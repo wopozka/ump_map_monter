@@ -176,10 +176,11 @@ class TestyPoprawnosciDanych(object):
 class PaczerGranicCzesciowych(object):
     def __init__(self, Zmienne):
         self.Zmienne = Zmienne
-        with open(self.Zmienne.KatalogzUMP+'narzedzia/granice.txt', 'r', encoding=self.Zmienne.Kodowanie) as f:
+        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/granice.txt'), 'r',
+                  encoding=self.Zmienne.Kodowanie) as f:
             self.granice_txt = f.readlines()
             self.granice_orig = self.granice_txt[:]
-        with open(self.Zmienne.KatalogzUMP + 'narzedzia/granice.txt', 'rb') as f:
+        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/granice.txt'), 'rb') as f:
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
     def konwertujLatke(self, granice_czesciowe_diff):
@@ -700,7 +701,7 @@ class tabelaKonwersjiTypow(object):
         sekcja = ''
         nr_linii = 0
         try:
-            with open(self.Zmienne.KatalogzUMP+'narzedzia/pnt2poi.txt', encoding=self.Zmienne.Kodowanie,
+            with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/pnt2poi.txt'), encoding=self.Zmienne.Kodowanie,
                       errors=self.Zmienne.ReadErrors) as f:
                 # zawartosc_pliku_pnt2poi = f.read().split('[END]')
                 zawartosc_pliku_pnt2poi = f.readlines()
@@ -1139,11 +1140,11 @@ class plikMP1(object):
                 noweData=noweData + ',(' + X + ',' + Y +')'
             return noweData.lstrip(',')
 
-    def sprawdzPoprawnoscSciezki(self,sciezka):
+    def sprawdzPoprawnoscSciezki(self, sciezka):
         skladowe=sciezka.split('/')
         if len(skladowe) != 3:
             return 1
-        elif os.path.isdir(self.Zmienne.KatalogzUMP+sciezka):
+        elif os.path.isdir(os.path.join(self.Zmienne.KatalogzUMP, sciezka)):
             return 1
         elif not skladowe[0].startswith('UMP-'):
             return 1
@@ -1680,8 +1681,8 @@ class plikMP1(object):
     def zwrocEntryPoint(self, entrypoints):
         return [';;EntryPoint: ' + self.zaokraglij(xyz, self.plikDokladnosc[daneDoZapisu['Plik']]) for xyz in entrypoints]
 
-class PlikiDoMontowania(object):
 
+class PlikiDoMontowania(object):
     def __init__(self, KatalogZeZrodlami, args):
         #print(KatalogZeZrodlami)
         #print(obszary)
@@ -2054,45 +2055,44 @@ class PolylinePolygone(ObiektNaMapie):
 
     """funkcja parsuje dane z pliku txt/mp i przetwarza na reprezentacje wewnetrzna"""
     def rekord2Dane(self, stringZDanymi, domyslneMiasto):
-        Klucze=set()
-        self.liniaObszar=string
+        Klucze = set()
+        self.liniaObszar = string
 
         for tmpbbb in stringZDanymi.strip().split('\n'):
-            tmpbbb=tmpbbb.strip()
-            if tmpbbb=='':
+            tmpbbb = tmpbbb.strip()
+            if tmpbbb == '':
                 pass
-            elif tmpbbb[0]==';':
+            elif tmpbbb[0] == ';':
                 self.Komentarz.append(tmpbbb)
                 self.Dane1.append(tmpbbb.rstrip())
             #elif tmpbbb.find('[PO')==0:
             elif tmpbbb.startswith('[PO'):
-                self.PoiPolyPoly=tmpbbb
+                self.PoiPolyPoly = tmpbbb
                 self.Dane1.append(tmpbbb)
             else:
                 try:
-                    klucz,wartosc=tmpbbb.split('=',1)
+                    klucz, wartosc = tmpbbb.split('=', 1)
                 except ValueError:
-                    print('Nieznana opcja: %s'%tmpbbb,file=sys.stderr)
+                    print('Nieznana opcja: %s' % tmpbbb, file=sys.stderr)
                     self.Dane1.append(tmpbbb)
                 else:
-                    if klucz=='Miasto' or klucz=='City':
+                    if klucz in ('Miasto', 'City',):
                         Klucze.add(klucz)
                         self.Dane1.append(tmpbbb)
                         self.dodajCityIdx(wartosc)
                         if self.czyDodacCityIdx:
-                            self.Dane1.append('CityIdx='+str(self.CityIdx))
+                            self.Dane1.append('CityIdx=' + str(self.CityIdx))
 
-                    elif klucz=='CityIdx':
-                        self.CityIdx=wartosc
-                    elif klucz=='Plik':
+                    elif klucz == 'CityIdx':
+                        self.CityIdx = wartosc
+                    elif klucz == 'Plik':
                         self.Dane1.append(tmpbbb)
                         Klucze.add(klucz)
-                    elif klucz.find('Data')>=0:
+                    elif klucz.find('Data') >= 0:
                         self.Dane1.append(tmpbbb)
                         #self.dokladnoscWsp=len(wartosc.split(',',1)[0].split('.')[1])
                         self.DataX.append(tmpbbb)
-                    elif klucz=='Type' and self.args.extratypes:
-
+                    elif klucz == 'Type' and self.args.extratypes:
                         if len(wartosc)>6:
                             self.Dane1.append('Type=0x0')
                             self.Dane1.append('OrigType=' + wartosc)
@@ -2101,39 +2101,22 @@ class PolylinePolygone(ObiektNaMapie):
 
                     else:
                         self.Dane1.append(tmpbbb)
-        if domyslneMiasto!='' and 'Miasto' not in Klucze:
-            self.Dane1.append('Miasto='+domyslneMiasto)
+        if domyslneMiasto != '' and 'Miasto' not in Klucze:
+            self.Dane1.append('Miasto=' + domyslneMiasto)
             self.dodajCityIdx(domyslneMiasto)
             if self.czyDodacCityIdx:
-                self.Dane1.append('CityIdx='+str(self.CityIdx))
-        if self.PoiPolyPoly=='':
+                self.Dane1.append('CityIdx=' + str(self.CityIdx))
+        if self.PoiPolyPoly == '':
             self.Dane1.append(';[END]')
         else:
             if 'Plik' not in Klucze:
-                self.Dane1.append('Plik='+self.Plik)
+                self.Dane1.append('Plik=' + self.Plik)
             self.Dane1.append('[END]\n')
-    #		print(self.Dane1)
 
-    def indeksMiasta(self,Miasto):
-
-        if 'CityIDX' in self.globalCityIDX:
-            self.globalCityIDX['CityIDX']+=1
-        else:
-            self.globalCityIDX={'CityIDX':1}
-        return
-
-'''
-	def zapiszdopliku(self):
-		return
-
-	def wczytajzpliku(self):
-		return
-'''
 
 class plikTXT(object):
-
     def __init__(self, NazwaPliku, args, punktzTXT):
-        self.domyslneMiasto=''
+        self.domyslneMiasto = ''
         self.sciezkaNazwaPliku = NazwaPliku
         self.Dokladnosc = ''
         self.NazwaPliku = NazwaPliku.split('/')[-1]
@@ -2182,10 +2165,10 @@ class plikTXT(object):
         # w przypadku gdy plik nie zawiera zadnych ulic, nie znajdziemy zadnego '[END]'
         if zawartoscPliku.find('[END]')<0:
             if zawartoscPliku.lstrip().startswith('Miasto='):
-                tmpaaa = zawartoscPliku.strip().split('\n',1)
-                self.domyslneMiasto=tmpaaa[0].split('=',1)[1]
+                tmpaaa = zawartoscPliku.strip().split('\n', 1)
+                self.domyslneMiasto=tmpaaa[0].split('=', 1)[1]
                 domyslneMiasta2[self.sciezkaNazwa]=self.domyslneMiasto
-                if len(tmpaaa)>1:
+                if len(tmpaaa) > 1:
                     return [tmpaaa[1]]
                 else:
                     return []
@@ -2199,12 +2182,12 @@ class plikTXT(object):
         #print(repr(zawartoscPlikuPodzielone[-1]))
         #if zawartoscPlikuPodzielone[0].find('Miasto=')==0:
         if zawartoscPlikuPodzielone[0].startswith('Miasto='):
-            self.domyslneMiasto,zawartoscPlikuPodzielone[0]=zawartoscPlikuPodzielone[0].split('\n',1)
-            self.domyslneMiasto=self.domyslneMiasto.split('=',1)[1]
+            self.domyslneMiasto,zawartoscPlikuPodzielone[0] = zawartoscPlikuPodzielone[0].split('\n', 1)
+            self.domyslneMiasto=self.domyslneMiasto.split('=', 1)[1]
             domyslneMiasta2[self.sciezkaNazwa]=self.domyslneMiasto
         #zawartoscPlikuPodzielone.replace('\n\n','\n').strip()
         #na koncu pliku jest z reguly jeszcze pusta linia, usuwamy ja
-        if zawartoscPlikuPodzielone[-1]=='':
+        if zawartoscPlikuPodzielone[-1]== '':
             zawartoscPlikuPodzielone.pop()
             return zawartoscPlikuPodzielone
         else:
@@ -2230,7 +2213,7 @@ class plikTXT(object):
     def procesuj(self, zawartoscPlikuTXT):
         if not zawartoscPlikuTXT:
             self.Dokladnosc = '0'
-            self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku )
+            self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
             return []
         for tmpaaa in self.txt2rekordy(zawartoscPlikuTXT):
             self.punktzTXT.rekord2Dane(tmpaaa, self.domyslneMiasto)
@@ -2238,79 +2221,81 @@ class plikTXT(object):
                 if not self.ustalDokladnosc(self.punktzTXT.DataX):
                     pass
                 else:
-                    self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku )
+                    self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
 
             self.Dane1.extend(self.punktzTXT.Dane1)
             self.punktzTXT.wyczyscRekordy()
         return self.Dane1
 
+
 class plikPNT(object):
     def __init__(self, NazwaPliku, args, punktzPntAdrCiti):
-        self.sciezkaNazwaPliku=NazwaPliku
+        self.sciezkaNazwaPliku = NazwaPliku
         self.Dokladnosc = ''
-        self.NazwaPliku=NazwaPliku.split('/')[-1]
-        self.sciezkaNazwa=NazwaPliku
+        self.NazwaPliku = NazwaPliku.split('/')[-1]
+        self.sciezkaNazwa = NazwaPliku
         self.punktzPntAdrCiti = punktzPntAdrCiti
         self.errOutWriter = errOutWriter(args)
         self.Dane1 = []
 
-    def zwrocRekord(self,OtwartyPlik):
+    def zwrocRekord(self, OtwartyPlik):
         """funkcja zwraca rekord danych z pliku pnt"""
-        RekordPNT=[]
-        KomentarzPNT=[]
-        liniazPlikuPNT=OtwartyPlik.readline()
+        RekordPNT = []
+        KomentarzPNT = []
+        liniazPlikuPNT = OtwartyPlik.readline()
         liniazPlikuPNT.rstrip('\n')
         liniazPlikuPNT.rstrip('\r\n')
         #		print(liniazPlikuPNT)
-        if liniazPlikuPNT=='':
+        if liniazPlikuPNT == '':
             RekordPNT.append(liniazPlikuPNT)
-            return KomentarzPNT,RekordPNT
+            return KomentarzPNT, RekordPNT
         else:
-            if liniazPlikuPNT[0]==';':
-                while liniazPlikuPNT[0]==';':
+            if liniazPlikuPNT[0] == ';':
+                while liniazPlikuPNT[0] == ';':
                     KomentarzPNT.append(liniazPlikuPNT)
                     #					print('Komentarz',KomentarzPNT)
-                    liniazPlikuPNT=OtwartyPlik.readline()
+                    liniazPlikuPNT = OtwartyPlik.readline()
                     liniazPlikuPNT.rstrip('\n')
                     liniazPlikuPNT.rstrip('\r\n')
 
             #			print(liniazPlikuPNT)
             RekordPNT.append(liniazPlikuPNT)
-            return KomentarzPNT,RekordPNT
+            return KomentarzPNT, RekordPNT
 
-    def usunNaglowek(self,zawartoscPliku):
+    def usunNaglowek(self, zawartoscPliku):
 
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         #pomijaj wszystko od pocz¹tku do wyst¹pienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
-        if len(zawartoscPliku)==1:
-            if zawartoscPliku[0].strip()==0:
+        if len(zawartoscPliku) == 1:
+            if zawartoscPliku[0].strip() == 0:
                 return zawartoscPliku
 
-        tabIndex=0
-        indeksPierwszegoPoprawnegoElementu=-1
-        while tabIndex<len(zawartoscPliku) and indeksPierwszegoPoprawnegoElementu<0:
-            linia=zawartoscPliku[tabIndex].split(',')
-            if len(linia)>=4:
+        tabIndex = 0
+        indeksPierwszegoPoprawnegoElementu = -1
+        while tabIndex < len(zawartoscPliku) and indeksPierwszegoPoprawnegoElementu < 0:
+            linia = zawartoscPliku[tabIndex].split(',')
+            if len(linia) >= 4:
                 try:
-                    wspSzerokosc=float(linia[0].strip())
-                    wspDlugosc=float(linia[1].strip())
+                    wspSzerokosc = float(linia[0].strip())
+                    wspDlugosc = float(linia[1].strip())
                 except ValueError:
-                    tabIndex+=1
+                    tabIndex += 1
                 else:
                     #if wspSzerokosc>=-90 and wspSzerokosc<=90 and wspDlugosc>=-180 and wspDlugosc<=180:
                     if -90 <= wspSzerokosc <= 90 and -180 <= wspDlugosc <= 180:
-                        indeksPierwszegoPoprawnegoElementu=tabIndex
+                        indeksPierwszegoPoprawnegoElementu = tabIndex
                     else:
-                        tabIndex+=1
+                        tabIndex += 1
             else:
-                tabIndex+=1
+                tabIndex += 1
 
         #znalezlismy pierwszy poprawny element, teraz sprawdzmy czy przez przypadek nie ma przed nim komentarza
-        if indeksPierwszegoPoprawnegoElementu>0:
-            while indeksPierwszegoPoprawnegoElementu>0 and zawartoscPliku[indeksPierwszegoPoprawnegoElementu-1][0]==';':
-                indeksPierwszegoPoprawnegoElementu-=1
-            zawartoscPliku=zawartoscPliku[indeksPierwszegoPoprawnegoElementu:]
+        if indeksPierwszegoPoprawnegoElementu > 0:
+            while indeksPierwszegoPoprawnegoElementu > 0 \
+                    and zawartoscPliku[indeksPierwszegoPoprawnegoElementu-1][0] == ';':
+                indeksPierwszegoPoprawnegoElementu -= 1
+            zawartoscPliku = zawartoscPliku[indeksPierwszegoPoprawnegoElementu:]
             return zawartoscPliku
         else:
             return zawartoscPliku
@@ -2321,7 +2306,7 @@ class plikPNT(object):
             return 1
         else:
             wsp1 = LiniaZPliku.split(',')[0]
-            if wsp1.find('.')>0:
+            if wsp1.find('.') > 0:
                 if len(wsp1.split('.')[1]) <= 5:
                     self.Dokladnosc = '5'
                 else:
@@ -2356,20 +2341,17 @@ class plikPNT(object):
                             pass
                         # print('Dokladnosc %s'%zawartoscPlikuMp.plikDokladnosc[pliki])
                         else:
-                            self.punktzPntAdrCiti.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
+                            self.punktzPntAdrCiti.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
+                                                                % self.NazwaPliku)
                     # ListaObiektowDoMontowania.append(punktzCity)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
-        #print(self.Dane1)
         return self.Dane1
 
-                # stara metoda zapisywania pliku mp:
-                # plikMP.write(punktzCity.zwrocRekordPlikuMp(1))
 
-
-def update_progress(progress,args):
-    barLength=20
-    status=''
+def update_progress(progress, args):
+    barLength = 20
+    status = ''
     if isinstance(progress, int):
         progress = float(progress)
     if not isinstance(progress, float):
@@ -2382,7 +2364,7 @@ def update_progress(progress,args):
         progress = 1
         status = "Zrobione...\n"
     block = int(round(barLength*progress))
-    text = "\rProcent: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), int(progress*100), status)
+    text = "\rProcent: [{0}] {1}% {2}".format("#" * block + "-" * (barLength-block), int(progress*100), status)
     if hasattr(args, 'stdoutqueue'):
         args.stdoutqueue.put(text)
     else:
@@ -2393,58 +2375,57 @@ def update_progress(progress,args):
 def zapiszkonfiguracje(args):
     print('Zapisuje konfiguracje w pliku konfiguracyjnym .mont-demont-py.config \nw katalogu domowym uzytkownika.')
     print('Podaj sciezki bezwzgledne. Tylda (~) oznacza katalog domowy uzytkownia.\n')
-    UMPHOME=''
-    while UMPHOME=='':
-        UMPHOME=input('Katalog ze zrodlami UMP: ')
+    UMPHOME = ''
+    while UMPHOME == '':
+        UMPHOME = input('Katalog ze zrodlami UMP: ')
         if UMPHOME.startswith('~'):
-            UMPHOME=os.path.expanduser('~')+UMPHOME.lstrip('~')
+            UMPHOME = os.path.expanduser('~') + UMPHOME.lstrip('~')
         if not os.path.isdir(UMPHOME):
-            print('Katalog ze zrodlami UMP %s nie istnieje. Utworz go najpierw'%UMPHOME)
-            UMPHOME=''
-
+            print('Katalog ze zrodlami UMP %s nie istnieje. Utworz go najpierw' % UMPHOME)
+            UMPHOME = ''
         if not (UMPHOME.endswith('\\') or UMPHOME.endswith('/')):
-            UMPHOME=UMPHOME.strip()+'/\n'
+            UMPHOME = UMPHOME.strip() + '/\n'
 
-    KATALOGROBOCZY=''
-    while KATALOGROBOCZY=='':
-        KATALOGROBOCZY=input('Katalog roboczy: ')
+    KATALOGROBOCZY = ''
+    while KATALOGROBOCZY == '':
+        KATALOGROBOCZY = input('Katalog roboczy: ')
         if KATALOGROBOCZY.startswith('~'):
-            KATALOGROBOCZY=os.path.expanduser('~')+KATALOGROBOCZY.lstrip('~')
+            KATALOGROBOCZY = os.path.expanduser('~') + KATALOGROBOCZY.lstrip('~')
         if not os.path.isdir(KATALOGROBOCZY):
-            print('Katalog roboczy %s nie istnieje. Utworz go najpierw'%KATALOGROBOCZY)
-            KATALOGROBOCZY=''
+            print('Katalog roboczy %s nie istnieje. Utworz go najpierw' % KATALOGROBOCZY)
+            KATALOGROBOCZY = ''
         if not (KATALOGROBOCZY.endswith('\\') or KATALOGROBOCZY.endswith('/')):
-            KATALOGROBOCZY=KATALOGROBOCZY.strip()+'/\n'
+            KATALOGROBOCZY = KATALOGROBOCZY.strip()+'/\n'
 
-
-    print('\nZapisuje plik konfiguracyjny .mont-demont-py.config \nw katalogu domowym uzytkownika: %s'%os.path.expanduser('~'),file=sys.stdout)
-    with open(os.path.expanduser('~')+'/.mont-demont-py.config','w') as configfile:
-        configfile.write('UMPHOME='+UMPHOME)
+    print('\nZapisuje plik konfiguracyjny .mont-demont-py.config \nw katalogu domowym uzytkownika: %s'
+          % os.path.expanduser('~'), file=sys.stdout)
+    with open(os.path.expanduser('~') + '/.mont-demont-py.config', 'w') as configfile:
+        configfile.write('UMPHOME=' + UMPHOME)
         configfile.write('\n')
-        configfile.write('KATALOGROBOCZY='+KATALOGROBOCZY)
+        configfile.write('KATALOGROBOCZY=' + KATALOGROBOCZY)
+
 
 def listujobszary(args):
-    Zmienne=UstawieniaPoczatkowe('wynik.mp')
+    Zmienne = UstawieniaPoczatkowe('wynik.mp')
     if args.umphome:
-        Zmienne.KatalogzUMP=args.umphome
+        Zmienne.KatalogzUMP = args.umphome
     try:
-        #listaobszarow=[a for a in os.listdir(Zmienne.KatalogzUMP) if (a.find('UMP-')==0 and os.path.isdir(Zmienne.KatalogzUMP+'/'+a))]
-        listaobszarow=[a for a in os.listdir(Zmienne.KatalogzUMP) if (a.startswith('UMP-') and os.path.isdir(Zmienne.KatalogzUMP+'/'+a))]
+        listaobszarow = [a for a in os.listdir(Zmienne.KatalogzUMP)
+                       if (a.startswith('UMP-') and os.path.isdir(os.path.join(Zmienne.KatalogzUMP, a)))]
         listaobszarow.sort()
-        print('\n'.join(listaobszarow),file=sys.stdout)
+        print('\n'.join(listaobszarow), file=sys.stdout)
     except FileNotFoundError:
-        print('Bledna konfiguracja, nie znalazlem zadnych obszarow.',file=sys.stderr)
+        print('Bledna konfiguracja, nie znalazlem zadnych obszarow.', file=sys.stderr)
         return []
     else:
         return listaobszarow
 
+
 def montujpliki(args):
     stderr_stdout_writer = errOutWriter(args)
-    #print('args',args)
-    Zmienne=UstawieniaPoczatkowe(args.plikmp)
-
+    Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if args.umphome:
-        #print(args.umphome)
+        # print(args.umphome)
         if args.umphome[-1] == '/':
             Zmienne.KatalogzUMP = args.umphome
         else:
@@ -2453,7 +2434,7 @@ def montujpliki(args):
 
     if args.obszary:
         if args.obszary[0] == 'pwd':
-            if  os.getcwd().find('UMP') >= 0:
+            if os.getcwd().find('UMP') >= 0:
                 args.obszary[0] = 'UMP' + os.getcwd().split('UMP')[1]
                 Zmienne.KatalogRoboczy = os.getcwd() + '/'
             else:
@@ -2463,7 +2444,7 @@ def montujpliki(args):
         stderr_stdout_writer.stderrorwrite('Nie wybrano zadnych obszarow.\nNie moge kontynuowac!')
         return 0
 
-    #gdy wybierzemy do montowania same radary, wtedy nalezy zamontowac cala polske - tylko drogi i radary.
+    # gdy wybierzemy do montowania same radary, wtedy nalezy zamontowac cala polske - tylko drogi i radary.
     if args.obszary[0] == 'UMP-radary' and len(args.obszary) == 1:
         for a in listujobszary(args):
             if a.find('UMP-PL') >= 0:
@@ -2472,15 +2453,10 @@ def montujpliki(args):
     else:
         args.tylkodrogi = 0
 
-
-    #print('args',args)
     try:
         plikidomont = PlikiDoMontowania(Zmienne.KatalogzUMP, args)
-
     except (IOError, FileNotFoundError):
         return 0
-
-    #print('args',args)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -2492,18 +2468,13 @@ def montujpliki(args):
             agranice = plikidomont.ograniczGranice(Zmienne.KatalogRoboczy, Zmienne.Kodowanie)
             #if agranice[-1]=='\n':
             #	agranice.pop()
-            with open(Zmienne.KatalogRoboczy + 'granice-czesciowe.txt','w', encoding=Zmienne.Kodowanie,
+            with open(os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w', encoding=Zmienne.Kodowanie,
                       errors=Zmienne.WriteErrors) as f:
                 for a in agranice:
                     f.write(a)
             plikidomont.Pliki[0] = os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
-    tabKonw=tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    #print(plikidomont.Pliki)
 
-    #ListaPlikow=[]
-    #plikMP=open(Zmienne.KatalogRoboczy+Zmienne.OutputFile,'w',encoding=Zmienne.Kodowanie)
-    #usuwamy istniej¹cy plik wynik.mp
-
+    tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     try:
         os.remove(os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
     except FileNotFoundError:
@@ -2511,18 +2482,18 @@ def montujpliki(args):
 
     plikMP = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy, delete=False)
     globalneIndeksy = IndeksyMiast()
-    zawartoscPlikuMp = plikMP1(Zmienne, args,tabKonw)
-    #ListaObiektowDoMontowania=[]
+    zawartoscPlikuMp = plikMP1(Zmienne, args, tabKonw)
+    # ListaObiektowDoMontowania=[]
     for pliki in plikidomont.Pliki:
         try:
             if pliki.find('granice-czesciowe.txt') > 0:
                 #print('granice czesciowe')
                 plikPNTTXT = open(pliki, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors)
             else:
-                plikPNTTXT=open(os.path.join(Zmienne.KatalogzUMP, pliki), encoding=Zmienne.Kodowanie,
-                                errors=Zmienne.ReadErrors)
+                plikPNTTXT = open(os.path.join(Zmienne.KatalogzUMP, pliki), encoding=Zmienne.Kodowanie,
+                                  errors=Zmienne.ReadErrors)
         except IOError:
-            stderr_stdout_writer.stderrorwrite('Nie moge otworzyæ pliku %s' % Zmienne.KatalogzUMP+pliki)
+            stderr_stdout_writer.stderrorwrite('Nie moge otworzyæ pliku %s' % os.path.join(Zmienne.KatalogzUMP, pliki))
         else:
             zawartoscPlikuMp.dodajplik(pliki)
             if args.hash:
@@ -2536,7 +2507,7 @@ def montujpliki(args):
 
             #print('Udalo sie otworzyc pliku %s'%(pliki))
 
-            ###############################################################################################################
+            ############################################################################################################
             #montowanie plikow cities
             if pliki.find('cities') > 0:
                 punktzCity = City(pliki,globalneIndeksy,tabKonw,args)
@@ -2571,9 +2542,9 @@ def montujpliki(args):
                 del punktzPnt
 
             ###############################################################################################################
-            #montowanie plikow txt
+            # montowanie plikow txt
             elif pliki.find('txt') > 0:
-                punktzTXT = PolylinePolygone(pliki,globalneIndeksy, tabKonw,args)
+                punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args)
                 punktzTXT.stdoutwrite('....[TXT] %s' % pliki)
 
                 przetwarzanyPlik = plikTXT(pliki, args, punktzTXT)
@@ -2587,12 +2558,12 @@ def montujpliki(args):
                     del przetwarzanyPlik
                     del punktzTXT
 
-            ##################################################################################################################
-            #montowanie plikow adr
-            elif pliki.find('adr')>0:
-                punktzAdr = Adr(pliki,globalneIndeksy,tabKonw,args)
+            ############################################################################################################
+            # montowanie plikow adr
+            elif pliki.find('adr') > 0:
+                punktzAdr = Adr(pliki, globalneIndeksy, tabKonw,args)
                 punktzAdr.stdoutwrite('....[ADR] %s' % pliki)
-                przetwarzanyPlik=plikPNT(pliki, args, punktzAdr)
+                przetwarzanyPlik = plikPNT(pliki, args, punktzAdr)
                 # komentarz=''
                 zawartoscPlikuADR = plikPNTTXT.readlines()
                 if not zawartoscPlikuADR:
@@ -2605,11 +2576,11 @@ def montujpliki(args):
                 del punktzAdr
             plikPNTTXT.close()
 
-    #zapisujemy naglowek
+    # zapisujemy naglowek
     stderr_stdout_writer.stdoutwrite('zapisuje naglowek')
-    plikMP.write((zawartoscPlikuMp.naglowek))
+    plikMP.write(zawartoscPlikuMp.naglowek)
 
-    #zapisujemy indeksy miast
+    # zapisujemy indeksy miast
     if args.cityidx:
         stderr_stdout_writer.stdoutwrite('zapisuje cityidx')
         if hasattr(args, 'savememory') and args.savememory:
@@ -2621,7 +2592,7 @@ def montujpliki(args):
             plikMP.write('\n[END-Cities]\n\n')
 
     if not args.trybosmand:
-        #zapisujemy dokladnosc
+        # zapisujemy dokladnosc
         stderr_stdout_writer.stdoutwrite('zapisuje pliki, domyslne miasta i dokladnosc plikow')
         plikMP.write('[CYFRY]\n')
         for abc in zawartoscPlikuMp.plikDokladnosc:
@@ -2631,13 +2602,12 @@ def montujpliki(args):
             plikMP.write(abc + ';' + zawartoscPlikuMp.plikDokladnosc[abc] + ';' + abcd + '\n')
         plikMP.write('[END]\n\n')
 
-    stderr_stdout_writer.stdoutwrite('zapisuje plik mp --> %s' % os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
+    stderr_stdout_writer.stdoutwrite('zapisuje plik mp --> %s'
+                                     % os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
     if hasattr(args,'savememory') and args.savememory:
         plikMP.writelines("{}\n".format(x) for x in zawartoscPlikuMp.zawartosc)
     else:
         plikMP.write('\n'.join(zawartoscPlikuMp.zawartosc))
-
-    #plikMP=open(Zmienne.KatalogRoboczy+Zmienne.OutputFile,'w',encoding=Zmienne.Kodowanie)
 
     plikMP.close()
     shutil.copy(plikMP.name, os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
@@ -2659,7 +2629,6 @@ def demontuj(args):
     stderr_stdout_writer = errOutWriter(args)
 
     if args.umphome:
-
         if args.umphome[-1]=='/':
             Zmienne.KatalogzUMP = args.umphome
         else:
@@ -2679,15 +2648,14 @@ def demontuj(args):
     stderr_stdout_writer.stdoutwrite('Wczytuje %s' % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
 
     try:
-        zawartoscPlikuMp=open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
+        zawartoscPlikuMp = open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
                               errors=Zmienne.ReadErrors).read()
     except FileNotFoundError:
-        stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.' % Zmienne.KatalogRoboczy+Zmienne.InputFile)
+        stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.'
+                                           % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
         if hasattr(args, 'queue'):
-            areturn=[[],{}]
+            areturn = [[], {}]
             args.queue.put(areturn)
-        #args.queue.put([])
-        #args.queue.put({})
         if hasattr(args, 'buttonqueue'):
             args.buttonqueue.put('Koniec')
         return []
@@ -2696,13 +2664,12 @@ def demontuj(args):
     formatIndeksow = ''
     #najpierw powinna byc sekcja dotyczaca indeksu miast. Szukam go
     if args.cityidx:
-        #format [CITIES] oraz [CityIdx=]
+        # format [CITIES] oraz [CityIdx=]
         if zawartoscPlikuMp.find('[END-Cities]') >= 0:
             formatIndeksow = '[CITIES]'
-            cities,zawartoscPlikuMp = zawartoscPlikuMp.split('[END-Cities]')
+            cities, zawartoscPlikuMp = zawartoscPlikuMp.split('[END-Cities]')
             stderr_stdout_writer.stdoutwrite('Wczytujê indeksy miast')
             listaCities = cities.split('[Cities]')[1].strip().split('\n')
-            #print(listaCities)
             for tmpabc in range(0, len(listaCities), 2):
                 nrCity, nazwaMiastaIdx = listaCities[tmpabc].split('=', 1)
                 if nazwaMiastaIdx.count('=') > 0:
@@ -2719,9 +2686,6 @@ def demontuj(args):
             stderr_stdout_writer.stderrorwrite('Nie znalazlem danych do indeksu miast, pomijam.')
             args.cityidx = None
 
-
-    #zawartoscPlikuMp=zawartoscPlikuMp.lstrip()
-
     #############################################################
     #sprawdzamy cyfry i hashe
     #############################################################
@@ -2731,13 +2695,13 @@ def demontuj(args):
         for abc in cyfry.strip().split('\n'):
 
             try:
-                if  plikMp.cyfryHash(abc, Zmienne.KatalogzUMP, args.X):
+                if plikMp.cyfryHash(abc, Zmienne.KatalogzUMP, args.X):
                     if args.hash:
                         stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].' % abc.split(';')[0])
                     else:
                         stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].\nSuma kontrolna nie zgadza sie albo jej brak.\nUzyj opcji -nh aby zdemontowac pomimo tego' % abc.split(';')[0])
                         if hasattr(args, 'queue'):
-                            areturn = [[],{}]
+                            areturn = [[], {}]
                             args.queue.put(areturn)
                         if hasattr(args, 'buttonqueue'):
                             args.buttonqueue.put('Koniec')
@@ -2748,8 +2712,8 @@ def demontuj(args):
             except FileNotFoundError:
                 stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].\nPlik nie istnieje w zrodlach. Nie moge kontynuowac.' % abc.split(';')[0])
                 if hasattr(args, 'queue'):
-                    #kolejka w gui oczekuje dwoch porcji danych, trzeba wiec je dostarczyc nawet jak ta funkcja zakonczy sie bledem
-                    areturn=[[], {}]
+                    # kolejka w gui oczekuje dwoch porcji danych, trzeba wiec je dostarczyc nawet jak ta funkcja zakonczy sie bledem
+                    areturn = [[], {}]
                     args.queue.put(areturn)
                 if hasattr(args, 'buttonqueue'):
                     args.buttonqueue.put('Koniec')
@@ -2757,21 +2721,21 @@ def demontuj(args):
     else:
         stderr_stdout_writer.stderrorwrite('Nie znalazlem informacji na temat zamontowanych plikow, nie moge kontynuowac.')
         if hasattr(args, 'queue'):
-            areturn=[[], {}]
+            areturn = [[], {}]
             args.queue.put(areturn)
         if hasattr(args, 'buttonqueue'):
             args.buttonqueue.put('Koniec')
         return []
-    zawartoscPlikuMp=zawartoscPlikuMp.strip()
+    zawartoscPlikuMp = zawartoscPlikuMp.strip()
 
-    #wczyta³em juz sekcje dotyczaca plikow, moge teraz ustawic liste zamontowanych obszarow
+    # wczyta³em juz sekcje dotyczaca plikow, moge teraz ustawic liste zamontowanych obszarow
     plikMp.ustawObszary()
 
-    #mamy liste plikow, teraz dla autopoly nalezy wczytac wspolrzedne z plikow ktore lapia sie na autopoly
+    # mamy liste plikow, teraz dla autopoly nalezy wczytac wspolrzedne z plikow ktore lapia sie na autopoly
     if args.autopolypoly:
         plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(plikMp.plikizMp)
 
-    #jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna '' dlatego [0:-1]
+    # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna '' dlatego [0:-1]
     ilosc_rekordow = len(zawartoscPlikuMp.split('\n[END]')[0:-1])
     aktrekord = 0
     wielokrotnosc = 0
@@ -2786,13 +2750,13 @@ def demontuj(args):
             if aktrekord == ilosc_rekordow:
                 update_progress(100/100, args)
 
-        #w pliku mp mog¹ byæ wielokrotne Data0, Data1 itd. W slowniku pythonowym klucze nie moga sie powtarzac,
+        # w pliku mp mog¹ byæ wielokrotne Data0, Data1 itd. W slowniku pythonowym klucze nie moga sie powtarzac,
         # wiec muszê je jakos rozroznic, Bdzie Data0_kolejneData
         kolejneData = 0
         rekordyMp = rekordyMp.strip().split('\n')
-        #if rekordyMp[0]!='':
+
         rekordyMp.append('[END]=[END]')
-        #print(repr(rekordyMp))
+        # print(repr(rekordyMp))
         komentarz = list()
         komentarzpoly = list()
         entrypoint = list()
@@ -2810,19 +2774,18 @@ def demontuj(args):
         for tmpabc in rekordyMp:
 
             tmpabc=tmpabc.strip()
-            #print(repr(tmpabc))
-            #nie znalaz³ jeszcze [POI], [POLYLYNE], [POLYGON], wiec wszystko co jest przed to komentarz
+            # nie znalaz³ jeszcze [POI], [POLYLYNE], [POLYGON], wiec wszystko co jest przed to komentarz
             if poipolypoly == '' and tmpabc != '':
                 # komentarz zaczyna sie od ';'
                 if tmpabc[0] == ';':
-                    #mamy komentarz, sprawdzmy czy nie jest pusty, jesli nie jest to go przetwarzamy
+                    # mamy komentarz, sprawdzmy czy nie jest pusty, jesli nie jest to go przetwarzamy
                     if tmpabc != ';':
                         if 'Komentarz' in daneDoZapisu:
                             daneDoZapisu['Komentarz'].append(tmpabc)
                         else:
                             daneDoZapisu['Komentarz'] = [tmpabc]
                             daneDoZapisuKolejnoscKluczy.append('Komentarz')
-                    #jesli komentarz jest pusty to go po prostu ignorujemy
+                    # jesli komentarz jest pusty to go po prostu ignorujemy
                     else:
                         pass
                 elif tmpabc in ('[POI]', '[POLYGON]', '[POLYLINE]'):
@@ -2840,9 +2803,9 @@ def demontuj(args):
                 if poipolypoly == '[POI]':
 
                     try:
-                        klucz,wartosc = tmpabc.split('=',1)
+                        klucz, wartosc = tmpabc.split('=', 1)
                     except ValueError:
-                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych: %s.'% tmpabc)
+                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych: %s.' % tmpabc)
                         if 'Dziwne' in daneDoZapisu:
                             daneDoZapisu['Dziwne'].append(tmpabc)
                         else:
@@ -3238,12 +3201,13 @@ def demontuj(args):
 
     if wszystkie_diffy_razem:
         stderr_stdout_writer.stdoutwrite('Plik wszystko.diff - zbiorczy plik dla wszystkich latek.')
-        with open(Zmienne.KatalogRoboczy+'wszystko.diff', 'w', encoding=Zmienne.Kodowanie,errors=Zmienne.WriteErrors) as f:
+        with open(os.path.join(Zmienne.KatalogRoboczy, 'wszystko.diff'), 'w',
+                  encoding=Zmienne.Kodowanie,errors=Zmienne.WriteErrors) as f:
             f.writelines(wszystkie_diffy_razem)
     stderr_stdout_writer.stdoutwrite('Gotowe!')
     #print(listaDiffow)
     if hasattr(args, 'queue'):
-        areturn=[listaDiffow,slownikHash]
+        areturn=[listaDiffow, slownikHash]
         args.queue.put(areturn)
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Koniec')
@@ -3555,13 +3519,13 @@ def rozdziel_na_klasy(args):
     montujpliki(args)
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        NetgenConfFile=Zmienne.KatalogzUMP + 'narzedzia/netgen.cfg'
+        NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/netgen.cfg')
     # locale.setlocale(locale.LC_ALL, 'pl_PL.iso88592')
     else:
-        NetgenConfFile=Zmienne.KatalogzUMP+'narzedzia\\netgen.cfg'
+        NetgenConfFile = Zmienne.KatalogzUMP+'narzedzia\\netgen.cfg'
 
     process = subprocess.Popen([Zmienne.NetGen ,'-e0', '-j', '-k',
-                                '-T'+NetgenConfFile, Zmienne.KatalogRoboczy+Zmienne.InputFile],
+                                '-T' + NetgenConfFile, Zmienne.KatalogRoboczy + Zmienne.InputFile],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -3569,7 +3533,8 @@ def rozdziel_na_klasy(args):
     stderr_stdout_writer.stdoutwrite('Dziele drogi na klasy')
     plik_mp_z_klasami = plik_mp_z_klasami.decode(Zmienne.Kodowanie)
     err = err.decode(Zmienne.Kodowanie)
-    with open(Zmienne.KatalogRoboczy+'wynik-klasy.mp','w',encoding=Zmienne.Kodowanie,errors=Zmienne.WriteErrors) as f:
+    with open(os.path.join(Zmienne.KatalogRoboczy, 'wynik-klasy.mp'), 'w', encoding=Zmienne.Kodowanie,
+              errors=Zmienne.WriteErrors) as f:
         for a in plik_mp_z_klasami.split('\n'):
             if a.startswith('EndLevel'):
                 pass
@@ -3588,7 +3553,7 @@ def patch(args):
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         patchExe = 'patch'
     else:
-        patchExe = Zmienne.KatalogzUMP + 'narzedzia/patch.exe'
+        patchExe = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/patch.exe')
     stderr_stdout_writer = errOutWriter(args)
 
     if args.katrob:
