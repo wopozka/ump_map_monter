@@ -273,6 +273,10 @@ class UstawieniaPoczatkowe(object):
         self.WriteErrors = 'ignore'
         self.wczytajKonfiguracje()
 
+    def ustaw_katalog_home(self, katalog_home):
+        self.KatalogzUMP = katalog_home
+        self.uaktualnijZalezneHome()
+
     def uaktualnijZalezneHome(self):
         self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy')
         self.NetGen = self.KatalogzUMP + 'narzedzia/netgen.exe'
@@ -288,7 +292,7 @@ class UstawieniaPoczatkowe(object):
 
                 if 'UMPHOME' in konf and 'KATALOGROBOCZY' not in konf:
                     if konf['UMPHOME'].startswith('~'):
-                        konf['UMPHOME'] = os.path.expanduser('~')+konf['UMPHOME'][1:]
+                        konf['UMPHOME'] = os.path.expanduser('~') + konf['UMPHOME'][1:]
                     if not (konf['UMPHOME'].endswith('/') or konf['UMPHOME'].endswith('\\')):
                         konf['UMPHOME'] += '/'
                     self.KatalogzUMP = konf['UMPHOME']
@@ -299,14 +303,14 @@ class UstawieniaPoczatkowe(object):
                     if not (konf['UMPHOME'].endswith('/') or konf['UMPHOME'].endswith('\\')):
                         konf['UMPHOME'] += '/'
                     if konf['KATALOGROBOCZY'].startswith('~'):
-                        konf['KATALOGROBOCZY'] = os.path.expanduser('~')+konf['KATALOGROBOCZY'][1:]
+                        konf['KATALOGROBOCZY'] = os.path.expanduser('~') + konf['KATALOGROBOCZY'][1:]
                     if not (konf['KATALOGROBOCZY'].endswith('/') or konf['KATALOGROBOCZY'].endswith('\\')):
                         konf['KATALOGROBOCZY'] += '/'
                     self.KatalogzUMP = konf['UMPHOME']
                     self.KatalogRoboczy = konf['KATALOGROBOCZY']
                 elif 'UMPHOME' not in konf and 'KATALOGROBOCZY' in konf:
                     if konf['KATALOGROBOCZY'].startswith('~'):
-                        konf['KATALOGROBOCZY'] = os.path.expanduser('~')+konf['KATALOGROBOCZY'][1:]
+                        konf['KATALOGROBOCZY'] = os.path.expanduser('~') + konf['KATALOGROBOCZY'][1:]
                     if not (konf['KATALOGROBOCZY'].endswith('/') or konf['KATALOGROBOCZY'].endswith('\\')):
                         konf['KATALOGROBOCZY'] += '/'
                     self.KatalogRoboczy = konf['KATALOGROBOCZY']
@@ -710,7 +714,7 @@ class tabelaKonwersjiTypow(object):
             for a in zawartosc_pliku_pnt2poi:
                 nr_linii += 1
                 a = a.strip()
-                # po strip powstaja nieraz puste liniee wiec takich nie ma co przeszukiwac stad ten if
+                # po strip powstaja nieraz puste linie wiec takich nie ma co przeszukiwac stad ten if
                 if a:
                     if a.startswith('[DEF-POI]'):
                         if sekcja:
@@ -780,7 +784,7 @@ class Obszary(object):
         inside = False
         p1x = polyx[0]
         p1y = polyy[0]
-        for i in range(n+1):
+        for i in range(n + 1):
             p2x = polyx[i % n]
             p2y = polyy[i % n]
             if y > min(p1y, p2y):
@@ -920,7 +924,7 @@ class autoPolylinePolygone(object):
 
     def znajdz_najblizszy(self, obszar, typ_pliku, wspolrzedne):
         y, x = wspolrzedne.split(',')
-        wsp = (float(x), float(y))
+        wsp = (float(x), float(y),)
         if typ_pliku in self.autoObszar[obszar]:
             if len(self.autoObszar[obszar][typ_pliku]) == 1:
                 return list(self.autoObszar[obszar][typ_pliku])[0]
@@ -1661,17 +1665,15 @@ class PlikiDoMontowania(object):
             self.Pliki += ['narzedzia/granice.txt']
         for aaa in obszary:
             if os.path.isdir(os.path.join(KatalogDoPrzeszukania, aaa, 'src')):
-                self.Pliki += [aaa + '/src/' + os.path.split(a)[1]
-                               for a in glob.glob(KatalogDoPrzeszukania + aaa + '/src/*.txt')]
-                self.Pliki += [aaa + '/src/' + os.path.split(a)[1]
-                               for a in glob.glob(KatalogDoPrzeszukania + aaa + '/src/*.pnt')]
-                self.Pliki += [aaa + '/src/' + os.path.split(a)[1]
-                               for a in glob.glob(KatalogDoPrzeszukania + aaa + '/src/*.adr')]
-            # for f in os.listdir(KatalogDoPrzeszukania+aaa+'/src/'):
-            # 	if f[0]!='.' and not os.path.isdir(KatalogDoPrzeszukania+aaa+'/src/'+f):
-            # 		self.Pliki.append(aaa+'/src/'+f)
+                self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
+                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.txt'))]
+                self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
+                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.pnt'))]
+                self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
+                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.adr'))]
             else:
-                self.errOutWriter.stderrorwrite('Problem z dostêpem do %s.' % (KatalogDoPrzeszukania+aaa+'/src/'))
+                self.errOutWriter.stderrorwrite('Problem z dostêpem do %s.' %
+                                                os.path.join(KatalogDoPrzeszukania, aaa, 'src'))
                 self.errOutWriter.stderrorwrite('Obszar %s nie istnieje' % aaa)
                 raise FileNotFoundError
         # przenosimy zakazy na koniec, aby montowane byly na koncu i aby byly nad drogami a nie pod nimi:
@@ -1731,9 +1733,10 @@ class PlikiDoMontowania(object):
 
 #    Klasa ogólna dla ka¿dego obiektu na mapie, ka¿dy obiekt ma podobne cechy, szczególne bêda ju¿ w klasach pochodnych
 class ObiektNaMapie(object):
-
-    """Ogolna klasa dla wszystkich obiektow na mapie:
-        dla poi, miast, adresow, polyline, polygone"""
+    """
+    Ogolna klasa dla wszystkich obiektow na mapie:
+    dla poi, miast, adresow, polyline, polygone
+    """
 
     def __init__(self, Plik, IndeksyMiast, alias2Type, args):
         self.EntryPoint = ''
@@ -2182,7 +2185,7 @@ class plikPNT(object):
         RekordPNT = []
         KomentarzPNT = []
         liniazPlikuPNT = OtwartyPlik.readline()
-        liniazPlikuPNT.rstrip('\n')
+        # liniazPlikuPNT.rstrip('\n')
         liniazPlikuPNT.rstrip('\r\n')
         if liniazPlikuPNT == '':
             RekordPNT.append(liniazPlikuPNT)
@@ -2192,7 +2195,7 @@ class plikPNT(object):
                 while liniazPlikuPNT[0] == ';':
                     KomentarzPNT.append(liniazPlikuPNT)
                     liniazPlikuPNT = OtwartyPlik.readline()
-                    liniazPlikuPNT.rstrip('\n')
+                    # liniazPlikuPNT.rstrip('\n')
                     liniazPlikuPNT.rstrip('\r\n')
             RekordPNT.append(liniazPlikuPNT)
             return KomentarzPNT, RekordPNT
@@ -2342,7 +2345,7 @@ def zapiszkonfiguracje(args):
 def listujobszary(args):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     if args.umphome:
-        Zmienne.KatalogzUMP = args.umphome
+        Zmienne.ustaw_katalog_home(args.umphome)
     try:
         listaobszarow = [a for a in os.listdir(Zmienne.KatalogzUMP)
                          if (a.startswith('UMP-') and os.path.isdir(os.path.join(Zmienne.KatalogzUMP, a)))]
@@ -2359,18 +2362,13 @@ def montujpliki(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if args.umphome:
-        # print(args.umphome)
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome+'/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.obszary:
         if args.obszary[0] == 'pwd':
             if os.getcwd().find('UMP') >= 0:
                 args.obszary[0] = 'UMP' + os.getcwd().split('UMP')[1]
-                Zmienne.KatalogRoboczy = os.getcwd() + '/'
+                Zmienne.KatalogRoboczy = os.getcwd()
             else:
                 stderr_stdout_writer.stderrorwrite('Nie wybrano zadnych obszarow.\nNie moge kontynuowac!')
                 return 0
@@ -2560,11 +2558,7 @@ def demontuj(args):
     stderr_stdout_writer = errOutWriter(args)
 
     if args.umphome:
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome+'/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -3135,17 +3129,13 @@ def edytuj(args):
     stderr_stdout_writer = errOutWriter(args)
 
     if args.umphome:
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome+'/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphone)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
 
     if args.plikmp:
-        Zmienne.KatalogRoboczy = os.getcwd() + '/'
+        Zmienne.KatalogRoboczy = os.getcwd()
 
     # sprawdzmy ktory wine jest dostepny w przypadku linuksa
     if sys.platform.startswith('linux'):
@@ -3192,11 +3182,7 @@ def sprawdz_numeracje(args):
         stderr_stdout_writer.stdoutwrite('Ciaglosc siatki routingowej!')
 
     if args.umphome:
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome+'/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -3220,17 +3206,13 @@ def sprawdz(args):
     stderr_stdout_writer.stdoutwrite('Uruchamiam netgen!')
 
     if args.umphome:
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome+'/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
 
     if args.plikmp:
-        Zmienne.KatalogRoboczy = os.getcwd()+'/'
+        Zmienne.KatalogRoboczy = os.getcwd()
 
     bledy = {'slepy': [], 'przeciecie': [], 'blad routingu': [], 'za bliskie': [], 'zygzak': [],
              'zapetlona numeracja': [], 'nieuzywany slepy': [], 'nieuzywany przeciecie': []}
@@ -3310,11 +3292,7 @@ def cvsup(args):
     stderr_stdout_writer = errOutWriter(args)
 
     if args.umphome:
-        if args.umphome[-1] == '/':
-            Zmienne.KatalogzUMP = args.umphome
-        else:
-            Zmienne.KatalogzUMP = args.umphome + '/'
-        Zmienne.uaktualnijZalezneHome()
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -3323,7 +3301,7 @@ def cvsup(args):
         if args.obszary[0] == 'pwd':
             if os.getcwd().find('UMP') >= 0:
                 args.obszary[0] = 'src'
-                Zmienne.KatalogRoboczy = os.getcwd()+'/'
+                Zmienne.KatalogRoboczy = os.getcwd()
             else:
                 stderr_stdout_writer.stderrorwrite('Nie wybrano zadnych obszarow.\nNie moge kontynuowac!')
                 return 0
@@ -3393,7 +3371,7 @@ def czysc(args):
 
     for a in plikiDoUsuniecia:
         try:
-            os.remove(Zmienne.KatalogRoboczy + a)
+            os.remove(os.path.join(Zmienne.KatalogRoboczy, a))
         except FileNotFoundError:
             pass
 
@@ -3405,7 +3383,7 @@ def rozdziel_na_klasy(args):
         if args.obszary[0] == 'pwd':
             if os.getcwd().find('UMP') >= 0:
                 args.obszary[0] = 'UMP' + os.getcwd().split('UMP')[1]
-                Zmienne.KatalogRoboczy = os.getcwd() + '/'
+                Zmienne.KatalogRoboczy = os.getcwd()
             else:
                 stderr_stdout_writer.stderrorwrite('Nie wybrano zadnych obszarow.\nNie moge kontynuowac!')
                 return 0
