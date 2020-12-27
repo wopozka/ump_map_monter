@@ -1114,22 +1114,22 @@ class plikMP1(object):
         # W takim przypadku wpisz tam co zostalo zapisane przez mapedit
         if dokladnosc not in ('5', '6'):
             return DataX
-        aaa = DataX.split('),(')
-        if len(aaa[0].lstrip('(').split(',')[0].split('.')[1]) == int(dokladnosc):
+        lista_wspolrzednych = DataX.split('),(')
+        if len(lista_wspolrzednych[0].lstrip('(').split(',')[0].split('.')[1]) == int(dokladnosc):
             return DataX
         else:
             noweData = ''
             dokFormat = '%.5f'
             if dokladnosc == '6':
                 dokFormat = '%.6f'
-            for abc in aaa:
-                X, Y = abc.split(',')
+            for para_wspolrzednych in lista_wspolrzednych:
+                X, Y = para_wspolrzednych.split(',')
                 X = dokFormat % float(X.lstrip('('))
                 Y = dokFormat % float(Y.rstrip(')'))
                 noweData = noweData + ',(' + X + ',' + Y + ')'
             return noweData.lstrip(',')
 
-    def sprawdzPoprawnoscSciezki(self, sciezka):
+    def sprawdz_poprawnosc_sciezki(self, sciezka):
         skladowe = sciezka.split('/')
         if len(skladowe) != 3:
             return 1
@@ -1159,7 +1159,7 @@ class plikMP1(object):
             return nazwaPliku
 
     def znajdzPlikDlaPoly(self, typobiektu, type, obszar, wspolrzedne):
-        # s elf.autoobszary.znajdz_najblizszy(obszar,type)
+        # self.autoobszary.znajdz_najblizszy(obszar,type)
         if typobiektu == '[POLYGON]':
             try:
                 for mozliwepliki in self.autoobszary.TypPolygon2Plik[type]:
@@ -1182,7 +1182,7 @@ class plikMP1(object):
                 return self.plik_nowosci_txt
         return self.plik_nowosci_txt
 
-    def stworzMiscInfo(self, daneDoZapisu):
+    def stworz_misc_info(self, daneDoZapisu):
         punkty_z_wysokoscia = ('0x6616', '0x6617',)
         skrot_dla_wysokosci = (';wys=',)
         skrot_dla_http = (';http://',)
@@ -1273,7 +1273,7 @@ class plikMP1(object):
         # dokladnosc taka jak dla plikow pnt
         if daneDoZapisu['Plik'] not in self.plikizMp:
             if daneDoZapisu['Plik'] != '':
-                if self.sprawdzPoprawnoscSciezki(daneDoZapisu['Plik']):
+                if self.sprawdz_poprawnosc_sciezki(daneDoZapisu['Plik']):
                     self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
                     daneDoZapisu['Plik'] = self.plik_nowosci_pnt
 
@@ -1311,7 +1311,7 @@ class plikMP1(object):
 
         # sprawdz czy komentarz zawieraj odniesienie do strony www, wiki, facebooka, badz wysokosc
         # w takim przypadku funcja utworzy niezbedny MiscInfo
-        self.stworzMiscInfo(daneDoZapisu)
+        self.stworz_misc_info(daneDoZapisu)
 
         # tylko dane autostradowe moga byc zapisywane w plikach txt. Reszta powinna trafic do plikow pnt.
         # if daneDoZapisu['Type'] in HW:
@@ -1433,36 +1433,7 @@ class plikMP1(object):
             daneDoZapisu[tmpData[0]] = self.zaokraglij(daneDoZapisu[tmpData[0]],
                                                        self.plikDokladnosc[daneDoZapisu['Plik']])
             szerokosc, dlugosc = daneDoZapisu[tmpData[0]].lstrip('(').rstrip(')').split(',')
-            # tworzymy UlNrTelUrl
-            if 'MiscInfo' in daneDoZapisu:
-                if 'StreetDesc' not in daneDoZapisu:
-                    daneDoZapisu['StreetDesc'] = ''
-                if 'HouseNumber' not in daneDoZapisu:
-                    daneDoZapisu['HouseNumber'] = ''
-                if 'Phone' not in daneDoZapisu:
-                    daneDoZapisu['Phone'] = ''
-                UlNrTelUrl = daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                             daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
-                             daneDoZapisu['Phone'].replace(',', '°') + ';' + \
-                             daneDoZapisu['MiscInfo'].replace(',', '°')
-            elif 'Phone' in daneDoZapisu:
-                if 'StreetDesc' not in daneDoZapisu:
-                    daneDoZapisu['StreetDesc'] = ''
-                if 'HouseNumber' not in daneDoZapisu:
-                    daneDoZapisu['HouseNumber'] = ''
-                UlNrTelUrl = daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                             daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
-                             daneDoZapisu['Phone'].replace(',', '°')
-            elif 'HouseNumber' in daneDoZapisu:
-                if 'StreetDesc' not in daneDoZapisu:
-                    daneDoZapisu['StreetDesc'] = ''
-                UlNrTelUrl = daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                             daneDoZapisu['HouseNumber'].replace(',', '°')
-            elif 'StreetDesc' in daneDoZapisu:
-                UlNrTelUrl = daneDoZapisu['StreetDesc'].replace(',', '°')
-            else:
-                UlNrTelUrl = ''
-
+            UlNrTelUrl = self.stworz_ulice_nr_tel_url(daneDoZapisu)
             liniaDoPnt = '  ' + szerokosc + ',  ' + dlugosc + ',  ' + daneDoZapisu['EndLevel'] + ',' + \
                        daneDoZapisu['Label'] + ',' + UlNrTelUrl + ',' + daneDoZapisu['Miasto'] + ',' + \
                        daneDoZapisu['Typ']
@@ -1521,6 +1492,8 @@ class plikMP1(object):
                         listawspolrzednychdosprawdzenia += daneDoZapisu[lista_wsp].split('=')[-1].strip().lstrip('(').rstrip(')').split('),(')
                         print(listawspolrzednychdosprawdzenia)
                 for lista_wsp in listawspolrzednychdosprawdzenia:
+                    # musimy sprawdzic czy dany polygon lub polyline w calosci lezy na terenie jednego obszaru
+                    # jesli tak, obszar_dla_poly przyjmie konkretna wartosc, jesli nie to wtedy bedzie 'Nieznany'
                     x, y = lista_wsp.split(',')
                     tmp_obszar = self.obszary.zwroc_obszar(float(x), float(y))
                     if obszar_dla_poly == 'Nieznany':
@@ -1548,7 +1521,7 @@ class plikMP1(object):
         # dokladnosc taka jak dla plikow txt
         if daneDoZapisu['Plik'] not in self.plikizMp:
             if daneDoZapisu['Plik'] != '':
-                if self.sprawdzPoprawnoscSciezki(daneDoZapisu['Plik']):
+                if self.sprawdz_poprawnosc_sciezki(daneDoZapisu['Plik']):
                     self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(daneDoZapisu['Plik']))
                     daneDoZapisu['Plik'] = self.plik_nowosci_txt
                 else:
@@ -1556,7 +1529,6 @@ class plikMP1(object):
                     self.plikDokladnosc[daneDoZapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_txt]
             else:
                 self.stderrorwrite('Niepoprawna sciezka do pliku: \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(daneDoZapisu['Plik']))
-
                 daneDoZapisu['Plik'] = self.plik_nowosci_txt
 
         if daneDoZapisu['Plik'].endswith('.pnt'):
@@ -1596,7 +1568,8 @@ class plikMP1(object):
             elif tmpaaa == 'Miasto':
                 # najpierw sprawdz czy lista zawiera jakies elementy, aby wykluczyc grzebanie w pustej
                 if self.plikizMp[daneDoZapisu['Plik']]:
-                    # w przypadku gdy miasto ma oddzielny plik wtedy na pierwszym miejscu stoi Miasto=, sprawdz czy wpisane i to na gorze sa takie same
+                    # w przypadku gdy miasto ma oddzielny plik wtedy na pierwszym miejscu stoi Miasto=, sprawdz czy
+                    # wpisane i to na gorze sa takie same
                     # oraz dodatkowo sprawdz czy ktos nie zrobil wpisy w stylu Miasto=, jesli tak to zignoruj oba przypadki
                     if self.plikizMp[daneDoZapisu['Plik']][1] == 'Miasto=' + daneDoZapisu[tmpaaa] + '\n' \
                             or daneDoZapisu[tmpaaa] == '':
@@ -1615,7 +1588,8 @@ class plikMP1(object):
                         self.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(daneDoZapisu['Label'], wspolrzedne)))
                 self.plikizMp[daneDoZapisu['Plik']].append(tmpaaa + '=' + daneDoZapisu[tmpaaa] + '\n')
 
-            # sprawdzanie niektorych wartosci type. W przypadku gdy mamy rondo musimy sprawdzic czy kreci sie odpowiednio
+            # sprawdzanie niektorych wartosci type. W przypadku gdy mamy rondo musimy sprawdzic czy kreci sie
+            # odpowiednio
             elif tmpaaa == 'Type':
                 if daneDoZapisu['POIPOLY'] == '[POLYLINE]':
                     if daneDoZapisu['Type'] == '0xc':
@@ -1650,6 +1624,35 @@ class plikMP1(object):
         return [';;EntryPoint: ' + self.zaokraglij(entry_point, self.plikDokladnosc[nazwa_pliku])
                 for entry_point in entrypoints]
 
+    def stworz_ulice_nr_tel_url(self, daneDoZapisu):
+        if 'MiscInfo' in daneDoZapisu:
+            if 'StreetDesc' not in daneDoZapisu:
+                daneDoZapisu['StreetDesc'] = ''
+            if 'HouseNumber' not in daneDoZapisu:
+                daneDoZapisu['HouseNumber'] = ''
+            if 'Phone' not in daneDoZapisu:
+                daneDoZapisu['Phone'] = ''
+            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
+                         daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
+                         daneDoZapisu['Phone'].replace(',', '°') + ';' + \
+                         daneDoZapisu['MiscInfo'].replace(',', '°')
+        elif 'Phone' in daneDoZapisu:
+            if 'StreetDesc' not in daneDoZapisu:
+                daneDoZapisu['StreetDesc'] = ''
+            if 'HouseNumber' not in daneDoZapisu:
+                daneDoZapisu['HouseNumber'] = ''
+            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
+                         daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
+                         daneDoZapisu['Phone'].replace(',', '°')
+        elif 'HouseNumber' in daneDoZapisu:
+            if 'StreetDesc' not in daneDoZapisu:
+                daneDoZapisu['StreetDesc'] = ''
+            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
+                         daneDoZapisu['HouseNumber'].replace(',', '°')
+        elif 'StreetDesc' in daneDoZapisu:
+            return daneDoZapisu['StreetDesc'].replace(',', '°')
+        else:
+            return ''
 
 class PlikiDoMontowania(object):
     def __init__(self, KatalogZeZrodlami, args):
@@ -1659,21 +1662,20 @@ class PlikiDoMontowania(object):
         self.errOutWriter = errOutWriter(args)
         self.KatalogZeZrodlami = KatalogZeZrodlami
         self.Obszary = obszary
-        KatalogDoPrzeszukania = KatalogZeZrodlami
         self.Pliki = list()
         if not args.trybosmand:
             self.Pliki += ['narzedzia/granice.txt']
         for aaa in obszary:
-            if os.path.isdir(os.path.join(KatalogDoPrzeszukania, aaa, 'src')):
+            if os.path.isdir(os.path.join(self.KatalogZeZrodlami, aaa, 'src')):
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.txt'))]
+                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.txt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.pnt'))]
+                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.pnt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(KatalogDoPrzeszukania, aaa, 'src/*.adr'))]
+                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.adr'))]
             else:
                 self.errOutWriter.stderrorwrite('Problem z dostêpem do %s.' %
-                                                os.path.join(KatalogDoPrzeszukania, aaa, 'src'))
+                                                os.path.join(self.KatalogZeZrodlami, aaa, 'src'))
                 self.errOutWriter.stderrorwrite('Obszar %s nie istnieje' % aaa)
                 raise FileNotFoundError
         # przenosimy zakazy na koniec, aby montowane byly na koncu i aby byly nad drogami a nie pod nimi:
@@ -2476,17 +2478,15 @@ def montujpliki(args):
             elif pliki.find('txt') > 0:
                 punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args)
                 punktzTXT.stdoutwrite('....[TXT] %s' % pliki)
-
                 przetwarzanyPlik = plikTXT(pliki, args, punktzTXT)
-                if True:
-                    tmpaaabbb = przetwarzanyPlik.procesuj(plikPNTTXT.read())
-                    zawartoscPlikuMp.dodaj(tmpaaabbb)
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
-                    _nazwapliku, _miasto = przetwarzanyPlik.zwrocDomyslneMiasto()
-                    if _miasto:
-                        zawartoscPlikuMp.domyslneMiasta2[_nazwapliku] = _miasto
-                    del przetwarzanyPlik
-                    del punktzTXT
+                tmpaaabbb = przetwarzanyPlik.procesuj(plikPNTTXT.read())
+                zawartoscPlikuMp.dodaj(tmpaaabbb)
+                zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
+                _nazwapliku, _miasto = przetwarzanyPlik.zwrocDomyslneMiasto()
+                if _miasto:
+                    zawartoscPlikuMp.domyslneMiasta2[_nazwapliku] = _miasto
+                del przetwarzanyPlik
+                del punktzTXT
 
             ############################################################################################################
             # montowanie plikow adr
@@ -2615,10 +2615,9 @@ def demontuj(args):
     # sprawdzamy cyfry i hashe
     #############################################################
     if zawartoscPlikuMp.find('[CYFRY]') >= 0:
-        cyfry,zawartoscPlikuMp = zawartoscPlikuMp.split('[CYFRY]')[1].split('[END]', 1)
+        cyfry, zawartoscPlikuMp = zawartoscPlikuMp.split('[CYFRY]')[1].split('[END]', 1)
         stderr_stdout_writer.stdoutwrite('Wczytuje dokladnosc pliku i sprawdzam sumy kontrolne.')
         for abc in cyfry.strip().split('\n'):
-
             try:
                 if plikMp.cyfryHash(abc, Zmienne.KatalogzUMP, args.X):
                     if args.hash:
@@ -2660,7 +2659,8 @@ def demontuj(args):
     if args.autopolypoly:
         plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(plikMp.plikizMp)
 
-    # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna '' dlatego [0:-1]
+    # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna
+    # '' dlatego [0:-1]
     ilosc_rekordow = len(zawartoscPlikuMp.split('\n[END]')[0:-1])
     aktrekord = 0
     wielokrotnosc = 0
@@ -2817,7 +2817,6 @@ def demontuj(args):
                         if klucz == 'CityIdx' and args.cityidx and formatIndeksow == '[CITIES]':
                             cityidx = int(wartosc) - 1
                             # byc moze miasto juz sie pojawilo w parametrach wiec zmien je teraz
-
                             if 'Miasto' in daneDoZapisu:
                                 daneDoZapisu['Miasto'] = plikMp.cityIdxMiasto[cityidx]
 
@@ -3003,7 +3002,7 @@ def demontuj(args):
     listaDiffow = []
     slownikHash = {}
     for aaa in plikMp.plikizMp:
-        # usuwamy pierwsza linijke z pliku ktora do zawiera hash do pliku
+        # usuwamy pierwsza linijke z pliku ktora to zawiera hash do pliku
         if not aaa.startswith('_nowosci.'):
             if len(plikMp.plikizMp[aaa]) > 0 and plikMp.plikizMp[aaa][0].startswith('MD5HASH='):
                 slownikHash[aaa] = plikMp.plikizMp[aaa].pop(0).split('=')[1].strip()
