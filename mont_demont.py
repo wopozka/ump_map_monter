@@ -2770,7 +2770,7 @@ def demontuj(args):
                                                                                         entrypoint)
                                 else:
                                     # daneDoZapisu['Komentarz'] = entrypoint
-                                    daneDoZapisu['Komentarz'] += plikMp.zwrocEntryPoint(daneDoZapisu['Plik'],
+                                    daneDoZapisu['Komentarz'] = plikMp.zwrocEntryPoint(daneDoZapisu['Plik'],
                                                                                         entrypoint)
                                     daneDoZapisuKolejnoscKluczy.insert(0, 'Komentarz')
                             # jesli mamy otwarte dodajemy je po entrypointach
