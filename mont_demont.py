@@ -991,7 +991,9 @@ class plikMP1(object):
         else:
             self.plikDokladnosc = {self.plik_nowosci_txt: '5', self.plik_nowosci_pnt: '5'}
             # slownik z kluczami jako obszary, a wartosciami jest kolejny slownik ktory ma klucz w postaci typu
-            # a wartosc w postaci nazwy pliku
+            # a wartosc w postaci nazwy pliku. Jest u¿ywane do dobierania najlepszego pliku dla danego poi w przypadku
+            # gdyby plik jest w nowosci.pnt. Przykladowy wpis,
+            # {'UMP-PL-LODZ': {'MIASTO': 'cities-Lodz.pnt}}
             self.obszarTypPlik = {}
             self.autopoiWykluczoneWartosciPlik = ['.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
                                                   '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
@@ -1620,7 +1622,7 @@ class plikMP1(object):
         self.plikizMp[daneDoZapisu['Plik']].append('[END]\n')
         self.plikizMp[daneDoZapisu['Plik']].append('\n')
 
-    def zwrocEntryPoint(self, nazwa_pliku, entrypoints):
+    def zwroc_entry_point(self, nazwa_pliku, entrypoints):
         return [';;EntryPoint: ' + self.zaokraglij(entry_point, self.plikDokladnosc[nazwa_pliku])
                 for entry_point in entrypoints]
 
@@ -1653,6 +1655,92 @@ class plikMP1(object):
             return daneDoZapisu['StreetDesc'].replace(',', '°')
         else:
             return ''
+
+    def zbuduj_city_idx_zwroc_format(self, zawartosc_pliku_mp):
+        city_idx_miasto = []
+        if zawartosc_pliku_mp.find('[END-Cities]') >= 0:
+            format_indeksow = '[CITIES]'
+            cities, zawartosc_pliku_mp = zawartosc_pliku_mp.split('[END-Cities]')
+            self.stdoutwrite('Wczytujê indeksy miast')
+            listaCities = cities.split('[Cities]')[1].strip().split('\n')
+            for indeks_miasta in range(0, len(listaCities), 2):
+                nrCity, nazwaMiastaIdx = listaCities[indeks_miasta].split('=', 1)
+                if nazwaMiastaIdx.count('=') > 0:
+                    self.stderrorwrite('Bledna nazwa miasta: ' + nazwaMiastaIdx
+                                                       + '. Znak "=" w nazwie.')
+                city_idx_miasto.append(nazwaMiastaIdx)
+                if city_idx_miasto.index(nazwaMiastaIdx) != (int(nrCity.split('City')[1]) - 1):
+                    self.stderrorwrite('Jakis blad w indeksach miast!')
+
+        # print(plikMp.cityIdxMiasto)
+        elif zawartosc_pliku_mp.find('CityName=') > 0 and zawartosc_pliku_mp.find('RegionName=') > 0 \
+                and zawartosc_pliku_mp.find('CountryName=') > 0:
+            format_indeksow = 'CityName'
+        else:
+            return '', city_idx_miasto, zawartosc_pliku_mp
+        return format_indeksow, city_idx_miasto, zawartosc_pliku_mp
+
+    def sprawdz_cyfry_i_hashe_plikow(self, zawartoscPlikuMp, args):
+        if zawartoscPlikuMp.find('[CYFRY]') >= 0:
+            dokladnosci_hashe_plikow, zawartoscPlikuMp = zawartoscPlikuMp.split('[CYFRY]')[1].split('[END]', 1)
+            self.stdoutwrite('Wczytuje dokladnosc pliku i sprawdzam sumy kontrolne.')
+            for dokladnosc_i_hash_pliku in dokladnosci_hashe_plikow.strip().split('\n'):
+                try:
+                    if self.cyfryHash(dokladnosc_i_hash_pliku, self.Zmienne.KatalogzUMP, args.X):
+                        if args.hash:
+                            self.stderrorwrite('[...] %s [FALSE].' % dokladnosc_i_hash_pliku.split(';')[0])
+                        else:
+                            self.stderrorwrite('[...] %s [FALSE].\nSuma kontrolna nie zgadza sie albo jej brak.'
+                                               '\nUzyj opcji -nh aby zdemontowac pomimo tego' %
+                                               dokladnosc_i_hash_pliku.split(';')[0])
+                            return False, zawartoscPlikuMp.strip()
+                    else:
+                        self.stdoutwrite('[...] %s [OK].' % dokladnosc_i_hash_pliku.split(';')[0])
+                except FileNotFoundError:
+                    self.stderrorwrite('[...] %s [FALSE].\nPlik nie istnieje w zrodlach. Nie moge kontynuowac.'
+                                       % dokladnosc_i_hash_pliku.split(';')[0])
+                    return False, zawartoscPlikuMp.strip()
+        else:
+            self.stderrorwrite('Nie znalazlem informacji na temat zamontowanych plikow, nie moge kontynuowac.')
+            return False, zawartoscPlikuMp.strip()
+        return True, zawartoscPlikuMp.strip()
+
+    def przeniesc_zawartosc_nowosci_pnt_do_plikow(self):
+        # punkty w nowosciach moga miec komentarz, nalezy wiec to uwzglednic
+        komentarz_w_nowosci = []
+        # tymczasowy plik nowosci, do ktorego bedziemy kopiowac nieznane punkty
+        tmp_nowosci = []
+        for punkt_z_nowosci_pnt in self.plikizMp['_nowosci.pnt']:
+            # najpierw sprawdzmy czy przez przypadek nie ma komentarza, jesli jest skopiuj
+            # go do zmiennej i przejdz dalej
+            if punkt_z_nowosci_pnt.startswith(';'):
+                komentarz_w_nowosci.append(punkt_z_nowosci_pnt)
+            else:
+                bbb = punkt_z_nowosci_pnt.split(',')
+                bbb_len = len(bbb)
+                UMP_obszar = self.obszary.zwroc_obszar(float(bbb[0]), float(bbb[1]))
+                if bbb_len in (4, 7, 8,):
+                    if bbb_len == 4:
+                        pnt_typ = 'MIASTO'
+                    else:
+                        pnt_typ = bbb[6].strip()
+                    if UMP_obszar != 'None':
+                        self.stdoutwrite('%s --> %s' %(punkt_z_nowosci_pnt.strip(),
+                                                       self.obszarTypPlik[UMP_obszar][pnt_typ]))
+                        # najpierw usuwamy i dodajemy komentarze
+                        for komentarz in komentarz_w_nowosci:
+                            self.plikizMp[self.obszarTypPlik[UMP_obszar][pnt_typ]].append(komentarz)
+                        self.plikizMp[self.obszarTypPlik[UMP_obszar][pnt_typ]].append(punkt_z_nowosci_pnt)
+                        komentarz_w_nowosci = []
+                    else:
+                        tmp_nowosci += komentarz_w_nowosci
+                        tmp_nowosci.append(punkt_z_nowosci_pnt)
+                        komentarz_w_nowosci = []
+                else:
+                    tmp_nowosci.append(punkt_z_nowosci_pnt)
+                # kopiujemy tmp_nowosci na oryginalne _nowosci.pnt
+                self.plikizMp['_nowosci.pnt'] = tmp_nowosci[:]
+
 
 class PlikiDoMontowania(object):
     def __init__(self, KatalogZeZrodlami, args):
@@ -2288,6 +2376,14 @@ class plikPNT(object):
         return self.Dane1
 
 
+def zwroc_dane_do_gui(args, listaDiffow, slownikHash):
+    if hasattr(args, 'queue'):
+        args.queue.put([listaDiffow, slownikHash])
+    if hasattr(args, 'buttonqueue'):
+        args.buttonqueue.put('Koniec')
+    return listaDiffow,
+
+
 def update_progress(progress, args):
     barLength = 20
     status = ''
@@ -2564,7 +2660,7 @@ def demontuj(args):
         Zmienne.KatalogRoboczy = args.katrob
 
     if args.plikmp:
-        Zmienne.KatalogRoboczy = os.getcwd() + '/'
+        Zmienne.KatalogRoboczy = os.getcwd()
     # print(Zmienne.KatalogRoboczy)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = plikMP1(Zmienne, args, tabKonw, 0)
@@ -2576,81 +2672,24 @@ def demontuj(args):
     except FileNotFoundError:
         stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.'
                                            % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
-        if hasattr(args, 'queue'):
-            areturn = [[], {}]
-            args.queue.put(areturn)
-        if hasattr(args, 'buttonqueue'):
-            args.buttonqueue.put('Koniec')
-        return []
+        return zwroc_dane_do_gui(args, [], {})
 
     # zmienna przechowujaca format indeksow w pliku mp, mozliwe sa dwie wartosci: [CITIES], albo CityName w zaleznosci
     # od ustawienia mapedit
     formatIndeksow = ''
     # najpierw powinna byc sekcja dotyczaca indeksu miast. Szukam go
     if args.cityidx:
-        # format [CITIES] oraz [CityIdx=]
-        if zawartoscPlikuMp.find('[END-Cities]') >= 0:
-            formatIndeksow = '[CITIES]'
-            cities, zawartoscPlikuMp = zawartoscPlikuMp.split('[END-Cities]')
-            stderr_stdout_writer.stdoutwrite('Wczytujê indeksy miast')
-            listaCities = cities.split('[Cities]')[1].strip().split('\n')
-            for tmpabc in range(0, len(listaCities), 2):
-                nrCity, nazwaMiastaIdx = listaCities[tmpabc].split('=', 1)
-                if nazwaMiastaIdx.count('=') > 0:
-                    stderr_stdout_writer.stderrorwrite('Bledna nazwa miasta: ' + nazwaMiastaIdx
-                                                       + '. Znak "=" w nazwie.')
-                plikMp.cityIdxMiasto.append(nazwaMiastaIdx)
-                if plikMp.cityIdxMiasto.index(nazwaMiastaIdx) != (int(nrCity.lstrip('City'))-1):
-                    stderr_stdout_writer.stderrorwrite('Jakis blad w indeksach miast!')
-
-        # print(plikMp.cityIdxMiasto)
-        elif zawartoscPlikuMp.find('CityName=') > 0 and zawartoscPlikuMp.find('RegionName=') > 0 \
-                and zawartoscPlikuMp.find('CountryName=') > 0:
-            formatIndeksow = 'CityName'
-        else:
+        formatIndeksow, plikMp.cityIdxMiasto, zawartoscPlikuMp = plikMp.zbuduj_city_idx_zwroc_format(zawartoscPlikuMp)
+        if not formatIndeksow:
             stderr_stdout_writer.stderrorwrite('Nie znalazlem danych do indeksu miast, pomijam.')
             args.cityidx = None
 
     #############################################################
     # sprawdzamy cyfry i hashe
     #############################################################
-    if zawartoscPlikuMp.find('[CYFRY]') >= 0:
-        cyfry, zawartoscPlikuMp = zawartoscPlikuMp.split('[CYFRY]')[1].split('[END]', 1)
-        stderr_stdout_writer.stdoutwrite('Wczytuje dokladnosc pliku i sprawdzam sumy kontrolne.')
-        for abc in cyfry.strip().split('\n'):
-            try:
-                if plikMp.cyfryHash(abc, Zmienne.KatalogzUMP, args.X):
-                    if args.hash:
-                        stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].' % abc.split(';')[0])
-                    else:
-                        stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].\nSuma kontrolna nie zgadza sie albo jej brak.\nUzyj opcji -nh aby zdemontowac pomimo tego' % abc.split(';')[0])
-                        if hasattr(args, 'queue'):
-                            areturn = [[], {}]
-                            args.queue.put(areturn)
-                        if hasattr(args, 'buttonqueue'):
-                            args.buttonqueue.put('Koniec')
-                        return []
-                else:
-                    stderr_stdout_writer.stdoutwrite('[...] %s [OK].' % abc.split(';')[0])
-
-            except FileNotFoundError:
-                stderr_stdout_writer.stderrorwrite('[...] %s [FALSE].\nPlik nie istnieje w zrodlach. Nie moge kontynuowac.' % abc.split(';')[0])
-                if hasattr(args, 'queue'):
-                    # kolejka w gui oczekuje dwoch porcji danych, trzeba wiec je dostarczyc nawet jak ta funkcja zakonczy sie bledem
-                    areturn = [[], {}]
-                    args.queue.put(areturn)
-                if hasattr(args, 'buttonqueue'):
-                    args.buttonqueue.put('Koniec')
-                return []
-    else:
-        stderr_stdout_writer.stderrorwrite('Nie znalazlem informacji na temat zamontowanych plikow, nie moge kontynuowac.')
-        if hasattr(args, 'queue'):
-            areturn = [[], {}]
-            args.queue.put(areturn)
-        if hasattr(args, 'buttonqueue'):
-            args.buttonqueue.put('Koniec')
-        return []
-    zawartoscPlikuMp = zawartoscPlikuMp.strip()
+    poprawne_sumy_hash, zawartoscPlikuMp = plikMp.sprawdz_cyfry_i_hashe_plikow(zawartoscPlikuMp, args)
+    if not poprawne_sumy_hash:
+        return zwroc_dane_do_gui(args, [], {})
 
     # wczyta³em juz sekcje dotyczaca plikow, moge teraz ustawic liste zamontowanych obszarow
     plikMp.ustawObszary()
@@ -2661,63 +2700,55 @@ def demontuj(args):
 
     # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna
     # '' dlatego [0:-1]
-    ilosc_rekordow = len(zawartoscPlikuMp.split('\n[END]')[0:-1])
-    aktrekord = 0
-    wielokrotnosc = 0
-    update_progress(0/100, args)
+    rekordy_mp = zawartoscPlikuMp.split('\n[END]')[0:-1]
+    ilosc_rekordow = len(rekordy_mp)
+
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
-    for rekordyMp in zawartoscPlikuMp.split('\n[END]')[0:-1]:
-        aktrekord += 1
-        if aktrekord > ilosc_rekordow/100 * wielokrotnosc:
-            update_progress(round(wielokrotnosc/100, 2), args)
-            wielokrotnosc += 1
-        else:
-            if aktrekord == ilosc_rekordow:
-                update_progress(100/100, args)
+    update_progress(0 / 100, args)
+    for aktrekord, rekord_z_pliku_mp in enumerate(rekordy_mp):
+        if (aktrekord + 1) % int(ilosc_rekordow/100) == 0:
+            update_progress(round((aktrekord + 1) / int(ilosc_rekordow), 2), args)
 
         # w pliku mp mog¹ byæ wielokrotne Data0, Data1 itd. W slowniku pythonowym klucze nie moga sie powtarzac,
         # wiec muszê je jakos rozroznic, Bdzie Data0_kolejneData
         kolejneData = 0
-        rekordyMp = rekordyMp.strip().split('\n')
+        rekord_z_pliku_mp_jako_lista = rekord_z_pliku_mp.strip().split('\n')
+        # aby oszczedzic pamiec wyzerujmy dany rekord z pliku mp
+        rekordy_mp[aktrekord] = ''
 
-        rekordyMp.append('[END]=[END]')
-        # print(repr(rekordyMp))
-        komentarz = list()
-        komentarzpoly = list()
+        rekord_z_pliku_mp_jako_lista.append('[END]=[END]')
         entrypoint = list()
         otwarte = list()
         poipolypoly = ''
         daneDoZapisu = OrderedDict()
         daneDoZapisuKolejnoscKluczy = []
-        city = 0
         cityidx = 0
-        miscinfo = ''
         CityName = ''
         OrigType = ''
 
         # iterujemy po kolejnych linijkach rekordu pliku mp
-        for tmpabc in rekordyMp:
-            tmpabc = tmpabc.strip()
+        for pojedyncza_linia_z_rekordu_mp in rekord_z_pliku_mp_jako_lista:
+            pojedyncza_linia_z_rekordu_mp = pojedyncza_linia_z_rekordu_mp.strip()
             # nie znalaz³ jeszcze [POI], [POLYLYNE], [POLYGON], wiec wszystko co jest przed to komentarz
-            if poipolypoly == '' and tmpabc != '':
+            if poipolypoly == '' and pojedyncza_linia_z_rekordu_mp != '':
                 # komentarz zaczyna sie od ';'
-                if tmpabc[0] == ';':
+                if pojedyncza_linia_z_rekordu_mp[0] == ';':
                     # mamy komentarz, sprawdzmy czy nie jest pusty, jesli nie jest to go przetwarzamy
-                    if tmpabc != ';':
+                    if pojedyncza_linia_z_rekordu_mp != ';':
                         if 'Komentarz' in daneDoZapisu:
-                            daneDoZapisu['Komentarz'].append(tmpabc)
+                            daneDoZapisu['Komentarz'].append(pojedyncza_linia_z_rekordu_mp)
                         else:
-                            daneDoZapisu['Komentarz'] = [tmpabc]
+                            daneDoZapisu['Komentarz'] = [pojedyncza_linia_z_rekordu_mp]
                             daneDoZapisuKolejnoscKluczy.append('Komentarz')
                     # jesli komentarz jest pusty to go po prostu ignorujemy
                     else:
                         pass
-                elif tmpabc in ('[POI]', '[POLYGON]', '[POLYLINE]'):
-                    poipolypoly = tmpabc.strip()
+                elif pojedyncza_linia_z_rekordu_mp in ('[POI]', '[POLYGON]', '[POLYLINE]'):
+                    poipolypoly = pojedyncza_linia_z_rekordu_mp.strip()
                     daneDoZapisu['POIPOLY'] = poipolypoly
                     daneDoZapisuKolejnoscKluczy.append('POIPOLY')
                 else:
-                    stderr_stdout_writer.stderrorwrite('Dziwna linia %s w rekordach %s.' % tmpabc)
+                    stderr_stdout_writer.stderrorwrite('Dziwna linia %s w rekordach %s.' % pojedyncza_linia_z_rekordu_mp)
 
                 # no dobrze, mamy juz [POI][POLYGON][POLYLINE]
             else:
@@ -2725,13 +2756,13 @@ def demontuj(args):
                 # gdyby w komentarzu poi znalaz³ siê url to go dodaj jako miscinfo
                 if poipolypoly == '[POI]':
                     try:
-                        klucz, wartosc = tmpabc.split('=', 1)
+                        klucz, wartosc = pojedyncza_linia_z_rekordu_mp.split('=', 1)
                     except ValueError:
-                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych: %s.' % tmpabc)
+                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych: %s.' % pojedyncza_linia_z_rekordu_mp)
                         if 'Dziwne' in daneDoZapisu:
-                            daneDoZapisu['Dziwne'].append(tmpabc)
+                            daneDoZapisu['Dziwne'].append(pojedyncza_linia_z_rekordu_mp)
                         else:
-                            daneDoZapisu['Dziwne'] = [tmpabc]
+                            daneDoZapisu['Dziwne'] = [pojedyncza_linia_z_rekordu_mp]
 
                     else:
                         if klucz == 'CityIdx' and args.cityidx and formatIndeksow == '[CITIES]':
@@ -2766,12 +2797,12 @@ def demontuj(args):
                                 if 'Komentarz' in daneDoZapisu:
                                     # daneDoZapisu['Komentarz'] = entrypoint + daneDoZapisu['Komentarz']
                                     # daneDoZapisu['Komentarz'] += entrypoint
-                                    daneDoZapisu['Komentarz'] += plikMp.zwrocEntryPoint(daneDoZapisu['Plik'],
-                                                                                        entrypoint)
+                                    daneDoZapisu['Komentarz'] += plikMp.zwroc_entry_point(daneDoZapisu['Plik'],
+                                                                                          entrypoint)
                                 else:
                                     # daneDoZapisu['Komentarz'] = entrypoint
-                                    daneDoZapisu['Komentarz'] = plikMp.zwrocEntryPoint(daneDoZapisu['Plik'],
-                                                                                        entrypoint)
+                                    daneDoZapisu['Komentarz'] = plikMp.zwroc_entry_point(daneDoZapisu['Plik'],
+                                                                                         entrypoint)
                                     daneDoZapisuKolejnoscKluczy.insert(0, 'Komentarz')
                             # jesli mamy otwarte dodajemy je po entrypointach
                             if otwarte:
@@ -2806,13 +2837,13 @@ def demontuj(args):
                 # sekcja dla POLYLINE
                 if poipolypoly == '[POLYLINE]':
                     try:
-                        klucz, wartosc = tmpabc.split('=', 1)
+                        klucz, wartosc = pojedyncza_linia_z_rekordu_mp.split('=', 1)
                     except ValueError:
-                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych %s' % tmpabc)
+                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych %s' % pojedyncza_linia_z_rekordu_mp)
                         if 'Dziwne' in daneDoZapisu:
-                            daneDoZapisu['Dziwne'].append(tmpabc)
+                            daneDoZapisu['Dziwne'].append(pojedyncza_linia_z_rekordu_mp)
                         else:
-                            daneDoZapisu['Dziwne'] = [tmpabc]
+                            daneDoZapisu['Dziwne'] = [pojedyncza_linia_z_rekordu_mp]
                     else:
                         if klucz == 'CityIdx' and args.cityidx and formatIndeksow == '[CITIES]':
                             cityidx = int(wartosc) - 1
@@ -2882,13 +2913,13 @@ def demontuj(args):
                 # sekcja dla POLYGON
                 if poipolypoly == '[POLYGON]':
                     try:
-                        klucz, wartosc = tmpabc.split('=', 1)
+                        klucz, wartosc = pojedyncza_linia_z_rekordu_mp.split('=', 1)
                     except ValueError:
-                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych %s' % tmpabc)
+                        stderr_stdout_writer.stderrorwrite('Dziwna linia wewnatrz danych %s' % pojedyncza_linia_z_rekordu_mp)
                         if 'Dziwne' in daneDoZapisu:
-                            daneDoZapisu['Dziwne'].append(tmpabc)
+                            daneDoZapisu['Dziwne'].append(pojedyncza_linia_z_rekordu_mp)
                         else:
-                            daneDoZapisu['Dziwne'] = [tmpabc]
+                            daneDoZapisu['Dziwne'] = [pojedyncza_linia_z_rekordu_mp]
                     else:
                         if klucz in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
                             klucz = klucz + '_' + str(kolejneData)
@@ -2941,55 +2972,9 @@ def demontuj(args):
     ########################################################
     # Przerzucam zawartosc nowosci.pnt do odpowiednich plikow
     ########################################################
-
     if plikMp.plikizMp['_nowosci.pnt'] and args.autopoi:
         stderr_stdout_writer.stdoutwrite('Przenosze zawartosc _nowosci.pnt do odpowiednich plikow.')
-        # punkty w nowosciach moga miec komentarz, nalezy wiec to uwzglednic
-        komentarz_w_nowosci = []
-        # tymczasowy plik nowosci, do ktorego bedziemy kopiowac nieznane punkty
-        tmp_nowosci = []
-
-        for xyz in plikMp.plikizMp['_nowosci.pnt'][:]:
-            # najpierw sprawdzmy czy przez przypadek nie ma komentarza, jesli jest skopiuj
-            # go do zmiennej i przejdz dalej
-            if xyz.startswith(';'):
-                komentarz_w_nowosci.append(xyz)
-            else:
-                bbb = xyz.split(',')
-                bbb_len = len(bbb)
-                UMP_X = plikMp.obszary.zwroc_obszar(float(bbb[0]), float(bbb[1]))
-                if bbb_len == 4:
-                    if UMP_X != 'None':
-                        stderr_stdout_writer.stdoutwrite('%s --> %s' %
-                                                         (xyz.strip(), plikMp.obszarTypPlik[UMP_X]['MIASTO']))
-                        # najpierw usuwamy i dodajemy komentarze
-                        for komentarz in komentarz_w_nowosci[:]:
-                            plikMp.plikizMp[plikMp.obszarTypPlik[UMP_X]['MIASTO']].append(komentarz)
-                        plikMp.plikizMp[plikMp.obszarTypPlik[UMP_X]['MIASTO']].append(xyz)
-                        komentarz_w_nowosci = []
-                    else:
-                        tmp_nowosci += komentarz_w_nowosci
-                        tmp_nowosci.append(xyz)
-                        komentarz_w_nowosci = []
-
-                elif 7 <= bbb_len <= 8:
-                    # UMP_X=plikMp.obszary.zwroc_obszar(float(bbb[0]),float(bbb[1]))
-                    if UMP_X != 'None' and bbb[6].strip() in plikMp.obszarTypPlik[UMP_X]:
-                        stderr_stdout_writer.stdoutwrite('%s --> %s' % (xyz.strip(), plikMp.obszarTypPlik[UMP_X][bbb[6].strip()]))
-                        # najpierw usuwamy i dodajemy komentarze
-                        for komentarz in komentarz_w_nowosci[:]:
-                            plikMp.plikizMp[plikMp.obszarTypPlik[UMP_X][bbb[6].strip()]].append(komentarz)
-                        plikMp.plikizMp[plikMp.obszarTypPlik[UMP_X][bbb[6].strip()]].append(xyz)
-                        komentarz_w_nowosci = []
-                    else:
-                        tmp_nowosci += komentarz_w_nowosci
-                        tmp_nowosci.append(xyz)
-                        komentarz_w_nowosci = []
-
-                else:
-                    tmp_nowosci.append(xyz)
-                # kopiujemy tmp_nowosci na oryginalne _nowosci.pnt
-                plikMp.plikizMp['_nowosci.pnt'] = tmp_nowosci[:]
+        plikMp.przeniesc_zawartosc_nowosci_pnt_do_plikow()
 
     ###############################
     # Plik mp przetworzony, generowanie diffow
@@ -3001,46 +2986,38 @@ def demontuj(args):
     # jako wartosc bedzie ustawione ''
     listaDiffow = []
     slownikHash = {}
-    for aaa in plikMp.plikizMp:
+    for nazwa_pliku in plikMp.plikizMp:
         # usuwamy pierwsza linijke z pliku ktora to zawiera hash do pliku
-        if not aaa.startswith('_nowosci.'):
-            if len(plikMp.plikizMp[aaa]) > 0 and plikMp.plikizMp[aaa][0].startswith('MD5HASH='):
-                slownikHash[aaa] = plikMp.plikizMp[aaa].pop(0).split('=')[1].strip()
+        if not nazwa_pliku.startswith('_nowosci.'):
+            if len(plikMp.plikizMp[nazwa_pliku]) > 0 and plikMp.plikizMp[nazwa_pliku][0].startswith('MD5HASH='):
+                slownikHash[nazwa_pliku] = plikMp.plikizMp[nazwa_pliku].pop(0).split('=')[1].strip()
             else:
-                slownikHash[aaa] = 'MD5HASH=NOWY_PLIK'
+                slownikHash[nazwa_pliku] = 'MD5HASH=NOWY_PLIK'
 
         # dodajemy naglowek do pliku pnt i adr
-        if aaa[-4:] == '.pnt' or aaa[-4:] == '.adr':
+        if nazwa_pliku[-4:] == '.pnt' or nazwa_pliku[-4:] == '.adr':
             naglowek = ['OziExplorer Point File Version 1.0\n', 'WGS 84\n', 'Reserved 1\n', 'Reserved 2\n']
-            if aaa.find('cities-') >= 0:
-                naglowek.append('255,65535,3,8,0,0,CITY ' + aaa.split('cities-')[1].split('.')[0] + '\n')
-                plikMp.plikizMp[aaa] = naglowek + plikMp.plikizMp[aaa]
+            if nazwa_pliku.find('cities-') >= 0:
+                naglowek.append('255,65535,3,8,0,0,CITY ' + nazwa_pliku.split('cities-')[1].split('.')[0] + '\n')
             else:
-                naglowek.append('255,65535,3,8,0,0,' + aaa.split('/')[-1] + '\n')
-                plikMp.plikizMp[aaa] = naglowek+plikMp.plikizMp[aaa]
+                naglowek.append('255,65535,3,8,0,0,' + nazwa_pliku.split('/')[-1] + '\n')
+            plikMp.plikizMp[nazwa_pliku] = naglowek + plikMp.plikizMp[nazwa_pliku]
 
-        if aaa == '_nowosci.txt':
-            if plikMp.plikizMp[aaa]:
-                stderr_stdout_writer.stdoutwrite('Uwaga. Powstal plik %s.' % aaa)
-                listaDiffow.append(aaa)
-                with open(os.path.join(Zmienne.KatalogRoboczy, aaa), 'w', encoding=Zmienne.Kodowanie,
+        if nazwa_pliku in ('_nowosci.txt', '_nowosci.pnt',):
+            # plik _nowosci.txt musi miec jakakolwiek zawartosc, a plik _nowosci.pnt musi byc dluzszy niz naglowek
+            if (nazwa_pliku == '_nowosci.txt' and plikMp.plikizMp[nazwa_pliku]) \
+                    or (nazwa_pliku == '_nowosci.pnt' and len(plikMp.plikizMp[nazwa_pliku]) > 5):
+                stderr_stdout_writer.stdoutwrite('Uwaga. Powstal plik %s.' % nazwa_pliku)
+                listaDiffow.append(nazwa_pliku)
+                with open(os.path.join(Zmienne.KatalogRoboczy, nazwa_pliku), 'w', encoding=Zmienne.Kodowanie,
                           errors=Zmienne.WriteErrors) as f:
-                    f.writelines(plikMp.plikizMp[aaa])
-
-        elif aaa == '_nowosci.pnt':
-            if len(plikMp.plikizMp[aaa]) > 5:
-                stderr_stdout_writer.stdoutwrite('Uwaga. Powstal plik %s.' % aaa)
-                listaDiffow.append(aaa)
-                with open(os.path.join(Zmienne.KatalogRoboczy, aaa), 'w', encoding=Zmienne.Kodowanie,
-                          errors=Zmienne.WriteErrors) as f:
-                    f.writelines(plikMp.plikizMp[aaa])
-
+                    f.writelines(plikMp.plikizMp[nazwa_pliku])
         else:
             try:
-                if aaa.find('granice-czesciowe.txt') > 0:
-                    orgPlikZawartosc = open(aaa, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors).readlines()
+                if nazwa_pliku.find('granice-czesciowe.txt') > 0:
+                    orgPlikZawartosc = open(nazwa_pliku, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors).readlines()
                 else:
-                    orgPlikZawartosc = open(os.path.join(Zmienne.KatalogzUMP, aaa), encoding=Zmienne.Kodowanie,
+                    orgPlikZawartosc = open(os.path.join(Zmienne.KatalogzUMP, nazwa_pliku), encoding=Zmienne.Kodowanie,
                                             errors=Zmienne.ReadErrors).readlines()
                 if orgPlikZawartosc:
                     if orgPlikZawartosc[-1][-1] != '\n':
@@ -3048,19 +3025,19 @@ def demontuj(args):
                 else:
                     orgPlikZawartosc.append('\\ No new line at the end of file\n')
             except FileNotFoundError:
-                stderr_stdout_writer.stdoutwrite('Powstal nowy plik %s. Zarejestruj go w cvs.' % aaa.replace('/', '-'))
-                listaDiffow.append(aaa)
-                with open(os.path.join(Zmienne.KatalogRoboczy, aaa.replace('/', '-')), 'w',
+                stderr_stdout_writer.stdoutwrite('Powstal nowy plik %s. Zarejestruj go w cvs.' % nazwa_pliku.replace('/', '-'))
+                listaDiffow.append(nazwa_pliku)
+                with open(os.path.join(Zmienne.KatalogRoboczy, nazwa_pliku.replace('/', '-')), 'w',
                           encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:
-                    f.writelines(plikMp.plikizMp[aaa])
+                    f.writelines(plikMp.plikizMp[nazwa_pliku])
             else:
                 plikDiff = []
-                if not plikMp.plikizMp[aaa]:
-                    plikMp.plikizMp[aaa].append('\\ No new line at the end of file\n')
-                elif plikMp.plikizMp[aaa][-1][-1] != '\n':
-                    plikMp.plikizMp[aaa][-1][-1] += '\\ No new line at the end of file\n'
-                for line in difflib.unified_diff(orgPlikZawartosc, plikMp.plikizMp[aaa], fromfile=aaa,
-                                                 tofile=aaa.replace('UMP', 'NoweUMP')):
+                if not plikMp.plikizMp[nazwa_pliku]:
+                    plikMp.plikizMp[nazwa_pliku].append('\\ No new line at the end of file\n')
+                elif plikMp.plikizMp[nazwa_pliku][-1][-1] != '\n':
+                    plikMp.plikizMp[nazwa_pliku][-1][-1] += '\\ No new line at the end of file\n'
+                for line in difflib.unified_diff(orgPlikZawartosc, plikMp.plikizMp[nazwa_pliku], fromfile=nazwa_pliku,
+                                                 tofile=nazwa_pliku.replace('UMP', 'NoweUMP')):
                     # sys.stdout.write(line)
                     if line.endswith('\\ No new line at the end of file\n'):
                         a, b = line.split('\\')
@@ -3072,26 +3049,26 @@ def demontuj(args):
                         plikDiff.append(line)
                         wszystkie_diffy_razem.append(line)
                 if plikDiff:
-                    stderr_stdout_writer.stdoutwrite('Powstala latka dla pliku %s.' % aaa)
+                    stderr_stdout_writer.stdoutwrite('Powstala latka dla pliku %s.' % nazwa_pliku)
                     plikdootwarcia = ''
-                    if aaa.find('granice-czesciowe.txt') > 0:
-                        plikdootwarcia = aaa
+                    if nazwa_pliku.find('granice-czesciowe.txt') > 0:
+                        plikdootwarcia = nazwa_pliku
                     else:
-                        plikdootwarcia = os.path.join(Zmienne.KatalogRoboczy, aaa.replace('/', '-'))
+                        plikdootwarcia = os.path.join(Zmienne.KatalogRoboczy, nazwa_pliku.replace('/', '-'))
                     # zapisujemy plik oryginalny
-                    if aaa.find('granice-czesciowe.txt') < 0:
+                    if nazwa_pliku.find('granice-czesciowe.txt') < 0:
                         with open(plikdootwarcia, 'w', encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:
-                            f.writelines(plikMp.plikizMp[aaa])
+                            f.writelines(plikMp.plikizMp[nazwa_pliku])
 
                     # bawimy sie z latkami. Jesli montowane byly granice czesciowe sprobujmy je przerobic na ogolne
-                    if aaa.find('granice-czesciowe.txt') > 0:
+                    if nazwa_pliku.find('granice-czesciowe.txt') > 0:
                         graniceczesciowe = PaczerGranicCzesciowych(Zmienne)
                         if not graniceczesciowe.konwertujLatke(plikDiff):
                             listaDiffow.append('narzedzia/granice.txt')
                             slownikHash['narzedzia/granice.txt'] = graniceczesciowe.granice_txt_hash
                         else:
                             stderr_stdout_writer.stderrorwrite('Nie udalo sie skonwertowac granic lokalnych na narzedzia/granice.txt.\nMusisz nalozyc latki recznie.')
-                            listaDiffow.append(aaa.lstrip(Zmienne.KatalogRoboczy))
+                            listaDiffow.append(nazwa_pliku.lstrip(Zmienne.KatalogRoboczy))
                             slownikHash['granice-czesciowe.txt'] = 'NOWY_PLIK'
                             with open(plikdootwarcia + '.diff', 'w', encoding=Zmienne.Kodowanie,
                                       errors=Zmienne.WriteErrors) as f:
@@ -3101,7 +3078,7 @@ def demontuj(args):
                         with open(plikdootwarcia + '.diff', 'w', encoding=Zmienne.Kodowanie,
                                   errors=Zmienne.WriteErrors) as f:
                             f.writelines(plikDiff)
-                        listaDiffow.append(aaa)
+                        listaDiffow.append(nazwa_pliku)
                     plikDiff = []
 
     if wszystkie_diffy_razem:
@@ -3111,12 +3088,11 @@ def demontuj(args):
             f.writelines(wszystkie_diffy_razem)
     stderr_stdout_writer.stdoutwrite('Gotowe!')
     if hasattr(args, 'queue'):
-        areturn = [listaDiffow, slownikHash]
-        args.queue.put(areturn)
+        args.queue.put([listaDiffow, slownikHash])
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Koniec')
     del plikMp
-    return listaDiffow
+    return zwroc_dane_do_gui(args, listaDiffow, slownikHash)
 
 
 def edytuj(args):
