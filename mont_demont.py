@@ -334,12 +334,12 @@ class UstawieniaPoczatkowe(object):
             # probujemy zgadnac konfiguracje
             sciezkaDoSkryptu = os.getcwd()
             if sciezkaDoSkryptu.endswith('narzedzia'):
-                bbb = [a for a in os.listdir(sciezkaDoSkryptu.rstrip('narzedzia')) if
-                       a.find('UMP-') >= 0 and os.path.isdir(sciezkaDoSkryptu.rstrip('narzedzia') + a)]
+                bbb = [a for a in os.listdir(sciezkaDoSkryptu.split('narzedzia', 1)[0]) if
+                       a.find('UMP-') >= 0 and os.path.isdir(sciezkaDoSkryptu.split('narzedzia', 1)[0] + a)]
                 # print(bbb)
                 if len(bbb) > 0:
-                    self.KatalogzUMP = sciezkaDoSkryptu.rstrip('narzedzia')
-                    self.KatalogRoboczy = sciezkaDoSkryptu.rstrip('narzedzia')
+                    self.KatalogzUMP = sciezkaDoSkryptu.split('narzedzia', 1)[0]
+                    self.KatalogRoboczy = sciezkaDoSkryptu.split('narzedzia', 1)[0]
                     self.uaktualnijZalezneHome()
                 else:
                     print('Nie moge zgadnac konfiguracji', file=sys.stderr)
@@ -3050,7 +3050,6 @@ def demontuj(args):
                         wszystkie_diffy_razem.append(line)
                 if plikDiff:
                     stderr_stdout_writer.stdoutwrite('Powstala latka dla pliku %s.' % nazwa_pliku)
-                    plikdootwarcia = ''
                     if nazwa_pliku.find('granice-czesciowe.txt') > 0:
                         plikdootwarcia = nazwa_pliku
                     else:
@@ -3068,7 +3067,7 @@ def demontuj(args):
                             slownikHash['narzedzia/granice.txt'] = graniceczesciowe.granice_txt_hash
                         else:
                             stderr_stdout_writer.stderrorwrite('Nie udalo sie skonwertowac granic lokalnych na narzedzia/granice.txt.\nMusisz nalozyc latki recznie.')
-                            listaDiffow.append(nazwa_pliku.lstrip(Zmienne.KatalogRoboczy))
+                            listaDiffow.append(nazwa_pliku.split(Zmienne.KatalogRoboczy, 1)[1])
                             slownikHash['granice-czesciowe.txt'] = 'NOWY_PLIK'
                             with open(plikdootwarcia + '.diff', 'w', encoding=Zmienne.Kodowanie,
                                       errors=Zmienne.WriteErrors) as f:
@@ -3087,10 +3086,6 @@ def demontuj(args):
                   encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:
             f.writelines(wszystkie_diffy_razem)
     stderr_stdout_writer.stdoutwrite('Gotowe!')
-    if hasattr(args, 'queue'):
-        args.queue.put([listaDiffow, slownikHash])
-    if hasattr(args, 'buttonqueue'):
-        args.buttonqueue.put('Koniec')
     del plikMp
     return zwroc_dane_do_gui(args, listaDiffow, slownikHash)
 
@@ -3320,7 +3315,7 @@ def czysc(args):
         if args.oryg:
             for a in zawartoscKatRob:
                 if a.endswith('.diff'):
-                    plikiDoUsuniecia.append(a.rstrip('.diff'))
+                    plikiDoUsuniecia.append(a.split('.diff', 1)[0])
         if args.bledy:
             for a in zawartoscKatRob:
                 if a.endswith('blad-routingu.wpt'):
