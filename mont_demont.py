@@ -22,6 +22,7 @@ import shutil
 import kdtree
 import znajdz_bledy_numeracji
 from collections import OrderedDict
+from collections import defaultdict
 
 
 class errOutWriter(object):
@@ -963,7 +964,7 @@ class IndeksyMiast(object):
 
 class plikMP1(object):
     """przechowuje zawartosc pliku mp do zapisu"""
-    def __init__(self, Zmienne, args, tabelaKonwersjiTypow, Montuj=1):
+    def __init__(self, Zmienne, args, tabela_konwersji_typow, Montuj=1):
 
         # zawartosc nowo tworzonego pliku mp, zawartosc z plikow skladowych do montazu
         self.zawartosc = []
@@ -971,7 +972,7 @@ class plikMP1(object):
         self.plik_nowosci_pnt = '_nowosci.pnt'
         self.Zmienne = Zmienne
         self.args = args
-        self.tabelaKonwersjiTypow = tabelaKonwersjiTypow
+        self.tabela_konwersji_typow = tabela_konwersji_typow
         self.domyslneMiasta2 = {}
         self.cityIdxMiasto = []
         self.errOutWriter = errOutWriter(args)
@@ -1401,7 +1402,7 @@ class plikMP1(object):
                 # obslugujemy tworzenie typu po nazwie
                 if 'Label' in daneDoZapisu:
                     zgadnietyTypDokladny, zgdanietyTypPoAliasie = \
-                        self.tabelaKonwersjiTypow.zwrocTypPoLabel(daneDoZapisu['Label'], daneDoZapisu['Type'])
+                        self.tabela_konwersji_typow.zwrocTypPoLabel(daneDoZapisu['Label'], daneDoZapisu['Type'])
                     if zgadnietyTypDokladny:
                         daneDoZapisu['Typ'] = zgadnietyTypDokladny
                     else:
@@ -1413,7 +1414,7 @@ class plikMP1(object):
                             daneDoZapisu['Typ'] = zgdanietyTypPoAliasie.upper()
                 else:
                     try:
-                        daneDoZapisu['Typ'] = self.tabelaKonwersjiTypow.type2Alias[daneDoZapisu['Type']][0].upper()
+                        daneDoZapisu['Typ'] = self.tabela_konwersji_typow.type2Alias[daneDoZapisu['Type']][0].upper()
                     except KeyError:
                         self.stderrorwrite('Nieznany alias dla Type=%s. Punkt o wspolrzednych %s' %
                                            (daneDoZapisu['Type'], daneDoZapisu[tmpData[0]]))
@@ -1421,7 +1422,7 @@ class plikMP1(object):
             else:
                 if daneDoZapisu['Typ'].startswith('0x'):
                     pass
-                elif daneDoZapisu['Typ'] not in self.tabelaKonwersjiTypow.alias2Type:
+                elif daneDoZapisu['Typ'] not in self.tabela_konwersji_typow.alias2Type:
                     self.stderrorwrite('Nieznany typ POI %s, w punkcie %s.' %
                                        (daneDoZapisu['Typ'], daneDoZapisu[tmpData[0]]))
             if 'EndLevel' not in daneDoZapisu:
@@ -1449,8 +1450,8 @@ class plikMP1(object):
 
             # zanim zapiszemy kilka testow:
             # 1 sprawdzamy czy dla wszystkich punktow z adresami wystepuje Label i Miasto
-            if daneDoZapisu['Typ'] in self.tabelaKonwersjiTypow.alias2Type:
-                if 0x2900 <= int(self.tabelaKonwersjiTypow.alias2Type[daneDoZapisu['Typ']], 16) <= 0x3008:
+            if daneDoZapisu['Typ'] in self.tabela_konwersji_typow.alias2Type:
+                if 0x2900 <= int(self.tabela_konwersji_typow.alias2Type[daneDoZapisu['Typ']], 16) <= 0x3008:
                     if daneDoZapisu['Label'] == '':
                         self.stderrorwrite('\nBrak Label dla punktu o wspolrzednych %s,%s.\nWyszukiwanie nie bêdzie dzia³aæ.'
                                            % (szerokosc, dlugosc))
@@ -1741,6 +1742,34 @@ class plikMP1(object):
                 # kopiujemy tmp_nowosci na oryginalne _nowosci.pnt
                 self.plikizMp['_nowosci.pnt'] = tmp_nowosci[:]
 
+    def zwroc_rekord_pliku_mp(self, string_z_rekordem):
+        dane_do_zapisu = defaultdict(list)
+        dane_do_zapisu_kolejnosc_kluczy = OrderedDict()
+        ostatni_id_dla_data = {'Data0': 0, 'Data1': 0, 'Data2': 0, 'Data3': 0, 'Data4': 0}
+        for linia in string_z_rekordem.split('\n'):
+            linia = linia.strip()
+            if 'POIPOLY' not in dane_do_zapisu:
+                if linia.startswith(';') and len(linia) > 1:
+                    dane_do_zapisu['Komentarz'].append(linia)
+                    dane_do_zapisu_kolejnosc_kluczy['Komentarz'] = ''
+                elif  linia in ('[POI]', '[POLYGON]', '[POLYLINE]'):
+                    dane_do_zapisu['POIPOLY'] = linia
+                    dane_do_zapisu_kolejnosc_kluczy['POIPOLY'] = ''
+                else:
+                    self.stderrorwrite('Dziwna linia %s w rekordach %s.' % (linia, string_z_rekordem))
+            else:
+                if '=' in linia:
+                    klucz, wartosc = linia.split('=', 1)
+                    if klucz.startswith('Data'):
+                        ostatni_id_dla_data[klucz] += 1
+                        klucz = klucz + '_' + str(ostatni_id_dla_data[klucz] - 1)
+                    dane_do_zapisu[klucz] = wartosc
+                    dane_do_zapisu_kolejnosc_kluczy[klucz] = ''
+                else:
+                    self.stderrorwrite('Dziwna linia %s w rekordach %s.' % (linia, string_z_rekordem))
+        return {key: dane_do_zapisu[key] for key in dane_do_zapisu}, [key for key in dane_do_zapisu_kolejnosc_kluczy]
+
+
 
 class PlikiDoMontowania(object):
     def __init__(self, KatalogZeZrodlami, args):
@@ -1829,8 +1858,6 @@ class ObiektNaMapie(object):
     """
 
     def __init__(self, Plik, IndeksyMiast, alias2Type, args):
-        self.EntryPoint = ''
-        self.Otwarte = ''
         self.Komentarz = []
         self.DataX = []
         self.PoiPolyPoly = ''
@@ -1849,28 +1876,26 @@ class ObiektNaMapie(object):
         self.IndeksyMiast = IndeksyMiast
 
     def komentarz2ep_otwarte(self):
-        ep = ';;EntryPoint: '
-        otwarte = ';otwarte:'
-        Otwarte = ';Otwarte:'
-        iloscLiniiKomentarza = 0
-        liniekomentarzadousuniecia = list()
+        entry_point_defs = (';;EntryPoint:', ';;EntryPoint=', ';EntryPoint:', ';EntryPoint=',)
+        otwarte_defs = (';;otwarte:', ';;Otwarte:', ';;otwarte=', ';;Otwarte=', ';otwarte:', ';Otwarte:', ';otwarte=',
+                        ';Otwarte=')
         komentarz = ''
         if not self.Komentarz:
             return 1
         self.Komentarz[0] = self.Komentarz[0].strip()
         for abcd in self.Komentarz[0].split('\n'):
-            if abcd.startswith(ep):
-                self.EntryPoint = abcd.split(ep)[-1].strip()
-                self.Dane1.append('EntryPoint=' + self.EntryPoint)
-            elif abcd.lower().startswith(otwarte):
-                self.Otwarte = abcd.split(otwarte)[-1].strip()
-                self.Dane1.append('Otwarte=' + self.Otwarte)
+            if any(ep for ep in entry_point_defs if abcd.startswith(ep)):
+                entry_point = abcd.lstrip(';')[len('EntryPoint:'):].strip()
+                self.Dane1.append('EntryPoint=' + entry_point)
+            elif any(otw for otw in otwarte_defs if abcd.startswith(otw)):
+                otwarte = abcd.lstrip(';')[len('otwarte:'):].strip()
+                self.Dane1.append('Otwarte=' + otwarte)
             else:
                 komentarz += abcd + '\n'
         # po tym zabiegach w komentarzu powinno pozostac tylko to co niezwiazane z otwarte i entrypoint
         if komentarz:
             # jesli tak zapisz nowy komentarz
-            self.Dane1[0] = komentarz
+            self.Dane1[0] = komentarz.strip()
         elif self.Dane1[0][0] == ';':
             # jesli nie to sprawdz czy byl komentarz, jesli byl tzn ze tam byl tylko albo entrypoint albo otwarte
             # W takim przypadku usun go
@@ -1904,11 +1929,15 @@ class Poi(ObiektNaMapie):
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.pnt2Dane(LiniaZPliku, orgLinia)
 
+    def dodaj_komentarz_do_dane(self):
+        if self.Komentarz:
+            for komentarz in self.Komentarz:
+                self.Dane1.append(komentarz.rstrip())
+
     def pnt2Dane(self, LiniaZPliku, orgLinia):
         """Funkcja konwertujaca linijke z pliku pnt na wewnetrzn¹ reprezentacje danego poi"""
 
-        if self.Komentarz:
-            self.Dane1.append(self.Komentarz[0].rstrip())
+        self.dodaj_komentarz_do_dane()
         # 0 Dlugosc, 1 Szerokosc, 2 EndLevel, 3 Label, 4 UlNrTelUrl, 5 Miasto, 6 Type, 7 KodPoczt
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
@@ -1987,8 +2016,7 @@ class Adr(Poi):
 
     def adr2Dane(self, LiniaZPliku):
         """Funkcja konwertujaca linijke z pliku adr na wewnetrzn¹ reprezentacje danego adr"""
-        if self.Komentarz:
-            self.Dane1.append(self.Komentarz[0].rstrip())
+        self.dodaj_komentarz_do_dane()
         # self.dokladnoscWsp=len(LiniaZPliku[0].split('.')[1])
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
@@ -2048,16 +2076,13 @@ class City(ObiektNaMapie):
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.city2Dane(LiniaZPliku)
 
-    def city2Dane(self, LiniaZPliku):
+    def dodaj_komentarz_do_dane(self):
+        if self.Komentarz:
+            for komentarz in self.Komentarz:
+                self.Dane1.append(komentarz.rstrip())
 
-        # rint('Liniazpliku',LiniaZPliku)
-        # rint('Dane1',self.Dane1)
-        if len(self.Komentarz) > 0:
-            # print('Komentarz',self.Komentarz[0])
-            self.Dane1.append(self.Komentarz[0].rstrip())
-        # print(LiniaZPliku[0].split('.')[1])
-        # self.dokladnoscWsp=len(LiniaZPliku[0].split('.')[1])
-        # 		print('Dane1',self.Dane1)
+    def city2Dane(self, LiniaZPliku):
+        self.dodaj_komentarz_do_dane()
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
         # Tworzymy Type=
@@ -2360,7 +2385,7 @@ class plikPNT(object):
                 else:
                     # punktzCity=City(pliki,tabKonw,args.cityidx)
                     if komentarz:
-                        self.punktzPntAdrCiti.Komentarz.append(komentarz)
+                        self.punktzPntAdrCiti.Komentarz.append(komentarz.strip())
                         komentarz = ''
                     self.punktzPntAdrCiti.liniaZPliku2Dane(rekordy, liniaPliku)
                     if not self.Dokladnosc or self.Dokladnosc == '0':
@@ -2370,7 +2395,6 @@ class plikPNT(object):
                         else:
                             self.punktzPntAdrCiti.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
                                                                 % self.NazwaPliku)
-                    # ListaObiektowDoMontowania.append(punktzCity)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
         return self.Dane1
@@ -2705,16 +2729,16 @@ def demontuj(args):
 
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
     update_progress(0 / 100, args)
-    for aktrekord, rekord_z_pliku_mp in enumerate(rekordy_mp):
-        if (aktrekord + 1) % int(ilosc_rekordow/100) == 0:
-            update_progress(round((aktrekord + 1) / int(ilosc_rekordow), 2), args)
+    for numer_aktualnego_rekordu, rekord_z_pliku_mp in enumerate(rekordy_mp):
+        if (numer_aktualnego_rekordu + 1) % int(ilosc_rekordow/100) == 0:
+            update_progress(round((numer_aktualnego_rekordu + 1) / int(ilosc_rekordow), 2), args)
 
         # w pliku mp mog¹ byæ wielokrotne Data0, Data1 itd. W slowniku pythonowym klucze nie moga sie powtarzac,
         # wiec muszê je jakos rozroznic, Bdzie Data0_kolejneData
         kolejneData = 0
         rekord_z_pliku_mp_jako_lista = rekord_z_pliku_mp.strip().split('\n')
         # aby oszczedzic pamiec wyzerujmy dany rekord z pliku mp
-        rekordy_mp[aktrekord] = ''
+        rekordy_mp[numer_aktualnego_rekordu] = ''
 
         rekord_z_pliku_mp_jako_lista.append('[END]=[END]')
         entrypoint = list()
@@ -2748,7 +2772,8 @@ def demontuj(args):
                     daneDoZapisu['POIPOLY'] = poipolypoly
                     daneDoZapisuKolejnoscKluczy.append('POIPOLY')
                 else:
-                    stderr_stdout_writer.stderrorwrite('Dziwna linia %s w rekordach %s.' % pojedyncza_linia_z_rekordu_mp)
+                    stderr_stdout_writer.stderrorwrite('Dziwna linia %s w rekordach %s.'
+                                                       % (pojedyncza_linia_z_rekordu_mp, rekord_z_pliku_mp))
 
                 # no dobrze, mamy juz [POI][POLYGON][POLYLINE]
             else:
