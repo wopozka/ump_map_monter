@@ -1068,12 +1068,10 @@ class plikMP1(object):
     def ustawObszary(self):
         # ustala zamontowane obszary oraz ustawia je pod zmienna self.obszary,
         # tam potem mozna sprawdzic do ktorego obszaru nalezy dany punkt/wielokat
-        tmp_obszary = []
-        for a_obsz in self.plikizMp:
-            if a_obsz.startswith('UMP'):
-                wyodrebniony_obszar = a_obsz.split('/')[0].split('-')[-1]
-                if wyodrebniony_obszar not in tmp_obszary:
-                    tmp_obszary.append(wyodrebniony_obszar)
+        tmp_obszary = set()
+        for a_obsz in (obszar for obszar in self.plikizMp if obszar.startswith('UMP')):
+            wyodrebniony_obszar = a_obsz.split('/')[0].split('-')[-1]
+            tmp_obszary.add(wyodrebniony_obszar)
         self.obszary = Obszary(tmp_obszary, self.Zmienne)
         return 0
 
@@ -1164,25 +1162,16 @@ class plikMP1(object):
     def znajdzPlikDlaPoly(self, typobiektu, type, obszar, wspolrzedne):
         # self.autoobszary.znajdz_najblizszy(obszar,type)
         if typobiektu == '[POLYGON]':
-            try:
-                for mozliwepliki in self.autoobszary.TypPolygon2Plik[type]:
-                    auto_plik = self.autoobszary.znajdz_najblizszy(obszar, mozliwepliki, wspolrzedne)
-                    if auto_plik != 'brak_klucza':
-                        return auto_plik
-                    else:
-                        pass
-            except KeyError:
-                return self.plik_nowosci_txt
+            auto_obszary_typy = self.autoobszary.TypPolygon2Plik[type]
         else:
-            try:
-                for mozliwepliki in self.autoobszary.TypPolyline2Plik[type]:
-                    auto_plik = self.autoobszary.znajdz_najblizszy(obszar, mozliwepliki, wspolrzedne)
-                    if auto_plik != 'brak_klucza':
-                        return auto_plik
-                    else:
-                        pass
-            except KeyError:
-                return self.plik_nowosci_txt
+            auto_obszary_typy = self.autoobszary.TypPolyline2Plik[type]
+        try:
+            for mozliwepliki in auto_obszary_typy:
+                auto_plik = self.autoobszary.znajdz_najblizszy(obszar, mozliwepliki, wspolrzedne)
+                if auto_plik != 'brak_klucza':
+                    return auto_plik
+        except KeyError:
+            return self.plik_nowosci_txt
         return self.plik_nowosci_txt
 
     def stworz_misc_info(self, daneDoZapisu):
@@ -1746,12 +1735,13 @@ class plikMP1(object):
         dane_do_zapisu = defaultdict(list)
         dane_do_zapisu_kolejnosc_kluczy = OrderedDict()
         ostatni_id_dla_data = {'Data0': 0, 'Data1': 0, 'Data2': 0, 'Data3': 0, 'Data4': 0}
-        for linia in string_z_rekordem.split('\n'):
+        for linia in string_z_rekordem.strip().split('\n'):
             linia = linia.strip()
             if 'POIPOLY' not in dane_do_zapisu:
-                if linia.startswith(';') and len(linia) > 1:
-                    dane_do_zapisu['Komentarz'].append(linia)
-                    dane_do_zapisu_kolejnosc_kluczy['Komentarz'] = ''
+                if linia.startswith(';'):
+                    if len(linia) > 1:
+                        dane_do_zapisu['Komentarz'].append(linia)
+                        dane_do_zapisu_kolejnosc_kluczy['Komentarz'] = ''
                 elif  linia in ('[POI]', '[POLYGON]', '[POLYLINE]'):
                     dane_do_zapisu['POIPOLY'] = linia
                     dane_do_zapisu_kolejnosc_kluczy['POIPOLY'] = ''
@@ -1767,8 +1757,133 @@ class plikMP1(object):
                     dane_do_zapisu_kolejnosc_kluczy[klucz] = ''
                 else:
                     self.stderrorwrite('Dziwna linia %s w rekordach %s.' % (linia, string_z_rekordem))
+                    dane_do_zapisu['Dziwne'].append(linia)
+                    dane_do_zapisu_kolejnosc_kluczy['Dziwne'] = ''
         return {key: dane_do_zapisu[key] for key in dane_do_zapisu}, [key for key in dane_do_zapisu_kolejnosc_kluczy]
 
+    @staticmethod
+    def zaokraglij_klucze_ze_wspolrzednymi(self, dane_do_zapisu, dokladnosc):
+        for klucz in dane_do_zapisu:
+            if klucz.startswith('Data') or klucz.startswith('EntryPoint'):
+                dane_do_zapisu[klucz] = self.zaokraglij(dane_do_zapisu[klucz], dokladnosc)
+        return dane_do_zapisu
+
+    @staticmethod
+    def przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        sep = {'EntryPoint': ':', 'Otwarte': '='}
+        for key in ('EntryPoint', 'Otwarte'):
+            if key in dane_do_zapisu:
+                if 'Komentarz' in dane_do_zapisu:
+                    dane_do_zapisu['Komentarz'].append(';;' + key + sep[key] + dane_do_zapisu[key])
+                else:
+                    dane_do_zapisu['Komentarz'] = [';;' + key + sep[key] + dane_do_zapisu[key]]
+                del dane_do_zapisu[key]
+                dane_do_zapisu_kolejnosc_kluczy.remove(key)
+                if 'Komentarz' not in dane_do_zapisu_kolejnosc_kluczy:
+                    dane_do_zapisu_kolejnosc_kluczy = ['Komentarz'] + dane_do_zapisu_kolejnosc_kluczy
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+    def modyfikuj_plik_dla_rekordu_z_pliku(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if 'POIPOLY' in ('[POLYGON]', '[POLYLINE]'):
+            return self.modyfikuj_plik_dla_polygon_polyline(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+        else:
+            return self.modyfikuj_plik_dla_poi(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+
+    def modyfikuj_plik_dla_polygon_polyline(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if 'Plik' in dane_do_zapisu and dane_do_zapisu['Plik'].endswith('.pnt'):
+            self.stderrorwrite('Dla polyline/polygon ustawiono plik %s. Zmieniam na _nowosci.txt'
+                               % dane_do_zapisu['Plik'])
+            dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+        if 'Plik' not in dane_do_zapisu:
+            # ponizej dodajemy plik bo i tak to powstanie, a teraz go nie ma
+            dane_do_zapisu_kolejnosc_kluczy.append('Plik')
+            # tutaj dodac sprawdzanie czy opcja autopoly jest wlaczona
+            if self.args.autopolypoly:
+                listawspolrzednychdosprawdzenia = []
+                for lista_wsp in (data for data in dane_do_zapisu if data.startswith('Data')):
+                    listawspolrzednychdosprawdzenia += dane_do_zapisu[lista_wsp].split('=')[-1].strip().lstrip('(').rstrip(')').split('),(')
+                    # print(listawspolrzednychdosprawdzenia)
+                obszar_dla_poly = set()
+                for lista_wsp in listawspolrzednychdosprawdzenia:
+                    # musimy sprawdzic czy dany polygon lub polyline w calosci lezy na terenie jednego obszaru
+                    # jesli tak, obszar_dla_poly przyjmie konkretna wartosc, jesli nie to wtedy bedzie 'Nieznany'
+                    x, y = lista_wsp.split(',')
+                    obszar_dla_poly.add(self.obszary.zwroc_obszar(float(x), float(y)))
+                if len(obszar_dla_poly) > 1:
+                    dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+                else:
+                    dane_do_zapisu['Plik'] = self.znajdzPlikDlaPoly(dane_do_zapisu['POIPOLY'], dane_do_zapisu['Type'],
+                                                                    obszar_dla_poly.pop(),
+                                                                    listawspolrzednychdosprawdzenia[0])
+                    print(dane_do_zapisu['POIPOLY'], dane_do_zapisu['Type'])
+                    self.stdoutwrite(('Przypisuje obiekt do pliku %s' % dane_do_zapisu['Plik']))
+            else:
+                dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+
+        dane_do_zapisu['Plik'] = self.plikNormalizacja(dane_do_zapisu['Plik'])
+        # jesli jako wartosc plik jest wpisana nieistniejaca w zrodlach pozycja to dodaj go do listy i ustaw mu
+        # dokladnosc taka jak dla plikow txt
+        if dane_do_zapisu['Plik'] not in self.plikizMp:
+            if dane_do_zapisu['Plik']:
+                if self.sprawdz_poprawnosc_sciezki(dane_do_zapisu['Plik']):
+                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(dane_do_zapisu['Plik']))
+                    dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+                else:
+                    self.plikizMp[dane_do_zapisu['Plik']] = []
+                    self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_txt]
+            else:
+                self.stderrorwrite('Niepoprawna sciezka do pliku: \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(dane_do_zapisu['Plik']))
+                dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+
+    def modyfikuj_plik_dla_poi(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
+              '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
+        # najpierw sprawdzmy czy plik do zapisu istnieje. Jesli nie to dla punktow autostradowych
+        # ustaw plik _nowosci.txt a dla wszystkich inych _nowosci.pnt
+        if 'Plik' not in dane_do_zapisu:
+            dane_do_zapisu_kolejnosc_kluczy.append('Plik')
+            if dane_do_zapisu['Type'] in HW:
+                dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+            else:
+                dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+        # normalizujemy nazwe pliku, bo moga byc pomieszane duze i male literki
+        dane_do_zapisu['Plik'] = self.plikNormalizacja(dane_do_zapisu['Plik'])
+        # jesli jako wartosc plik jest wpisana nieistniejaca w zrodlach pozycja to dodaj go do listy i ustaw mu
+        # dokladnosc taka jak dla plikow pnt
+        if dane_do_zapisu['Plik'] not in self.plikizMp:
+            if dane_do_zapisu['Plik']:
+                if self.sprawdz_poprawnosc_sciezki(dane_do_zapisu['Plik']):
+                    if dane_do_zapisu['Type'] in HW:
+                        self.stderrorwrite(
+                            'Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(
+                                dane_do_zapisu['Plik']))
+                        dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+                    else:
+                        self.stderrorwrite(
+                            'Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(
+                            dane_do_zapisu['Plik']))
+                        dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+                else:
+                    # plik jeszcze nie zaistnial przy demontazu, tworzymy wiec jego pusta zawartosc
+                    # i ustalamy dokladnosc
+                    self.plikizMp[dane_do_zapisu['Plik']] = []
+                    self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
+            else:
+                if dane_do_zapisu['Type'] in HW:
+                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(
+                        dane_do_zapisu['Plik']))
+                    dane_do_zapisu['Plik'] = self.plik_nowosci_txt
+                else:
+                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(
+                        dane_do_zapisu['Plik']))
+                    dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
 
 class PlikiDoMontowania(object):
@@ -2723,7 +2838,7 @@ def demontuj(args):
         plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(plikMp.plikizMp)
 
     # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna
-    # '' dlatego [0:-1]
+    # '' dlatego [0:-1]. Dodatkowo na koncu pliku zamontowane sa warstwy ktorych tez nie potrzebujemy
     rekordy_mp = zawartoscPlikuMp.split('\n[END]')[0:-1]
     ilosc_rekordow = len(rekordy_mp)
 
@@ -2749,6 +2864,12 @@ def demontuj(args):
         cityidx = 0
         CityName = ''
         OrigType = ''
+
+        # dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = plikMp.zwroc_rekord_pliku_mp(rekord_z_pliku_mp.strip())
+        # wypelnij plik dla danych rekordow
+        # zaokraglij klucze ze wspolrzednymi
+        # dane_do_zapisu = plikMp.zaokraglij_klucze_ze_wspolrzednymi(dane_do_zapisu,
+        #                                                            plikMp.plikDokladnosc[daneDoZapisu['Plik']])
 
         # iterujemy po kolejnych linijkach rekordu pliku mp
         for pojedyncza_linia_z_rekordu_mp in rekord_z_pliku_mp_jako_lista:
