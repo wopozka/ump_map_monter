@@ -1401,14 +1401,8 @@ class plikMP1(object):
             # w miscinfo mamy url albo wysokosc, ale to ma pozostac dla miast, wiec dodajemy go do komentarza
             self.plikizMp[daneDoZapisu['Plik']].append(liniaDoPnt)
 
-            # wyodrebnij obszar z UMP-PL-Lodz, powinnismy otrzymac Lodz
+            # dodaj plik do automatycznego przenoszenia plikow poi
             self.obszarTypPlik.dodaj_plik_dla_poi(daneDoZapisu)
-            # obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
-            # if obszar in self.obszarTypPlik:
-            #     if 'MIASTO' not in self.obszarTypPlik[obszar]:
-            #         self.obszarTypPlik[obszar]['MIASTO'] = daneDoZapisu['Plik']
-            # else:
-            #     self.obszarTypPlik[obszar] = {'MIASTO': daneDoZapisu['Plik']}
         else:
             # pozostale poi powinny powinny byc zapisane w plikach pnt, ale nie moga to byc pliki cities
             # jesli bedzie to plik cities, zamien na _nowosci.pnt
@@ -1487,18 +1481,8 @@ class plikMP1(object):
                     else:
                         pass
             self.plikizMp[daneDoZapisu['Plik']].append(liniaDoPnt)
-
             # sekcja dla autopoi, to tutaj dodajemy dany typ do globalnej listy powiazan, Typ->plik
-            # wyodrebnij obszar z UMP-PL-Lodz, powinnismy otrzymac Lodz
             self.obszarTypPlik.dodaj_plik_dla_poi(daneDoZapisu)
-            # obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
-            # if obszar in self.obszarTypPlik:
-            #     if daneDoZapisu['Typ'] not in self.obszarTypPlik[obszar]:
-            #         if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
-            #             self.obszarTypPlik[obszar][daneDoZapisu['Typ']] = daneDoZapisu['Plik']
-            # else:
-            #     if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
-            #         self.obszarTypPlik[obszar] = {daneDoZapisu['Typ']: daneDoZapisu['Plik']}
         return 0
 
     def zapiszTXT(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
