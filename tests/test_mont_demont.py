@@ -250,3 +250,75 @@ def test_modyfikuj_plik_dla_polygon_polyline(target, answer):
     assert plikMp.modyfikuj_plik_dla_polygon_polyline(target[0], kolejnosc_kluczy_target) \
           == (answer, kolejnosc_kluczy_answer,)
 
+
+TEST_STWORZ_MISC_INFO = (
+    ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
+    ({'Plik': 'POI-Lodz.bankomaty.txt', 'Type': '0x2f06', 'Komentarz': ['lalala']}, {'Plik': 'POI-Lodz.bankomaty.txt', 'Type': '0x2f06', 'Komentarz': ['lalala']}),
+    ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0xe00', 'Komentarz': ['lalala']}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0xe00', 'Komentarz': ['lalala']}),
+    ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'Komentarz': [';wys=123']}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'StreetDesc': '123'}),
+    ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'Komentarz': ['kom1', ';wys=123', 'kom2']}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'Komentarz': ['kom1', 'kom2'], 'StreetDesc': '123'}),
+    ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'Komentarz': ['kom1', ';wys=123', ';wys=124','kom2']}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x6616', 'Komentarz': ['kom1', 'kom2'], 'StreetDesc': '124'}),
+    ({'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
+    ({'Komentarz': ['aaa', ';http://bbb.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'url=http://bbb.pl'}),
+    ({'Komentarz': ['aaa', ';https://bbb.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'url=https://bbb.pl'}),
+    ({'Komentarz': ['aaa', ';http://aaa.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'url=http://bbb.pl'}, {'Komentarz': ['aaa', ';http://aaa.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'url=http://bbb.pl'}),
+    ({'Komentarz': ['aaa', ';fb:bbb.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'fb=bbb.pl'}),
+    ({'Komentarz': ['aaa', ';fb://bbb.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'fb=bbb.pl'}),
+    ({'Komentarz': ['aaa', ';wiki://bbb.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'wiki=bbb.pl'}),
+    ({'Komentarz': ['aaa', ';wiki://bbb.pl', ';http://aaa.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Komentarz': ['aaa', ';http://aaa.pl'], 'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06', 'MiscInfo': 'wiki=bbb.pl'}),
+)
+@pytest.mark.parametrize('target, answer', TEST_STWORZ_MISC_INFO)
+def test_stworz_misc_info(target, answer):
+    args = Args()
+    Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
+    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    kolejnosc_kluczy_target = [a for a in target]
+    kolejnosc_kluczy_answer = [a for a in answer]
+    assert plikMp.stworz_misc_info(target, kolejnosc_kluczy_target) \
+          == (answer, kolejnosc_kluczy_answer,)
+
+TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
+    ('OLSZTYN.BP.paliwo.pnt', True),
+    ('OLSZTYN.paczkom.pnt', False),
+)
+@pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
+def test_czy_plik_jest_wykluczony(target, answer):
+    assert mont_demont.autoPlikDlaPoi().czy_plik_jest_wykluczony(target) == answer
+
+TEST_PLIK_TYP_DANE = (
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty1.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Lodz/src/POI-Belchatow.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
+    {'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0xe00'},
+    {'Plik': 'UMP-PL-Lodz/src/cities-Belchatow.pnt', 'Type': '0xe00'},
+)
+
+TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
+    (('Lodz', 'ATMBANK',), 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt'),
+    (('Leszno', 'ATMBANK',), 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt'),
+    (('Lodz', 'MIASTO',), 'UMP-PL-Lodz/src/cities-Lodz.pnt'),
+    (('Leszno', 'MIASTO',), 'UMP-PL-Leszno/src/cities-Leszno.pnt'),
+)
+@pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
+def test_zwroc_plik_dla_typu(target, answer):
+    auto_plik = mont_demont.autoPlikDlaPoi()
+    for dane_do_zapisu in TEST_PLIK_TYP_DANE:
+        auto_plik.dodaj_plik_dla_poi(dane_do_zapisu)
+    assert auto_plik.zwroc_plik_dla_typu(target[0], target[1]) == answer

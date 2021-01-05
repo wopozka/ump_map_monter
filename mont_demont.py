@@ -799,6 +799,55 @@ class Obszary(object):
         return inside
 
 
+class autoPlikDlaPoi(object):
+    def __init__(self):
+        self.obszar_typ_plik = {}
+        self.typ_plik = dict()
+        self.autopoiWykluczoneWartosciPlik = ('.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
+                                              '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
+                                              '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
+                                              '.paczkomaty.pnt',)
+
+    def czy_plik_jest_wykluczony(self, plik):
+        return any(a for a in self.autopoiWykluczoneWartosciPlik if plik.endswith(a))
+
+    def dodaj_plik_dla_poi(self, dane_do_zapisu):
+        if 'Plik' not in dane_do_zapisu or 'Type' not in dane_do_zapisu or \
+                self.czy_plik_jest_wykluczony(dane_do_zapisu['Plik']):
+            return
+        if dane_do_zapisu['Type'] in City.rozmiar2Type:
+            typ = 'MIASTO'
+        else:
+            if 'Typ' in dane_do_zapisu:
+                typ = dane_do_zapisu['Typ']
+            else:
+                return
+        plik = dane_do_zapisu['Plik']
+        if typ in self.typ_plik:
+            self.typ_plik[typ][plik] += 1
+        else:
+            self.typ_plik[typ] = defaultdict(lambda: 0)
+
+    def przygotuj_obszar_typ_plik(self):
+        for typ in self.typ_plik:
+            for obszar in (obsz.split('/')[0].split('-')[-1] for obsz in self.typ_plik[typ]):
+                pliki = [p for p in self.typ_plik[typ] if obszar in p]
+                typy_dict = self.typ_plik[typ]
+                plik_z_maksymalna_wartoscia = max(pliki,
+                                                  key=typy_dict.get)
+                if obszar in self.obszar_typ_plik:
+                    self.obszar_typ_plik[obszar][typ] = plik_z_maksymalna_wartoscia
+                else:
+                    self.obszar_typ_plik[obszar] = {typ: plik_z_maksymalna_wartoscia}
+
+    def zwroc_plik_dla_typu(self, obszar, typ):
+        if not self.obszar_typ_plik:
+            self.przygotuj_obszar_typ_plik()
+        if obszar in self.obszar_typ_plik and typ in self.obszar_typ_plik[obszar]:
+            return self.obszar_typ_plik[obszar][typ]
+        return ''
+
+
 class autoPolylinePolygone(object):
     def __init__(self, Zmienne):
         # zmienne z nazwami plikow, tak aby w razie czego zmieniac w jedny miejscu, a nie w wielu
@@ -995,11 +1044,11 @@ class plikMP1(object):
             # a wartosc w postaci nazwy pliku. Jest u¿ywane do dobierania najlepszego pliku dla danego poi w przypadku
             # gdyby plik jest w nowosci.pnt. Przykladowy wpis,
             # {'UMP-PL-LODZ': {'MIASTO': 'cities-Lodz.pnt}}
-            self.obszarTypPlik = {}
-            self.autopoiWykluczoneWartosciPlik = ['.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
-                                                  '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
-                                                  '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
-                                                  '.paczkomaty.pnt']
+            self.obszarTypPlik = autoPlikDlaPoi()
+            # self.autopoiWykluczoneWartosciPlik = ['.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
+            #                                       '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
+            #                                       '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
+            #                                       '.paczkomaty.pnt']
             self.plikizMp = {self.plik_nowosci_txt: [], self.plik_nowosci_pnt: []}
 
             # Zmienna z obszarami ktore sa zamontowane, wykorzystywana do autorozkladu linii i polygonow do
@@ -1174,72 +1223,59 @@ class plikMP1(object):
                 return auto_plik
         return self.plik_nowosci_txt
 
-    def stworz_misc_info(self, daneDoZapisu):
+    def stworz_misc_info(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
         punkty_z_wysokoscia = ('0x6616', '0x6617',)
-        skrot_dla_wysokosci = (';wys=',)
-        skrot_dla_http = (';http://',)
-        skrot_dla_facebook = (';fb=', ';fb:', ';fb://',)
-        skrot_dla_wiki = (';wiki=', ';wiki:', ';wiki://',)
+        skroty_dla_wysokosci = (';wys=', ';wys:')
+        skroty = OrderedDict({';https://': ';', ';http://': ';', ';fb://': ';fb://', ';fb:': ';fb:', ';fb=': ';fb=',
+                              ';wiki://': ';wiki://', ';wiki=': ';wiki=', ';wiki:': ';wiki:'})
+        przedrostek = OrderedDict({';https://': 'url=', ';http://': 'url=', ';fb://': 'fb=', ';fb:': 'fb=',
+                                   ';fb=': 'fb=', ';wiki://': 'wiki=', ';wiki=': 'wiki=', ';wiki:': 'wiki='})
         tmp_komentarz = []
 
         # jesli dla poi mamy przypisany plik txt, wtedy nie tworz MiscInfo
-        if daneDoZapisu['Plik'].endswith('.txt'):
-            return
-
-        if 'Komentarz' not in daneDoZapisu:
-            return
-        elif daneDoZapisu['Type'] in City.rozmiar2Type:
-            return
-        elif daneDoZapisu['Type'] in punkty_z_wysokoscia:
-            for ddd in skrot_dla_wysokosci:
-                if daneDoZapisu['Komentarz'][-1].startswith(ddd):
-                    daneDoZapisu['StreetDesc'] = daneDoZapisu['Komentarz'][-1].split(ddd, 1)[1]
-                    daneDoZapisu['Komentarz'].pop()
-            return
+        if dane_do_zapisu['Plik'].endswith('.txt') or 'Komentarz' not in dane_do_zapisu \
+                or dane_do_zapisu['Type'] in City.rozmiar2Type:
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        elif dane_do_zapisu['Type'] in punkty_z_wysokoscia:
+            for skrot_dla_wys in skroty_dla_wysokosci:
+                if 'Komentarz' not in dane_do_zapisu:
+                    break
+                for wysokosc_w_komentarzu in \
+                        [wys for wys in dane_do_zapisu['Komentarz'] if wys.startswith(skrot_dla_wys)]:
+                    dane_do_zapisu['StreetDesc'] = wysokosc_w_komentarzu.split(skrot_dla_wys, 1)[1]
+                    if 'StreetDesc' not in dane_do_zapisu_kolejnosc_kluczy:
+                        dane_do_zapisu_kolejnosc_kluczy.append('StreetDesc')
+                    dane_do_zapisu['Komentarz'].remove(wysokosc_w_komentarzu)
+                    if not dane_do_zapisu['Komentarz']:
+                        dane_do_zapisu_kolejnosc_kluczy.remove('Komentarz')
+                        del(dane_do_zapisu['Komentarz'])
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
         else:
-            for abcde in daneDoZapisu['Komentarz']:
-                if abcde.startswith(';http://') or abcde.startswith(';https://'):
-                    if 'MiscInfo' in daneDoZapisu:
-                        self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\nPozostawiam niezmienione i zostawiam komentarz!\n' % (daneDoZapisu['Komentarz'][-1], daneDoZapisu['MiscInfo'])))
-                        tmp_komentarz.append(abcde)
-                        return
-                    else:
-                        daneDoZapisu['MiscInfo'] = 'url=' + abcde.split(';', 1)[1]
-                # daneDoZapisu['Komentarz'].pop()
-                elif abcde.startswith(';fb'):
-                    splitter = ''
-                    for spl in skrot_dla_facebook:
-                        if abcde.startswith(spl):
-                            splitter = spl
-                            break
-                    if splitter:
-                        if 'MiscInfo' in daneDoZapisu:
-                            self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\nPozostawiam niezmienione i zostawiam komentarz!\n' % (daneDoZapisu['Komentarz'][-1], daneDoZapisu['MiscInfo'])))
-                            tmp_komentarz.append(abcde)
-                            return
+            for linia_komentarza in dane_do_zapisu['Komentarz']:
+                czy_dodac_linie_do_tmp_komentarz = True
+                for skrot in skroty:
+                    if linia_komentarza.startswith(skrot):
+                        if 'MiscInfo' in dane_do_zapisu:
+                            self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\nPozostawiam niezmienione i zostawiam komentarz!\n' % (
+                                                   linia_komentarza, dane_do_zapisu['MiscInfo'])))
+                            czy_dodac_linie_do_tmp_komentarz = True
                         else:
-                            daneDoZapisu['MiscInfo'] = 'fb=' + abcde.split(splitter, 1)[1]
-                    else:
-                        tmp_komentarz.append(abcde)
-                elif abcde.startswith(';wiki'):
-                    splitter = ''
-                    for spl in skrot_dla_wiki:
-                        if abcde.startswith(spl):
-                            splitter = spl
-                            break
-                    if splitter:
-                        if 'MiscInfo' in daneDoZapisu:
-                            self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\nPozostawiam niezmienione i zostawiam komentarz!\n' % (daneDoZapisu['Komentarz'][-1], daneDoZapisu['MiscInfo'])))
-                            tmp_komentarz.append(abcde)
-                            return
-                        else:
-                            daneDoZapisu['MiscInfo'] = 'wiki=' + abcde.split(splitter, 1)[1]
-                    else:
-                        tmp_komentarz.append(abcde)
-                else:
-                    tmp_komentarz.append(abcde)
-            daneDoZapisu['Komentarz'] = tmp_komentarz[:]
-            return
+                            dane_do_zapisu['MiscInfo'] = przedrostek[skrot] + \
+                                                         linia_komentarza.split(skroty[skrot], 1)[1]
+                            if 'MiscInfo' not in dane_do_zapisu_kolejnosc_kluczy:
+                                dane_do_zapisu_kolejnosc_kluczy.append('MiscInfo')
+                                czy_dodac_linie_do_tmp_komentarz = False
+                        break
+                if czy_dodac_linie_do_tmp_komentarz:
+                    tmp_komentarz.append(linia_komentarza)
+            if tmp_komentarz:
+                dane_do_zapisu['Komentarz'] = tmp_komentarz
+            else:
+                del dane_do_zapisu['Komentarz']
+                dane_do_zapisu_kolejnosc_kluczy.remove('Komentarz')
+            if 'MiscInfo' in dane_do_zapisu and 'MiscInfo' not in dane_do_zapisu_kolejnosc_kluczy:
+                dane_do_zapisu_kolejnosc_kluczy.append('MiscInfo')
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
     def zapiszPOI(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
         # mozlie klucze dla poi:
@@ -1303,7 +1339,7 @@ class plikMP1(object):
 
         # sprawdz czy komentarz zawieraj odniesienie do strony www, wiki, facebooka, badz wysokosc
         # w takim przypadku funcja utworzy niezbedny MiscInfo
-        self.stworz_misc_info(daneDoZapisu)
+        self.stworz_misc_info(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
 
         # tylko dane autostradowe moga byc zapisywane w plikach txt. Reszta powinna trafic do plikow pnt.
         # if daneDoZapisu['Type'] in HW:
@@ -1366,12 +1402,13 @@ class plikMP1(object):
             self.plikizMp[daneDoZapisu['Plik']].append(liniaDoPnt)
 
             # wyodrebnij obszar z UMP-PL-Lodz, powinnismy otrzymac Lodz
-            obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
-            if obszar in self.obszarTypPlik:
-                if 'MIASTO' not in self.obszarTypPlik[obszar]:
-                    self.obszarTypPlik[obszar]['MIASTO'] = daneDoZapisu['Plik']
-            else:
-                self.obszarTypPlik[obszar] = {'MIASTO': daneDoZapisu['Plik']}
+            self.obszarTypPlik.dodaj_plik_dla_poi(daneDoZapisu)
+            # obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
+            # if obszar in self.obszarTypPlik:
+            #     if 'MIASTO' not in self.obszarTypPlik[obszar]:
+            #         self.obszarTypPlik[obszar]['MIASTO'] = daneDoZapisu['Plik']
+            # else:
+            #     self.obszarTypPlik[obszar] = {'MIASTO': daneDoZapisu['Plik']}
         else:
             # pozostale poi powinny powinny byc zapisane w plikach pnt, ale nie moga to byc pliki cities
             # jesli bedzie to plik cities, zamien na _nowosci.pnt
@@ -1453,14 +1490,15 @@ class plikMP1(object):
 
             # sekcja dla autopoi, to tutaj dodajemy dany typ do globalnej listy powiazan, Typ->plik
             # wyodrebnij obszar z UMP-PL-Lodz, powinnismy otrzymac Lodz
-            obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
-            if obszar in self.obszarTypPlik:
-                if daneDoZapisu['Typ'] not in self.obszarTypPlik[obszar]:
-                    if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
-                        self.obszarTypPlik[obszar][daneDoZapisu['Typ']] = daneDoZapisu['Plik']
-            else:
-                if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
-                    self.obszarTypPlik[obszar] = {daneDoZapisu['Typ']: daneDoZapisu['Plik']}
+            self.obszarTypPlik.dodaj_plik_dla_poi(daneDoZapisu)
+            # obszar = daneDoZapisu['Plik'].split('/')[0].split('-')[-1]
+            # if obszar in self.obszarTypPlik:
+            #     if daneDoZapisu['Typ'] not in self.obszarTypPlik[obszar]:
+            #         if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
+            #             self.obszarTypPlik[obszar][daneDoZapisu['Typ']] = daneDoZapisu['Plik']
+            # else:
+            #     if not self.czyplikjestwykluczony(daneDoZapisu['Plik']):
+            #         self.obszarTypPlik[obszar] = {daneDoZapisu['Typ']: daneDoZapisu['Plik']}
         return 0
 
     def zapiszTXT(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
@@ -1714,13 +1752,13 @@ class plikMP1(object):
                         pnt_typ = 'MIASTO'
                     else:
                         pnt_typ = bbb[6].strip()
-                    if UMP_obszar != 'None':
-                        self.stdoutwrite('%s --> %s' %(punkt_z_nowosci_pnt.strip(),
-                                                       self.obszarTypPlik[UMP_obszar][pnt_typ]))
+                    plik_dla_typu_w_obszarze = self.obszarTypPlik.zwroc_plik_dla_typu(UMP_obszar, pnt_typ)
+                    if UMP_obszar != 'None' and plik_dla_typu_w_obszarze:
+                        self.stdoutwrite('%s --> %s' %(punkt_z_nowosci_pnt.strip(), plik_dla_typu_w_obszarze))
                         # najpierw usuwamy i dodajemy komentarze
                         for komentarz in komentarz_w_nowosci:
-                            self.plikizMp[self.obszarTypPlik[UMP_obszar][pnt_typ]].append(komentarz)
-                        self.plikizMp[self.obszarTypPlik[UMP_obszar][pnt_typ]].append(punkt_z_nowosci_pnt)
+                            self.plikizMp[plik_dla_typu_w_obszarze].append(komentarz)
+                        self.plikizMp[plik_dla_typu_w_obszarze].append(punkt_z_nowosci_pnt)
                         komentarz_w_nowosci = []
                     else:
                         tmp_nowosci += komentarz_w_nowosci
@@ -1877,14 +1915,27 @@ class plikMP1(object):
             self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
         return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
+    def koreguj_miasto_przy_pomocy_indeksow_miast(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if 'CityIdx' in dane_do_zapisu:
+            dane_do_zapisu['Miasto'] = plikMp.cityIdxMiasto[int(dane_do_zapisu['CityIdx']) - 1]
+        elif 'CityName' in dane_do_zapisu:
+            dane_do_zapisu['Miasto'] = dane_do_zapisu['CityName']
+        # usun zbedne klucze zwiazane z indeksami miast
+        for klucz in ('RegionName', 'CountryName', 'DistrictName', 'CityIdx', 'CityName'):
+            if klucz in dane_do_zapisu:
+                del(dane_do_zapisu[klucz])
+            if klucz in dane_do_zapisu_kolejnosc_kluczy:
+                dane_do_zapisu_kolejnosc_kluczy.remove(klucz)
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
 
 class PlikiDoMontowania(object):
-    def __init__(self, KatalogZeZrodlami, args):
+    def __init__(self, katalog_ze_zrodlami, args):
         if not hasattr(args, 'montuj_wedlug_klas'):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
         self.errOutWriter = errOutWriter(args)
-        self.KatalogZeZrodlami = KatalogZeZrodlami
+        self.KatalogZeZrodlami = katalog_ze_zrodlami
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
