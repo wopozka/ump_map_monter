@@ -53,7 +53,7 @@ class errOutWriter(object):
 class TestyPoprawnosciDanych(object):
     def __init__(self):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
-        self.typyLabelzMiastem = [
+        self.typy_label_z_miastem = [
             '0x1',  # motorway
             '0x2',  # principal highway
             '0x3',  # principal highway
@@ -70,7 +70,7 @@ class TestyPoprawnosciDanych(object):
             # '0x1a',#ferry
             # ' 0x1b'#water or rail ferry
         ]
-        self.typyData0Only = self.typyLabelzMiastem + ['0x14', '0x10e10', '0x10e14', '0x10e15']
+        self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15']
         self.literyWojewodztw = [
             'B',  # województwo podlaskie
             'C',  # województwo kujawsko-pomorskie
@@ -91,30 +91,49 @@ class TestyPoprawnosciDanych(object):
         ]
         self.ruchLewostronny = ['UMP-GB']
 
-    def sprawdzData0Only(self, Data, type):
-        if type in self.typyData0Only:
-            if len(Data) == 1 and Data[0].startswith('Data0'):
+    def sprawdzData0Only(self, dane_do_zapisu):
+        data = [a for a in dane_do_zapisu if a.startswith('Data')]
+        if dane_do_zapisu['POIPOLY'] == '[POI]' and len(data) > 1:
+            return data[0]
+        elif dane_do_zapisu['Type'] in self.typy_data_0_only:
+            if len(data) == 1 and data[0].startswith('Data0'):
                 return 0
             else:
-                print(Data, type)
-                return Data[0]
+                print(data, type)
+                return data[0]
         else:
             return 0
 
-    def sprawdzLabel(self, Type, Label, POIPOLY):
-        if Type in self.typyLabelzMiastem and POIPOLY == '[POLYLINE]':
+    def sprawdz_label_dla_poi(self, dane_do_zapisu):
+        if 0x2900 <= int(dane_do_zapisu['Type'], 16) <= 0x3008:
+            if 'Label' not in dane_do_zapisu:
+                return 'brak_label'
+            elif 'Label' in dane_do_zapisu and not dane_do_zapisu['Label']:
+                return 'brak_label'
+            elif 'Miasto' not in dane_do_zapisu:
+                return 'brak_miasto'
+            elif not dane_do_zapisu['Miasto']:
+                return 'brak_miasto'
+            return ''
+        elif dane_do_zapisu['Type'] in City.rozmiar2Type:
+            if 'Label' not in dane_do_zapisu:
+                return 'brak_nazwy_miasta'
+            elif not dane_do_zapisu['Label']:
+                return 'brak_nazwy_miasta'
+
+    def sprawdz_label_dla_poly(self, dane_do_zapisu):
+        if dane_do_zapisu['Type'] in self.typy_label_z_miastem and dane_do_zapisu['POIPOLY'] == '[POLYLINE]':
             # gdy label w nawiasach klamrowych
-            if Label.startswith('{'):
+            if dane_do_zapisu['Label'].startswith('{'):
                 return 'miasto niepotrzebne'
-            elif Label.startswith('~'):
-                Label1 = Label.split(' ', 1)
+            elif dane_do_zapisu['Label'].startswith('~'):
+                Label1 = dane_do_zapisu['Label'].split(' ', 1)
                 if len(Label1) == 1:
                     return 'miasto niepotrzebne'
                 else:
                     if Label1[1].startswith('{') and Label1[1].endswith('}'):
                         return 'miasto niepotrzebne'
-                    else:
-                        return 'miasto potrzebne'
+                    return 'miasto potrzebne'
             # w przypadku gdyby nazwa zaczynala sie mala litera
             else:
                 return 'miasto potrzebne'
@@ -1223,7 +1242,7 @@ class plikMP1(object):
                 return auto_plik
         return self.plik_nowosci_txt
 
-    def stworz_misc_info(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def stworz_misc_info(self, dane_do_zapisu):
         punkty_z_wysokoscia = ('0x6616', '0x6617',)
         skroty_dla_wysokosci = (';wys=', ';wys:')
         skroty = OrderedDict({';https://': ';', ';http://': ';', ';fb://': ';fb://', ';fb:': ';fb:', ';fb=': ';fb=',
@@ -1235,7 +1254,7 @@ class plikMP1(object):
         # jesli dla poi mamy przypisany plik txt, wtedy nie tworz MiscInfo
         if dane_do_zapisu['Plik'].endswith('.txt') or 'Komentarz' not in dane_do_zapisu \
                 or dane_do_zapisu['Type'] in City.rozmiar2Type:
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            return dane_do_zapisu
         elif dane_do_zapisu['Type'] in punkty_z_wysokoscia:
             for skrot_dla_wys in skroty_dla_wysokosci:
                 if 'Komentarz' not in dane_do_zapisu:
@@ -1243,13 +1262,10 @@ class plikMP1(object):
                 for wysokosc_w_komentarzu in \
                         [wys for wys in dane_do_zapisu['Komentarz'] if wys.startswith(skrot_dla_wys)]:
                     dane_do_zapisu['StreetDesc'] = wysokosc_w_komentarzu.split(skrot_dla_wys, 1)[1]
-                    if 'StreetDesc' not in dane_do_zapisu_kolejnosc_kluczy:
-                        dane_do_zapisu_kolejnosc_kluczy.append('StreetDesc')
                     dane_do_zapisu['Komentarz'].remove(wysokosc_w_komentarzu)
                     if not dane_do_zapisu['Komentarz']:
-                        dane_do_zapisu_kolejnosc_kluczy.remove('Komentarz')
                         del(dane_do_zapisu['Komentarz'])
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            return dane_do_zapisu
         else:
             for linia_komentarza in dane_do_zapisu['Komentarz']:
                 czy_dodac_linie_do_tmp_komentarz = True
@@ -1262,9 +1278,7 @@ class plikMP1(object):
                         else:
                             dane_do_zapisu['MiscInfo'] = przedrostek[skrot] + \
                                                          linia_komentarza.split(skroty[skrot], 1)[1]
-                            if 'MiscInfo' not in dane_do_zapisu_kolejnosc_kluczy:
-                                dane_do_zapisu_kolejnosc_kluczy.append('MiscInfo')
-                                czy_dodac_linie_do_tmp_komentarz = False
+                            czy_dodac_linie_do_tmp_komentarz = False
                         break
                 if czy_dodac_linie_do_tmp_komentarz:
                     tmp_komentarz.append(linia_komentarza)
@@ -1272,51 +1286,50 @@ class plikMP1(object):
                 dane_do_zapisu['Komentarz'] = tmp_komentarz
             else:
                 del dane_do_zapisu['Komentarz']
-                dane_do_zapisu_kolejnosc_kluczy.remove('Komentarz')
-            if 'MiscInfo' in dane_do_zapisu and 'MiscInfo' not in dane_do_zapisu_kolejnosc_kluczy:
-                dane_do_zapisu_kolejnosc_kluczy.append('MiscInfo')
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            return dane_do_zapisu
 
     def zapiszPOI(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
+        daneDoZapisu, daneDoZapisuKolejnoscKluczy = \
+            self.modyfikuj_plik_dla_rekordu_mp(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
         # mozlie klucze dla poi:
         # Dziwne,Komentarz,POIPOLY,Type,Label,HouseNumber,StreetDesc,Data,Phone,MiscInfo,Miasto,Plik,KodPoczt,
         # Rozmiar,Highway,Typ
-        HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
-              '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
-        PunktyZWysokoscia = ('0x6616', '0x6617')
+        # HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
+        #       '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
+        # PunktyZWysokoscia = ('0x6616', '0x6617')
 
         # najpierw sprawdzmy czy plik do zapisu istnieje. Jesli nie to dla punktow autostradowych
         # ustaw plik _nowosci.txt a dla wszystkich inych _nowosci.pnt
-        if 'Plik' not in daneDoZapisu:
-            if daneDoZapisu['Type'] in HW:
-                daneDoZapisu['Plik'] = self.plik_nowosci_txt
-            else:
-                daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-            daneDoZapisuKolejnoscKluczy.append('Plik')
-        else:
-            # normalizujemy nazwe pliku, bo moga byc pomieszane duze i male literki
-            daneDoZapisu['Plik'] = self.plikNormalizacja(daneDoZapisu['Plik'])
+        # if 'Plik' not in daneDoZapisu:
+        #     if daneDoZapisu['Type'] in HW:
+        #         daneDoZapisu['Plik'] = self.plik_nowosci_txt
+        #     else:
+        #         daneDoZapisu['Plik'] = self.plik_nowosci_pnt
+        #     daneDoZapisuKolejnoscKluczy.append('Plik')
+        # else:
+        #     # normalizujemy nazwe pliku, bo moga byc pomieszane duze i male literki
+        #     daneDoZapisu['Plik'] = self.plikNormalizacja(daneDoZapisu['Plik'])
 
         # jesli jako wartosc plik jest wpisana nieistniejaca w zrodlach pozycja to dodaj go do listy i ustaw mu
         # dokladnosc taka jak dla plikow pnt
-        if daneDoZapisu['Plik'] not in self.plikizMp:
-            if daneDoZapisu['Plik'] != '':
-                if self.sprawdz_poprawnosc_sciezki(daneDoZapisu['Plik']):
-                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
-                    daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-
-                else:
-                    # plik jeszcze nie zaistnial przy demontazu, tworzymy wiec jego pusta zawartosc
-                    # i ustalamy dokladnosc
-                    self.plikizMp[daneDoZapisu['Plik']] = []
-                    self.plikDokladnosc[daneDoZapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
-            else:
-                if daneDoZapisu['Type'] in HW:
-                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(daneDoZapisu['Plik']))
-                    daneDoZapisu['Plik'] = self.plik_nowosci_txt
-                else:
-                    self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
-                    daneDoZapisu['Plik'] = self.plik_nowosci_pnt
+        # if daneDoZapisu['Plik'] not in self.plikizMp:
+        #     if daneDoZapisu['Plik'] != '':
+        #         if self.sprawdz_poprawnosc_sciezki(daneDoZapisu['Plik']):
+        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
+        #             daneDoZapisu['Plik'] = self.plik_nowosci_pnt
+        #
+        #         else:
+        #             # plik jeszcze nie zaistnial przy demontazu, tworzymy wiec jego pusta zawartosc
+        #             # i ustalamy dokladnosc
+        #             self.plikizMp[daneDoZapisu['Plik']] = []
+        #             self.plikDokladnosc[daneDoZapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
+        #     else:
+        #         if daneDoZapisu['Type'] in HW:
+        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(daneDoZapisu['Plik']))
+        #             daneDoZapisu['Plik'] = self.plik_nowosci_txt
+        #         else:
+        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
+        #             daneDoZapisu['Plik'] = self.plik_nowosci_pnt
 
         # gdyby dla punktu byl ustawiony plik txt, zamien go na _nowosci.pnt
         # if daneDoZapisu['Type'] not in HW and daneDoZapisu['Plik'].find('.txt')>0:
@@ -1331,15 +1344,17 @@ class plikMP1(object):
         #	daneDoZapisu['Plik']=self.plik_nowosci_txt
 
         # Miasta < od 1000 dostaj¹ typ 0xe00
-        if daneDoZapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
-            daneDoZapisu['Type'] = '0xe00'
-        # miasta > od 1000000 dostaja typ 0x0400
-        if daneDoZapisu['Type'] in ['0x300', '0x200', '0x100']:
-            daneDoZapisu['Type'] = '0x400'
+        daneDoZapisu, daneDoZapisuKolejnoscKluczy =  \
+            self.koreguj_wpisy_dla_miast(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
+        # if daneDoZapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
+        #     daneDoZapisu['Type'] = '0xe00'
+        # # miasta > od 1000000 dostaja typ 0x0400
+        # if daneDoZapisu['Type'] in ['0x300', '0x200', '0x100']:
+        #     daneDoZapisu['Type'] = '0x400'
 
         # sprawdz czy komentarz zawieraj odniesienie do strony www, wiki, facebooka, badz wysokosc
         # w takim przypadku funcja utworzy niezbedny MiscInfo
-        self.stworz_misc_info(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
+        self.stworz_misc_info(daneDoZapisu)
 
         # tylko dane autostradowe moga byc zapisywane w plikach txt. Reszta powinna trafic do plikow pnt.
         # if daneDoZapisu['Type'] in HW:
@@ -1372,8 +1387,8 @@ class plikMP1(object):
         # w przypadku gdy mamy do czynienia z miastem
         elif daneDoZapisu['Type'] in City.rozmiar2Type:
             #miasta powinny byc zapisywane w cities, jesli nie to przerzuc je do _nowosci.pnt
-            if daneDoZapisu['Plik'].find('cities-') < 0:
-                daneDoZapisu['Plik'] = self.plik_nowosci_pnt
+            # if daneDoZapisu['Plik'].find('cities-') < 0:
+            #     daneDoZapisu['Plik'] = self.plik_nowosci_pnt
             # pare wartosci ktore byc powinny, a jesli nie ma to ustawiamy jako puste wartosci
 
             # nie wiem czy jest Data0 1, 2 itd, wiêc sprawdzam tak i biorê pierwsz¹ wartoœæ
@@ -1486,15 +1501,7 @@ class plikMP1(object):
         return 0
 
     def zapiszTXT(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
-        # testujemy czy nie ma przypadkiem Data1, Data2, Data3, Data4 dla plikow ktore miec ich nie powinny
-        # ale tylko dla polyline
-        if daneDoZapisu['POIPOLY'] == '[POLYLINE]':
-            data1234 = TestyPoprawnosciDanych().sprawdzData0Only([a for a in daneDoZapisu if a.startswith('Data')],
-                                                                 daneDoZapisu['Type'])
-            if data1234:
-                self.stderrorwrite(('Data 1 albo wyzej dla drogi/kolei %s' % daneDoZapisu[data1234]))
-
-        # sprawdzmy czy plik do zapisu istnieje. Jesli nie to dla punktow autostradowych ustaw plik _nowosci.txt
+        self.testuj_wielokrotne_data(daneDoZapisu)
 
         if 'Plik' not in daneDoZapisu:
             # tutaj dodac sprawdzanie czy opcja autopoly jest wlaczona
@@ -1594,33 +1601,13 @@ class plikMP1(object):
                     self.plikizMp[daneDoZapisu['Plik']].append(tmpaaa + '=' + daneDoZapisu[tmpaaa] + '\n')
             elif tmpaaa == 'Label':
                 # sprawdzamy poprawnosc Label, oraz jeœli istnieje Label dla ulicy, wtedy powinno istnieæ te¿ miasto
-                spr_label = TestyPoprawnosciDanych().sprawdzLabel(daneDoZapisu['Type'], daneDoZapisu['Label'],
-                                                                daneDoZapisu['POIPOLY'])
-                if 'Miasto' not in daneDoZapisuKolejnoscKluczy:
-                    if spr_label == 'miasto potrzebne':
-                        wspolrzedne = daneDoZapisu[[b for b in daneDoZapisu if b.startswith('Data')][0]].split('),(')[-1].rstrip(')')
-                        self.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(daneDoZapisu['Label'], wspolrzedne)))
+                self.testuj_label(daneDoZapisu)
                 self.plikizMp[daneDoZapisu['Plik']].append(tmpaaa + '=' + daneDoZapisu[tmpaaa] + '\n')
 
             # sprawdzanie niektorych wartosci type. W przypadku gdy mamy rondo musimy sprawdzic czy kreci sie
             # odpowiednio
             elif tmpaaa == 'Type':
-                if daneDoZapisu['POIPOLY'] == '[POLYLINE]':
-                    if daneDoZapisu['Type'] == '0xc':
-                        wspolrzedne = daneDoZapisu[[b for b in daneDoZapisu if b.startswith('Data')][0]]
-                        wspolrzedneOstPara = wspolrzedne.split('),(')[-1].rstrip(')')
-                        if 'DirIndicator' not in daneDoZapisu:
-                            self.stderrorwrite(('Brak kierunkowosci dla ronda {!s}'.format(wspolrzedneOstPara)))
-                        wspolrzedne = daneDoZapisu[[b for b in daneDoZapisu if b.startswith('Data')][0]]
-                        kierunek_ronda = TestyPoprawnosciDanych().sprawdzKierunekRonda(wspolrzedne, daneDoZapisu['Plik'])
-                        if kierunek_ronda == 'OK':
-                            pass
-                        elif kierunek_ronda == 'ODWROTNE':
-                            self.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(wspolrzedneOstPara))
-                        elif kierunek_ronda == 'NIE_WIEM':
-                            self.stderrorwrite('Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(wspolrzedneOstPara))
-                        elif kierunek_ronda == 'NOWOSCI.TXT':
-                            self.stderrorwrite('Nie moge sprawdzic kierunkowosci bo rondo w _nowosci.txt')
+                self.testuj_kierunkowosc_ronda(daneDoZapisu)
                 self.plikizMp[daneDoZapisu['Plik']].append(tmpaaa + '=' + daneDoZapisu[tmpaaa] + '\n')
             # dla kazdej innej wartosci klucza poza Plik (plik pomijamy) zapisujemy dane na dysk
             elif tmpaaa != 'Plik':
@@ -1781,7 +1768,7 @@ class plikMP1(object):
                     self.stderrorwrite('Dziwna linia %s w rekordach %s.' % (linia, string_z_rekordem))
                     dane_do_zapisu['Dziwne'].append(linia)
                     dane_do_zapisu_kolejnosc_kluczy['Dziwne'] = ''
-        return {key: dane_do_zapisu[key] for key in dane_do_zapisu}, [key for key in dane_do_zapisu_kolejnosc_kluczy]
+        return OrderedDict({key: dane_do_zapisu[key] for key in dane_do_zapisu_kolejnosc_kluczy})
 
     @staticmethod
     def zaokraglij_klucze_ze_wspolrzednymi(self, dane_do_zapisu, dokladnosc):
@@ -1791,7 +1778,7 @@ class plikMP1(object):
         return dane_do_zapisu
 
     @staticmethod
-    def przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu):
         sep = {'EntryPoint': ':', 'Otwarte': '='}
         for key in ('EntryPoint', 'Otwarte'):
             if key in dane_do_zapisu:
@@ -1799,19 +1786,17 @@ class plikMP1(object):
                     dane_do_zapisu['Komentarz'].append(';;' + key + sep[key] + dane_do_zapisu[key])
                 else:
                     dane_do_zapisu['Komentarz'] = [';;' + key + sep[key] + dane_do_zapisu[key]]
+                    dane_do_zapisu.move_to_end('Komentarz', last=False)
                 del dane_do_zapisu[key]
-                dane_do_zapisu_kolejnosc_kluczy.remove(key)
-                if 'Komentarz' not in dane_do_zapisu_kolejnosc_kluczy:
-                    dane_do_zapisu_kolejnosc_kluczy = ['Komentarz'] + dane_do_zapisu_kolejnosc_kluczy
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        return dane_do_zapisu
 
-    def modyfikuj_plik_dla_rekordu_mp(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def modyfikuj_plik_dla_rekordu_mp(self, dane_do_zapisu):
         if 'POIPOLY' in ('[POLYGON]', '[POLYLINE]'):
-            return self.modyfikuj_plik_dla_polygon_polyline(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+            return self.modyfikuj_plik_dla_polygon_polyline(dane_do_zapisu)
         else:
-            return self.modyfikuj_plik_dla_poi(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+            return self.modyfikuj_plik_dla_poi(dane_do_zapisu)
 
-    def modyfikuj_plik_dla_polygon_polyline(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def modyfikuj_plik_dla_polygon_polyline(self, dane_do_zapisu):
         # je¶li Plik jest ale koñczy siê na pnt wtedy zamieñ warto¶æ na nowosci
         if 'Plik' in dane_do_zapisu:
             dane_do_zapisu['Plik'] = self.plikNormalizacja(dane_do_zapisu['Plik'])
@@ -1825,14 +1810,12 @@ class plikMP1(object):
                 dane_do_zapisu['Plik'] = self.plik_nowosci_txt
             if self.args.autopolypoly and  dane_do_zapisu['Plik'] == self.plik_nowosci_txt:
                 del(dane_do_zapisu['Plik'])
-                dane_do_zapisu_kolejnosc_kluczy.remove('Plik')
             elif dane_do_zapisu['Plik'] == self.plik_nowosci_txt:
-                return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+                return dane_do_zapisu
 
         # jesli Plik nie jest obecny w danych do zapisu
         if 'Plik' not in dane_do_zapisu:
             # ponizej dodajemy plik bo i tak to powstanie, a teraz go nie ma
-            dane_do_zapisu_kolejnosc_kluczy.append('Plik')
             # tutaj dodac sprawdzanie czy opcja autopoly jest wlaczona
             if self.args.autopolypoly:
                 listawspolrzednychdosprawdzenia = []
@@ -1861,21 +1844,34 @@ class plikMP1(object):
         if dane_do_zapisu['Plik'] not in self.plikizMp:
             self.plikizMp[dane_do_zapisu['Plik']] = []
             self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_txt]
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        return dane_do_zapisu
 
 
-    def modyfikuj_plik_dla_poi(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def modyfikuj_plik_dla_poi(self, dane_do_zapisu):
         HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
               '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
         # najpierw sprawdzmy czy plik do zapisu istnieje. Jesli nie to dla punktow autostradowych
         # ustaw plik _nowosci.txt a dla wszystkich inych _nowosci.pnt
         if 'Plik' not in dane_do_zapisu:
-            dane_do_zapisu_kolejnosc_kluczy.append('Plik')
             if dane_do_zapisu['Type'] in HW:
                 dane_do_zapisu['Plik'] = self.plik_nowosci_txt
             else:
                 dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            return dane_do_zapisu
+
+        # jesli mamy miasto i plik nie jest cities wtedy zamien na nowosci.pnt
+        if 'Type' in dane_do_zapisu and dane_do_zapisu['Type'] in City.rozmiar2Type:
+            if not 'cities-' in dane_do_zapisu['Plik']:
+                dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+                return dane_do_zapisu
+        # poi ktore nie sa miastami powinny byc zapisywane w innych plikach niz cities
+        try:
+            if int(dane_do_zapisu['Type'], 16) > 17 and 'cities-' in dane_do_zapisu['Plik']:
+                dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+        except ValueError:
+            # jezeli ktos sie pomylil i zamiast Typ wpisal Type=alias to program sie tutaj wylozy, obslugujemy to.
+            self.stderrorwrite('Nieznany Type:%s. Prawdopodobnie literowka Type zamiast Typ.' % dane_do_zapisu['Type'])
+            return dane_do_zapisu
 
         # normalizujemy nazwe pliku, bo moga byc pomieszane duze i male literki
         dane_do_zapisu['Plik'] = self.plikNormalizacja(dane_do_zapisu['Plik'])
@@ -1890,18 +1886,18 @@ class plikMP1(object):
                     'Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(
                         dane_do_zapisu['Plik']))
                 dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            return dane_do_zapisu
 
         # jesli jako wartosc plik jest wpisana nieistniejaca w zrodlach pozycja to dodaj go do listy i ustaw mu
         # dokladnosc taka jak dla plikow pnt
         if dane_do_zapisu['Plik'] not in self.plikizMp:
             self.plikizMp[dane_do_zapisu['Plik']] = []
             self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        return dane_do_zapisu
 
     def koreguj_miasto_przy_pomocy_indeksow_miast(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
         if 'CityIdx' in dane_do_zapisu:
-            dane_do_zapisu['Miasto'] = plikMp.cityIdxMiasto[int(dane_do_zapisu['CityIdx']) - 1]
+            dane_do_zapisu['Miasto'] = self.cityIdxMiasto[int(dane_do_zapisu['CityIdx']) - 1]
         elif 'CityName' in dane_do_zapisu:
             dane_do_zapisu['Miasto'] = dane_do_zapisu['CityName']
         # usun zbedne klucze zwiazane z indeksami miast
@@ -1912,6 +1908,145 @@ class plikMP1(object):
                 dane_do_zapisu_kolejnosc_kluczy.remove(klucz)
         return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
+    @staticmethod
+    def zamien_type_na_orig_type(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if 'OrigType' in dane_do_zapisu:
+            dane_do_zapisu['Type'] = dane_do_zapisu['OrigType']
+            del(dane_do_zapisu['OrigType'])
+            dane_do_zapisu_kolejnosc_kluczy.remove('OrigType')
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+    def koreguj_wpisy_dla_miast(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if dane_do_zapisu['POIPOLY'] != '[POI]':
+            return dane_do_zapisu
+        if dane_do_zapisu['Type'] not in City.rozmiar2Type:
+            return dane_do_zapisu
+        # Miasta < od 1000 dostaj¹ typ 0xe00
+        if dane_do_zapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
+            dane_do_zapisu['Type'] = '0xe00'
+        # miasta > od 1000000 dostaja typ 0x0400
+        elif dane_do_zapisu['Type'] in ['0x300', '0x200', '0x100']:
+            dane_do_zapisu['Type'] = '0x400'
+        if 'Label' not in dane_do_zapisu:
+            self.stderrorwrite('Brakuje nazwy miasta dla wspolrzednych %s' % daneDoZapisu[tmpData[0]])
+            dane_do_zapisu['Label'] = ''
+            dane_do_zapisu_kolejnosc_kluczy.append('Label')
+        if 'Rozmiar' not in dane_do_zapisu:
+            dane_do_zapisu['Rozmiar'] = City.type2Rozmiar[daneDoZapisu['Type']]
+            dane_do_zapisu_kolejnosc_kluczy.append('Rozmiar')
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+    def koreguj_wpisy_dla_poi(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+        if dane_do_zapisu['POIPOLY'] != '[POI]' or dane_do_zapisu['Type']  in City.rozmiar2Type:
+            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        if 'Miasto' not in dane_do_zapisu:
+            dane_do_zapisu['Miasto'] = ''
+        if 'Typ' not in dane_do_zapisu:
+            # obslugujemy tworzenie typu po nazwie
+            if 'Label' in dane_do_zapisu:
+                zgadnietyTypDokladny, zgdanietyTypPoAliasie = \
+                    self.tabela_konwersji_typow.zwrocTypPoLabel(dane_do_zapisu['Label'], dane_do_zapisu['Type'])
+                if zgadnietyTypDokladny:
+                    dane_do_zapisu['Typ'] = zgadnietyTypDokladny
+                else:
+                    if zgdanietyTypPoAliasie.startswith('0x'):
+                        self.stderrorwrite('Nieznany alias dla Type=%s.\nPunkt o wspolrzednych %s' %
+                                           (dane_do_zapisu['Type'], dane_do_zapisu[tmpData[0]]))
+                        dane_do_zapisu['Typ'] = '0x0'
+                    else:
+                        dane_do_zapisu['Typ'] = zgdanietyTypPoAliasie.upper()
+            else:
+                try:
+                    dane_do_zapisu['Typ'] = self.tabela_konwersji_typow.type2Alias[dane_do_zapisu['Type']][0].upper()
+                except KeyError:
+                    self.stderrorwrite('Nieznany alias dla Type=%s. Punkt o wspolrzednych %s' %
+                                       (dane_do_zapisu['Type'], dane_do_zapisu[tmpData[0]]))
+                    dane_do_zapisu['Typ'] = '0x0'
+        else:
+            if dane_do_zapisu['Typ'].startswith('0x'):
+                pass
+            elif dane_do_zapisu['Typ'] not in self.tabela_konwersji_typow.alias2Type:
+                self.stderrorwrite('Nieznany typ POI %s, w punkcie %s.' %
+                                   (dane_do_zapisu['Typ'], dane_do_zapisu[tmpData[0]]))
+        if 'EndLevel' not in dane_do_zapisu:
+            dane_do_zapisu['EndLevel'] = '0'
+        if len(tmpData) > 1:
+            self.stderrorwrite('Wielokrotne DataX= dla POI o wspolrzednych %s' % tmpData[0])
+        if 'Label' not in dane_do_zapisu_kolejnosc_kluczy:
+            dane_do_zapisu['Label'] = ''
+        else:
+            dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
+        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+
+    def zamien_przecinki_na_stopnie(self, dane_do_zapisu):
+        dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
+        return dane_do_zapisu
+
+    def testy_poprawnosci_danych(self, dane_do_zapisu):
+        wyniki_testow = list()
+        wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
+        wyniki_testow.append(self.testuj_wielokrotne_data(dane_do_zapisu))
+        wyniki_testow.append(self.testuj_label(dane_do_zapisu))
+        return ','.join(a for a in wyniki_testow if a)
+
+    def testuj_kierunkowosc_ronda(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]':
+            return ''
+        if dane_do_zapisu['Type'] == '0xc':
+            wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu if b.startswith('Data')][0]]
+            wspolrzedneOstPara = wspolrzedne.split('),(')[-1].rstrip(')')
+            if 'DirIndicator' not in dane_do_zapisu:
+                self.stderrorwrite(('Brak kierunkowosci dla ronda {!s}'.format(wspolrzedneOstPara)))
+                return 'brak_DirIndicator'
+            kierunek_ronda = TestyPoprawnosciDanych().sprawdzKierunekRonda(wspolrzedne, dane_do_zapisu['Plik'])
+            if kierunek_ronda == 'OK':
+                return ''
+            if kierunek_ronda == 'ODWROTNE':
+                self.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(wspolrzedneOstPara))
+                return kierunek_ronda
+            if kierunek_ronda == 'NIE_WIEM':
+                self.stderrorwrite(
+                    'Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(wspolrzedneOstPara))
+                return kierunek_ronda
+            if kierunek_ronda == 'NOWOSCI.TXT':
+                self.stderrorwrite('Nie moge sprawdzic kierunkowosci bo rondo w _nowosci.txt')
+                return kierunek_ronda
+            return ''
+
+    def testuj_wielokrotne_data(self, dane_do_zapisu):
+        data1234 = TestyPoprawnosciDanych().sprawdzData0Only(dane_do_zapisu)
+        if data1234:
+            self.stderrorwrite(('Data 1 albo wyzej dla drogi/kolei %s' % dane_do_zapisu[data1234]))
+            return 'Data1'
+        return ''
+
+    def testuj_label(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] == '[POI]':
+            wynik_testu = TestyPoprawnosciDanych().sprawdz_label_dla_poi(dane_do_zapisu)
+            szerokosc, dlugosc = \
+                [dane_do_zapisu[data] for data in dane_do_zapisu if data.startswith('Data')][0][1:-1].split(',')
+            if wynik_testu == 'brak_label':
+                self.stderrorwrite(
+                    '\nBrak Label dla punktu o wspolrzednych %s,%s.\nWyszukiwanie nie bêdzie dzia³aæ.'
+                    % (szerokosc, dlugosc))
+            elif wynik_testu == 'brak_miasto':
+                self.stderrorwrite(
+                    '\nBrak Miasto dla punktu o wspolrzednych %s,%s.\nWyszukiwanie nie bêdzie dzia³aæ.'
+                    % (szerokosc, dlugosc))
+            elif wynik_testu == 'brak_nazwy_miasta':
+                self.stderrorwrite(
+                    '\nBrak nazwy Miasta dla punktu o wspolrzednych %s,%s.'% (szerokosc, dlugosc))
+            return wynik_testu
+        else:
+            if 'Label' not in dane_do_zapisu:
+                return ''
+            if 'Miasto' not in dane_do_zapisu:
+                if TestyPoprawnosciDanych().sprawdz_label_dla_poly(dane_do_zapisu) == 'miasto potrzebne':
+                    wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu if b.startswith('Data')][0]].split('),(')[
+                        -1].rstrip(')')
+                    self.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(dane_do_zapisu['Label'], wspolrzedne)))
+                    return 'miasto potrzebne'
+        return ''
 
 class PlikiDoMontowania(object):
     def __init__(self, katalog_ze_zrodlami, args):
@@ -2895,11 +3030,26 @@ def demontuj(args):
         # dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = plikMp.zwroc_rekord_pliku_mp(rekord_z_pliku_mp.strip())
         # dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = \
         #     plikMp.modyfiku_plik_dla_rekordu_mp(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+        # dla miast zmodyfikuj type do odpowiednich wartosci
+        # dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = \
+        #   plikMp.koreguj_wpisy_dla_miast(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
         # zaokraglij klucze ze wspolrzednymi
         # dane_do_zapisu = plikMp.zaokraglij_klucze_ze_wspolrzednymi(dane_do_zapisu,
         #                                                            plikMp.plikDokladnosc[daneDoZapisu['Plik']])
-
+        # if args.cityidx:
+        #     dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = \
+        #        plikMp.koreguj_miasto_przy_pomocy_indeksow_miast(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+        # przenies otwarte i entrypoint do komentarza
+        # dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = \
+        #     plikMp.przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
         # iterujemy po kolejnych linijkach rekordu pliku mp
+        # if args.extratypes:
+        #    dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy = \
+        #       plikMp.zamien_type_na_orig_type(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+        # if dane_do_zapisu['POIPOLY'] in ('[POLYLINE]', '[POLYGON]'):
+        #     plikMp.zapiszTXT(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
+        # elif dane_do_zapisu['POIPOLY'] == '[POI]':
+        #     plikMp.zapiszPOI(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy)
         for pojedyncza_linia_z_rekordu_mp in rekord_z_pliku_mp_jako_lista:
             pojedyncza_linia_z_rekordu_mp = pojedyncza_linia_z_rekordu_mp.strip()
             # nie znalaz³ jeszcze [POI], [POLYLYNE], [POLYGON], wiec wszystko co jest przed to komentarz

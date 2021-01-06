@@ -3,6 +3,7 @@ import sys
 import os.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 import mont_demont
+from collections import OrderedDict
 
 class Args(object):
     def __init__(self):
@@ -100,7 +101,7 @@ def test_zwroc_rekord_pliku_mp(target, answer):
     args = Args()
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabela_konwersji_typow = mont_demont.tabelaKonwersjiTypow(zmienne, stderr_stdout_writer)
-    assert mont_demont.plikMP1(zmienne, args, tabela_konwersji_typow, Montuj=0).zwroc_rekord_pliku_mp(target) == (answer, [key for key in answer])
+    assert mont_demont.plikMP1(zmienne, args, tabela_konwersji_typow, Montuj=0).zwroc_rekord_pliku_mp(target) == answer
 
 
 TEST_ADR_TO_MP = (
@@ -191,12 +192,9 @@ TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ = (
 
 @pytest.mark.parametrize('target, answer', TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ)
 def test_entrypoint_otwarte_na_komentarz(target, answer):
-    kolejnosc_kluczy_target = [a for a in target]
-    kolejnosc_kluczy_answer = [a for a in answer]
-    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(target, kolejnosc_kluczy_target) \
-          == (answer, kolejnosc_kluczy_answer,)
+    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == answer
 
-TEST_MODYFIKUJ_PLOK_DLA_POI = (
+TEST_MODYFIKUJ_PLIK_DLA_POI = (
     ({'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
     ({'Label': 'label', 'Plik': 'UMP-PL-Lodz/crs/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Label': 'label', 'Plik': '_nowosci.pnt', 'Type': '0x2f06'}),
     ({'Label': 'label', 'Plik': 'UMP-PL-Lodz/crs/POI-Lodz.bankomaty.pnt', 'Type': '0x2000'}, {'Label': 'label', 'Plik': '_nowosci.txt', 'Type': '0x2000'}),
@@ -204,19 +202,17 @@ TEST_MODYFIKUJ_PLOK_DLA_POI = (
     ({'Label': 'label', 'Plik': '', 'Type': '0x2f06'}, {'Label': 'label', 'Plik': '_nowosci.pnt', 'Type': '0x2f06'}),
     ({'Label': 'label', 'Type': '0x2f06'}, {'Label': 'label', 'Type': '0x2f06', 'Plik': '_nowosci.pnt'}),
     ({'Label': 'label', 'Type': '0x2000'}, {'Label': 'label', 'Type': '0x2000', 'Plik': '_nowosci.txt'}),
-
+    ({'Label': 'Miasto', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0xd00'}, {'Label': 'Miasto', 'Plik': '_nowosci.pnt', 'Type': '0xd00'}),
+    ({'Label': 'ATM', 'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0x2f06'}, {'Label': 'ATM', 'Plik': '_nowosci.pnt', 'Type': '0x2f06'}),
 )
-@pytest.mark.parametrize('target, answer', TEST_MODYFIKUJ_PLOK_DLA_POI)
+@pytest.mark.parametrize('target, answer', TEST_MODYFIKUJ_PLIK_DLA_POI)
 def test_modyfikuj_plik_dla_poi(target, answer):
     args = Args()
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    kolejnosc_kluczy_target = [a for a in target]
-    kolejnosc_kluczy_answer = [a for a in answer]
-    assert plikMp.modyfikuj_plik_dla_poi(target, kolejnosc_kluczy_target) \
-          == (answer, kolejnosc_kluczy_answer,)
+    assert plikMp.modyfikuj_plik_dla_poi(OrderedDict(target)) == answer
 
 TEST_MODYFIKUJ_PLIK_DLA_POLY = (
     (({'POIPOLY': 'POLYLINE', 'Type': '0x6', 'Label': 'Starowiejska', 'EndLevel' :'1', 'Data0': '(51.86757,19.56022),(51.86762,19.55950),(51.86768,19.55851),(51.86772,19.55783),(51.86768,19.55755),(51.86675,19.55321),(51.86666,19.55279),(51.86640,19.55173),(51.86624,19.55123),(51.86566,19.54977),(51.86514,19.54834),(51.86476,19.54694),(51.86450,19.54646),(51.86381,19.54534),(51.86352,19.54462),(51.86339,19.54394),(51.86307,19.54107),(51.86299,19.53973)', 'Plik': 'UMP-PL-Lodz/src/DOBRA.ulice.txt'}, False,), {'POIPOLY': 'POLYLINE', 'Type': '0x6', 'Label': 'Starowiejska', 'EndLevel': '1', 'Data0': '(51.86757,19.56022),(51.86762,19.55950),(51.86768,19.55851),(51.86772,19.55783),(51.86768,19.55755),(51.86675,19.55321),(51.86666,19.55279),(51.86640,19.55173),(51.86624,19.55123),(51.86566,19.54977),(51.86514,19.54834),(51.86476,19.54694),(51.86450,19.54646),(51.86381,19.54534),(51.86352,19.54462),(51.86339,19.54394),(51.86307,19.54107),(51.86299,19.53973)', 'Plik': 'UMP-PL-Lodz/src/DOBRA.ulice.txt'}),
@@ -245,11 +241,7 @@ def test_modyfikuj_plik_dla_polygon_polyline(target, answer):
                                                       'UMP-PL-Lodz/src/LODZ.kolej.txt',
                                                       'UMP-PL-Lodz/src/LODZ.zakazy.txt'
                                                       ])
-    kolejnosc_kluczy_target = [a for a in target[0]]
-    kolejnosc_kluczy_answer = [a for a in answer]
-    assert plikMp.modyfikuj_plik_dla_polygon_polyline(target[0], kolejnosc_kluczy_target) \
-          == (answer, kolejnosc_kluczy_answer,)
-
+    assert plikMp.modyfikuj_plik_dla_polygon_polyline(OrderedDict(target[0])) == answer
 
 TEST_STWORZ_MISC_INFO = (
     ({'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'Plik': 'POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
@@ -274,10 +266,7 @@ def test_stworz_misc_info(target, answer):
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    kolejnosc_kluczy_target = [a for a in target]
-    kolejnosc_kluczy_answer = [a for a in answer]
-    assert plikMp.stworz_misc_info(target, kolejnosc_kluczy_target) \
-          == (answer, kolejnosc_kluczy_answer,)
+    assert plikMp.stworz_misc_info(OrderedDict(target)) == answer
 
 TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
     ('OLSZTYN.BP.paliwo.pnt', True),
@@ -322,3 +311,71 @@ def test_zwroc_plik_dla_typu(target, answer):
     for dane_do_zapisu in TEST_PLIK_TYP_DANE:
         auto_plik.dodaj_plik_dla_poi(dane_do_zapisu)
     assert auto_plik.zwroc_plik_dla_typu(target[0], target[1]) == answer
+
+TEST_POPRAWNOSC_DANYCH = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'brak_DirIndicator',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-GB-Leszno/src/LESZNO.ulice.txt'}, 'ODWROTNE',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'NIE_WIEM',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
+    ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1'),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '{rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX {rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'Bank Spoldzielczy', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, ''),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'brak_label'),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': '', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'brak_label'),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Miasto': '',
+    'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'brak_miasto'),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+      'Data0': '(51.82457,17.57944)',
+      'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'brak_miasto'),
+    ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': '', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+      'Data0': '(51.82457,17.57944)',
+      'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'brak_label'),
+    ({'POIPOLY': '[POI]', 'Type': '0xe00', 'Label': 'Golkowo', 'City': 'Y', 'Data0': '(51.60143,17.51641)',
+      'Miasto': 'Golkowo', 'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Rozmiar': '0'}, ''),
+    ({'POIPOLY': '[POI]', 'Type': '0xe00', 'Label': '', 'City': 'Y', 'Data0': '(51.60143,17.51641)',
+      'Miasto': 'Golkowo', 'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Rozmiar': '0'}, 'brak_nazwy_miasta'),
+    ({'POIPOLY': '[POI]', 'Type': '0xe00', 'City': 'Y', 'Data0': '(51.60143,17.51641)',
+      'Miasto': 'Golkowo', 'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Rozmiar': '0'}, 'brak_nazwy_miasta'),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH)
+def test_testy_poprawnosci_danych(target, answer):
+    args = Args()
+    Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
+    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    assert plikMp.testy_poprawnosci_danych(target) == answer
+
