@@ -204,6 +204,7 @@ TEST_MODYFIKUJ_PLIK_DLA_POI = (
     ({'Label': 'label', 'Type': '0x2000'}, {'Label': 'label', 'Type': '0x2000', 'Plik': '_nowosci.txt'}),
     ({'Label': 'Miasto', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0xd00'}, {'Label': 'Miasto', 'Plik': '_nowosci.pnt', 'Type': '0xd00'}),
     ({'Label': 'ATM', 'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0x2f06'}, {'Label': 'ATM', 'Plik': '_nowosci.pnt', 'Type': '0x2f06'}),
+    ({'Label': 'Miasto Miasto', 'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0xe00'}, {'Label': 'Miasto Miasto', 'Plik': 'UMP-PL-Lodz/src/cities-Lodz.pnt', 'Type': '0xe00'}),
 )
 @pytest.mark.parametrize('target, answer', TEST_MODYFIKUJ_PLIK_DLA_POI)
 def test_modyfikuj_plik_dla_poi(target, answer):
@@ -330,6 +331,11 @@ TEST_POPRAWNOSC_DANYCH = (
     ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
       'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
       'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
+    ({'POIPOLY': '[POLYGON]', 'Type': '0x14', 'EndLevel': '2',
+      'Data0': '(51.38958,19.39735),(51.38938,19.39714),(51.38924,19.39739),(51.38725,19.39673),(51.38714,19.39623),(51.38715,19.39556),(51.38725,19.39513),(51.38730,19.39456),(51.38735,19.39364),(51.38893,19.39361),(51.38906,19.39422),(51.38799,19.39428),(51.38799,19.39512),(51.38938,19.39531),(51.38991,19.39733)',
+      'Data1': '(51.38851,19.39563),(51.38838,19.39544),(51.38810,19.39537),(51.38797,19.39557),(51.38810,19.39585),(51.38836,19.39585)',
+      'Data2': '(51.38768,19.39593),(51.38768,19.39580),(51.38756,19.39583),(51.38743,19.39570),(51.38726,19.39573),(51.38717,19.39603),(51.38719,19.39632),(51.38725,19.39656),(51.38751,19.39660),(51.38757,19.39622),(51.38760,19.39598)',
+      'Plik': 'UMP-PL-Lodz/src/BELCHATOW.zielone.txt'}, '',),
     ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
     'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
     'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1'),

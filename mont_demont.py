@@ -92,6 +92,8 @@ class TestyPoprawnosciDanych(object):
         self.ruchLewostronny = ['UMP-GB']
 
     def sprawdzData0Only(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] == '[POLYGON]':
+            return 0
         data = [a for a in dane_do_zapisu if a.startswith('Data')]
         if dane_do_zapisu['POIPOLY'] == '[POI]' and len(data) > 1:
             return data[0]
@@ -1289,77 +1291,14 @@ class plikMP1(object):
             return dane_do_zapisu
 
     def zapiszPOI(self, daneDoZapisu, daneDoZapisuKolejnoscKluczy):
-        daneDoZapisu, daneDoZapisuKolejnoscKluczy = \
-            self.modyfikuj_plik_dla_rekordu_mp(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
-        # mozlie klucze dla poi:
-        # Dziwne,Komentarz,POIPOLY,Type,Label,HouseNumber,StreetDesc,Data,Phone,MiscInfo,Miasto,Plik,KodPoczt,
-        # Rozmiar,Highway,Typ
-        # HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
-        #       '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
-        # PunktyZWysokoscia = ('0x6616', '0x6617')
-
-        # najpierw sprawdzmy czy plik do zapisu istnieje. Jesli nie to dla punktow autostradowych
-        # ustaw plik _nowosci.txt a dla wszystkich inych _nowosci.pnt
-        # if 'Plik' not in daneDoZapisu:
-        #     if daneDoZapisu['Type'] in HW:
-        #         daneDoZapisu['Plik'] = self.plik_nowosci_txt
-        #     else:
-        #         daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-        #     daneDoZapisuKolejnoscKluczy.append('Plik')
-        # else:
-        #     # normalizujemy nazwe pliku, bo moga byc pomieszane duze i male literki
-        #     daneDoZapisu['Plik'] = self.plikNormalizacja(daneDoZapisu['Plik'])
-
-        # jesli jako wartosc plik jest wpisana nieistniejaca w zrodlach pozycja to dodaj go do listy i ustaw mu
-        # dokladnosc taka jak dla plikow pnt
-        # if daneDoZapisu['Plik'] not in self.plikizMp:
-        #     if daneDoZapisu['Plik'] != '':
-        #         if self.sprawdz_poprawnosc_sciezki(daneDoZapisu['Plik']):
-        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
-        #             daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-        #
-        #         else:
-        #             # plik jeszcze nie zaistnial przy demontazu, tworzymy wiec jego pusta zawartosc
-        #             # i ustalamy dokladnosc
-        #             self.plikizMp[daneDoZapisu['Plik']] = []
-        #             self.plikDokladnosc[daneDoZapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_pnt]
-        #     else:
-        #         if daneDoZapisu['Type'] in HW:
-        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.txt'.format(daneDoZapisu['Plik']))
-        #             daneDoZapisu['Plik'] = self.plik_nowosci_txt
-        #         else:
-        #             self.stderrorwrite('Niepoprawna sciezka do pliku  \"Plik={!s}\". Zamieniam na _nowosci.pnt'.format(daneDoZapisu['Plik']))
-        #             daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-
-        # gdyby dla punktu byl ustawiony plik txt, zamien go na _nowosci.pnt
-        # if daneDoZapisu['Type'] not in HW and daneDoZapisu['Plik'].find('.txt')>0:
-        #	tmpData=[b for b in daneDoZapisu.keys() if b.find('Data')>=0]
-        #	print('Dla punktu o wspolrzednych %s ustawiony byl plik tekstowy. Zmieniam na _nowosci.pnt'%daneDoZapisu[tmpData[0]])
-        #	daneDoZapisu['Plik']=self.plik_nowosci_pnt
-
-        # gdyby punkt autostradowy mia³ przypisany plik pnt zamien go na _nowosci.txt
-        # if daneDoZapisu['Type'] in HW and daneDoZapisu['Plik'].find('.txt')<0:
-        #	tmpData=[b for b in daneDoZapisu.keys() if b.find('Data')>=0]
-        #	print('Dla punktu autostradowego o wspolrzednych %s ustawiony byl plik pnt. Zmieniam na _nowosci.txt'%daneDoZapisu[tmpData[0]])
-        #	daneDoZapisu['Plik']=self.plik_nowosci_txt
-
-        # Miasta < od 1000 dostaj¹ typ 0xe00
-        daneDoZapisu, daneDoZapisuKolejnoscKluczy =  \
-            self.koreguj_wpisy_dla_miast(daneDoZapisu, daneDoZapisuKolejnoscKluczy)
-        # if daneDoZapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
-        #     daneDoZapisu['Type'] = '0xe00'
-        # # miasta > od 1000000 dostaja typ 0x0400
-        # if daneDoZapisu['Type'] in ['0x300', '0x200', '0x100']:
-        #     daneDoZapisu['Type'] = '0x400'
-
-        # sprawdz czy komentarz zawieraj odniesienie do strony www, wiki, facebooka, badz wysokosc
-        # w takim przypadku funcja utworzy niezbedny MiscInfo
+        daneDoZapisu = self.modyfikuj_plik_dla_rekordu_mp(daneDoZapisu)
+        daneDoZapisu = self.koreguj_wpisy_dla_miast(daneDoZapisu)
         self.stworz_misc_info(daneDoZapisu)
 
         # tylko dane autostradowe moga byc zapisywane w plikach txt. Reszta powinna trafic do plikow pnt.
         # if daneDoZapisu['Type'] in HW:
         if daneDoZapisu['Plik'].find('.txt') > 0:
-            for tmpaaa in daneDoZapisuKolejnoscKluczy:
+            for tmpaaa in daneDoZapisu:
 
                 if tmpaaa == 'Komentarz':
                     for tmpbbb in daneDoZapisu['Komentarz']:
@@ -1386,22 +1325,18 @@ class plikMP1(object):
 
         # w przypadku gdy mamy do czynienia z miastem
         elif daneDoZapisu['Type'] in City.rozmiar2Type:
-            #miasta powinny byc zapisywane w cities, jesli nie to przerzuc je do _nowosci.pnt
-            # if daneDoZapisu['Plik'].find('cities-') < 0:
-            #     daneDoZapisu['Plik'] = self.plik_nowosci_pnt
-            # pare wartosci ktore byc powinny, a jesli nie ma to ustawiamy jako puste wartosci
 
             # nie wiem czy jest Data0 1, 2 itd, wiêc sprawdzam tak i biorê pierwsz¹ wartoœæ
             tmpData = [b for b in daneDoZapisu if b.startswith('Data')]
             if len(tmpData) > 1:
                 self.stderrorwrite('Wielokrotne DataX= dla miasta o wspolrzednych %s' % tmpData[0])
             # print('Wielokrotne DataX= dla miasta o wspolrzednych %s'%tmpData[0],file=sys.stderr)
-            if 'Label' not in daneDoZapisuKolejnoscKluczy:
+            if 'Label' not in daneDoZapisu:
                 self.stderrorwrite('Brakuje nazwy miasta dla wspolrzednych %s' % daneDoZapisu[tmpData[0]])
                 daneDoZapisu['Label'] = ''
             else:
                 daneDoZapisu['Label'] = daneDoZapisu['Label'].replace(',', '°')
-            if 'Rozmiar' not in daneDoZapisuKolejnoscKluczy:
+            if 'Rozmiar' not in daneDoZapisu:
                 daneDoZapisu['Rozmiar'] = City.type2Rozmiar[daneDoZapisu['Type']]
 
             daneDoZapisu[tmpData[0]] = self.zaokraglij(daneDoZapisu[tmpData[0]],
@@ -1421,7 +1356,6 @@ class plikMP1(object):
         else:
             # pozostale poi powinny powinny byc zapisane w plikach pnt, ale nie moga to byc pliki cities
             # jesli bedzie to plik cities, zamien na _nowosci.pnt
-
             try:
                 if int(daneDoZapisu['Type'], 16) > 17 and daneDoZapisu['Plik'].find('cities-') > 0:
                     daneDoZapisu['Plik'] = self.plik_nowosci_pnt
@@ -1464,7 +1398,7 @@ class plikMP1(object):
                 daneDoZapisu['EndLevel'] = '0'
             if len(tmpData) > 1:
                 self.stderrorwrite('Wielokrotne DataX= dla POI o wspolrzednych %s' % tmpData[0])
-            if 'Label' not in daneDoZapisuKolejnoscKluczy:
+            if 'Label' not in daneDoZapisu:
                 daneDoZapisu['Label'] = ''
             else:
                 daneDoZapisu['Label'] = daneDoZapisu['Label'].replace(',', '°')
@@ -1866,8 +1800,9 @@ class plikMP1(object):
                 return dane_do_zapisu
         # poi ktore nie sa miastami powinny byc zapisywane w innych plikach niz cities
         try:
-            if int(dane_do_zapisu['Type'], 16) > 17 and 'cities-' in dane_do_zapisu['Plik']:
+            if int(dane_do_zapisu['Type'], 16) > int('0x1100', 16) and 'cities-' in dane_do_zapisu['Plik']:
                 dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
+                return dane_do_zapisu
         except ValueError:
             # jezeli ktos sie pomylil i zamiast Typ wpisal Type=alias to program sie tutaj wylozy, obslugujemy to.
             self.stderrorwrite('Nieznany Type:%s. Prawdopodobnie literowka Type zamiast Typ.' % dane_do_zapisu['Type'])
@@ -1916,10 +1851,8 @@ class plikMP1(object):
             dane_do_zapisu_kolejnosc_kluczy.remove('OrigType')
         return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
-    def koreguj_wpisy_dla_miast(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
-        if dane_do_zapisu['POIPOLY'] != '[POI]':
-            return dane_do_zapisu
-        if dane_do_zapisu['Type'] not in City.rozmiar2Type:
+    def koreguj_wpisy_dla_miast(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] != '[POI]' or dane_do_zapisu['Type'] not in City.rozmiar2Type:
             return dane_do_zapisu
         # Miasta < od 1000 dostaj¹ typ 0xe00
         if dane_do_zapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
@@ -1930,11 +1863,9 @@ class plikMP1(object):
         if 'Label' not in dane_do_zapisu:
             self.stderrorwrite('Brakuje nazwy miasta dla wspolrzednych %s' % daneDoZapisu[tmpData[0]])
             dane_do_zapisu['Label'] = ''
-            dane_do_zapisu_kolejnosc_kluczy.append('Label')
         if 'Rozmiar' not in dane_do_zapisu:
-            dane_do_zapisu['Rozmiar'] = City.type2Rozmiar[daneDoZapisu['Type']]
-            dane_do_zapisu_kolejnosc_kluczy.append('Rozmiar')
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+            dane_do_zapisu['Rozmiar'] = City.type2Rozmiar[dane_do_zapisu['Type']]
+        return dane_do_zapisu
 
     def koreguj_wpisy_dla_poi(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
         if dane_do_zapisu['POIPOLY'] != '[POI]' or dane_do_zapisu['Type']  in City.rozmiar2Type:
