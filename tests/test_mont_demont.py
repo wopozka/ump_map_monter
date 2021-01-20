@@ -145,7 +145,7 @@ TEST_ADR_TO_MP = (
         ],
         [';;Gmina=Rozdrazew', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
          'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
-         'KodPoczt=63-708', 'Typ=ADR', 'Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00', 'EntryPoint=(51.77364,17.46213)',
+         'KodPoczt=63-708', 'Typ=ADR', 'EntryPoint=(51.77364,17.46213)', 'Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00',
          '[END]\n'
         ]
     ),
@@ -189,6 +189,15 @@ TEST_ADR_TO_MP = (
          'KodPoczt=63-708', 'Typ=ADR', 'EntryPoint=(51.77364,17.46213)', '[END]\n'
         ]
     ),
+    (
+        [';3', ';2', ';1',
+         '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
+        ],
+        [';3\n;2\n;1', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
+         'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
+         'KodPoczt=63-708', 'Typ=ADR', '[END]\n'
+        ]
+    ),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_ADR_TO_MP)
@@ -205,14 +214,14 @@ def test_plik_pnt_procesuj(target, answer):
     assert przetwarzanyPlik.procesuj(zawartoscPlikuADR) == answer
 
 TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ = (
-    ({'EntryPoint': '(51.77364,17.46213)', 'Otwarte': 'Mo-Sa 6:00-24:00; Su 7:00-24:00'}, {'Komentarz': [';;EntryPoint:(51.77364,17.46213)', ';;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00']}),
-    ({'Komentarz': ['la la la'], 'EntryPoint': '(51.77364,17.46213)', 'Otwarte': 'Mo-Sa 6:00-24:00; Su 7:00-24:00'}, {'Komentarz': ['la la la', ';;EntryPoint:(51.77364,17.46213)', ';;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00']}),
+    ({'EntryPoint': '(51.77364,17.46213)', 'Otwarte': 'Mo-Sa 6:00-24:00; Su 7:00-24:00'}, {'Komentarz': [';;EntryPoint: (51.77364,17.46213)', ';otwarte: Mo-Sa 6:00-24:00; Su 7:00-24:00']}),
+    ({'Komentarz': ['la la la'], 'EntryPoint': '(51.77364,17.46213)', 'Otwarte': 'Mo-Sa 6:00-24:00; Su 7:00-24:00'}, {'Komentarz': ['la la la', ';;EntryPoint: (51.77364,17.46213)', ';otwarte: Mo-Sa 6:00-24:00; Su 7:00-24:00']}),
 
 )
 
 @pytest.mark.parametrize('target, answer', TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ)
 def test_entrypoint_otwarte_na_komentarz(target, answer):
-    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == answer
+    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == OrderedDict(answer)
 
 TEST_MODYFIKUJ_PLIK_DLA_POI = (
     ({'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
@@ -233,7 +242,7 @@ def test_modyfikuj_plik_dla_poi(target, answer):
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target)) == answer
+    assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target)) == OrderedDict(answer)
 
 TEST_MODYFIKUJ_PLIK_DLA_POLY = (
     (({'POIPOLY': '[POLYLINE]', 'Type': '0x6', 'Label': 'Starowiejska', 'EndLevel' :'1', 'Data0': '(51.86757,19.56022),(51.86762,19.55950),(51.86768,19.55851),(51.86772,19.55783),(51.86768,19.55755),(51.86675,19.55321),(51.86666,19.55279),(51.86640,19.55173),(51.86624,19.55123),(51.86566,19.54977),(51.86514,19.54834),(51.86476,19.54694),(51.86450,19.54646),(51.86381,19.54534),(51.86352,19.54462),(51.86339,19.54394),(51.86307,19.54107),(51.86299,19.53973)', 'Plik': 'UMP-PL-Lodz/src/DOBRA.ulice.txt'}, False,), {'POIPOLY': '[POLYLINE]', 'Type': '0x6', 'Label': 'Starowiejska', 'EndLevel': '1', 'Data0': '(51.86757,19.56022),(51.86762,19.55950),(51.86768,19.55851),(51.86772,19.55783),(51.86768,19.55755),(51.86675,19.55321),(51.86666,19.55279),(51.86640,19.55173),(51.86624,19.55123),(51.86566,19.54977),(51.86514,19.54834),(51.86476,19.54694),(51.86450,19.54646),(51.86381,19.54534),(51.86352,19.54462),(51.86339,19.54394),(51.86307,19.54107),(51.86299,19.53973)', 'Plik': 'UMP-PL-Lodz/src/DOBRA.ulice.txt'}),
@@ -322,10 +331,10 @@ TEST_PLIK_TYP_DANE = (
 )
 
 TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
-    (('Lodz', 'ATMBANK',), 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt'),
-    (('Leszno', 'ATMBANK',), 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt'),
+    # (('Lodz', 'ATMBANK',), 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt'),
+    # (('Leszno', 'ATMBANK',), 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt'),
     (('Lodz', 'MIASTO',), 'UMP-PL-Lodz/src/cities-Lodz.pnt'),
-    (('Leszno', 'MIASTO',), 'UMP-PL-Leszno/src/cities-Leszno.pnt'),
+    # (('Leszno', 'MIASTO',), 'UMP-PL-Leszno/src/cities-Leszno.pnt'),
 )
 @pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
 def test_zwroc_plik_dla_typu(target, answer):
@@ -400,9 +409,94 @@ TEST_POPRAWNOSC_DANYCH = (
 @pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH)
 def test_testy_poprawnosci_danych(target, answer):
     args = Args()
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
+    # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+    # stderr_stdout_writer = mont_demont.errOutWriter(args)
+    # tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
+    # plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    assert tester_poprawnosci_danych.testy_poprawnosci_danych_txt(target) == answer
+
+TEST_DATA_0_ONLY = (
+({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+      'Data0': '(51.82457,17.57944)',
+      'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, ''),
+({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+      'Data0_1': '(51.82457,17.57944)', 'Data0_2': '(51.82457,17.57944)',
+      'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, 'Data1'),
+)
+@pytest.mark.parametrize('target, answer', TEST_DATA_0_ONLY)
+def test_testuj_wielokrotne_data(target, answer):
+    args = Args()
+    testy_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    assert plikMp.testy_poprawnosci_danych(target) == answer
+    assert plikMp.testuj_wielokrotne_data(target, testy_poprawnosci_danych) == answer
 
+TEST_ZAOKRAGLIJ = (
+    (('(51.55555,29.55555)', '5',), '(51.55555,29.55555)'),
+    (('(51.555555,29.555555)', '6',), '(51.555555,29.555555)'),
+    (('(51.55555,29.55555)', '6',), '(51.555550,29.555550)'),
+    (('(51.555555,29.555555)', '5',), '(51.55555,29.55555)'),
+    (('(51.555555,29.555555)', '7',), '(51.555555,29.555555)'),
+)
+@pytest.mark.parametrize('target, answer', TEST_ZAOKRAGLIJ)
+def test_testuj_wielokrotne_data(target, answer):
+    data, dokladnosc = target
+    assert mont_demont.plikMP1.zaokraglij(data, dokladnosc) == answer
+
+TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
+    (([';;EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
+      [';;EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota', '[POI]', 'Type=0x2800',
+       'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
+       'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
+    (['ala ma kota'], ['ala ma kota', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
+                        'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
+                        'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR',
+                        'EntryPoint=(55.55555,22.22222)','Otwarte=Pn-Nie']),),
+    (([';;EntryPoint=(55.55555,22.22222)\nala ma kota\n;;otwarte=Pn-Nie'],
+      [';;EntryPoint=(55.55555,22.22222)\nala ma kota\n;;otwarte=Pn-Nie', '[POI]', 'Type=0x2800',
+       'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
+       'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
+    (['ala ma kota'], ['ala ma kota', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
+                        'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
+                        'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR',
+                        'EntryPoint=(55.55555,22.22222)','Otwarte=Pn-Nie']),),
+    (([';otwarte=Pn-Nie\n;;EntryPoint:(55.55555,22.22222)\nala ma kota'],
+      [';otwarte=Pn-Nie\n;;EntryPoint:(55.55555,22.22222)\nala ma kota', '[POI]', 'Type=0x2800',
+       'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
+       'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
+    (['ala ma kota'], ['ala ma kota', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
+                        'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
+                        'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR',
+                        'EntryPoint=(55.55555,22.22222)', 'Otwarte=Pn-Nie']),),
+    (([';komentarz3\n;komentarz2\n;komentarz1'],
+      [';komentarz3\n;komentarz2\n;komentarz1', '[POI]', 'Type=0x2800',
+       'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
+       'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
+    ([';komentarz3\n;komentarz2\n;komentarz1'], [';komentarz3\n;komentarz2\n;komentarz1', '[POI]', 'Type=0x2800',
+                        'Label=78', 'HouseNumber=78',
+                        'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
+                        'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT)
+def test_testuj_wielokrotne_data(target, answer):
+    args = Args()
+    args.cityidx = False
+    Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+    tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, None)
+    obiekt_na_mapie = mont_demont.ObiektNaMapie('jakis_plik', [], tabKonw, args)
+    obiekt_na_mapie.Dane1 = target[1]
+    obiekt_na_mapie.Komentarz = target[0]
+    obiekt_na_mapie.komentarz_na_entrypoint_i_otwarte()
+    assert obiekt_na_mapie.Dane1 == answer[1]
+
+
+TEST_KIERUNKOWOSC_RONDA = {
+    ('(51.22184,19.04221),(51.22177,19.04218),(51.22172,19.04221),(51.22167,19.04231),(51.22168,19.04245),(51.22175,19.04252),(51.22183,19.04251),(51.22188,19.04243),(51.22189,19.04232),(51.22184,19.04221)', -1),
+}
+@pytest.mark.parametrize('target, answer', TEST_KIERUNKOWOSC_RONDA)
+def testuj_clockwisecheck(target, answer):
+    assert mont_demont.TestyPoprawnosciDanych.clockwisecheck(target) == answer
