@@ -23,11 +23,6 @@ import znajdz_bledy_numeracji
 from collections import OrderedDict
 from collections import defaultdict
 
-import multiprocessing
-import multiprocessing.managers
-from queue import Empty
-import timeit
-
 
 class errOutWriter(object):
     def __init__(self, args):
@@ -227,7 +222,6 @@ class TestyPoprawnosciDanych(object):
             return 'ODWROTNE'
 
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
-        # dane_do_zapisu_copy = copy.copy(dane_do_zapisu)
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
 
@@ -888,9 +882,16 @@ class autoPlikDlaPoi(object):
                                               '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
                                               '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
                                               '.paczkomaty.pnt',)
+        self.wykluczone_dozwolone_pliki = defaultdict(lambda: False)
 
     def czy_plik_jest_wykluczony(self, plik):
-        return any(a for a in self.autopoiWykluczoneWartosciPlik if plik.endswith(a))
+        if plik in self.wykluczone_dozwolone_pliki:
+            return self.wykluczone_dozwolone_pliki[plik]
+        if any(a for a in self.autopoiWykluczoneWartosciPlik if plik.endswith(a)):
+            self.wykluczone_dozwolone_pliki[plik] = True
+        else:
+            self.wykluczone_dozwolone_pliki[plik] = False
+        return self.wykluczone_dozwolone_pliki[plik]
 
     def dodaj_plik_dla_poi(self, dane_do_zapisu):
         if 'Plik' not in dane_do_zapisu or 'Type' not in dane_do_zapisu or \
@@ -1519,7 +1520,7 @@ class plikMP1(object):
             elif klucz_z_dane_do_zapisu == 'POIPOLY':
                 # self.plikizMp[daneDoZapisu['Plik']].append(daneDoZapisu[klucz_z_dane_do_zapisu] + '\n')
                 rekord_danych_do_mp.append(daneDoZapisu[klucz_z_dane_do_zapisu] + '\n')
-            elif klucz_z_dane_do_zapisu.find('Data') >= 0:
+            elif klucz_z_dane_do_zapisu.startswith('Data'):
                 # dla plikow tekstowych mozliwe jest wielokrotne Data0, Data1 itd. Poniewaz przechowuje takie dane
                 # w slowniku a tam klucze nie moga sie powtarzac dlatego
                 # mamy Data w postaci Data0_0, Data0_1, Data0_2 itd, dla rozroznienia, dlatego przy zapisie do
@@ -1847,12 +1848,11 @@ class plikMP1(object):
         return dane_do_zapisu
 
     @staticmethod
-    def zamien_type_na_orig_type(dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
+    def zamien_type_na_orig_type(dane_do_zapisu):
         if 'OrigType' in dane_do_zapisu:
             dane_do_zapisu['Type'] = dane_do_zapisu['OrigType']
             del(dane_do_zapisu['OrigType'])
-            dane_do_zapisu_kolejnosc_kluczy.remove('OrigType')
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
+        return dane_do_zapisu
 
     def koreguj_wpisy_dla_miast(self, dane_do_zapisu):
          # Miasta < od 1000 dostaj¹ typ 0xe00
@@ -2627,22 +2627,10 @@ def listujobszary(args):
         return listaobszarow
 
 def testoj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
-    if dane_do_zapisu['POIPOLY'] == 'POI':
+    if dane_do_zapisu['POIPOLY'] == '[POI]':
         tester_poprawnosci_danych.testy_poprawnosci_danych_poi(dane_do_zapisu)
     else:
         tester_poprawnosci_danych.testy_poprawnosci_danych_txt(dane_do_zapisu)
-    # while 1:
-    #     try:
-    #         dane_do_zapisu = kolejka_z_danymi.get(timeout=10)
-    #     except Empty:
-    #         break
-    #     if not dane_do_zapisu:
-    #         print('Puste dane, koncze')
-    #         break
-    #     if dane_do_zapisu['POIPOLY'] == 'POI':
-    #         tester_poprawnosci_danych.testy_poprawnosci_danych_poi(dane_do_zapisu)
-    #     else:
-    #         tester_poprawnosci_danych.testy_poprawnosci_danych_txt(dane_do_zapisu)
 
 
 def montujpliki(args):
@@ -2887,11 +2875,6 @@ def demontuj(args):
     # wczyta³em juz sekcje dotyczaca plikow, moge teraz ustawic liste zamontowanych obszarow
     plikMp.ustawObszary()
     plikMp.zwaliduj_sciezki_do_plikow()
-
-    #uruchamiamy tester poprawnosci danych jako osobny process
-    # tester_queue = multiprocessing.Queue()
-    # tester_subprocess = multiprocessing.Process(target=testoj_poprawnosc_danych, args=(args, tester_queue,))
-    # tester_subprocess.start()
 
     # mamy liste plikow, teraz dla autopoly nalezy wczytac wspolrzedne z plikow ktore lapia sie na autopoly
     if args.autopolypoly:
