@@ -507,18 +507,18 @@ class ConfigWindow(tkinter.Toplevel):
         self.wait_window(self)
 
     def buttonbox(self):
-        box=tkinter.Frame(self,padx=10,pady=10)
-        box.grid(row=4,column=0,columnspan=2,sticky='ew')
-        box.grid_columnconfigure(0,weight=1)
+        box = tkinter.Frame(self, padx=10, pady=10)
+        box.grid(row=4, column=0, columnspan=2, sticky='ew')
+        box.grid_columnconfigure(0, weight=1)
 
-        saveButton=tkinter.ttk.Button(box,text=u'Zapisz konfigurację',command=self.OnButtonClickZapisz)
-        saveButton.grid(column=0,row=0,sticky='w')
+        saveButton=tkinter.ttk.Button(box, text=u'Zapisz konfigurację', command=self.OnButtonClickZapisz)
+        saveButton.grid(column=0, row=0, sticky='w')
 
-        cancelButton=tkinter.ttk.Button(box,text=u'Anuluj',command=self.destroy)
-        cancelButton.grid(column=1,row=0,sticky='e')
+        cancelButton=tkinter.ttk.Button(box, text=u'Anuluj', command=self.destroy)
+        cancelButton.grid(column=1, row=0, sticky='e')
 
-        self.bind("<Return>",self.ok)
-        self.bind("<Escape>",self.anuluj)
+        self.bind("<Return>", self.ok)
+        self.bind("<Escape>", self.anuluj)
 
     def ok(self,event=None):
         self.withdraw()
@@ -530,55 +530,55 @@ class ConfigWindow(tkinter.Toplevel):
         self.destroy()
 
     def OnButtonClickZapisz(self):
-        with open(os.path.expanduser('~')+'/.mont-demont-py.config','w') as configfile:
-            configfile.write('UMPHOME='+self.Konfiguracja.KatalogzUMP)
+        with open(os.path.expanduser('~') + '/.mont-demont-py.config', 'w') as configfile:
+            configfile.write('UMPHOME=' + self.Konfiguracja.KatalogzUMP)
             configfile.write('\n')
-            configfile.write('KATALOGROBOCZY='+self.Konfiguracja.KatalogRoboczy)
+            configfile.write('KATALOGROBOCZY=' + self.Konfiguracja.KatalogRoboczy)
             configfile.write('\n')
-            configfile.write('MAPEDITEXE='+self.Konfiguracja.MapEditExe)
+            configfile.write('MAPEDITEXE=' + self.Konfiguracja.MapEditExe)
             configfile.write('\n')
-            configfile.write('MAPEDIT2EXE='+self.Konfiguracja.MapEdit2Exe)
+            configfile.write('MAPEDIT2EXE=' + self.Konfiguracja.MapEdit2Exe)
             configfile.write('\n')
-            configfile.write('NETGEN='+self.Konfiguracja.NetGen)
+            configfile.write('NETGEN=' + self.Konfiguracja.NetGen)
             configfile.write('\n')
-            if self.ump_mdm_mode.get()==1:
+            if self.ump_mdm_mode.get() == 1:
                 configfile.write('MDMMODE=edytor')
             else:
                 configfile.write('MDMMODE=wrzucacz')
             configfile.write('\n')
-            configfile.write('CVSUSERNAME='+self.umpcvsusername.get())
+            configfile.write('CVSUSERNAME=' + self.umpcvsusername.get())
 
-            command=self.destroy()
+            command = self.destroy()
 
     def OnButtonClickMapedit(self):
-        aaa=tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
-        if len(aaa)>0:
+        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
+        if len(aaa) > 0:
             self.umpMapeditPath.set(aaa)
-            self.Konfiguracja.MapEditExe=aaa
+            self.Konfiguracja.MapEditExe = aaa
 
     def OnButtonClickMapedit2(self):
-        aaa=tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
-        if len(aaa)>0:
+        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
+        if len(aaa) > 0:
             self.umpMapedit2Path.set(aaa)
-            self.Konfiguracja.MapEdit2Exe=aaa
+            self.Konfiguracja.MapEdit2Exe = aaa
 
     def OnButtonClickNetgen(self):
-        aaa=tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu netgen.exe')
-        if len(aaa)>0:
+        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu netgen.exe')
+        if len(aaa) > 0:
             self.umpNetGenPath.set(aaa)
-            self.Konfiguracja.NetGen=aaa
+            self.Konfiguracja.NetGen = aaa
 
     def OnButtonClickUMPSource(self):
-        aaa=tkinter.filedialog.askdirectory(title=u'Katalog ze źródłami UMP')
-        if len(aaa)>0:
+        aaa = tkinter.filedialog.askdirectory(title=u'Katalog ze źródłami UMP')
+        if len(aaa) > 0:
             self.umpSourceValue.set(aaa)
-            self.Konfiguracja.KatalogzUMP=aaa
+            self.Konfiguracja.KatalogzUMP = aaa
 
     def OnButtonClickUMPRoboczy(self):
-        aaa=tkinter.filedialog.askdirectory(title=u'Katalog roboczy')
-        if len(aaa)>0:
+        aaa = tkinter.filedialog.askdirectory(title=u'Katalog roboczy')
+        if len(aaa) > 0:
             self.umpRoboczyValue.set(aaa)
-            self.Konfiguracja.KatalogRoboczy=aaa
+            self.Konfiguracja.KatalogRoboczy = aaa
 
 
 class mdmConfig(object):
@@ -738,22 +738,22 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
 
         self.bind("Text", "<Control-a>", self.event_select_all)
         self.bind("<Button-3><ButtonRelease-3>", self.show_menu)
-        self.tag_config('P',foreground='green')
-        self.tag_config('U',foreground='green')
-        self.tag_config('questionmark',foreground='olive drab')
-        self.tag_config('C',foreground='red')
-        self.tag_config('M',foreground='deep pink')
-        self.tag_config('normal',foreground='black')
-        self.tag_config('error',foreground='red')
-        self.tag_config('wskazowka',foreground='blue')
+        self.tag_config('P', foreground='green')
+        self.tag_config('U', foreground='green')
+        self.tag_config('questionmark', foreground='olive drab')
+        self.tag_config('C', foreground='red')
+        self.tag_config('M', foreground='deep pink')
+        self.tag_config('normal', foreground='black')
+        self.tag_config('error', foreground='red')
+        self.tag_config('wskazowka', foreground='blue')
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
 
         #usuwam skróty klawiautorwe które powinny być przechwytywane globalnie, tak żeby nie łapało ich też okienko do wpisywania komentarza.
         #Np ctrl+o dodawało nową linię i przez to mój walidador się psuł :D.
 
-        self.bind("<Control-o>",lambda e:None)
-        self.bind("<Escape>",lambda e:None)
+        self.bind("<Control-o>", lambda e:None)
+        self.bind("<Escape>", lambda e:None)
 
         #Zmieniamy kolejność bindtags. Z niewiadomego dla mnie powodu '.' nie działała.
         tags=list(self.bindtags())
@@ -1704,7 +1704,7 @@ class mdm_gui_py(tkinter.Tk):
         self.modul_cvs = ModulCVS()
         self.initialize()
         if os.path.isfile(self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif'):
-            iconimg=tkinter.PhotoImage(file=self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif')
+            iconimg = tkinter.PhotoImage(file=self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif')
             self.tk.call('wm', 'iconphoto', self._w, iconimg)
         self.sprawdzAktualnoscZrodelandPopupMessage()
 
@@ -1772,9 +1772,15 @@ class mdm_gui_py(tkinter.Tk):
                                                        command=lambda x=modul_pojedynczy: self.cvs_co(x))
 
             menuCVS_pobierz.add_cascade(label=modul_cvs, menu=menuCVS_obszary[modul_cvs])
+        menuCVS_pobierz.add_separator()
+        menuCVS_pobierz.add_command(label='cvs.exe', command=self.pobierz_cvs)
+        menuCVS_pobierz.add_command(label='mapedit2-2.78-10.zip', command=self.pobierz_mapedit2)
+        if platform.architecture() == '32bit':
+            menuCVS_pobierz.add_command(label='mapedit++(32)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
+        else:
+            menuCVS_pobierz.add_command(label='mapedit++(64)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
         menuCVS.add_cascade(label=u'Pobierz', menu=menuCVS_pobierz)
         menubar.add_cascade(label=u'CVS', menu=menuCVS)
-
 
         # menu Pomoc
         menuPomoc=tkinter.Menu(menubar, tearoff=0)
@@ -2026,10 +2032,10 @@ class mdm_gui_py(tkinter.Tk):
                                          xscrollcommand=diffScrollX.set,width=835,
                                          height=160, highlightthickness=0)
         self.diffCanvas.grid(column=0, row=0, sticky='nsew')
-        self.diffCanvas.bind_class('movewheel',"<MouseWheel>", self._on_mousewheediffCanvas)
-        self.diffCanvas.bind_class('movewheel',"<Button-4>", self._on_mousewheediffCanvas)
-        self.diffCanvas.bind_class('movewheel',"<Button-5>", self._on_mousewheediffCanvas)
-        newtags=self.diffCanvas.bindtags()+('movewheel',)
+        self.diffCanvas.bind_class('movewheel', "<MouseWheel>", self._on_mousewheediffCanvas)
+        self.diffCanvas.bind_class('movewheel', "<Button-4>", self._on_mousewheediffCanvas)
+        self.diffCanvas.bind_class('movewheel', "<Button-5>", self._on_mousewheediffCanvas)
+        newtags = self.diffCanvas.bindtags()+('movewheel',)
         self.diffCanvas.bindtags(newtags)
         diffScrollY.config(command=self.diffCanvas.yview)
         diffScrollX.config(command=self.diffCanvas.xview)
@@ -2040,12 +2046,12 @@ class mdm_gui_py(tkinter.Tk):
         newtags = self.frameInDiffCanvas.bindtags()+('movewheel',)
         self.frameInDiffCanvas.bindtags(newtags)
 
-        style1=tkinter.ttk.Style()
+        style1 = tkinter.ttk.Style()
         style1.configure('Helvetica1.TLabel', font=('Helvetica',9))
         plikLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Pliki', borderwidth=4, relief='raised', width=60,
                                     anchor='w', style='Helvetica1.TLabel')
         plikLabel.grid(row=0, column=0)
-        newtags = plikLabel.bindtags()+('movewheel',)
+        newtags = plikLabel.bindtags() + ('movewheel',)
         plikLabel.bindtags(newtags)
 
         dodanoLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Dodano', borderwidth=4, relief='raised',
@@ -2371,6 +2377,59 @@ class mdm_gui_py(tkinter.Tk):
             plikzip.close()
 
     #obsługa poleceń cvs
+    def pobierz_cvs(self):
+        url = 'http://ump.waw.pl/pliki/cvs.exe'
+
+    def pobierz_mapedit2(self):
+        url = 'http://www.geopainting.com/download/mapedit2-1-78-10.zip'
+
+    def pobierz_mapedit_plus(self):
+        url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
+        if platform.architecture() == '32bit':
+            url = 'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
+
+    def pobierz_pliki_z_internetu(self, katalg_przeznaczenia, nazwa_pliku, url):
+        try:
+            u = urllib.request.urlopen(url)
+            f = open(self.umpHome+'/'+plik, 'wb')
+            meta = u.info()
+            print(meta['Content-Length'])
+            filesize = int(meta['Content-Length'])
+            print("Downloading: %s Bytes: %s" % (plik, filesize))
+            file_size_dl = 0
+            block_sz = 8192
+            while True:
+                buffer = u.read(block_sz)
+                if not buffer:
+                    break
+
+                file_size_dl += len(buffer)
+                f.write(buffer)
+                status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
+                status = status + chr(8)*(len(status)+1)
+                sys.stdout.write(status)
+                sys.stdout.flush()
+                #print(status)
+
+            f.close()
+        except urllib.error.HTTPError:
+            print('Nie moge sciagnac pliku cvs.exe')
+        # process = subprocess.Popen(['cvs', '-q',self.CVSROOT,'ls',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        os.chdir(self.umpHome)
+
+        #tworzymy katalogi mapedita i rozpakowujemy zipy
+        for plik in self.plikiDoSciagniecia:
+            if not plik == 'cvs.exe':
+                if plik.startswith('mapedit2'):
+                    dir = 'mapedit2'
+                elif plik.startswith('mapedit++'):
+                    dir = 'mapedit++'
+                plikzip=zipfile.ZipFile(plik, 'r')
+                os.makedirs(dir)
+                print(u'Rozpakowuję plik: '+plik)
+                plikzip.extractall(path=dir)
+                #os.remove(plik)
+
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
         self.args.stderrqueue = self.stderrqueue
