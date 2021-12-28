@@ -2442,96 +2442,96 @@ class mdm_gui_py(tkinter.Tk):
         #czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
 
-        self.args.obszary=[]
+        self.args.obszary = []
 
 
         for aaa in self.regionVariableDictionary.keys():
-            if self.regionVariableDictionary[aaa].get()==1:
+            if self.regionVariableDictionary[aaa].get() == 1:
                 self.args.obszary.append(aaa)
 
-        self.args.plikmp='wynik.mp'
+        self.args.plikmp = 'wynik.mp'
         #self.args.adrfile=self.adrfile.get()
-        self.args.adrfile=self.mdmMontDemontOptions.montDemontOptions['adrfile'].get()
+        self.args.adrfile = self.mdmMontDemontOptions.montDemontOptions['adrfile'].get()
         #self.args.cityidx=self.cityidx.get()
-        self.args.cityidx=self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
+        self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
 
         #self.args.notopo=self.notopo.get()
         #self.args.notopo=self.mdmMontDemontOptions.montDemontOptions['notopo'].get()
 
         #self.args.nocity=self.nocity.get()
-        self.args.nocity=self.mdmMontDemontOptions.montDemontOptions['nocity'].get()
+        self.args.nocity = self.mdmMontDemontOptions.montDemontOptions['nocity'].get()
         #self.args.noszlaki=self.noszlaki.get()
-        self.args.noszlaki=self.mdmMontDemontOptions.montDemontOptions['noszlaki'].get()
+        self.args.noszlaki = self.mdmMontDemontOptions.montDemontOptions['noszlaki'].get()
         #self.args.nopnt=self.nopnt.get()
-        self.args.nopnt=self.mdmMontDemontOptions.montDemontOptions['nopnt'].get()
+        self.args.nopnt = self.mdmMontDemontOptions.montDemontOptions['nopnt'].get()
         #self.args.hash=self.monthash.get()
-        self.args.hash=self.mdmMontDemontOptions.montDemontOptions['monthash'].get()
+        self.args.hash = self.mdmMontDemontOptions.montDemontOptions['monthash'].get()
         #self.args.extratypes=self.extratypes.get()
-        self.args.extratypes=self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
+        self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
         #self.args.graniceczesciowe=self.graniceczesciowe.get()
-        self.args.graniceczesciowe=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'].get()
+        self.args.graniceczesciowe = self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'].get()
         # ustawiamy tryb nieosmandowy, jest on uruchamiany tylko na potrzeby konwersji do OSNAnda
         self.args.trybosmand = 0
 
-        self.args.stderrqueue=self.stderrqueue
-        self.args.stdoutqueue=self.stdoutqueue
+        self.args.stderrqueue = self.stderrqueue
+        self.args.stdoutqueue = self.stdoutqueue
 
 
         #_thread.start_new_thread(mont_demont_py.montujpliki,(self.args,))
-        thread=threading.Thread(target=mont_demont_py.montujpliki, args=(self.args,))
+        thread = threading.Thread(target=mont_demont_py.montujpliki, args=(self.args,))
         thread.start()
 
-        thread1=threading.Thread(target=self.cvsSprawdzAktualnoscMontowanychObszarow,args=(self.args.obszary))
+        thread1 = threading.Thread(target=self.cvsSprawdzAktualnoscMontowanychObszarow, args=(self.args.obszary))
         thread1.start()
 
         self.montButton.configure(state='disabled')
 
     def OnButtonClickEdit(self):
-        self.args.plikmp=None
-        self.args.mapedit2=False
-        self.args.stderrqueue=self.stderrqueue
+        self.args.plikmp = None
+        self.args.mapedit2 = False
+        self.args.stderrqueue = self.stderrqueue
         thread=threading.Thread(target=mont_demont_py.edytuj, args=(self.args,))
         thread.start()
 
-    def OnButtonClickEdit2(self,event):
-        if os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp'):
-            self.args.plikmp=None
-            self.args.mapedit2=True
-            self.args.stderrqueue=self.stderrqueue
-            thread=threading.Thread(target=mont_demont_py.edytuj, args=(self.args,))
+    def OnButtonClickEdit2(self, event):
+        if os.path.isfile(self.Zmienne.KatalogRoboczy + 'wynik.mp'):
+            self.args.plikmp = None
+            self.args.mapedit2 = True
+            self.args.stderrqueue = self.stderrqueue
+            thread = threading.Thread(target=mont_demont_py.edytuj, args=(self.args,))
             thread.start()
 
     def OnButtonClickDemont(self):
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
-        self.args.plikmp=None
-        self.args.katrob=None
-        self.args.umphome=None
+        self.args.plikmp = None
+        self.args.katrob = None
+        self.args.umphome = None
 
         #autoobszary
-        self.args.autopolypoly=self.mdmMontDemontOptions.montDemontOptions['autopolypoly'].get()
+        self.args.autopolypoly = self.mdmMontDemontOptions.montDemontOptions['autopolypoly'].get()
 
         #self.args.X=self.X.get()
-        self.args.X=self.mdmMontDemontOptions.montDemontOptions['X'].get()
+        self.args.X = self.mdmMontDemontOptions.montDemontOptions['X'].get()
         #self.args.autopoi=self.autopoi.get()
-        self.args.autopoi=self.mdmMontDemontOptions.montDemontOptions['autopoi'].get()
+        self.args.autopoi = self.mdmMontDemontOptions.montDemontOptions['autopoi'].get()
         #self.args.cityidx=self.cityidx.get()
-        self.args.cityidx=self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
+        self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
         #self.args.hash=self.demonthash.get()
-        self.args.hash=self.mdmMontDemontOptions.montDemontOptions['demonthash'].get()
+        self.args.hash = self.mdmMontDemontOptions.montDemontOptions['demonthash'].get()
         #self.args.extratypes=self.extratypes.get()
-        self.args.extratypes=self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
+        self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
         self.montButton.configure(state='disabled')
         #self.demontButton.configure(state='disabled')
 
         #_thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
         my_queue = queue.Queue()
         #self.args.queue=my_queue
-        self.args.queue=self.frameInDiffCanvas.queueListaPlikowFrame
-        self.args.stderrqueue=self.stderrqueue
-        self.args.stdoutqueue=self.stdoutqueue
+        self.args.queue = self.frameInDiffCanvas.queueListaPlikowFrame
+        self.args.stderrqueue = self.stderrqueue
+        self.args.stdoutqueue = self.stdoutqueue
         # kolejka do informowania guzika że właśnie działa i żeby się wyłączył
         self.args.buttonqueue = self.demontButton.statusqueue
-        thread=threading.Thread(target=mont_demont_py.demontuj,args=(self.args,))
+        thread=threading.Thread(target=mont_demont_py.demontuj, args=(self.args,))
         #thread=threading.Thread(target=self.demont,args=(my_queue,))
         thread.start()
         #thread.join()
@@ -2543,9 +2543,9 @@ class mdm_gui_py(tkinter.Tk):
         self.diffCanvas.config(scrollregion=self.diffCanvas.bbox("all"))
 
     def OnButtonClickSprawdz(self):
-        self.args.plikmp=None
-        self.args.stderrqueue=self.stderrqueue
-        self.args.stdoutqueue=self.stdoutqueue
+        self.args.plikmp = None
+        self.args.stderrqueue = self.stderrqueue
+        self.args.stdoutqueue = self.stdoutqueue
         self.args.sprawdzbuttonqueue = self.sprawdzButton.statusqueue
         thread=threading.Thread(target=mont_demont_py.sprawdz, args=(self.args,))
         thread.start()
