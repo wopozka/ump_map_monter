@@ -2379,23 +2379,35 @@ class mdm_gui_py(tkinter.Tk):
     #obsługa poleceń cvs
     def pobierz_cvs(self):
         url = 'http://ump.waw.pl/pliki/cvs.exe'
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla cvs.exe')
+        if katalog_przeznaczenia:
+            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
     def pobierz_mapedit2(self):
         url = 'http://www.geopainting.com/download/mapedit2-1-78-10.zip'
+
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla mapedit2')
+        if katalog_przeznaczenia:
+            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
     def pobierz_mapedit_plus(self):
         url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
         if platform.architecture() == '32bit':
             url = 'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla mapedit++')
+        if katalog_przeznaczenia:
+            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
-    def pobierz_pliki_z_internetu(self, katalg_przeznaczenia, nazwa_pliku, url):
+
+    def pobierz_pliki_z_internetu(self, katalog_przeznaczenia, url):
+        nazwa_pliku = url.split('/')[-1]
         try:
             u = urllib.request.urlopen(url)
-            f = open(self.umpHome+'/'+plik, 'wb')
+            f = open(os.path.join(katalog_przeznaczenia, nazwa_pliku), 'wb')
             meta = u.info()
             print(meta['Content-Length'])
             filesize = int(meta['Content-Length'])
-            print("Downloading: %s Bytes: %s" % (plik, filesize))
+            print("Downloading: %s Bytes: %s" % (nazwa_pliku, filesize))
             file_size_dl = 0
             block_sz = 8192
             while True:
@@ -2413,22 +2425,22 @@ class mdm_gui_py(tkinter.Tk):
 
             f.close()
         except urllib.error.HTTPError:
-            print('Nie moge sciagnac pliku cvs.exe')
+            print('Nie moge sciagnac pliku:' + nazwa_pliku)
         # process = subprocess.Popen(['cvs', '-q',self.CVSROOT,'ls',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        os.chdir(self.umpHome)
-
-        #tworzymy katalogi mapedita i rozpakowujemy zipy
-        for plik in self.plikiDoSciagniecia:
-            if not plik == 'cvs.exe':
-                if plik.startswith('mapedit2'):
-                    dir = 'mapedit2'
-                elif plik.startswith('mapedit++'):
-                    dir = 'mapedit++'
-                plikzip=zipfile.ZipFile(plik, 'r')
-                os.makedirs(dir)
-                print(u'Rozpakowuję plik: '+plik)
-                plikzip.extractall(path=dir)
-                #os.remove(plik)
+        # os.chdir(self.umpHome)
+        #
+        # #tworzymy katalogi mapedita i rozpakowujemy zipy
+        # for plik in self.plikiDoSciagniecia:
+        #     if not plik == 'cvs.exe':
+        #         if plik.startswith('mapedit2'):
+        #             dir = 'mapedit2'
+        #         elif plik.startswith('mapedit++'):
+        #             dir = 'mapedit++'
+        #         plikzip=zipfile.ZipFile(plik, 'r')
+        #         os.makedirs(dir)
+        #         print(u'Rozpakowuję plik: '+plik)
+        #         plikzip.extractall(path=dir)
+        #         #os.remove(plik)
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
