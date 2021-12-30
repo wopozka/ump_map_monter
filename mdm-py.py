@@ -1550,7 +1550,7 @@ class SetupMode(object):
         self.modulyCVSCheckboksy = {}
 
         self.plikiDoSciagniecia={'cvs.exe':'http://ump.waw.pl/pliki/cvs.exe',
-                                'mapedit2-1-78-10.zip':'http://www.geopainting.com/download/mapedit2-1-78-10.zip'}
+                                'mapedit2-1-78-18.zip':'http://www.geopainting.com/download/mapedit2-1-78-18.zip'}
         if platform.architecture() == '32bit':
             self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
         else:
