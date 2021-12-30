@@ -1761,26 +1761,26 @@ class mdm_gui_py(tkinter.Tk):
         menubar.add_cascade(label=u'Kreatory', menu=menuKreatory)
 
         # menu CVS
-        menuCVS = tkinter.Menu(menubar, tearoff=0)
-        menuCVS_pobierz = tkinter.Menu(menuCVS, tearoff=0)
+        menu_pobierz = tkinter.Menu(menubar, tearoff=0)
+        menuCVS = tkinter.Menu(menu_pobierz, tearoff=0)
         menuCVS_obszary = dict()
         for modul_cvs in self.modul_cvs.modulyCVS:
-            menuCVS_obszary[modul_cvs] = tkinter.Menu(menuCVS_pobierz, tearoff=0)
+            menuCVS_obszary[modul_cvs] = tkinter.Menu(menuCVS, tearoff=0)
             menuCVS_obszary[modul_cvs].add_command(label=modul_cvs)
             for modul_pojedynczy in self.modul_cvs.modulyCVS[modul_cvs]:
                 menuCVS_obszary[modul_cvs].add_command(label=modul_pojedynczy,
                                                        command=lambda x=modul_pojedynczy: self.cvs_co(x))
 
-            menuCVS_pobierz.add_cascade(label=modul_cvs, menu=menuCVS_obszary[modul_cvs])
-        menuCVS_pobierz.add_separator()
-        menuCVS_pobierz.add_command(label='cvs.exe', command=self.pobierz_cvs)
-        menuCVS_pobierz.add_command(label='mapedit2-1.78-18.zip', command=self.pobierz_mapedit2)
+            menuCVS.add_cascade(label=modul_cvs, menu=menuCVS_obszary[modul_cvs])
+        menu_pobierz.add_cascade(label=u'CVS', menu=menuCVS)
+        menu_pobierz.add_separator()
+        menu_pobierz.add_command(label='cvs.exe', command=self.pobierz_cvs)
+        menu_pobierz.add_command(label='mapedit2-1.78-18.zip', command=self.pobierz_mapedit2)
         if platform.architecture() == '32bit':
-            menuCVS_pobierz.add_command(label='mapedit++(32)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
+            menu_pobierz.add_command(label='mapedit++(32)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
         else:
-            menuCVS_pobierz.add_command(label='mapedit++(64)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
-        menuCVS.add_cascade(label=u'Pobierz', menu=menuCVS_pobierz)
-        menubar.add_cascade(label=u'CVS', menu=menuCVS)
+            menu_pobierz.add_command(label='mapedit++(64)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
+        menubar.add_cascade(label=u'Pobierz', menu=menu_pobierz)
 
         # menu Pomoc
         menuPomoc=tkinter.Menu(menubar, tearoff=0)
