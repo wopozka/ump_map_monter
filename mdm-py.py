@@ -46,6 +46,28 @@ import urllib.error
 import collections
 
 
+def sprawdz_czy_cvs_obecny():
+    Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+    if shutil.which('cvs', path=Zmienne.KatalogzUMP):
+        return ''
+    if platform.system() == 'Windows':
+        return 'Nie odnalazłem programu cvs. Ściągnij go poprzez menu->Pobierz do katalogu ze środłami mapy.'
+    else:
+        return 'Nie odnalazłem programu cvs. Zainstaluj go.'
+
+
+def createToolTip(widget, text):
+    toolTip = ToolTip(widget)
+    def enter(event):
+        toolTip.schedule(text)
+    def leave(event):
+        toolTip.unschedule()
+        toolTip.hidetip()
+
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+
 class ModulCVS(object):
     def __init__(self):
         self.modulyCVS = {'AUSTRIA': ['UMP-AT-Graz', 'UMP-AT-Innsbruck', 'UMP-AT-Linz', 'UMP-AT-Wien'],
@@ -162,16 +184,6 @@ class ToolTip(object):
         if id:
             self.widget.after_cancel(id)
 
-def createToolTip(widget, text):
-    toolTip = ToolTip(widget)
-    def enter(event):
-        toolTip.schedule(text)
-    def leave(event):
-        toolTip.unschedule()
-        toolTip.hidetip()
-
-    widget.bind('<Enter>', enter)
-    widget.bind('<Leave>', leave)
 
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
@@ -721,7 +733,7 @@ class stdOutstdErrText(tkinter.scrolledtext.ScrolledText):
 
 #ScrolledText który przyjmuje informacje z wątków pobocznych, dla operacji cvs up i cvs co
 class cvsOutText(tkinter.scrolledtext.ScrolledText):
-    def __init__(self, master,**options):
+    def __init__(self, master, **options):
         tkinter.scrolledtext.ScrolledText.__init__(self, master, **options)
         self.master=master
         self.inputqueue=queue.Queue()
@@ -858,45 +870,69 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.tk.call("tk_popup", self.menu, e.x_root, e.y_root)
 
     def cvsup(self):
-        Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-        if os.path.isfile(Zmienne.KatalogRoboczy+'wynik.mp'):
-            if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
-                aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
-            else:
-                pass
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
+            Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+            if os.path.isfile(Zmienne.KatalogRoboczy+'wynik.mp'):
+                if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
+                    aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
+                else:
+                    pass
+            else:
+                aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
 
     def cvsco(self):
-        aaa = cvsOutputReceaver(self, [self.obszar], '', 'co')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showinfo(cvs_status)
+        else:
+            aaa = cvsOutputReceaver(self, [self.obszar], '', 'co')
 
     def cvsdiff(self):
-        aaa = cvsOutputReceaver(self, [self.obszar], '', 'diff')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
+        else:
+            aaa = cvsOutputReceaver(self, [self.obszar], '', 'diff')
 
     def cvsupgranice(self):
-        doCVS=cvsOutputReceaver(self, ['narzedzia/granice.txt'], '', 'up')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
+        else:
+            doCVS = cvsOutputReceaver(self, ['narzedzia/granice.txt'], '', 'up')
 
     def cvsci(self):
-        oknodialogowe=cvsDialog(self,[self.obszar],title=u'Prześlij pliki do repozytorium cvs')
-        if oknodialogowe.iftocommit=='tak':
-            doCVS=cvsOutputReceaver(self,[self.obszar],oknodialogowe.message,'ci')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            pass
+            oknodialogowe=cvsDialog(self,[self.obszar],title=u'Prześlij pliki do repozytorium cvs')
+            if oknodialogowe.iftocommit=='tak':
+                doCVS=cvsOutputReceaver(self,[self.obszar],oknodialogowe.message,'ci')
+            else:
+                pass
 
     def cvsci_zaznaczone_obszary(self):
-        zaznaczone_obszary=[]
-        for aaa in self.regionVariableDictionary.keys():
-            if self.regionVariableDictionary[aaa].get()==1:
-                print(aaa)
-                zaznaczone_obszary.append(aaa)
-        if not zaznaczone_obszary:
-            tkinter.messagebox.showwarning(u'Brak wybranego obszaru!',u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
-            return
-        oknodialogowe=cvsDialog(self,zaznaczone_obszary,title=u'Prześlij pliki do repozytorium cvs')
-        if oknodialogowe.iftocommit=='tak':
-            doCVS = cvsOutputReceaver(self, zaznaczone_obszary, oknodialogowe.message, 'ci')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            pass
+            zaznaczone_obszary=[]
+            for aaa in self.regionVariableDictionary.keys():
+                if self.regionVariableDictionary[aaa].get()==1:
+                    print(aaa)
+                    zaznaczone_obszary.append(aaa)
+            if not zaznaczone_obszary:
+                tkinter.messagebox.showwarning(u'Brak wybranego obszaru!',u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
+                return
+            oknodialogowe=cvsDialog(self, zaznaczone_obszary, title=u'Prześlij pliki do repozytorium cvs')
+            if oknodialogowe.iftocommit=='tak':
+                doCVS = cvsOutputReceaver(self, zaznaczone_obszary, oknodialogowe.message, 'ci')
+            else:
+                pass
 
 
 class cvsDialog(tkinter.Toplevel):
@@ -1702,6 +1738,7 @@ class mdm_gui_py(tkinter.Tk):
         self.parent = parent
         self.cvsstatusQueue = queue.Queue()
         self.modul_cvs = ModulCVS()
+        self.Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         self.initialize()
         if os.path.isfile(self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif'):
             iconimg = tkinter.PhotoImage(file=self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif')
@@ -1730,7 +1767,11 @@ class mdm_gui_py(tkinter.Tk):
         aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
 
     def cvs_co(self, obszar):
-        aaa = cvsOutputReceaver(self, [obszar], '', 'co')
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            tkinter.messagebox.showwarning(message=cvs_status)
+        else:
+            aaa = cvsOutputReceaver(self, [obszar], '', 'co')
 
     def initialize(self):
 
@@ -1741,7 +1782,6 @@ class mdm_gui_py(tkinter.Tk):
         #pliki zmienione, do wysłania na cvs
         self.plikiDoCVS=[]
         self.uncommitedfilesqueue=queue.Queue()
-        self.Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         self.args = Argumenty()
         self.grid()
 
@@ -1766,7 +1806,7 @@ class mdm_gui_py(tkinter.Tk):
         menuCVS_obszary = dict()
         for modul_cvs in self.modul_cvs.modulyCVS:
             menuCVS_obszary[modul_cvs] = tkinter.Menu(menuCVS, tearoff=0)
-            menuCVS_obszary[modul_cvs].add_command(label=modul_cvs)
+            menuCVS_obszary[modul_cvs].add_command(label=modul_cvs, command=lambda x=modul_cvs: self.cvs_co(x))
             for modul_pojedynczy in self.modul_cvs.modulyCVS[modul_cvs]:
                 menuCVS_obszary[modul_cvs].add_command(label=modul_pojedynczy,
                                                        command=lambda x=modul_pojedynczy: self.cvs_co(x))
@@ -2184,7 +2224,7 @@ class mdm_gui_py(tkinter.Tk):
         else:
             self.autopolypoly.configure(background='orange red')
 
-    def montuj_shortcut(self,event):
+    def montuj_shortcut(self, event):
 
         if (str(self.montButton['state']) != 'disabled'):
             self.OnButtonClickMont()
@@ -2460,24 +2500,30 @@ class mdm_gui_py(tkinter.Tk):
         else:
             obszary.append('narzedzia')
 
-        if os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp'):
-            if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
-                doCVS = cvsOutputReceaver(self, obszary, '', 'up')
-            else:
-                pass
+        cvs_status = sprawdz_czy_cvs_obecny()
+        if cvs_status:
+            tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            doCVS=cvsOutputReceaver(self, obszary, '', 'up')
+            if os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp'):
+                if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
+                    doCVS = cvsOutputReceaver(self, obszary, '', 'up')
+                else:
+                    pass
+            else:
+                doCVS = cvsOutputReceaver(self, obszary, '', 'up')
 
         #doCVS=cvsOutputReceaver(self,obszary,'','up')
 
-
     def OnButtonClickCvsCommit(self):
-
-        if len(self.plikiDoCVS)>0:
+       if len(self.plikiDoCVS) > 0:
             oknodialogowe=cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
-                doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
-                self.plikiDoCVS=doCVS.uncommitedfiles[:]
+                cvs_status = sprawdz_czy_cvs_obecny()
+                if cvs_status:
+                    tkinter.messagebox.showwarning(message=cvs_status)
+                else:
+                    doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
+                    self.plikiDoCVS=doCVS.uncommitedfiles[:]
             else:
                 pass
 
