@@ -886,7 +886,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
     def cvsco(self):
         cvs_status = sprawdz_czy_cvs_obecny()
         if cvs_status:
-            aaa = tkinter.messagebox.showinfo(cvs_status)
+            aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
             aaa = cvsOutputReceaver(self, [self.obszar], '', 'co')
 
@@ -1131,7 +1131,6 @@ class cvsOutputReceaver(tkinter.Toplevel):
             thread = threading.Thread(target=self.cvsco, args=(obszary, self.stopthreadqueue,
                                                                self.progreststartstopqueue))
             thread.start()
-            # self.cvsco(obszary, self.stopthreadqueue, self.progreststartstopqueue)
         else:
             thread = threading.Thread(target=self.cvsci, args=(obszary, message, self.stopthreadqueue,
                                                             self.progreststartstopqueue))
@@ -1221,7 +1220,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
     #
     # command hooks
-    def closewindows(self,event=None):
+    def closewindows(self, event=None):
         if self.OKButton.config('state')[-1] != 'disabled':
             self.ok()
 
@@ -1244,7 +1243,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put(('CVSROOT='+CVSROOT+'\n\n'))
         for a in obszary:
             self.outputwindow.inputqueue.put(('cvs ci -m "'+message.strip()+'" '+a+'\n'))
-            process = subprocess.Popen(['cvs', '-q',CVSROOT,'ci','-m',message,a],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
 
             while process.poll()==None:
                 try:
@@ -1257,10 +1257,10 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
                 time.sleep(1)
 
-            stderr=process.stderr.readlines()
-            stdout=process.stdout.readlines()
+            stderr = process.stderr.readlines()
+            stdout = process.stdout.readlines()
 
-            if len(stderr)>0:
+            if len(stderr) > 0:
                 if stderr[0].decode(Zmienne.Kodowanie).find('Up-to-date check failed')>=0:
                     for line in stderr:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
@@ -1368,7 +1368,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
         for a in obszary:
             self.outputwindow.inputqueue.put(('cvs ' + komenda + ' ' + a +'\n'))
-            process = subprocess.Popen(['cvs','-q', CVSROOT, komenda, a], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            process = subprocess.Popen(['cvs', '-q', CVSROOT, komenda, a], stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT)
             processexitstatus=process.poll()
 
             while processexitstatus == None:
@@ -1397,7 +1398,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         else:
             #okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i trzeba doczytać tutaj.
             while line.decode(Zmienne.Kodowanie) != '':
-                line=process.stdout.readline()
+                line = process.stdout.readline()
                 self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
@@ -1542,64 +1543,9 @@ class Argumenty(object):
 
 class SetupMode(object):
     def __init__(self):
-        self.modulyCVSLista = ['AUSTRIA', 'BALKANY', 'BRYTANIA', 'CZECHY', 'DANIA', 'ESTONIA', 'EUROPA', 'FINLANDIA',
-                               'FRANCJA', 'HISZPANIA', 'HOLANDIA', 'NIEMCY', 'NORWEGIA', 'POLSKA',
-                               'PORTUGALIA', 'ROSJA', 'RUMUNIA', 'SKANDYNAWIA', 'SZWECJA', 'WLOCHY', 'all', 'inne']
-        self.modulyCVS = {'AUSTRIA': ['UMP-AT-Graz', 'UMP-AT-Innsbruck', 'UMP-AT-Linz', 'UMP-AT-Wien'],
-                          'BALKANY': ['UMP-Albania', 'UMP-Bosnia', 'UMP-Bulgaria', 'UMP-Chorwacja', 'UMP-Czarnogora',
-                                     'UMP-Grecja', 'UMP-Kosowo', 'UMP-Macedonia', 'UMP-Moldawia', 'RUMUNIA',
-                                     'UMP-Serbia', 'UMP-Slowenia', 'UMP-Turcja'],
-                          'BRYTANIA': ['UMP-GB-Belfast', 'UMP-GB-Edinburgh', 'UMP-GB-Bristol', 'UMP-GB-Leeds',
-                                       'UMP-GB-Leicester', 'UMP-GB-London', 'UMP-GB-Manchester', 'UMP-GB-Plymouth'],
-                          'CZECHY': ['UMP-CZ-Brno', 'UMP-CZ-Budejovice', 'UMP-CZ-Jihlava', 'UMP-CZ-KarlovyVary',
-                                     'UMP-CZ-Olomouc', 'UMP-CZ-Ostrava', 'UMP-CZ-Pardubice', 'UMP-CZ-Plzen',
-                                     'UMP-CZ-Praha'],
-                          'DANIA': ['UMP-Dania', 'UMP-WyspyOwcze'],
-                          'ESTONIA': ['UMP-EE-Tallin', 'UMP-EE-Tartu'],
-                          'EUROPA': ['BALKANY', 'NIEMCY', 'SKANDYNAWIA', 'BRYTANIA', 'UMP-Andora', 'AUSTRIA',
-                                    'UMP-Belgia', 'UMP-Bialorus', 'UMP-Cypr', 'CZECHY', 'ESTONIA', 'FRANCJA',
-                                    'HISZPANIA', 'HOLANDIA', 'UMP-Irlandia', 'UMP-RU-Kaliningrad', 'UMP-Lichtenstein',
-                                    'UMP-Litwa', 'UMP-Lotwa', 'UMP-Luksemburg', 'UMP-Malta', 'PORTUGALIA', 'ROSJA',
-                                    'UMP-Slowacja', 'UMP-Szwajcaria', 'UMP-Ukraina', 'UMP-Wegry', 'WLOCHY'],
-                          'FINLANDIA': ['UMP-FI-Helsinki', 'UMP-FI-Oulu', 'UMP-FI-Tampere', 'UMP-FI-Vaasa'],
-                          'FRANCJA': ['UMP-FR-Ajaccio', 'UMP-FR-ClermontFerrand', 'UMP-FR-Dijon', 'UMP-FR-LeHavre',
-                                      'UMP-FR-Lille', 'UMP-FR-Limoges', 'UMP-FR-Lyon', 'UMP-FR-Marseille',
-                                      'UMP-FR-Montpellier', 'UMP-FRpantes', 'UMP-FR-Orleans', 'UMP-FR-Paris',
-                                      'UMP-FR-Rennes', 'UMP-FR-SaintEtienne', 'UMP-FR-Strasbourg', 'UMP-FR-Toulouse'],
-                          'HISZPANIA': ['UMP-ES-Madrid', 'UMP-ES-Kanary', 'UMP-ES-Albacete', 'UMP-ES-Badajoz',
-                                        'UMP-ES-Barcelona', 'UMP-ES-Gijon', 'UMP-ES-Murcia', 'UMP-ES-Palma',
-                                        'UMP-ES-Sevilla', 'UMP-ES-Valencia', 'UMP-ES-Valladolid', 'UMP-ES-Vigo',
-                                        'UMP-ES-Zaragoza'],
-                          'HOLANDIA': ['UMP-NL-Amsterdam', 'UMP-NL-Eindhoven', 'UMP-NL-Groningen', 'UMP-NL-Rotterdam',
-                                      'UMP-NL-Tilburg', 'UMP-NL-Utrecht', 'UMP-NL-Zwolle'],
-                          'NIEMCY': ['UMP-DE-Baden', 'UMP-DE-Bayern', 'UMP-DE-Brandenburg', 'UMP-DE-Hessen',
-                                    'UMP-DE-Mecklenburg', 'UMP-DE-Niedersachsen', 'UMP-DE-Rheinland', 'UMP-DE-Sachsen',
-                                    'UMP-DE-SachsenAnhalt', 'UMP-DE-Schleswig', 'UMP-DE-Thuringen', 'UMP-DE-Westfalen'],
-                          'NORWEGIA': ['UMP-NO-Alta', 'UMP-NO-Bergen', 'UMP-NO-Tromso', 'UMP-NO-Trondheim',
-                                       'UMP-NO-Oslo'],
-                          'POLSKA': ['UMP-PL-Warszawa', 'UMP-PL-Bialystok', 'UMP-PL-Ciechanow', 'UMP-PL-Gdansk',
-                                     'UMP-PL-GorzowWlkp', 'UMP-PL-JeleniaGora', 'UMP-PL-Kalisz', 'UMP-PL-Katowice',
-                                     'UMP-PL-Kielce', 'UMP-PL-Klodzko', 'UMP-PL-Koszalin', 'UMP-PL-Krakow',
-                                     'UMP-PL-Leszno', 'UMP-PL-Lodz', 'UMP-PL-Lublin', 'UMP-PL-NowySacz',
-                                     'UMP-PL-Olsztyn', 'UMP-PL-Opole', 'UMP-PL-Pila', 'UMP-PL-Plock', 'UMP-PL-Poznan',
-                                     'UMP-PL-Przemysl', 'UMP-PL-Radom', 'UMP-PL-Rzeszow', 'UMP-PL-Siedlce',
-                                     'UMP-PL-Suwalki', 'UMP-PL-Szczecin', 'UMP-PL-Tarnow', 'UMP-PL-Tczew',
-                                     'UMP-PL-Torun', 'UMP-PL-Wloclawek', 'UMP-PL-Wroclaw', 'UMP-PL-Zamosc',
-                                     'UMP-radary'],
-                          'PORTUGALIA': ['UMP-PT-Lisbona', 'UMP-PT-Azory', 'UMP-PT-Madera'],
-                          'ROSJA': ['UMP-RU-Moskwa', 'UMP-RU-Kaliningrad'],
-                          'RUMUNIA': ['UMP-RO-Bucuresti', 'UMP-RO-Timisoara'],
-                          'SKANDYNAWIA': ['DANIA', 'SZWECJA', 'FINLANDIA', 'NORWEGIA', 'UMP-Islandia'],
-                          'SZWECJA': ['UMP-SE-Goteborg', 'UMP-SE-Linkoping', 'UMP-SE-Malmo', 'UMP-SE-Norrkoping',
-                                      'UMP-SE-Orebro', 'UMP-SE-Stockholm', 'UMP-SE-Umea'],
-                          'WLOCHY': ['UMP-IT-Bari', 'UMP-IT-Bologna', 'UMP-IT-Bolzano', 'UMP-IT-Cagliari',
-                                     'UMP-IT-Cosenza', 'UMP-IT-Firenze', 'UMP-IT-Genova', 'UMP-IT-Milano',
-                                     'UMP-IT-Napoli', 'UMP-IT-Palermo', 'UMP-IT-Perugia', 'UMP-IT-Pescara',
-                                     'UMP-IT-Roma', 'UMP-IT-Torino', 'UMP-IT-Trieste'],
-                          'all': ['narzedzia', 'POLSKA', 'EUROPA', 'UMP-Egipt', 'UMP-Tunezja', 'UMP-Algieria',
-                                  'UMP-Maroko', 'UMP-Nepal', 'Makefile.common'],
-                          'inne': ['UMP-Karaiby', 'UMP-ZielonyPrzyladek', 'UMP-Afryka', 'UMP-Ameryka', 'UMP-Australia',
-                                   'UMP-Azja']}
+        self.modulyCVS = ModulCVS()
+        self.modulyCVSLista = [a for a in self.modulyCVS.modulyCVS]
+
         umpfoldernames = ['ump', 'umpsource', 'umpcvs', 'cvsump', 'ump_cvs', 'cvsump']
         self.modulyCVSCheckboksy = {}
 
@@ -1609,14 +1555,14 @@ class SetupMode(object):
             self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
         else:
             self.plikiDoSciagniecia['mapedit++(64)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
-        home=os.path.expanduser('~')+'/'
+        home = os.path.expanduser('~')
         self.CvsUserName = 'guest'
-        self.CVSROOT='-d:pserver:'+self.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
+        self.CVSROOT='-d:pserver:' + self.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
         # self.ListaObszarow = list()
         self.modulyCvsDoSciagniecia = list()
         for a in umpfoldernames:
             try:
-                abc = home+a
+                abc = os.path.join(home, a)
                 os.makedirs(abc)
                 self.umpHome = abc
                 break
@@ -1626,7 +1572,7 @@ class SetupMode(object):
         for plik in self.plikiDoSciagniecia:
             try:
                 u = urllib.request.urlopen(self.plikiDoSciagniecia[plik])
-                f = open(self.umpHome+'/'+plik, 'wb')
+                f = open(os.path.join(self.umpHome, plik), 'wb')
                 meta = u.info()
                 print(meta['Content-Length'])
                 filesize = int(meta['Content-Length'])
@@ -1649,7 +1595,6 @@ class SetupMode(object):
                 f.close()
             except urllib.error.HTTPError:
                 print('Nie moge sciagnac pliku cvs.exe')
-            # process = subprocess.Popen(['cvs', '-q',self.CVSROOT,'ls',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         os.chdir(self.umpHome)
 
         #tworzymy katalogi mapedita i rozpakowujemy zipy
@@ -1699,10 +1644,11 @@ class SetupMode(object):
             self.modulyCVSCheckboksy[abc] = []
             obszarFrame = tkinter.ttk.Labelframe(listaObszarowCanvas, text=abc)
 
-            for bbb in range(len(self.modulyCVS[abc])):
+            for bbb in range(len(self.modulyCVS.modulyCVS[abc])):
                 self.modulyCVSCheckboksy[abc].append(tkinter.BooleanVar())
-                self.modulyCVSCheckboksy[abc].append(tkinter.ttk.Checkbutton(obszarFrame, width=25, text=self.modulyCVS[abc][bbb],
-                                                                                variable=self.modulyCVSCheckboksy[abc][-1]))
+                self.modulyCVSCheckboksy[abc].append(tkinter.ttk.Checkbutton(obszarFrame, width=25,
+                                                                             text=self.modulyCVS.modulyCVS[abc][bbb],
+                                                                             variable=self.modulyCVSCheckboksy[abc][-1]))
                 self.modulyCVSCheckboksy[abc][-1].grid(column=bbb%ilosc_kolumn, row=bbb//ilosc_kolumn)
                 #ilosc_wierszy_danego_obszaru = bbb//ilosc_kolumn
                 #print('ilosc kolumn danego obszaru: ', ilosc_wierszy_danego_obszaru)
@@ -1718,14 +1664,29 @@ class SetupMode(object):
         listaObszarowCanvas.config(scrollregion=listaObszarowCanvas.bbox('all'))
         self.glowneOknoDialkogCVS.mainloop()
 
-        print(self.modulyCvsDoSciagniecia)
+
+
 
     def sciagnijButtonClick(self):
         for abc in self.modulyCVSLista:
             for bbb in range(0, len(self.modulyCVSCheckboksy[abc]), 2):
                 if self.modulyCVSCheckboksy[abc][bbb].get():
-                    self.modulyCvsDoSciagniecia.append(self.modulyCVS[abc][int(bbb/2)])
+                    self.modulyCvsDoSciagniecia.append(self.modulyCVS.modulyCVS[abc][int(bbb/2)])
         self.glowneOknoDialkogCVS.destroy()
+        if 'narzedzia' not in self.modulyCvsDoSciagniecia:
+            self.modulyCvsDoSciagniecia.append('narzedzia')
+        CVSROOT = '-d:pserver:' + 'guest' + '@cvs.ump.waw.pl:/home/cvsroot'
+        os.chdir(self.umpHome)
+        process = subprocess.Popen(['cvs', '-q', CVSROOT, 'co'] + self.modulyCvsDoSciagniecia)
+        processexitstatus = process.poll()
+
+        while processexitstatus == None:
+            time.sleep(1)
+            processexitstatus = process.poll()
+
+        print('Skonczylem sciaganie')
+        tkinter.messagebox.showinfo(message='Skończyłeś ściąganie źródeł do katalogu:\n' + self.umpHome)
+        return 0
 
 
     def cancelButtonClick(self):
