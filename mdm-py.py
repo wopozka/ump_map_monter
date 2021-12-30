@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import tempfile
 from tkinter import *
 import tkinter
 import tkinter.ttk
@@ -1774,7 +1774,7 @@ class mdm_gui_py(tkinter.Tk):
             menuCVS_pobierz.add_cascade(label=modul_cvs, menu=menuCVS_obszary[modul_cvs])
         menuCVS_pobierz.add_separator()
         menuCVS_pobierz.add_command(label='cvs.exe', command=self.pobierz_cvs)
-        menuCVS_pobierz.add_command(label='mapedit2-2.78-10.zip', command=self.pobierz_mapedit2)
+        menuCVS_pobierz.add_command(label='mapedit2-1.78-18.zip', command=self.pobierz_mapedit2)
         if platform.architecture() == '32bit':
             menuCVS_pobierz.add_command(label='mapedit++(32)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
         else:
@@ -1792,21 +1792,23 @@ class mdm_gui_py(tkinter.Tk):
 
         self.regionyWersja = tkinter.Frame(self)
         self.regionyWersja.grid(columnspan=2, row=0, sticky='EW')
-        self.regionyWersja.grid_columnconfigure(0,weight=1)
-        self.regionyWersja.grid_columnconfigure(1,weight=1)
+        self.regionyWersja.grid_columnconfigure(0, weight=1)
+        self.regionyWersja.grid_columnconfigure(1, weight=1)
         #zmienna wskazuje czy mamy do czynienia z edytorem czy wrzucaczem. W zależności od tego możemy albo kopiować pliki bezpośrednio, albo utworzyć archiwum zip do wysłania.
         self.mdm_mode=self.Zmienne.mdm_mode
         self.os=platform.system()
         self.osVersionVariable = tkinter.StringVar()
-        self.osVersionVariable.set(u'Python: %s.%s.%s na %s %s (%s)'%(sys.version_info[0],sys.version_info[1],sys.version_info[0],platform.uname()[0],platform.uname()[2], platform.architecture()[0]))
+        self.osVersionVariable.set(u'Python: %s.%s.%s na %s %s (%s)'%(sys.version_info[0], sys.version_info[1],
+                                                                      sys.version_info[0], platform.uname()[0],
+                                                                      platform.uname()[2], platform.architecture()[0]))
         systemLabel = tkinter.ttk.Label(self.regionyWersja, textvariable=self.osVersionVariable)
-        systemLabel.grid(column=0, row=0,sticky='w')
+        systemLabel.grid(column=0, row=0, sticky='w')
         self.guimodeVar = tkinter.StringVar()
         self.guimodeVar.set(u'Tryb pracy mdm: %s'%self.Zmienne.mdm_mode)
         guiMode = tkinter.ttk.Label(self.regionyWersja, textvariable=self.guimodeVar)
-        guiMode.grid(column=1, row=0,sticky='w')
-        self.autopolypoly=tkinter.ttk.Label(self.regionyWersja,text=u'Automatyczny rozkład obszarów i linii')
-        self.autopolypoly.grid(column=2,row=0,sticky='w')
+        guiMode.grid(column=1, row=0, sticky='w')
+        self.autopolypoly=tkinter.ttk.Label(self.regionyWersja, text=u'Automatyczny rozkład obszarów i linii')
+        self.autopolypoly.grid(column=2, row=0, sticky='w')
         self.selectUnselect_aol(None)
 
 
@@ -1815,8 +1817,8 @@ class mdm_gui_py(tkinter.Tk):
         self.regionVariableDictionary = {}
         self.regionCheckButtonDictionary = {}
 
-        self.regionyFrame = tkinter.ttk.LabelFrame(self,text=u'Wybór regionów')
-        self.regionyFrame.grid(column=0,columnspan=2, row=1,sticky='ew')
+        self.regionyFrame = tkinter.ttk.LabelFrame(self, text=u'Wybór regionów')
+        self.regionyFrame.grid(column=0, columnspan=2, row=1, sticky='ew')
 
 
         self.regionyFrame.bind_class('kolkomyszkiregiony',"<MouseWheel>", self._on_mousewheelregionyCanvas)
@@ -1826,12 +1828,12 @@ class mdm_gui_py(tkinter.Tk):
         self.regionyFrame.bindtags(newtags)
 
         regionyScroll=AutoScrollbar(self.regionyFrame)
-        regionyScroll.grid(column=1,row=0,sticky='NS')
-        newtags=regionyScroll.bindtags()+('kolkomyszkiregiony',)
+        regionyScroll.grid(column=1, row=0, sticky='NS')
+        newtags=regionyScroll.bindtags() + ('kolkomyszkiregiony',)
         regionyScroll.bindtags(newtags)
 
-        regionyScrollX=AutoScrollbar(self.regionyFrame,orient='horizontal')
-        regionyScrollX.grid(column=0,row=1,sticky='EW')
+        regionyScrollX=AutoScrollbar(self.regionyFrame, orient='horizontal')
+        regionyScrollX.grid(column=0, row=1, sticky='EW')
 
         #self.regionyListbox = tkinter.Listbox(self.regionyFrame,bd=1,highlightthickness=0,bg='SystemMenu',yscrollcommand = regionyScroll.set,height=4)
         #self.regionyListbox.grid(column=0,row=0)
@@ -2384,9 +2386,9 @@ class mdm_gui_py(tkinter.Tk):
             self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
     def pobierz_mapedit2(self):
-        url = 'http://www.geopainting.com/download/mapedit2-1-78-10.zip'
+        url = 'http://www.geopainting.com/download/mapedit2-1-78-18.zip'
 
-        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla mapedit2')
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog rozpakowania mapedit2')
         if katalog_przeznaczenia:
             self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
@@ -2394,16 +2396,17 @@ class mdm_gui_py(tkinter.Tk):
         url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
         if platform.architecture() == '32bit':
             url = 'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
-        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla mapedit++')
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog do rozpakowania mapedit++')
         if katalog_przeznaczenia:
             self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
 
     def pobierz_pliki_z_internetu(self, katalog_przeznaczenia, url):
         nazwa_pliku = url.split('/')[-1]
+        temporary_file = tempfile.NamedTemporaryFile(delete=False)
         try:
             u = urllib.request.urlopen(url)
-            f = open(os.path.join(katalog_przeznaczenia, nazwa_pliku), 'wb')
+            # f = open(temporary_file, 'wb')
             meta = u.info()
             print(meta['Content-Length'])
             filesize = int(meta['Content-Length'])
@@ -2416,31 +2419,24 @@ class mdm_gui_py(tkinter.Tk):
                     break
 
                 file_size_dl += len(buffer)
-                f.write(buffer)
+                # f.write(buffer)
+                temporary_file.write(buffer)
                 status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
-                status = status + chr(8)*(len(status)+1)
+                status = status + chr(8) * (len(status) + 1)
                 sys.stdout.write(status)
                 sys.stdout.flush()
                 #print(status)
 
-            f.close()
         except urllib.error.HTTPError:
             print('Nie moge sciagnac pliku:' + nazwa_pliku)
-        # process = subprocess.Popen(['cvs', '-q',self.CVSROOT,'ls',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        # os.chdir(self.umpHome)
-        #
-        # #tworzymy katalogi mapedita i rozpakowujemy zipy
-        # for plik in self.plikiDoSciagniecia:
-        #     if not plik == 'cvs.exe':
-        #         if plik.startswith('mapedit2'):
-        #             dir = 'mapedit2'
-        #         elif plik.startswith('mapedit++'):
-        #             dir = 'mapedit++'
-        #         plikzip=zipfile.ZipFile(plik, 'r')
-        #         os.makedirs(dir)
-        #         print(u'Rozpakowuję plik: '+plik)
-        #         plikzip.extractall(path=dir)
-        #         #os.remove(plik)
+            return
+        temporary_file.close()
+        if url.endswith('.exe'):
+            shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
+        else:
+            with zipfile.ZipFile(temporary_file.name, 'r') as plikzip:
+                plikzip.extractall(path=katalog_przeznaczenia)
+        os.remove(temporary_file.name)
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
