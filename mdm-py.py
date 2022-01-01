@@ -1571,8 +1571,6 @@ class SetupMode(object):
             self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
         else:
             self.plikiDoSciagniecia['mapedit++(64)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
-        self.CvsUserName = 'guest'
-        self.CVSROOT='-d:pserver:' + self.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
         # self.ListaObszarow = list()
         self.modulyCvsDoSciagniecia = list()
         self.utworz_katalog_ump()
@@ -1640,13 +1638,14 @@ class SetupMode(object):
 
     def sciagnijButtonClick(self):
         # self.glowneOknoDialkogCVS.hide()
+        cvs_user_name = self.loginEntry.get()
         for abc in self.modulyCVSLista:
             for bbb in range(0, len(self.modulyCVSCheckboksy[abc]), 2):
                 if self.modulyCVSCheckboksy[abc][bbb].get():
                     self.modulyCvsDoSciagniecia.append(self.modulyCVS.modulyCVS[abc][int(bbb/2)])
         if 'narzedzia' not in self.modulyCvsDoSciagniecia:
             self.modulyCvsDoSciagniecia.append('narzedzia')
-        CVSROOT = '-d:pserver:' + 'guest' + '@cvs.ump.waw.pl:/home/cvsroot'
+        CVSROOT = '-d:pserver:' + cvs_user_name + '@cvs.ump.waw.pl:/home/cvsroot'
         os.chdir(self.umpHome)
         process = subprocess.Popen(['cvs', '-q', CVSROOT, 'co'] + self.modulyCvsDoSciagniecia)
         processexitstatus = process.poll()
@@ -1667,14 +1666,25 @@ class SetupMode(object):
     def utworz_katalog_ump(self):
         umpfoldernames = ['ump', 'umpsource', 'umpcvs', 'cvsump', 'ump_cvs', 'cvsump']
         home = os.path.expanduser('~')
+
         for a in umpfoldernames:
-            try:
-                abc = os.path.join(home, a)
-                os.makedirs(abc)
+            abc = os.path.join(home, a)
+            if os.path.isdir(abc):
+                continue
+            else:
                 self.umpHome = abc
                 break
-            except FileExistsError:
-                pass
+
+        kol_numer = 1
+        while not self.umpHome:
+            abc = os.path.join(home, 'ump_' + str(kol_numer))
+            if os.path.isdir(abc):
+                kol_numer += 1
+                continue
+            else:
+                self.umpHome = abc
+        os.makedirs(self.umpHome)
+
 
     def sciagnij_pliki(self):
         for plik in self.plikiDoSciagniecia:
@@ -1717,7 +1727,7 @@ class SetupMode(object):
                 os.makedirs(dir)
                 print(u'Rozpakowuję plik: ' + plik)
                 plikzip.extractall(path=dir)
-                # os.remove(plik)
+                os.remove(plik)
 
 class mdm_gui_py(tkinter.Tk):
     def __init__(self, parent):
