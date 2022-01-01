@@ -1566,7 +1566,7 @@ class SetupMode(object):
         self.modulyCVSCheckboksy = {}
 
         self.plikiDoSciagniecia = {'cvs.exe':'http://ump.waw.pl/pliki/cvs.exe',
-                                'mapedit2-1-78-18.zip':'http://www.geopainting.com/download/mapedit2-1-78-18.zip'}
+                                'mapedit2-1-78-18.zip':'https://www.geopainting.com/download/mapedit2-1-78-18.zip'}
         if platform.architecture() == '32bit':
             self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
         else:
@@ -2424,7 +2424,7 @@ class mdm_gui_py(tkinter.Tk):
             self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
     def pobierz_mapedit2(self):
-        url = 'http://www.geopainting.com/download/mapedit2-1-78-18.zip'
+        url = 'https://www.geopainting.com/download/mapedit2-1-78-18.zip'
 
         katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog rozpakowania mapedit2')
         if katalog_przeznaczenia:
