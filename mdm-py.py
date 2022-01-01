@@ -44,7 +44,7 @@ import collections
 
 def sprawdz_czy_cvs_obecny():
     Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-    if shutil.which('cvs', path=Zmienne.KatalogzUMP):
+    if shutil.which('cvs') or shutil.which('cvs', path=Zmienne.KatalogzUMP):
         return ''
     if platform.system() == 'Windows':
         return 'Nie odnalazłem programu cvs. Ściągnij go poprzez menu->Pobierz do katalogu ze środłami mapy.'
@@ -1559,6 +1559,7 @@ class Argumenty(object):
 
 class SetupMode(object):
     def __init__(self):
+        self.umpHome = None
         self.modulyCVS = ModulCVS()
         self.modulyCVSLista = [a for a in self.modulyCVS.modulyCVS]
 
@@ -1638,11 +1639,11 @@ class SetupMode(object):
 
 
     def sciagnijButtonClick(self):
+        # self.glowneOknoDialkogCVS.hide()
         for abc in self.modulyCVSLista:
             for bbb in range(0, len(self.modulyCVSCheckboksy[abc]), 2):
                 if self.modulyCVSCheckboksy[abc][bbb].get():
                     self.modulyCvsDoSciagniecia.append(self.modulyCVS.modulyCVS[abc][int(bbb/2)])
-        self.glowneOknoDialkogCVS.destroy()
         if 'narzedzia' not in self.modulyCvsDoSciagniecia:
             self.modulyCvsDoSciagniecia.append('narzedzia')
         CVSROOT = '-d:pserver:' + 'guest' + '@cvs.ump.waw.pl:/home/cvsroot'
@@ -1656,6 +1657,7 @@ class SetupMode(object):
 
         print('Skonczylem sciaganie')
         tkinter.messagebox.showinfo(message='Skończyłeś ściąganie źródeł do katalogu:\n' + self.umpHome)
+        self.glowneOknoDialkogCVS.destroy()
         return 0
 
 
