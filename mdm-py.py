@@ -1723,10 +1723,10 @@ class SetupMode(object):
                     dir = 'mapedit2'
                 else:
                     dir = 'mapedit++'
-                plikzip = zipfile.ZipFile(plik, 'r')
-                os.makedirs(dir)
-                print(u'Rozpakowuję plik: ' + plik)
-                plikzip.extractall(path=dir)
+                with zipfile.ZipFile(plik, 'r') as plikzip:
+                    os.makedirs(dir)
+                    print(u'Rozpakowuję plik: ' + plik)
+                    plikzip.extractall(path=dir)
                 os.remove(plik)
 
 class mdm_gui_py(tkinter.Tk):
@@ -1785,8 +1785,8 @@ class mdm_gui_py(tkinter.Tk):
 
 
         # menu Plik
-        menubar=tkinter.Menu(self)
-        menuPlik=tkinter.Menu(menubar, tearoff=0)
+        menubar = tkinter.Menu(self)
+        menuPlik = tkinter.Menu(menubar, tearoff=0)
         menuPlik.add_command(label=u'Konfiguracja', command=self.konfiguracja)
         menuPlik.add_separator()
         menuPlik.add_command(label=u'Wyjdź', command=self.Quit)
@@ -1832,9 +1832,10 @@ class mdm_gui_py(tkinter.Tk):
         self.regionyWersja.grid(columnspan=2, row=0, sticky='EW')
         self.regionyWersja.grid_columnconfigure(0, weight=1)
         self.regionyWersja.grid_columnconfigure(1, weight=1)
-        #zmienna wskazuje czy mamy do czynienia z edytorem czy wrzucaczem. W zależności od tego możemy albo kopiować pliki bezpośrednio, albo utworzyć archiwum zip do wysłania.
-        self.mdm_mode=self.Zmienne.mdm_mode
-        self.os=platform.system()
+        # zmienna wskazuje czy mamy do czynienia z edytorem czy wrzucaczem. W zależności od tego możemy
+        # albo kopiować pliki bezpośrednio, albo utworzyć archiwum zip do wysłania.
+        self.mdm_mode = self.Zmienne.mdm_mode
+        self.os = platform.system()
         self.osVersionVariable = tkinter.StringVar()
         self.osVersionVariable.set(u'Python: %s.%s.%s na %s %s (%s)'%(sys.version_info[0], sys.version_info[1],
                                                                       sys.version_info[0], platform.uname()[0],
@@ -1845,7 +1846,7 @@ class mdm_gui_py(tkinter.Tk):
         self.guimodeVar.set(u'Tryb pracy mdm: %s'%self.Zmienne.mdm_mode)
         guiMode = tkinter.ttk.Label(self.regionyWersja, textvariable=self.guimodeVar)
         guiMode.grid(column=1, row=0, sticky='w')
-        self.autopolypoly=tkinter.ttk.Label(self.regionyWersja, text=u'Automatyczny rozkład obszarów i linii')
+        self.autopolypoly = tkinter.ttk.Label(self.regionyWersja, text=u'Automatyczny rozkład obszarów i linii')
         self.autopolypoly.grid(column=2, row=0, sticky='w')
         self.selectUnselect_aol(None)
 
@@ -1859,18 +1860,18 @@ class mdm_gui_py(tkinter.Tk):
         self.regionyFrame.grid(column=0, columnspan=2, row=1, sticky='ew')
 
 
-        self.regionyFrame.bind_class('kolkomyszkiregiony',"<MouseWheel>", self._on_mousewheelregionyCanvas)
-        self.regionyFrame.bind_class('kolkomyszkiregiony',"<Button-4>", self._on_mousewheelregionyCanvas)
-        self.regionyFrame.bind_class('kolkomyszkiregiony',"<Button-5>", self._on_mousewheelregionyCanvas)
-        newtags=self.regionyFrame.bindtags()+('kolkomyszkiregiony',)
+        self.regionyFrame.bind_class('kolkomyszkiregiony', "<MouseWheel>", self._on_mousewheelregionyCanvas)
+        self.regionyFrame.bind_class('kolkomyszkiregiony', "<Button-4>", self._on_mousewheelregionyCanvas)
+        self.regionyFrame.bind_class('kolkomyszkiregiony', "<Button-5>", self._on_mousewheelregionyCanvas)
+        newtags = self.regionyFrame.bindtags() + ('kolkomyszkiregiony',)
         self.regionyFrame.bindtags(newtags)
 
-        regionyScroll=AutoScrollbar(self.regionyFrame)
+        regionyScroll = AutoScrollbar(self.regionyFrame)
         regionyScroll.grid(column=1, row=0, sticky='NS')
-        newtags=regionyScroll.bindtags() + ('kolkomyszkiregiony',)
+        newtags = regionyScroll.bindtags() + ('kolkomyszkiregiony',)
         regionyScroll.bindtags(newtags)
 
-        regionyScrollX=AutoScrollbar(self.regionyFrame, orient='horizontal')
+        regionyScrollX = AutoScrollbar(self.regionyFrame, orient='horizontal')
         regionyScrollX.grid(column=0, row=1, sticky='EW')
 
         #self.regionyListbox = tkinter.Listbox(self.regionyFrame,bd=1,highlightthickness=0,bg='SystemMenu',yscrollcommand = regionyScroll.set,height=4)
@@ -1880,7 +1881,7 @@ class mdm_gui_py(tkinter.Tk):
                                             xscrollcommand=regionyScrollX.set, width=846, height=126,
                                             highlightthickness=0)
         self.regionyCanvas.grid(column=0, row=0, sticky='nsew')
-        newtags=self.regionyCanvas.bindtags() + ('kolkomyszkiregiony',)
+        newtags = self.regionyCanvas.bindtags() + ('kolkomyszkiregiony',)
         self.regionyCanvas.bindtags(newtags)
 
         regionyScroll.config(command=self.regionyCanvas.yview)
@@ -1899,7 +1900,7 @@ class mdm_gui_py(tkinter.Tk):
         self.regionyCanvas.config(scrollregion=self.regionyCanvas.bbox("all"))
         #regionyScroll.config(command=self.regionyListbox.yview)
 
-        buttonFrame=tkinter.Frame(self.regionyFrame)
+        buttonFrame = tkinter.Frame(self.regionyFrame)
         buttonFrame.grid_columnconfigure(0, weight=1)
         buttonFrame.grid_columnconfigure(1, weight=1)
 
@@ -1907,7 +1908,7 @@ class mdm_gui_py(tkinter.Tk):
                                                   command=self.OnButtonClickOdswiezListeObszarow)
         odswiezRegionyButton.grid(column=0, row=0)
 
-        cvsUaktualnijZrodlaButton=tkinter.ttk.Button(buttonFrame, text=u'Uaktualnij źródła (cvs update)',
+        cvsUaktualnijZrodlaButton = tkinter.ttk.Button(buttonFrame, text=u'Uaktualnij źródła (cvs update)',
                                                      command=self.OnButtonClickCvsUp)
         cvsUaktualnijZrodlaButton.grid(column=1, row=0)
         buttonFrame.grid(column=0, columnspan=2, row=2, sticky='ew')
@@ -1936,49 +1937,49 @@ class mdm_gui_py(tkinter.Tk):
                                                             onvalue=True, offvalue=False)
         self.montOptionAdrCheckbutton.grid(column=1, row=0, sticky='W')
 
-        #szlaki
-        #self.noszlaki = tkinter.BooleanVar()
-        #self.noszlaki.set(False)
+        # szlaki
+        # self.noszlaki = tkinter.BooleanVar()
+        # self.noszlaki.set(False)
         self.montOptionNoszlakiCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij szlaki',
                                                                 variable=self.mdmMontDemontOptions.montDemontOptions['noszlaki'],
                                                                 onvalue=False, offvalue=True)
         self.montOptionNoszlakiCheckbutton.grid(column=0, row=1, sticky='W')
 
-        #miasta
-        #self.nocity = tkinter.BooleanVar()
-        #self.nocity.set(False)
+        # miasta
+        # self.nocity = tkinter.BooleanVar()
+        # self.nocity.set(False)
         self.montOptionNocityCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij miasta',
                                                                 variable=self.mdmMontDemontOptions.montDemontOptions['nocity'],
                                                                 onvalue=False, offvalue=True)
         self.montOptionNocityCheckbutton.grid(column=1, row=1, sticky='W')
 
-        #punkty pnt
-        #self.nopnt = tkinter.BooleanVar()
-        #self.nopnt.set(False)
+        # punkty pnt
+        # self.nopnt = tkinter.BooleanVar()
+        # self.nopnt.set(False)
         self.montOptionNopntCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij punkty',
                                                                 variable=self.mdmMontDemontOptions.montDemontOptions['nopnt'],
                                                                 onvalue=False, offvalue=True)
         self.montOptionNopntCheckbutton.grid(column=0, row=2, sticky='W')
 
-        #sumy kontrolne plikow
-        #self.monthash= tkinter.BooleanVar()
-        #self.monthash.set(False)
+        # sumy kontrolne plikow
+        # self.monthash= tkinter.BooleanVar()
+        # self.monthash.set(False)
         self.montOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Generuj sumy kontrolne',
                                                                 variable=self.mdmMontDemontOptions.montDemontOptions['monthash'],
                                                                 onvalue=False, offvalue=True)
         self.montOptionNohashCheckbutton.grid(column=1, row=2, sticky='W')
 
-        #extratypes
-        #self.extratypes= tkinter.BooleanVar()
-        #self.extratypes.set(False)
+        # extratypes
+        # self.extratypes= tkinter.BooleanVar()
+        # self.extratypes.set(False)
         self.montOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,text=u'Specjalne traktowanie typów',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
                                                                     onvalue=True, offvalue=False)
         self.montOptionExtratypesCheckbutton.grid(column=0,row=3,sticky='W')
 
-        #granice lokalne
-        #self.graniceczesciowe=tkinter.BooleanVar()
-        #self.graniceczesciowe.set(False)
+        # granice lokalne
+        # self.graniceczesciowe=tkinter.BooleanVar()
+        # self.graniceczesciowe.set(False)
         self.montOptionGraniceCzescioweCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,text=u'Granice częściowe',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'],
                                                                     onvalue=True, offvalue=False)
@@ -1996,37 +1997,37 @@ class mdm_gui_py(tkinter.Tk):
         createToolTip(self.editButton, 'LPM - uruchamia podstawowy MapEdit z mapą\nPPM - uruchamia alternatywny MapEdit z mapą')
 
         #####################################
-        #demontowanie
+        # demontowanie
         #####################################
 
         self.demontFrame = tkinter.ttk.LabelFrame(self, text=u'Sprawdzanie i demontaż')
         self.demontFrame.grid(column=1, row=3)
 
-        #obsługa indeksu miast
+        # obsługa indeksu miast
         self.demontOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Obsługa indeksu miast',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
                                                                     onvalue=True, offvalue=False)
         self.demontOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
-        #obsługa sum kontrolnych
-        #self.demonthash= tkinter.BooleanVar()
-        #self.demonthash.set(False)
+        # obsługa sum kontrolnych
+        # self.demonthash= tkinter.BooleanVar()
+        # self.demonthash.set(False)
         self.demontOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Sprawdzaj sumy kontrolne',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['demonthash'],
                                                                     onvalue=False, offvalue=True)
         self.demontOptionNohashCheckbutton.grid(column=0, row=1, sticky='W')
 
-        #automatyczny rozkład poi
-        #self.autopoi = tkinter.BooleanVar()
-        #self.autopoi.set(False)
+        # automatyczny rozkład poi
+        # self.autopoi = tkinter.BooleanVar()
+        # self.autopoi.set(False)
         self.demontOptionAutopoiLabel = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Automatyczny rozkład poi',
                                                             variable=self.mdmMontDemontOptions.montDemontOptions['autopoi'],
                                                             onvalue=True, offvalue=False)
         self.demontOptionAutopoiLabel.grid(column=0, row=2, sticky='W')
 
-        #zaokrąglanie
-        #self.X = tkinter.StringVar()
-        #self.X.set('0')
+        # zaokrąglanie
+        # self.X = tkinter.StringVar()
+        # self.X.set('0')
         self.demontOptionZaokraglanieRadio0 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Nie zaokrąglaj',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='0')
         self.demontOptionZaokraglanieRadio0.grid(column=1, row=0, sticky='W')
@@ -2037,31 +2038,31 @@ class mdm_gui_py(tkinter.Tk):
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='6')
         self.demontOptionZaokraglanieRadio6.grid(column=1, row=2, sticky='W')
 
-        #extratypes
+        # extratypes
         self.demontOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame,text=u'Specjalne traktowanie typów',
                                                                     variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
                                                                     onvalue=True, offvalue=False)
         self.demontOptionExtratypesCheckbutton.grid(columnspan=2,row=3,sticky='W')
 
-        #przycisk demontuj
+        # przycisk demontuj
         self.demontButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy,text=u'Demontuj',command=self.OnButtonClickDemont)
         self.demontButton.grid(column=1, row=4)
 
-        #przycisk sprawdź
+        # przycisk sprawdź
         self.sprawdzButton = ButtonZaleznyOdWynik(self.demontFrame,self.Zmienne.KatalogRoboczy,text=u'Sprawdź błędy',command=self.OnButtonClickSprawdz)
         self.sprawdzButton.grid(column=0,row=4)
         createToolTip(self.sprawdzButton, 'LPM - uruchamia sprawdzanie błędów\nPPM - czyści okno błędów')
 
 
         ########################################################
-        #zmienione pliki do wyswietlenia, obejrzenia itd
+        # zmienione pliki do wyswietlenia, obejrzenia itd
         ########################################################
 
         self.diffFrame = tkinter.ttk.LabelFrame(self, text=u'Zmienione pliki')
         self.diffFrame.grid(columnspan=2, row=4)
 
         diffScrollY = AutoScrollbar(self.diffFrame)
-        diffScrollY.grid(column=1,row=0, sticky='NS')
+        diffScrollY.grid(column=1, row=0, sticky='NS')
         newtags = diffScrollY.bindtags()+('movewheel',)
         diffScrollY.bindtags(newtags)
 
@@ -2080,7 +2081,7 @@ class mdm_gui_py(tkinter.Tk):
         diffScrollY.config(command=self.diffCanvas.yview)
         diffScrollX.config(command=self.diffCanvas.xview)
 
-        #ramka w canvas
+        # ramka w canvas
         self.frameInDiffCanvas=ListaPlikowFrame(self.diffCanvas, self.Zmienne)
         self.frameInDiffCanvas.grid(column=0, row=0)
         newtags = self.frameInDiffCanvas.bindtags()+('movewheel',)
@@ -2136,15 +2137,15 @@ class mdm_gui_py(tkinter.Tk):
         buttonFrame.grid(column=0, row=2, sticky='ew')
 
         ####################################################
-        #stderr będą wyświetlane tutaj
+        # stderr będą wyświetlane tutaj
         ####################################################
 
-        self.stderrFrame=tkinter.ttk.LabelFrame(self, text=u'Błędy')
+        self.stderrFrame = tkinter.ttk.LabelFrame(self, text=u'Błędy')
         self.stderrFrame.grid(column=0, row=5,sticky='news')
-        self.grid_columnconfigure(0,weight=1)
-        self.grid_rowconfigure(5,weight=1)
-        self.stderrFrame.grid_columnconfigure(0,weight=1)
-        self.stderrFrame.grid_rowconfigure(0,weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(5, weight=1)
+        self.stderrFrame.grid_columnconfigure(0, weight=1)
+        self.stderrFrame.grid_rowconfigure(0, weight=1)
 
         self.stderrText = stdOutstdErrText(self.stderrFrame, width=60, height=6, wrap='none', font=('Courier', 8))
         self.stderrText.grid(column=0,row=0,sticky='news')
@@ -2153,7 +2154,7 @@ class mdm_gui_py(tkinter.Tk):
         self.sprawdzButton.bind('<Button-3>', self.stderrText.event_clear_all_event)
 
         ####################################################
-        #stdout będą wyświetlanu tutaj
+        # stdout będą wyświetlanu tutaj
         ####################################################
 
         self.stdoutFrame = tkinter.ttk.LabelFrame(self, text=u'Komunikaty')
@@ -2194,23 +2195,22 @@ class mdm_gui_py(tkinter.Tk):
         self.bind('<F1>', lambda event: self.skrotyKlawiaturowe())
 
     def sprawdzAktualnoscZrodelandPopupMessage(self):
-
         try:
             while 1:
-                    string = self.cvsstatusQueue.get_nowait()
-                    if string == 'aktualne':
-                        pass
-                    else:
-                        tkinter.messagebox.showwarning(u'Nieaktualne źródła', u'Pliki na serwerze są nowsze niż te które montujesz. Powinieneś najpierw zaktualizować źródła.')
+                queue_string = self.cvsstatusQueue.get_nowait()
+                if queue_string == 'aktualne':
+                    pass
+                else:
+                    tkinter.messagebox.showwarning(u'Nieaktualne źródła', u'Pliki na serwerze są nowsze niż te które montujesz. Powinieneś najpierw zaktualizować źródła.')
 
         except queue.Empty:
             pass
         self.after(100, self.sprawdzAktualnoscZrodelandPopupMessage)
 
 
-    #bindowanie do skrótów klawiaturowych
-    #włączanie i wyłączanie automatycznego rozkładu polylinii i polygonów
-    def selectUnselect_aol(self,event):
+    # bindowanie do skrótów klawiaturowych
+    # włączanie i wyłączanie automatycznego rozkładu polylinii i polygonów
+    def selectUnselect_aol(self, event):
 
         if event:
             aaa = self.mdmMontDemontOptions.montDemontOptions['autopolypoly'].get()
@@ -2228,23 +2228,23 @@ class mdm_gui_py(tkinter.Tk):
             self.OnButtonClickMont()
         return 0
 
-    def demontuj_shortcut(self,event):
+    def demontuj_shortcut(self, event):
         if (str(self.demontButton['state']) != 'disabled'):
             self.OnButtonClickDemont()
         return 0
 
-    def sprawdz_shortcut(self,event):
+    def sprawdz_shortcut(self, event):
         if (str(self.sprawdzButton['state']) != 'disabled'):
             self.OnButtonClickSprawdz()
 
-    def edit_shortcut(self,event):
+    def edit_shortcut(self, event):
         if (str(self.editButton['state']) != 'disabled'):
             self.OnButtonClickEdit()
 
-    def montuj_edit_shortcut(self,event):
+    def montuj_edit_shortcut(self, event):
         if (str(self.montButton['state']) != 'disabled'):
             self.OnButtonClickMont()
-            thread=threading.Thread(target=self.help_function_montuj_edit_shortcut, args=())
+            thread = threading.Thread(target=self.help_function_montuj_edit_shortcut, args=())
             thread.start()
 
     def help_function_montuj_edit_shortcut(self):
@@ -2284,17 +2284,17 @@ class mdm_gui_py(tkinter.Tk):
 
         for aaa in range(len(listaNazwObszarow)):
             self.regionVariableDictionary[listaNazwObszarow[aaa]] = tkinter.IntVar()
-            nazwaobszaru = listaNazwObszarow[aaa].split('-',1)[1]
+            nazwaobszaru = listaNazwObszarow[aaa].split('-', 1)[1]
             if len(nazwaobszaru) > 13:
                 nazwaobszaru = nazwaobszaru[:12]
             self.regionCheckButtonDictionary[listaNazwObszarow[aaa]] = myCheckbutton(self.regionyFrameInCanvas, args, listaNazwObszarow[aaa], text=nazwaobszaru,
-                                                                                    zmienna = self.regionVariableDictionary[listaNazwObszarow[aaa]],
+                                                                                    zmienna=self.regionVariableDictionary[listaNazwObszarow[aaa]],
                                                                                     regionVariableDictionary=self.regionVariableDictionary,
                                                                                     variable=self.regionVariableDictionary[listaNazwObszarow[aaa]],
                                                                                     onvalue=1, offvalue=0, style='Helvetica.TCheckbutton',
                                                                                     command=self.MontButtonStateSet)
             #self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].regionVariableDictionary=self.regionVariableDictionary
-            newtags=self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].bindtags() + ('kolkomyszkiregiony',)
+            newtags = self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].bindtags() + ('kolkomyszkiregiony',)
             self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].bindtags(newtags)
 
             self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].grid(column=aaa % 8, row=aaa // 8, sticky='W')
@@ -2306,7 +2306,6 @@ class mdm_gui_py(tkinter.Tk):
 
 
     def _on_mousewheelregionyCanvas(self, event):
-
         if self.os == 'Linux':
             if event.num == 4:
                 self.regionyCanvas.yview_scroll(int(-1), "units")
@@ -2316,7 +2315,6 @@ class mdm_gui_py(tkinter.Tk):
             self.regionyCanvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def _on_mousewheediffCanvas(self, event):
-
         if self.os == 'Linux':
             if event.num == 4:
                 self.diffCanvas.yview_scroll(int(-1), "units")
@@ -2336,7 +2334,6 @@ class mdm_gui_py(tkinter.Tk):
 
 
     def OnButtonClickOdswiezListeObszarow(self):
-
         self.GenerujListeObszarow()
         self.MontButtonStateSet()
 
@@ -2364,21 +2361,21 @@ class mdm_gui_py(tkinter.Tk):
                                 #self.stdoutqueue.put('%s-->%s\n'%(a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\')))
                                 #print('%s-->%s'%(a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\')))
                                 shutil.copy(self.Zmienne.KatalogRoboczy + a.replace('/', '-'), self.Zmienne.KatalogzUMP + a)
-                                self.stdoutqueue.put('%s-->%s\n'%(a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
-                                print('%s-->%s'%(a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
+                                self.stdoutqueue.put('%s-->%s\n' % (a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
+                                print('%s-->%s' % (a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
                                 if a not in self.plikiDoCVS:
                                     self.plikiDoCVS.append(a)
                             else:
-                                plikzip.write(self.Zmienne.KatalogRoboczy+a.replace('/','-')+'.diff',a.replace('/','-')+'.diff')
-                                self.stdoutqueue.put('%s-->%s\n'%(a.replace('/','-'), plikzipname))
-                                print('%s-->%s'%(a.replace('/','-'),plikzipname))
-                            b=self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
+                                plikzip.write(self.Zmienne.KatalogRoboczy+a.replace('/', '-') + '.diff', a.replace('/', '-')+'.diff')
+                                self.stdoutqueue.put('%s-->%s\n' % (a.replace('/', '-'), plikzipname))
+                                print('%s-->%s' % (a.replace('/', '-'), plikzipname))
+                            b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                             self.frameInDiffCanvas.skopiujCheckButtonPlikowOknoZmienionePliki[b].configure(state='disabled')
                             self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='lawn green')
                             self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                         else:
                             self.stderrqueue.put(u'Suma kontrolna pliku %s\nnie zgadza sie.\nPróbuję nałożyć łatki przy pomocy patch.\n'%a)
-                            patch_result = self.patchExe(a.replace('/','-') + '.diff')
+                            patch_result = self.patchExe(a.replace('/', '-') + '.diff')
                             b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                             if patch_result == 0:
                                 self.stdoutqueue.put(u'Łatka nałożona bezbłędnie.\n')
@@ -2395,25 +2392,25 @@ class mdm_gui_py(tkinter.Tk):
                                 state='disabled')
                             self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                 except FileNotFoundError:
-                    if a.find('_nowosci')>=0:
+                    if a.find('_nowosci') >= 0:
                         print(a)
                         plikzip.write(self.Zmienne.KatalogRoboczy+a,a)
-                        self.stdoutqueue.put('%s-->%s\n'%(a,plikzipname))
-                        print('%s-->%s'%(a,plikzipname))
-                        b=self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
+                        self.stdoutqueue.put('%s-->%s\n' % (a, plikzipname))
+                        print('%s-->%s' % (a, plikzipname))
+                        b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                         self.frameInDiffCanvas.skopiujCheckButtonPlikowOknoZmienionePliki[b].configure(state='disabled')
                         self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='lawn green')
                         self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                     else:
-                        self.stderrqueue.put(u'Nie moge odnaleźć pliku %s. Musisz go skopiować ręcznie.\n'%a)
-                        print(u'Nie moge odnaleźć pliku %s. Musisz go skopiować ręcznie.'%a,file=sys.stderr)
-                        b=self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
+                        self.stderrqueue.put(u'Nie moge odnaleźć pliku %s. Musisz go skopiować ręcznie.\n' % a)
+                        print(u'Nie moge odnaleźć pliku %s. Musisz go skopiować ręcznie.' % a, file=sys.stderr)
+                        b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                         self.frameInDiffCanvas.skopiujCheckButtonPlikowOknoZmienionePliki[b].configure(state='disabled')
                         self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='red')
                         self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                 #c:\\ump\roboczy\UMP-PL-Leszno\-src\-POI-Leszno.sklepy.pnt
 
-        if self.mdm_mode!='edytor' and len(self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania)>0:
+        if self.mdm_mode != 'edytor' and len(self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania) > 0:
             plikzip.close()
 
     #obsługa poleceń cvs
@@ -2472,8 +2469,11 @@ class mdm_gui_py(tkinter.Tk):
         if url.endswith('.exe'):
             shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
         else:
-            with zipfile.ZipFile(temporary_file.name, 'r') as plikzip:
-                plikzip.extractall(path=katalog_przeznaczenia)
+            if tkinter.messagebox.askyesno('Kopiowanie', 'Czy rozpakować edytor do katalogu?'):
+                with zipfile.ZipFile(temporary_file.name, 'r') as plikzip:
+                    plikzip.extractall(path=katalog_przeznaczenia)
+            else:
+                shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
         os.remove(temporary_file.name)
 
     def patchExe(self, pliki_diff):
@@ -2486,14 +2486,14 @@ class mdm_gui_py(tkinter.Tk):
 
 
     def OnButtonClickCvsUp(self):
-        obszary=[]
-        obszarywszystkie=[]
+        obszary = []
+        obszarywszystkie = []
         for aaa in self.regionVariableDictionary.keys():
             obszarywszystkie.append(aaa)
-            if self.regionVariableDictionary[aaa].get()==1:
+            if self.regionVariableDictionary[aaa].get() == 1:
                 obszary.append(aaa)
         if not obszary:
-            obszary=obszarywszystkie
+            obszary = obszarywszystkie
             obszary.append('narzedzia')
         else:
             obszary.append('narzedzia')
@@ -2503,7 +2503,8 @@ class mdm_gui_py(tkinter.Tk):
             tkinter.messagebox.showwarning(message=cvs_status)
         else:
             if os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp'):
-                if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
+                if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',
+                                               u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
                     doCVS = cvsOutputReceaver(self, obszary, '', 'up')
                 else:
                     pass
@@ -2526,20 +2527,20 @@ class mdm_gui_py(tkinter.Tk):
                 pass
 
     def cvsSprawdzAktualnoscMontowanychObszarow(self,*obszary):
-        Needs_Patch=0
-        Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-        CVSROOT='-d:pserver:'+Zmienne.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
-        subprocess_args=['cvs','-q', CVSROOT,'status']
+        Needs_Patch = 0
+        Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+        CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
+        subprocess_args = ['cvs', '-q', CVSROOT, 'status']
         for a in obszary:
             subprocess_args.append(a)
 
         subprocess_args.append('narzedzia/granice.txt')
 
         os.chdir(Zmienne.KatalogzUMP)
-        process = subprocess.Popen(subprocess_args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        process = subprocess.Popen(subprocess_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for a in process.stdout.readlines():
-            if a.decode(Zmienne.Kodowanie).find('Needs Patch')>0:
-                Needs_Patch=1
+            if a.decode(Zmienne.Kodowanie).find('Needs Patch') > 0:
+                Needs_Patch = 1
                 print(a.decode(Zmienne.Kodowanie))
         if Needs_Patch:
             self.cvsstatusQueue.put('nieaktualne')
@@ -2550,36 +2551,35 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickMont(self):
 
-        #czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
+        # czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
 
         self.args.obszary = []
-
 
         for aaa in self.regionVariableDictionary.keys():
             if self.regionVariableDictionary[aaa].get() == 1:
                 self.args.obszary.append(aaa)
 
         self.args.plikmp = 'wynik.mp'
-        #self.args.adrfile=self.adrfile.get()
+        # self.args.adrfile=self.adrfile.get()
         self.args.adrfile = self.mdmMontDemontOptions.montDemontOptions['adrfile'].get()
-        #self.args.cityidx=self.cityidx.get()
+        # self.args.cityidx=self.cityidx.get()
         self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
 
-        #self.args.notopo=self.notopo.get()
-        #self.args.notopo=self.mdmMontDemontOptions.montDemontOptions['notopo'].get()
+        # self.args.notopo=self.notopo.get()
+        # self.args.notopo=self.mdmMontDemontOptions.montDemontOptions['notopo'].get()
 
-        #self.args.nocity=self.nocity.get()
+        # self.args.nocity=self.nocity.get()
         self.args.nocity = self.mdmMontDemontOptions.montDemontOptions['nocity'].get()
-        #self.args.noszlaki=self.noszlaki.get()
+        # self.args.noszlaki=self.noszlaki.get()
         self.args.noszlaki = self.mdmMontDemontOptions.montDemontOptions['noszlaki'].get()
-        #self.args.nopnt=self.nopnt.get()
+        # self.args.nopnt=self.nopnt.get()
         self.args.nopnt = self.mdmMontDemontOptions.montDemontOptions['nopnt'].get()
-        #self.args.hash=self.monthash.get()
+        # self.args.hash=self.monthash.get()
         self.args.hash = self.mdmMontDemontOptions.montDemontOptions['monthash'].get()
-        #self.args.extratypes=self.extratypes.get()
+        # self.args.extratypes=self.extratypes.get()
         self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
-        #self.args.graniceczesciowe=self.graniceczesciowe.get()
+        # self.args.graniceczesciowe=self.graniceczesciowe.get()
         self.args.graniceczesciowe = self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'].get()
         # ustawiamy tryb nieosmandowy, jest on uruchamiany tylko na potrzeby konwersji do OSNAnda
         self.args.trybosmand = 0
@@ -2588,7 +2588,7 @@ class mdm_gui_py(tkinter.Tk):
         self.args.stdoutqueue = self.stdoutqueue
 
 
-        #_thread.start_new_thread(mont_demont_py.montujpliki,(self.args,))
+        # _thread.start_new_thread(mont_demont_py.montujpliki,(self.args,))
         thread = threading.Thread(target=mont_demont_py.montujpliki, args=(self.args,))
         thread.start()
 
@@ -2601,7 +2601,7 @@ class mdm_gui_py(tkinter.Tk):
         self.args.plikmp = None
         self.args.mapedit2 = False
         self.args.stderrqueue = self.stderrqueue
-        thread=threading.Thread(target=mont_demont_py.edytuj, args=(self.args,))
+        thread = threading.Thread(target=mont_demont_py.edytuj, args=(self.args,))
         thread.start()
 
     def OnButtonClickEdit2(self, event):
@@ -2618,37 +2618,37 @@ class mdm_gui_py(tkinter.Tk):
         self.args.katrob = None
         self.args.umphome = None
 
-        #autoobszary
+        # autoobszary
         self.args.autopolypoly = self.mdmMontDemontOptions.montDemontOptions['autopolypoly'].get()
 
-        #self.args.X=self.X.get()
+        # self.args.X=self.X.get()
         self.args.X = self.mdmMontDemontOptions.montDemontOptions['X'].get()
-        #self.args.autopoi=self.autopoi.get()
+        # self.args.autopoi=self.autopoi.get()
         self.args.autopoi = self.mdmMontDemontOptions.montDemontOptions['autopoi'].get()
-        #self.args.cityidx=self.cityidx.get()
+        # self.args.cityidx=self.cityidx.get()
         self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
-        #self.args.hash=self.demonthash.get()
+        # self.args.hash=self.demonthash.get()
         self.args.hash = self.mdmMontDemontOptions.montDemontOptions['demonthash'].get()
-        #self.args.extratypes=self.extratypes.get()
+        # self.args.extratypes=self.extratypes.get()
         self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
         self.montButton.configure(state='disabled')
-        #self.demontButton.configure(state='disabled')
+        # self.demontButton.configure(state='disabled')
 
-        #_thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
+        # _thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
         my_queue = queue.Queue()
-        #self.args.queue=my_queue
+        # self.args.queue=my_queue
         self.args.queue = self.frameInDiffCanvas.queueListaPlikowFrame
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
         # kolejka do informowania guzika że właśnie działa i żeby się wyłączył
         self.args.buttonqueue = self.demontButton.statusqueue
-        thread=threading.Thread(target=mont_demont_py.demontuj, args=(self.args,))
-        #thread=threading.Thread(target=self.demont,args=(my_queue,))
+        thread = threading.Thread(target=mont_demont_py.demontuj, args=(self.args,))
+        # thread=threading.Thread(target=self.demont,args=(my_queue,))
         thread.start()
-        #thread.join()
-        #thread1=threading.Thread(target=self.wyswietlListePlikow,args=(my_queue,))
-        #thread1.start()
-        #for a in my_queue.get():
+        # thread.join()
+        # thread1=threading.Thread(target=self.wyswietlListePlikow,args=(my_queue,))
+        # thread1.start()
+        # for a in my_queue.get():
         #	print(a)
         self.frameInDiffCanvas.update_idletasks()
         self.diffCanvas.config(scrollregion=self.diffCanvas.bbox("all"))
@@ -2658,9 +2658,9 @@ class mdm_gui_py(tkinter.Tk):
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
         self.args.sprawdzbuttonqueue = self.sprawdzButton.statusqueue
-        thread=threading.Thread(target=mont_demont_py.sprawdz, args=(self.args,))
+        thread = threading.Thread(target=mont_demont_py.sprawdz, args=(self.args,))
         thread.start()
-        thread1=threading.Thread(target=mont_demont_py.sprawdz_numeracje, args=(self.args,))
+        thread1 = threading.Thread(target=mont_demont_py.sprawdz_numeracje, args=(self.args,))
         thread1.start()
 
     def Quit(self):
