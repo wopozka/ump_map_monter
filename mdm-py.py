@@ -698,13 +698,14 @@ class stdOutstdErrText(tkinter.scrolledtext.ScrolledText):
         self.menu.entryconfigure("Kopiuj", command=lambda: self.event_generate("<<Copy>>"))
         self.menu.entryconfigure("Wklej", command=lambda: self.event_generate("<<Paste>>"))
         self.menu.entryconfigure("Zaznacz wszystko", command=self.event_select_all)
-        self.menu.entryconfigure(u'Wyczyść wszystko',command=self.event_clear_all)
+        self.menu.entryconfigure(u'Wyczyść wszystko', command=self.event_clear_all)
 
         self.bind("Text", "<Control-a>", self.event_select_all)
         self.bind("<Button-3><ButtonRelease-3>", self.show_menu)
-        self.bind("<Double-Button-1>",self.event_double_click)
+        self.bind("<Double-Button-1>", self.event_double_click)
 
-        # zmieniamy kolejność bindtags, najpierw klasa, potem widget tak aby podwójne kliknięcie na współrzędnych kopiowało je do schowka:
+        # zmieniamy kolejność bindtags, najpierw klasa, potem widget tak aby podwójne kliknięcie
+        # na współrzędnych kopiowało je do schowka:
         tags = list(self.bindtags())
         tags.remove('Text')
         tags = ['Text']+tags
@@ -716,7 +717,7 @@ class stdOutstdErrText(tkinter.scrolledtext.ScrolledText):
         self.tag_add("sel", "1.0", "end")
 
     def event_clear_all_event(self, event):
-        if (str(app.sprawdzButton['state']) != 'disabled'):
+        if str(app.sprawdzButton['state']) != 'disabled':
             self.event_clear_all()
 
     def event_clear_all(self):
@@ -736,9 +737,9 @@ class stdOutstdErrText(tkinter.scrolledtext.ScrolledText):
             while 1:
                 string = self.inputqueue.get_nowait()
                 if string.startswith('\rProcent:'):
-                    #	self.output.insert('%linestart'%tkinter.END,string)
-                    self.delete('insert linestart','insert lineend')
-                    self.insert('end linestart',string.lstrip())
+                    # self.output.insert('%linestart'%tkinter.END,string)
+                    self.delete('insert linestart', 'insert lineend')
+                    self.insert('end linestart', string.lstrip())
                 else:
                     self.insert(tkinter.END, string)
                     self.see(tkinter.END)
@@ -752,7 +753,7 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
     def __init__(self, master, **options):
         tkinter.scrolledtext.ScrolledText.__init__(self, master, **options)
         self.master = master
-        self.inputqueue=queue.Queue()
+        self.inputqueue = queue.Queue()
         self.menu = tkinter.Menu(self, tearoff=0)
         self.menu.add_command(label="Wytnij")
         self.menu.add_command(label="Kopiuj")
@@ -777,18 +778,17 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
 
-        #usuwam skróty klawiautorwe które powinny być przechwytywane globalnie, tak żeby nie łapało ich też okienko do wpisywania komentarza.
-        #Np ctrl+o dodawało nową linię i przez to mój walidador się psuł :D.
+        # usuwam skróty klawiautorwe które powinny być przechwytywane globalnie, tak żeby nie łapało ich też okienko do
+        # wpisywania komentarza. Np ctrl+o dodawało nową linię i przez to mój walidador się psuł :D.
 
-        self.bind("<Control-o>", lambda e:None)
-        self.bind("<Escape>", lambda e:None)
+        self.bind("<Control-o>", lambda e: None)
+        self.bind("<Escape>", lambda e: None)
 
-        #Zmieniamy kolejność bindtags. Z niewiadomego dla mnie powodu '.' nie działała.
+        # Zmieniamy kolejność bindtags. Z niewiadomego dla mnie powodu '.' nie działała.
         tags = list(self.bindtags())
         tags.remove('Text')
         tags.append('Text')
         self.bindtags(tuple(tags))
-
         self.update_me()
 
     def event_select_all(self, *args):
@@ -809,7 +809,7 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
                 elif string.startswith('? '):
                     self.insert('end', string.lstrip(), 'questionmark')
                 elif string.startswith('C '):
-                    self.insert('end', string.lstrip(),'C')
+                    self.insert('end', string.lstrip(), 'C')
                     self.insert('end', u'Uwaga! Łączenie zmian się nie powiodło. W pliku występują konflikty!\n', 'error')
                     self.insert('end', u'Otwórz plik w edytorze i usuń konflikty ręcznie.\n\n', 'wskazowka')
                 elif string.startswith('M '):
@@ -829,6 +829,7 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
             pass
         self.after(100, self.update_me)
 
+
 class myCheckbutton(tkinter.ttk.Checkbutton):
     # checkbutton ktory umieszczony jest w liscie obszarow. Ma dodatkowo dolozone menu do cvs up i cvs co
     def __init__(self, master, args, obszar, zmienna, regionVariableDictionary, **options):
@@ -844,7 +845,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.menu.add_command(label='cvs up narzedzia' + os.sep + 'granice.txt', command=self.cvsupgranice)
         a = 'cvs ci ' + self.obszar
         self.menu.add_command(label=a, command=self.cvsci)
-        a= 'cvs ci dla zaznaczonych obszarów'
+        a = 'cvs ci dla zaznaczonych obszarów'
         self.menu.add_command(label=a, command=self.cvsci_zaznaczone_obszary)
         a = 'cvs diff -u ' + self.obszar
         self.menu.add_command(label=a, command=self.cvsdiff)
@@ -867,13 +868,13 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
     def sprawdz_ciaglosc_grafow_routingowych(self, mode):
         self.args.plikmp = None
         self.args.mode = mode
-        thread1=threading.Thread(target=mont_demont_py.sprawdz_numeracje, args=(self.args,))
+        thread1 = threading.Thread(target=mont_demont_py.sprawdz_numeracje, args=(self.args,))
         thread1.start()
 
     def znajdz_wyst(self):
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         argumenty = [self.obszar, Zmienne.KatalogzUMP, Zmienne.KatalogRoboczy]
-        thread = threading.Thread(target=znajdz_wystajace.main,args=[argumenty])
+        thread = threading.Thread(target=znajdz_wystajace.main, args=[argumenty])
         thread.start()
 
     def sel_then_cvsup(self, e):
@@ -927,7 +928,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            oknodialogowe=cvsDialog(self, [self.obszar],title=u'Prześlij pliki do repozytorium cvs')
+            oknodialogowe = cvsDialog(self, [self.obszar],title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
                 doCVS = cvsOutputReceaver(self, [self.obszar], oknodialogowe.message, 'ci')
             else:
@@ -940,13 +941,13 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         else:
             zaznaczone_obszary = []
             for aaa in self.regionVariableDictionary.keys():
-                if self.regionVariableDictionary[aaa].get()==1:
+                if self.regionVariableDictionary[aaa].get() == 1:
                     print(aaa)
                     zaznaczone_obszary.append(aaa)
             if not zaznaczone_obszary:
                 tkinter.messagebox.showwarning(u'Brak wybranego obszaru!', u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
                 return
-            oknodialogowe=cvsDialog(self, zaznaczone_obszary, title=u'Prześlij pliki do repozytorium cvs')
+            oknodialogowe = cvsDialog(self, zaznaczone_obszary, title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
                 doCVS = cvsOutputReceaver(self, zaznaczone_obszary, oknodialogowe.message, 'ci')
             else:
@@ -954,7 +955,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
 
 
 class cvsDialog(tkinter.Toplevel):
-# używane do CVS commit, aby wpisać komentarz do transakcji
+    # używane do CVS commit, aby wpisać komentarz do transakcji
     def __init__(self, parent, pliki, title=None):
 
         tkinter.Toplevel.__init__(self, parent)
@@ -993,7 +994,6 @@ class cvsDialog(tkinter.Toplevel):
         self.logwindow.focus_set()
         self.wait_window(self)
 
-
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
@@ -1001,7 +1001,7 @@ class cvsDialog(tkinter.Toplevel):
         katalog.pack()
         logwindowsFrame = tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
-        self.logwindow = cvsOutText(logwindowsFrame,width=70, height=6, font='Arial 10')
+        self.logwindow = cvsOutText(logwindowsFrame, width=70, height=6, font='Arial 10')
         self.logwindow.pack(fill='y', expand=True)
 
         # wczytujemy ostatni log cvs
@@ -1060,7 +1060,7 @@ class cvsDialog(tkinter.Toplevel):
         self.parent.focus_set()
         self.destroy()
         return 'break'
-    #
+
     # command hooks
     def validate(self):
         a = self.logwindow.get(1.0, 'end')
@@ -1072,7 +1072,7 @@ class cvsDialog(tkinter.Toplevel):
 
     def apply(self):
 
-        self.iftocommit='tak'
+        self.iftocommit = 'tak'
         #print('stosuje')
         #doCVS=cvsOutputReceaver(self.parent,self.pliki,self.message,'ci')
         #pass # override
@@ -1094,8 +1094,7 @@ class cvsDialog(tkinter.Toplevel):
             pass
 
 class cvsOutputReceaver(tkinter.Toplevel):
-#okienko które wyświetla wyjście z programu cvs
-
+    # okienko które wyświetla wyjście z programu cvs
     def __init__(self, parent, obszary, message, cvscommand, title=None):
 
         tkinter.Toplevel.__init__(self, parent)
@@ -1132,7 +1131,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.initial_focus.focus_set()
 
         if cvscommand == 'up':
-            thread=threading.Thread(target=self.cvsup, args=(obszary, self.stopthreadqueue,
+            thread = threading.Thread(target=self.cvsup, args=(obszary, self.stopthreadqueue,
                                                              self.progreststartstopqueue))
             thread.start()
         elif cvscommand == 'diff':
@@ -1147,8 +1146,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
             thread = threading.Thread(target=self.cvsci, args=(obszary, message, self.stopthreadqueue,
                                                             self.progreststartstopqueue))
             thread.start()
-            #self.cvsci(self.args.obszary,self.args.message)
-        #mont_demont_py.cvsup(self.args)
+            # self.cvsci(self.args.obszary,self.args.message)
+        # mont_demont_py.cvsup(self.args)
         self.progres_start_stop_check()
         self.wait_window(self)
 
@@ -1156,10 +1155,10 @@ class cvsOutputReceaver(tkinter.Toplevel):
         try:
             while 1:
                 string = self.progreststartstopqueue.get_nowait()
-                if string=='start':
+                if string == 'start':
                     self.progressbar.start()
                     self.OKButton.configure(state='disabled')
-                elif string=='stop':
+                elif string == 'stop':
                     self.progressbar.stop()
                     self.OKButton.configure(state='active')
                     self.przerwijButton.configure(state='disabled')
@@ -1204,8 +1203,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         #self.bind("<Return>", self.ok)
         #self.bind("<Escape>", self.cancel)
 
-        box.pack(fill='x',expand=0)
-
+        box.pack(fill='x', expand=0)
 
     # standard button semantics
     def ok(self, event=None):
@@ -1272,7 +1270,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
             stdout = process.stdout.readlines()
 
             if len(stderr) > 0:
-                if stderr[0].decode(Zmienne.Kodowanie).find('Up-to-date check failed')>=0:
+                if stderr[0].decode(Zmienne.Kodowanie).find('Up-to-date check failed') >= 0:
                     for line in stderr:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
                     self.outputwindow.inputqueue.put(u'Błąd, polecenie CVS nieudane!\n\n')
@@ -1327,9 +1325,9 @@ class cvsOutputReceaver(tkinter.Toplevel):
             self.outputwindow.inputqueue.put(('cvs diff -u ' + a + '/src\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'diff', '-u', a+'/src'], stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT)
-            processexitstatus=process.poll()
+            processexitstatus = process.poll()
 
-            while processexitstatus==None:
+            while processexitstatus is None:
                 try:
                     queue_string = stopthreadqueue.get_nowait()
                     if queue_string == 'stop':
@@ -1375,14 +1373,14 @@ class cvsOutputReceaver(tkinter.Toplevel):
         czyzatrzymac = 0
 
         os.chdir(Zmienne.KatalogzUMP)
-        self.outputwindow.inputqueue.put(('cd '+ Zmienne.KatalogzUMP+'\n'))
+        self.outputwindow.inputqueue.put(('cd ' + Zmienne.KatalogzUMP + '\n'))
         self.outputwindow.inputqueue.put(('CVSROOT=' + CVSROOT + '\n'))
 
         for a in obszary:
-            self.outputwindow.inputqueue.put(('cvs ' + komenda + ' ' + a +'\n'))
+            self.outputwindow.inputqueue.put(('cvs ' + komenda + ' ' + a + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, komenda, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT)
-            processexitstatus=process.poll()
+            processexitstatus = process.poll()
 
             while processexitstatus == None:
                 try:
@@ -1441,10 +1439,11 @@ class zobaczDiffText(tkinter.Text):
         linia = self.get(nr_linii + ".0", nr_linii + ".end")
         # podwójne kliknięcie powinno zaznaczyć parę współrzędnych
         # para współrzędnych to (XX,XXXXX,YY,YYYYY), a
-        # musimy kliknąć na liczbie, przecinku lub  nawiasie by zacząć wyszukiwać w przeciwnym przypadku zaznacza całą linię
+        # musimy kliknąć na liczbie, przecinku lub  nawiasie by zacząć wyszukiwać w przeciwnym przypadku
+        # zaznacza całą linię
         if literka_pod_kursorem not in znaki_dla_wspolrzednych:
             # zaznaczamy całą linię:
-            self.tag_add("sel",nr_linii+".0",nr_linii+".end")
+            self.tag_add("sel", nr_linii + ".0", nr_linii + ".end")
         else:
             try:
                 if self.typpliku == 'txt':
@@ -1457,13 +1456,13 @@ class zobaczDiffText(tkinter.Text):
                         elif literka_pod_kursorem == ')':
                             while linia[index0] != '(':
                                 index0 -= 1
-                            self.tag_add("sel", nr_linii+"."+str(index0+1),nr_linii+"."+ str(index1))
+                            self.tag_add("sel", nr_linii + "." + str(index0+1), nr_linii + "." + str(index1))
                         else:
                             while linia[index0] in znaki_dla_wsp_txt:
                                 index0 -= 1
                             while linia[index1] in znaki_dla_wsp_txt:
                                 index1 += 1
-                            self.tag_add("sel", nr_linii+"."+str(index0+1),nr_linii+"."+ str(index1))
+                            self.tag_add("sel", nr_linii + "." +str(index0 + 1), nr_linii+"." + str(index1))
                     else:
                         return 0
                 elif self.typpliku == 'pnt' or self.typpliku == 'adr':
@@ -1495,8 +1494,8 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
         self.funkcjaPrzyciskuPracuje = 0
         self.previousFunkcjaPrzyciskuPracuje = 1
         tkinter.ttk.Button.__init__(self, master, **options)
-        self.bind('<Enter>',self.enter)
-        self.bind('<Leave>',self.leave)
+        self.bind('<Enter>', self.enter)
+        self.bind('<Leave>', self.leave)
         self.update_me()
 
 
@@ -1519,11 +1518,10 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
                 self.funkcjaPrzyciskuPracuje = 1
                 self.previousFunkcjaPrzyciskuPracuje = 0
         except queue.Empty:
-            #self.previousFunkcjaPrzyciskuPracuje = self.funkcjaPrzyciskuPracuje = 0
+            # self.previousFunkcjaPrzyciskuPracuje = self.funkcjaPrzyciskuPracuje = 0
             pass
 
         self.actfile = os.path.isfile(os.path.join(self.KatalogRoboczy, 'wynik.mp'))
-
 
         if self.previousFunkcjaPrzyciskuPracuje != self.funkcjaPrzyciskuPracuje:
             if self.funkcjaPrzyciskuPracuje:
@@ -1540,7 +1538,7 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
                 elif not self.actfile:
                     self.configure(state='disabled')
                 self.previousfile=self.actfile
-            #elif self.configure('state')[-1] == 'disabled':
+            # elif self.configure('state')[-1] == 'disabled':
         self.master.update_idletasks()
         self.after(100, self.update_me)
 
@@ -1572,7 +1570,6 @@ class SetupMode(object):
         self.utworz_katalog_ump()
         self.sciagnij_pliki()
         self.rozpakuj_pliki_do_katalogow()
-
 
         # budujemy okno z listą wszystkich obszarów
         self.glowneOknoDialkogCVS = tkinter.Tk(None)
@@ -1654,7 +1651,6 @@ class SetupMode(object):
         tkinter.messagebox.showinfo(message='Skończyłeś ściąganie źródeł do katalogu:\n' + self.umpHome)
         self.glowneOknoDialkogCVS.destroy()
         return 0
-
 
     def cancelButtonClick(self):
         self.glowneOknoDialkogCVS.destroy()
