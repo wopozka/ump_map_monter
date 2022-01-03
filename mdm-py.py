@@ -141,17 +141,15 @@ class MyProgressBar(tkinter.Toplevel):
         self.parent = parent
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
-        self.progressbar = tkinter.ttk.Progressbar(body, mode='determinate', length=100)
+        self.progressbar = tkinter.ttk.Progressbar(body, mode='determinate', length=300)
         self.progressbar.pack()
         self.progress_var = tkinter.DoubleVar()
-        # self.grab_set()
-
+        self.geometry('320x60')
+        self.grab_set()
+        self.wait_window(self)
         # self.protocol("WM_DELETE_WINDOW", self.destroy)
         # self.bind('<Escape>', lambda event: self.destroy())
         # self.geometry("+%d+%d" % (parent.winfo_rootx()+50, parent.winfo_rooty()+50))
-
-        # self.focus_set()
-        # self.wait_window(self)
 
 
 class ToolTip(object):
@@ -165,7 +163,7 @@ class ToolTip(object):
         self.text = ''
 
     def showtip(self, text):
-        "Display text in tooltip window"
+        """Display text in tooltip window"""
         self.text = text
         if self.tipwindow or not self.text:
             return
@@ -2448,7 +2446,8 @@ class mdm_gui_py(tkinter.Tk):
 
 
     def pobierz_pliki_z_internetu(self, katalog_przeznaczenia, url):
-        # downloadProgressBar = MyProgressBar(self)
+        downloadProgressBar = MyProgressBar(self)
+        return
         nazwa_pliku = url.split('/')[-1]
         temporary_file = tempfile.NamedTemporaryFile(delete=False)
         try:
