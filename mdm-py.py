@@ -132,6 +132,27 @@ class ModulCVS(object):
         :return: None
         """
 
+class MyProgressBar(tkinter.Toplevel):
+    """Progress bar używany podczas ściągania plików z internetu"""
+    def __init__(self, parent, **options):
+        tkinter.Toplevel.__init__(self, parent, **options)
+        self.transient(parent)
+        self.title(u'Status pobierania z internetu')
+        self.parent = parent
+        body = tkinter.Frame(self)
+        body.pack(padx=5, pady=5, fill='both', expand=1)
+        self.progressbar = tkinter.ttk.Progressbar(body, mode='determinate', length=100)
+        self.progressbar.pack()
+        self.progress_var = tkinter.DoubleVar()
+        # self.grab_set()
+
+        # self.protocol("WM_DELETE_WINDOW", self.destroy)
+        # self.bind('<Escape>', lambda event: self.destroy())
+        # self.geometry("+%d+%d" % (parent.winfo_rootx()+50, parent.winfo_rooty()+50))
+
+        # self.focus_set()
+        # self.wait_window(self)
+
 
 class ToolTip(object):
 
@@ -2427,6 +2448,7 @@ class mdm_gui_py(tkinter.Tk):
 
 
     def pobierz_pliki_z_internetu(self, katalog_przeznaczenia, url):
+        # downloadProgressBar = MyProgressBar(self)
         nazwa_pliku = url.split('/')[-1]
         temporary_file = tempfile.NamedTemporaryFile(delete=False)
         try:
