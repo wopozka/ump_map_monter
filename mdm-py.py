@@ -556,7 +556,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.destroy()
 
     def OnButtonClickZapisz(self):
-        with open(os.path.expanduser('~') + '/.mont-demont-py.config', 'w') as configfile:
+        with open(os.path.join(os.path.expanduser('~'), '.mont-demont-py.config', 'w')) as configfile:
             configfile.write('UMPHOME=' + self.Konfiguracja.KatalogzUMP)
             configfile.write('\n')
             configfile.write('KATALOGROBOCZY=' + self.Konfiguracja.KatalogRoboczy)
