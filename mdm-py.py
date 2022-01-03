@@ -864,15 +864,15 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.sprawdz_ciaglosc_grafow_routingowych('sprawdz_siatke_jednokierunkowa')
 
     def sprawdz_ciaglosc_grafow_routingowych(self, mode):
-        self.args.plikmp=None
+        self.args.plikmp = None
         self.args.mode = mode
         thread1=threading.Thread(target=mont_demont_py.sprawdz_numeracje, args=(self.args,))
         thread1.start()
 
     def znajdz_wyst(self):
-        Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-        argumenty=[self.obszar, Zmienne.KatalogzUMP, Zmienne.KatalogRoboczy]
-        thread=threading.Thread(target=znajdz_wystajace.main,args=[argumenty])
+        Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+        argumenty = [self.obszar, Zmienne.KatalogzUMP, Zmienne.KatalogRoboczy]
+        thread = threading.Thread(target=znajdz_wystajace.main,args=[argumenty])
         thread.start()
 
     def sel_then_cvsup(self, e):
@@ -891,7 +891,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+            Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
             if os.path.isfile(Zmienne.KatalogRoboczy+'wynik.mp'):
                 if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje', u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
                     aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
@@ -926,9 +926,9 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            oknodialogowe=cvsDialog(self,[self.obszar],title=u'Prześlij pliki do repozytorium cvs')
-            if oknodialogowe.iftocommit=='tak':
-                doCVS=cvsOutputReceaver(self,[self.obszar],oknodialogowe.message,'ci')
+            oknodialogowe=cvsDialog(self, [self.obszar],title=u'Prześlij pliki do repozytorium cvs')
+            if oknodialogowe.iftocommit == 'tak':
+                doCVS = cvsOutputReceaver(self, [self.obszar], oknodialogowe.message, 'ci')
             else:
                 pass
 
@@ -937,30 +937,29 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            zaznaczone_obszary=[]
+            zaznaczone_obszary = []
             for aaa in self.regionVariableDictionary.keys():
                 if self.regionVariableDictionary[aaa].get()==1:
                     print(aaa)
                     zaznaczone_obszary.append(aaa)
             if not zaznaczone_obszary:
-                tkinter.messagebox.showwarning(u'Brak wybranego obszaru!',u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
+                tkinter.messagebox.showwarning(u'Brak wybranego obszaru!', u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
                 return
             oknodialogowe=cvsDialog(self, zaznaczone_obszary, title=u'Prześlij pliki do repozytorium cvs')
-            if oknodialogowe.iftocommit=='tak':
+            if oknodialogowe.iftocommit == 'tak':
                 doCVS = cvsOutputReceaver(self, zaznaczone_obszary, oknodialogowe.message, 'ci')
             else:
                 pass
 
 
 class cvsDialog(tkinter.Toplevel):
-#używane do CVS commit, aby wpisać komentarz do transakcji
-
-    def __init__(self, parent,pliki, title = None):
+# używane do CVS commit, aby wpisać komentarz do transakcji
+    def __init__(self, parent, pliki, title=None):
 
         tkinter.Toplevel.__init__(self, parent)
         self.transient(parent)
-        self.pliki=pliki[:]
-        self.iftocommit='nie'
+        self.pliki = pliki[:]
+        self.iftocommit = 'nie'
         self.last_cvs_log = []
 
         if title:
@@ -996,57 +995,52 @@ class cvsDialog(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog=tkinter.Label(self,text='AAAAA')
+        katalog=tkinter.Label(self, text='AAAAA')
         katalog.pack()
-        logwindowsFrame=tkinter.ttk.Labelframe(self,text='Komentarz')
+        logwindowsFrame=tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
-        self.logwindow=cvsOutText(logwindowsFrame,width=70,height=6,font='Arial 10')
-        self.logwindow.pack(fill='y',expand=True)
+        self.logwindow=cvsOutText(logwindowsFrame,width=70, height=6, font='Arial 10')
+        self.logwindow.pack(fill='y', expand=True)
 
         # wczytujemy ostatni log cvs
         last_cvs_log = self.read_last_commit_log()
         if last_cvs_log:
             last_cvs_log[-1] = last_cvs_log[-1].rstrip()
             for a in last_cvs_log:
-                self.logwindow.insert('end',a)
+                self.logwindow.insert('end', a)
             # zaznaczamy go aby było łatwo usunąć
-            self.logwindow.tag_add("sel","1.0","end")
+            self.logwindow.tag_add("sel", "1.0", "end")
 
-        commitedFilesFrame=tkinter.ttk.Labelframe(self,text=u'Obszary lub/i pliki do zatwierdzenia')
+        commitedFilesFrame=tkinter.ttk.Labelframe(self, text=u'Obszary lub/i pliki do zatwierdzenia')
         commitedFilesFrame.pack()
-        commitedFiles=cvsOutText(commitedFilesFrame,width=70,height=6,font='Arial 10')
+        commitedFiles = cvsOutText(commitedFilesFrame, width=70, height=6, font='Arial 10')
         commitedFiles.pack()
         for a in self.pliki:
-            commitedFiles.insert('insert',a)
-            commitedFiles.insert('insert','\n')
+            commitedFiles.insert('insert', a)
+            commitedFiles.insert('insert', '\n')
         commitedFiles.configure(state='disabled')
-
-
 
     def buttonbox(self):
         # add standard button box. override if you don't want the
         # standard buttons
-
         box = tkinter.Frame(self)
-
         w = tkinter.Button(box, text="OK", width=10, command=self.ok, default='active')
         w.pack(side='left', padx=5, pady=5)
         w = tkinter.Button(box, text="Cancel", width=10, command=self.cancel)
         w.pack(side='left', padx=5, pady=5)
-
         box.pack()
 
     def keyboardShortcuts(self):
-        #łączymy skróty klawiaturowe do ok oraz cancel
+        # łączymy skróty klawiaturowe do ok oraz cancel
         self.bind("<Control-o>", self.ok)
         self.bind("<Escape>", self.cancel)
 
     # standard button semantics
     def ok(self, event=None):
         if self.validate():
-            #self.initial_focus.focus_set() # put focus back
+            # self.initial_focus.focus_set() # put focus back
             self.logwindow.focus_set()
-            return  "break"
+            return "break"
 
         self.save_last_commit_log()
         self.withdraw()
@@ -1067,11 +1061,11 @@ class cvsDialog(tkinter.Toplevel):
     #
     # command hooks
     def validate(self):
-        a=self.logwindow.get(1.0,'end')
-        if len(a)<=1:
+        a = self.logwindow.get(1.0, 'end')
+        if len(a) <= 1:
             return 1
         else:
-            self.message=a
+            self.message = a
             return 0
 
     def apply(self):
@@ -1083,9 +1077,9 @@ class cvsDialog(tkinter.Toplevel):
 
     def read_last_commit_log(self):
         last_cvs_log = []
-
         try:
-            with open(os.path.expanduser('~')+'/.mdm_cvs_last_log','r', encoding='utf-8', errors='ignore') as lastlog:
+            with open(os.path.expanduser('~') + '/.mdm_cvs_last_log', 'r', encoding='utf-8', errors='ignore') \
+                    as lastlog:
                 last_cvs_log = lastlog.readlines()
         except FileNotFoundError:
             pass
@@ -1251,22 +1245,22 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def cvsci(self, obszary, message, stopthreadqueue, progreststartstopqueue):
 
         progreststartstopqueue.put('start')
-        Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-        CVSROOT='-d:pserver:'+Zmienne.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
-        string=''
+        Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+        CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
+        cvs_sstring = ''
 
         os.chdir(Zmienne.KatalogzUMP)
         self.outputwindow.inputqueue.put(('cd '+Zmienne.KatalogzUMP+'\n'))
         self.outputwindow.inputqueue.put(('CVSROOT='+CVSROOT+'\n\n'))
         for a in obszary:
-            self.outputwindow.inputqueue.put(('cvs ci -m "'+message.strip()+'" '+a+'\n'))
+            self.outputwindow.inputqueue.put(('cvs ci -m "'+ message.strip()+'" '+a+'\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
 
             while process.poll()==None:
                 try:
-                    string = stopthreadqueue.get_nowait()
-                    if string=='stop':
+                    cvs_string = stopthreadqueue.get_nowait()
+                    if cvs_string=='stop':
                         process.terminate()
                         break
                 except queue.Empty:
@@ -1296,7 +1290,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
                         if line.decode(Zmienne.Kodowanie).find('<--  '+a.split('/')[-1])>=0:
                             self.commitedfiles.append(a)
-                    if string == 'stop':
+                    if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
                         self.outputwindow.inputqueue.put('Gotowe\n')
                         break
@@ -1320,8 +1314,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
     def cvsdiff(self, obszary, stopthreadqueue, progreststartstopqueue):
         progreststartstopqueue.put('start')
-        Zmienne=mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-        CVSROOT='-d:pserver:'+Zmienne.CvsUserName+'@cvs.ump.waw.pl:/home/cvsroot'
+        Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+        CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
         queue_string = ''
         czyzatrzymac = 0
 
