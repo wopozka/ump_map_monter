@@ -996,7 +996,7 @@ class cvsDialog(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog=tkinter.Label(self, text='AAAAA')
+        katalog = tkinter.Label(self, text='AAAAA')
         katalog.pack()
         logwindowsFrame = tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
@@ -1151,7 +1151,6 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.progres_start_stop_check()
         self.wait_window(self)
 
-
     def progres_start_stop_check(self):
         try:
             while 1:
@@ -1175,13 +1174,13 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog=tkinter.Label(self,text='AAAAA')
-        katalog.pack(fill='x',expand=0)
-        logwindowsFrame=tkinter.ttk.Labelframe(self,text=u'Dane wyjściowe')
-        logwindowsFrame.pack(fill='both',expand=1)
-        self.outputwindow=cvsOutText(logwindowsFrame,width=80,height=10,font='Arial 10')
+        katalog = tkinter.Label(self, text='AAAAA')
+        katalog.pack(fill='x', expand=0)
+        logwindowsFrame = tkinter.ttk.Labelframe(self, text=u'Dane wyjściowe')
+        logwindowsFrame.pack(fill='both', expand=1)
+        self.outputwindow = cvsOutText(logwindowsFrame, width=80, height=10, font='Arial 10')
         self.outputwindow.config(wrap='none')
-        self.outputwindow.pack(fill='both',expand=1)
+        self.outputwindow.pack(fill='both', expand=1)
 
 
     def buttonbox(self):
@@ -1190,16 +1189,16 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
         box = tkinter.Frame(self)
 
-        self.progressbar=tkinter.ttk.Progressbar(box,mode='indeterminate',length=100)
-        self.progressbar.pack(side='left',anchor='w',expand=1)
+        self.progressbar=tkinter.ttk.Progressbar(box, mode='indeterminate', length=100)
+        self.progressbar.pack(side='left', anchor='w', expand=1)
         self.OKButton = tkinter.Button(box, text="OK", width=10, command=self.ok, default='active')
-        self.OKButton.pack(side='left', padx=5, pady=5,anchor='e')
+        self.OKButton.pack(side='left', padx=5, pady=5, anchor='e')
         #do guzika OK bindujemy klawisz Return, aby można było zamknąć enterem oraz klawiszem escape
-        self.OKButton.bind('<Return>',self.ok)
-        self.OKButton.bind('<Escape>',self.ok)
+        self.OKButton.bind('<Return>', self.ok)
+        self.OKButton.bind('<Escape>', self.ok)
 
         self.przerwijButton = tkinter.Button(box, text="Przerwij", width=10, command=self.cancel)
-        self.przerwijButton.pack(side='left', padx=5, pady=5,anchor='e')
+        self.przerwijButton.pack(side='left', padx=5, pady=5, anchor='e')
 
         #self.bind("<Return>", self.ok)
         #self.bind("<Escape>", self.cancel)
@@ -1240,7 +1239,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
     def apply(self):
 
-        pass # override
+        pass  # override
 
     def cvsci(self, obszary, message, stopthreadqueue, progreststartstopqueue):
 
@@ -1253,14 +1252,14 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put(('cd '+Zmienne.KatalogzUMP+'\n'))
         self.outputwindow.inputqueue.put(('CVSROOT='+CVSROOT+'\n\n'))
         for a in obszary:
-            self.outputwindow.inputqueue.put(('cvs ci -m "'+ message.strip()+'" '+a+'\n'))
+            self.outputwindow.inputqueue.put(('cvs ci -m "' + message.strip() + '" ' + a + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
 
-            while process.poll()==None:
+            while process.poll() == None:
                 try:
                     cvs_string = stopthreadqueue.get_nowait()
-                    if cvs_string=='stop':
+                    if cvs_string == 'stop':
                         process.terminate()
                         break
                 except queue.Empty:
@@ -1285,7 +1284,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
 
             else:
-                if len(stdout)>0:
+                if len(stdout) > 0:
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
                         if line.decode(Zmienne.Kodowanie).find('<--  '+a.split('/')[-1])>=0:
@@ -1306,7 +1305,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         if len(self.uncommitedfiles)>0:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
-                self.outputwindow.inputqueue.put(('nieprzeslane'+a+'\n'))
+                self.outputwindow.inputqueue.put(('nieprzeslane' + a + '\n'))
 
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
