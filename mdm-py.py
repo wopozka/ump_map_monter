@@ -961,6 +961,7 @@ class cvsDialog(tkinter.Toplevel):
         self.pliki = pliki[:]
         self.iftocommit = 'nie'
         self.last_cvs_log = []
+        self.mdm_cvs_last_log_file = os.path.join(os.path.expanduser('~'), '.mdm_cvs_last_log')
 
         if title:
             self.title(title)
@@ -997,9 +998,9 @@ class cvsDialog(tkinter.Toplevel):
         # initial focus.  this method should be overridden
         katalog=tkinter.Label(self, text='AAAAA')
         katalog.pack()
-        logwindowsFrame=tkinter.ttk.Labelframe(self, text='Komentarz')
+        logwindowsFrame = tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
-        self.logwindow=cvsOutText(logwindowsFrame,width=70, height=6, font='Arial 10')
+        self.logwindow = cvsOutText(logwindowsFrame,width=70, height=6, font='Arial 10')
         self.logwindow.pack(fill='y', expand=True)
 
         # wczytujemy ostatni log cvs
@@ -1011,7 +1012,7 @@ class cvsDialog(tkinter.Toplevel):
             # zaznaczamy go aby było łatwo usunąć
             self.logwindow.tag_add("sel", "1.0", "end")
 
-        commitedFilesFrame=tkinter.ttk.Labelframe(self, text=u'Obszary lub/i pliki do zatwierdzenia')
+        commitedFilesFrame = tkinter.ttk.Labelframe(self, text=u'Obszary lub/i pliki do zatwierdzenia')
         commitedFilesFrame.pack()
         commitedFiles = cvsOutText(commitedFilesFrame, width=70, height=6, font='Arial 10')
         commitedFiles.pack()
@@ -1078,8 +1079,7 @@ class cvsDialog(tkinter.Toplevel):
     def read_last_commit_log(self):
         last_cvs_log = []
         try:
-            with open(os.path.expanduser('~') + '/.mdm_cvs_last_log', 'r', encoding='utf-8', errors='ignore') \
-                    as lastlog:
+            with open(self.mdm_cvs_last_log_file, 'r', encoding='utf-8', errors='ignore') as lastlog:
                 last_cvs_log = lastlog.readlines()
         except FileNotFoundError:
             pass
@@ -1087,7 +1087,7 @@ class cvsDialog(tkinter.Toplevel):
 
     def save_last_commit_log(self):
         try:
-            with open(os.path.expanduser('~')+'/.mdm_cvs_last_log','w', encoding='utf-8', errors='ignore') as lastlog:
+            with open(self.mdm_cvs_last_log_file, 'w', encoding='utf-8', errors='ignore') as lastlog:
                 lastlog.writelines(self.message)
         except FileNotFoundError:
             pass
@@ -1771,7 +1771,7 @@ class mdm_gui_py(tkinter.Tk):
 
         #wczytywanie zapisanych opcji montazu i demontazu:
         self.protocol("WM_DELETE_WINDOW", self.Quit)
-        self.mdmMontDemontOptions=mdmConfig()
+        self.mdmMontDemontOptions = mdmConfig()
 
         #pliki zmienione, do wysłania na cvs
         self.plikiDoCVS=[]
