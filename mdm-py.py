@@ -231,8 +231,8 @@ class ListaPlikowFrame(tkinter.Frame):
                     iloscdodanych = '-1'
                     iloscusunietych = '-1'
                     try:
-                        with open(self.Zmienne.KatalogRoboczy+a.replace('/', '-')+'.diff',
-                                  encoding=self.Zmienne.Kodowanie,
+                        plik_do_otwarcia = os.path.join(self.Zmienne.KatalogRoboczy, a.replace(os.sep, '-')) + '.diff'
+                        with open(plik_do_otwarcia, encoding=self.Zmienne.Kodowanie,
                                   errors=self.Zmienne.ReadErrors) as file:
                             for bbb in file.readlines():
                                 if bbb.startswith('+'):
@@ -308,10 +308,11 @@ class ListaPlikowFrame(tkinter.Frame):
         self.master.update_idletasks()
 
     def OnButtonClickZobacz(self, plik):
-        plikdootw = plik.replace('/', '-')
+        print(plik)
+        plikdootw = plik.replace(os.sep, '-')
         if not plikdootw.startswith('_nowosci.') and self.nazwapliku_Hash[plik] != 'MD5HASH=NOWY_PLIK':
             plikdootw += '.diff'
-        with open(self.Zmienne.KatalogRoboczy+plikdootw, encoding=self.Zmienne.Kodowanie,
+        with open(os.path.join(self.Zmienne.KatalogRoboczy, plikdootw), encoding=self.Zmienne.Kodowanie,
                   errors=self.Zmienne.ReadErrors) as f:
             aaa = f.readlines()
         oknopodgladu = tkinter.Toplevel(self)
@@ -556,7 +557,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.destroy()
 
     def OnButtonClickZapisz(self):
-        with open(os.path.join(os.path.expanduser('~'), '.mont-demont-py.config', 'w')) as configfile:
+        with open(os.path.join(os.path.expanduser('~'), '.mont-demont-py.config'), 'w') as configfile:
             configfile.write('UMPHOME=' + self.Konfiguracja.KatalogzUMP)
             configfile.write('\n')
             configfile.write('KATALOGROBOCZY=' + self.Konfiguracja.KatalogRoboczy)
@@ -577,31 +578,31 @@ class ConfigWindow(tkinter.Toplevel):
             command = self.destroy()
 
     def OnButtonClickMapedit(self):
-        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe'))
         if len(aaa) > 0:
             self.umpMapeditPath.set(aaa)
             self.Konfiguracja.MapEditExe = aaa
 
     def OnButtonClickMapedit2(self):
-        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe')
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu mapedit.exe'))
         if len(aaa) > 0:
             self.umpMapedit2Path.set(aaa)
             self.Konfiguracja.MapEdit2Exe = aaa
 
     def OnButtonClickNetgen(self):
-        aaa = tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu netgen.exe')
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka do programu netgen.exe'))
         if len(aaa) > 0:
             self.umpNetGenPath.set(aaa)
             self.Konfiguracja.NetGen = aaa
 
     def OnButtonClickUMPSource(self):
-        aaa = tkinter.filedialog.askdirectory(title=u'Katalog ze źródłami UMP')
+        aaa = os.path.normcase(tkinter.filedialog.askdirectory(title=u'Katalog ze źródłami UMP'))
         if len(aaa) > 0:
             self.umpSourceValue.set(aaa)
             self.Konfiguracja.KatalogzUMP = aaa
 
     def OnButtonClickUMPRoboczy(self):
-        aaa = tkinter.filedialog.askdirectory(title=u'Katalog roboczy')
+        aaa = os.path.normcase(tkinter.filedialog.askdirectory(title=u'Katalog roboczy'))
         if len(aaa) > 0:
             self.umpRoboczyValue.set(aaa)
             self.Konfiguracja.KatalogRoboczy = aaa
@@ -840,7 +841,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.menu = tkinter.Menu(self, tearoff=0)
         a = 'cvs up ' + self.obszar
         self.menu.add_command(label=a, command=self.cvsup)
-        self.menu.add_command(label='cvs up narzedzia/granice.txt', command=self.cvsupgranice)
+        self.menu.add_command(label='cvs up narzedzia' + os.sep + 'granice.txt', command=self.cvsupgranice)
         a = 'cvs ci ' + self.obszar
         self.menu.add_command(label=a, command=self.cvsci)
         a= 'cvs ci dla zaznaczonych obszarów'
@@ -919,7 +920,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            doCVS = cvsOutputReceaver(self, ['narzedzia/granice.txt'], '', 'up')
+            doCVS = cvsOutputReceaver(self, ['narzedzia' + os.sep + 'granice.txt'], '', 'up')
 
     def cvsci(self):
         cvs_status = sprawdz_czy_cvs_obecny()
@@ -2348,34 +2349,32 @@ class mdm_gui_py(tkinter.Tk):
                 #przed kopiowaniem nalezy sprawdzic czy dany plik to naprawde dany plik, czy moze ktos
                 # w miedzyczasie go zmienil, wykorzystamy do tego hashe dla plikow
                 try:
-
                     with open(os.path.join(self.Zmienne.KatalogzUMP, a), 'rb') as f:
                         if hashlib.md5(f.read()).hexdigest() == self.frameInDiffCanvas.nazwapliku_Hash[a]:
                             if self.mdm_mode == 'edytor':
-                                #shutil.copy(self.Zmienne.KatalogRoboczy+a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\'))
-                                #self.stdoutqueue.put('%s-->%s\n'%(a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\')))
-                                #print('%s-->%s'%(a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\')))
-                                shutil.copy(self.Zmienne.KatalogRoboczy + a.replace('/', '-'), self.Zmienne.KatalogzUMP + a)
-                                self.stdoutqueue.put('%s-->%s\n' % (a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
-                                print('%s-->%s' % (a.replace('/', '-'), self.Zmienne.KatalogzUMP + a))
+                                kopiuj_co = os.path.join(self.Zmienne.KatalogRoboczy, a.replace(os.sep, '-'))
+                                kopiuj_na_co = os.path.join(self.Zmienne.KatalogzUMP, a)
+                                shutil.copy(kopiuj_co, kopiuj_na_co)
+                                self.stdoutqueue.put('%s-->%s\n' % (a.replace(os.sep, '-'), kopiuj_na_co))
+                                print('%s-->%s' % (a.replace(os.sep, '-'), kopiuj_na_co))
                                 if a not in self.plikiDoCVS:
                                     self.plikiDoCVS.append(a)
                             else:
-                                plikzip.write(self.Zmienne.KatalogRoboczy+a.replace('/', '-') + '.diff', a.replace('/', '-')+'.diff')
-                                self.stdoutqueue.put('%s-->%s\n' % (a.replace('/', '-'), plikzipname))
-                                print('%s-->%s' % (a.replace('/', '-'), plikzipname))
+                                plikzip.write(os.path.join(self.Zmienne.KatalogRoboczy, a.replace(os.sep, '-'))
+                                              + '.diff', a.replace(os.sep, '-') + '.diff')
+                                self.stdoutqueue.put('%s-->%s\n' % (a.replace(os.sep, '-'), plikzipname))
+                                print('%s-->%s' % (a.replace(os.sep, '-'), plikzipname))
                             b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                             self.frameInDiffCanvas.skopiujCheckButtonPlikowOknoZmienionePliki[b].configure(state='disabled')
                             self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='lawn green')
                             self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                         else:
                             self.stderrqueue.put(u'Suma kontrolna pliku %s\nnie zgadza sie.\nPróbuję nałożyć łatki przy pomocy patch.\n'%a)
-                            patch_result = self.patchExe(a.replace('/', '-') + '.diff')
+                            patch_result = self.patchExe(a.replace(os.sep, '-') + '.diff')
                             b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                             if patch_result == 0:
                                 self.stdoutqueue.put(u'Łatka nałożona bezbłędnie.\n')
-                                self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(
-                                    background='lawn green')
+                                self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='lawn green')
                             elif patch_result == 1:
                                 self.stdoutqueue.put(u'Łatka nałożona z problemami, sprawdź plik!\n')
                                 self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(
@@ -2389,7 +2388,7 @@ class mdm_gui_py(tkinter.Tk):
                 except FileNotFoundError:
                     if a.find('_nowosci') >= 0:
                         print(a)
-                        plikzip.write(self.Zmienne.KatalogRoboczy+a,a)
+                        plikzip.write(os.path.join(self.Zmienne.KatalogRoboczy, a), a)
                         self.stdoutqueue.put('%s-->%s\n' % (a, plikzipname))
                         print('%s-->%s' % (a, plikzipname))
                         b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
@@ -2529,7 +2528,7 @@ class mdm_gui_py(tkinter.Tk):
         for a in obszary:
             subprocess_args.append(a)
 
-        subprocess_args.append('narzedzia/granice.txt')
+        subprocess_args.append('narzedzia' + os.sep + 'granice.txt')
 
         os.chdir(Zmienne.KatalogzUMP)
         process = subprocess.Popen(subprocess_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

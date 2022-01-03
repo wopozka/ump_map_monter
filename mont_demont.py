@@ -253,11 +253,11 @@ class TestyPoprawnosciDanych(object):
 class PaczerGranicCzesciowych(object):
     def __init__(self, Zmienne):
         self.Zmienne = Zmienne
-        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/granice.txt'), 'r',
+        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt'), 'r',
                   encoding=self.Zmienne.Kodowanie) as f:
             self.granice_txt = f.readlines()
             self.granice_orig = self.granice_txt[:]
-        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/granice.txt'), 'rb') as f:
+        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt'), 'rb') as f:
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
     def konwertujLatke(self, granice_czesciowe_diff):
@@ -321,8 +321,9 @@ class PaczerGranicCzesciowych(object):
             with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt.diff'), 'w',
                       encoding=self.Zmienne.Kodowanie) as f:
                 f.writelines(
-                    difflib.unified_diff(self.granice_orig, self.granice_txt, fromfile='narzedzia/granice.txt',
-                                         tofile='narzedzia-Nowe/granice.txt')
+                    difflib.unified_diff(self.granice_orig, self.granice_txt,
+                                         fromfile='narzedzia' + os.sep + 'granice.txt',
+                                         tofile='narzedzia-Nowe' + os.sep + 'granice.txt')
                 )
                 return 0
         else:
@@ -364,7 +365,7 @@ class UstawieniaPoczatkowe(object):
                 for zawartosc in b.readlines():
                     kluczwartosc = zawartosc.split('=')
                     if len(kluczwartosc) == 2:
-                        konf[kluczwartosc[0].strip()] = kluczwartosc[1].strip()
+                        konf[kluczwartosc[0].strip()] = os.path.normpath(kluczwartosc[1].strip())
 
                 if 'UMPHOME' in konf and 'KATALOGROBOCZY' not in konf:
                     if konf['UMPHOME'].startswith('~'):
@@ -1271,7 +1272,7 @@ class plikMP1(object):
     def sprawdz_poprawnosc_sciezki(self, sciezka):
         if sciezka in self.sciezka_zwalidowana:
             return 0
-        if 'granice-czesciowe' in sciezka or 'narzedzia/granice.txt' in sciezka:
+        if 'granice-czesciowe' in sciezka or 'narzedzia' + os.sep + 'granice.txt' in sciezka:
             self.sciezka_zwalidowana.add(sciezka)
             return 0
         skladowe = sciezka.split(os.sep)
@@ -1949,7 +1950,7 @@ class PlikiDoMontowania(object):
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
-            self.Pliki += ['narzedzia/granice.txt']
+            self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
         for aaa in obszary:
             if os.path.isdir(os.path.join(self.KatalogZeZrodlami, aaa, 'src')):
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
@@ -1999,7 +2000,8 @@ class PlikiDoMontowania(object):
         return
 
     def ograniczGranice(self, kodowanie):
-        with open(os.path.join(self.KatalogZeZrodlami, 'narzedzia/granice.txt'), encoding=kodowanie) as granice:
+        with open(os.path.join(self.KatalogZeZrodlami, 'narzedzia' + os.sep + 'granice.txt'),
+                  encoding=kodowanie) as granice:
             zawartoscgranice = granice.read().split('[END]\n')
         granicewspolne = []
         for a in self.Obszary:
@@ -3004,10 +3006,10 @@ def demontuj(args):
                     if nazwa_pliku.find('granice-czesciowe.txt') > 0:
                         graniceczesciowe = PaczerGranicCzesciowych(Zmienne)
                         if not graniceczesciowe.konwertujLatke(plikDiff):
-                            listaDiffow.append('narzedzia/granice.txt')
-                            slownikHash['narzedzia/granice.txt'] = graniceczesciowe.granice_txt_hash
+                            listaDiffow.append('narzedzia' + os.sep + 'granice.txt')
+                            slownikHash['narzedzia' + os.sep + 'granice.txt'] = graniceczesciowe.granice_txt_hash
                         else:
-                            stderr_stdout_writer.stderrorwrite('Nie udalo sie skonwertowac granic lokalnych na narzedzia/granice.txt.\nMusisz nalozyc latki recznie.')
+                            stderr_stdout_writer.stderrorwrite('Nie udalo sie skonwertowac granic lokalnych na narzedzia' + os.sep + 'granice.txt.\nMusisz nalozyc latki recznie.')
                             listaDiffow.append(nazwa_pliku.split(Zmienne.KatalogRoboczy, 1)[1])
                             slownikHash['granice-czesciowe.txt'] = 'NOWY_PLIK'
                             with open(plikdootwarcia + '.diff', 'w', encoding=Zmienne.Kodowanie,
@@ -3127,12 +3129,7 @@ def sprawdz(args):
 
     bledy = {'slepy': [], 'przeciecie': [], 'blad routingu': [], 'za bliskie': [], 'zygzak': [],
              'zapetlona numeracja': [], 'nieuzywany slepy': [], 'nieuzywany przeciecie': []}
-    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/netgen.cfg')
-    # locale.setlocale(locale.LC_ALL, 'pl_PL.iso88592')
-    else:
-        NetgenConfFile = Zmienne.KatalogzUMP + 'narzedzia\\netgen.cfg'
-
+    NetgenConfFile = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'netgen.cfg'))
     process = subprocess.Popen([Zmienne.NetGen, '-cbxj', '-a60', '-e0', '-r0.00007', '-s0.0003',
                                 '-N', '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -3249,8 +3246,8 @@ def czysc(args):
             args.diff = 1
             args.oryg = 1
             for a in zawartoscKatRob:
-                if a.endswith('wynik.mp') or a.endswith('granice-czesciowe.txt') or a.endswith('_nowosci.txt') or \
-                        a.endswith('_nowosci.pnt'):
+                if a.endswith('wynik.mp') or a.endswith('wynik-klasy.mp') or a.endswith('granice-czesciowe.txt') or \
+                        a.endswith('_nowosci.txt') or a.endswith('_nowosci.pnt'):
                     plikiDoUsuniecia.append(a)
 
         if args.oryg:
@@ -3277,7 +3274,7 @@ def czysc(args):
                     plikiDoUsuniecia.append(a)
     else:
         for a in zawartoscKatRob:
-            if a.endswith('wynik.mp') or a.endswith('granice-czesciowe.txt'):
+            if a.endswith('wynik.mp') or a.endswith('wynik-klasy.mp') or a.endswith('granice-czesciowe.txt'):
                 plikiDoUsuniecia.append(a)
 
     for a in plikiDoUsuniecia:
@@ -3316,13 +3313,10 @@ def rozdziel_na_klasy(args):
 
     montujpliki(args)
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
-    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/netgen.cfg')
-    else:
-        NetgenConfFile = Zmienne.KatalogzUMP + 'narzedzia\\netgen.cfg'
-
+    NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'netgen.cfg')
+    print(NetgenConfFile)
     process = subprocess.Popen([Zmienne.NetGen, '-e0', '-j', '-k',
-                                '-T' + NetgenConfFile, Zmienne.KatalogRoboczy + Zmienne.InputFile],
+                                '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     plik_mp_z_klasami, err = process.communicate()
@@ -3339,7 +3333,8 @@ def rozdziel_na_klasy(args):
                     klasa = a.split('=')[-1].split(',')[1]
                     f.write('EndLevel=' + klasa + '\n')
                 f.write(a.strip() + '\n')
-    stderr_stdout_writer.stdoutwrite('Utworzony plik z klasami: ' + Zmienne.KatalogRoboczy + 'wynik-klasy.mp')
+    stderr_stdout_writer.stdoutwrite('Utworzony plik z klasami: ' +
+                                     os.path.join(Zmienne.KatalogRoboczy, 'wynik-klasy.mp'))
     # jesli wywolany z mdm bedzie mial w argumentach kolejke do aktywacji guzika zobacz
     if hasattr(args, 'zobaczbuttonqueue'):
         args.zobaczbuttonqueue.put('Koniec')
@@ -3350,7 +3345,7 @@ def patch(args):
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         patchExe = 'patch'
     else:
-        patchExe = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/patch.exe')
+        patchExe = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'patch.exe')
     stderr_stdout_writer = errOutWriter(args)
 
     if args.katrob:
@@ -3361,7 +3356,7 @@ def patch(args):
     returncode = None
     for plik in args.pliki_diff:
         stderr_stdout_writer.stdoutwrite('Plik: ' + str(plik))
-        process = subprocess.Popen([patchExe, '-Np0', '-t', '-i', Zmienne.KatalogRoboczy + plik],
+        process = subprocess.Popen([patchExe, '-Np0', '-t', '-i', os.path.join(Zmienne.KatalogRoboczy, plik)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, err = process.communicate()
         stderr_stdout_writer.stdoutwrite(out.decode(Zmienne.Kodowanie))
@@ -3373,14 +3368,10 @@ def dodaj_dane_routingowe(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
-    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia/netgen.cfg')
-    else:
-        NetgenConfFile = Zmienne.KatalogzUMP + 'narzedzia\\netgen.cfg'
-
+    NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'snetgen.cfg')
     stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym')
     process = subprocess.Popen([Zmienne.NetGen, '-e0', '-j', '-k',
-                                '-T' + NetgenConfFile, Zmienne.KatalogRoboczy + Zmienne.InputFile],
+                                '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     plik_mp_z_klasami, err = process.communicate()
