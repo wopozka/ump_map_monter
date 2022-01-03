@@ -332,10 +332,10 @@ class PaczerGranicCzesciowych(object):
 # ustawienia poczatkowe
 class UstawieniaPoczatkowe(object):
     def __init__(self, plikmp):
-        self.KatalogzUMP = "/ump/"
+        self.KatalogzUMP = "c:\\ump"
         self.OutputFile = plikmp
         self.InputFile = plikmp
-        self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy/')
+        self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy')
         self.MapEditExe = 'c:\\ump\\mapedit++\\MapEdit++.exe'
         self.MapEdit2Exe = 'c:\\ump\\mapedit\\mapedit.exe'
         self.NetGen = 'c:\\ump\\narzedzia\\netgen.exe'
@@ -355,7 +355,7 @@ class UstawieniaPoczatkowe(object):
 
     def uaktualnijZalezneHome(self):
         self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy')
-        self.NetGen = os.path.join(self.KatalogzUMP, 'narzedzia/netgen.exe')
+        self.NetGen = os.path.join(os.path.join(self.KatalogzUMP, 'narzedzia'), 'netgen.exe')
 
     def wczytajKonfiguracje(self):
         konf = {}
