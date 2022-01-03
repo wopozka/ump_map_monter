@@ -1246,7 +1246,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         progreststartstopqueue.put('start')
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
-        cvs_sstring = ''
+        cvs_string = ''
 
         os.chdir(Zmienne.KatalogzUMP)
         self.outputwindow.inputqueue.put(('cd '+Zmienne.KatalogzUMP+'\n'))
@@ -1299,7 +1299,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     self.commitedfiles.append(a)
 
         for a in obszary:
-            if (a.find('/src')>0) and (a not in self.commitedfiles):
+            if (a.find('/src') > 0) and (a not in self.commitedfiles):
                 self.uncommitedfiles.append(a)
 
         if len(self.uncommitedfiles)>0:
