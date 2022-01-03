@@ -1645,7 +1645,7 @@ class SetupMode(object):
         process = subprocess.Popen(['cvs', '-q', CVSROOT, 'co'] + self.modulyCvsDoSciagniecia)
         processexitstatus = process.poll()
 
-        while processexitstatus == None:
+        while processexitstatus is None:
             time.sleep(1)
             processexitstatus = process.poll()
 
