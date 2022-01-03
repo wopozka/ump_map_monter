@@ -1256,7 +1256,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
 
-            while process.poll() == None:
+            while process.poll() is None:
                 try:
                     cvs_string = stopthreadqueue.get_nowait()
                     if cvs_string == 'stop':
