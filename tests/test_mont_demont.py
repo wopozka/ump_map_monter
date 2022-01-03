@@ -41,7 +41,7 @@ TEST_ZWROC_REKORD_PLIKU_MP = (
             'Plik': 'UMP-PL-Leszno/src/ZMIGROD.ulice.txt'
          }),
     ),
-    (';;Gmina=Rozdrazew\n\n[POI]\nType=0x2800\nLabel=1\nHouseNumber=1\nStreetDesc=Wygoda\nData0=(51.78184,17.44398)\nMiasto=Wygoda\nPlik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr\nKodPoczt=63-708\nTyp=ADR\n',
+    (';;Gmina=Rozdrazew\n[POI]\nType=0x2800\nLabel=1\nHouseNumber=1\nStreetDesc=Wygoda\nData0=(51.78184,17.44398)\nMiasto=Wygoda\nPlik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr\nKodPoczt=63-708\nTyp=ADR\n',
      ({
         'Komentarz': [';;Gmina=Rozdrazew'],
         'POIPOLY': '[POI]',

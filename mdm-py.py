@@ -1499,12 +1499,12 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
         self.update_me()
 
 
-    def enter(self,event):
-        if os.path.isfile(self.KatalogRoboczy+'wynik.mp') and not self.funkcjaPrzyciskuPracuje:
+    def enter(self, event):
+        if os.path.isfile(os.path.join(self.KatalogRoboczy, 'wynik.mp')) and not self.funkcjaPrzyciskuPracuje:
             self.configure(state='active')
 
-    def leave(self,event):
-        if os.path.isfile(self.KatalogRoboczy+'wynik.mp') and not self.funkcjaPrzyciskuPracuje:
+    def leave(self, event):
+        if os.path.isfile(os.path.join(self.KatalogRoboczy, 'wynik.mp')) and not self.funkcjaPrzyciskuPracuje:
             self.configure(state='normal')
 
     def update_me(self):
@@ -1521,7 +1521,7 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
             #self.previousFunkcjaPrzyciskuPracuje = self.funkcjaPrzyciskuPracuje = 0
             pass
 
-        self.actfile = os.path.isfile(self.KatalogRoboczy+'wynik.mp')
+        self.actfile = os.path.isfile(os.path.join(self.KatalogRoboczy, 'wynik.mp'))
 
 
         if self.previousFunkcjaPrzyciskuPracuje != self.funkcjaPrzyciskuPracuje:
