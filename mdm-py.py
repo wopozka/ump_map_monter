@@ -892,7 +892,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
             Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
-            if os.path.isfile(Zmienne.KatalogRoboczy+'wynik.mp'):
+            if os.path.isfile(os.path.join(Zmienne.KatalogRoboczy, 'wynik.mp')):
                 if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje', u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
                     aaa = cvsOutputReceaver(self, [self.obszar], '', 'up')
                 else:
@@ -1733,8 +1733,8 @@ class mdm_gui_py(tkinter.Tk):
         self.modul_cvs = ModulCVS()
         self.Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         self.initialize()
-        if os.path.isfile(self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif'):
-            iconimg = tkinter.PhotoImage(file=self.Zmienne.KatalogzUMP + 'narzedzia/ikonki/UMPlogo32.gif')
+        if os.path.isfile(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/ikonki/UMPlogo32.gif')):
+            iconimg = tkinter.PhotoImage(file=os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/ikonki/UMPlogo32.gif'))
             self.tk.call('wm', 'iconphoto', self._w, iconimg)
         self.sprawdzAktualnoscZrodelandPopupMessage()
 
@@ -2349,7 +2349,7 @@ class mdm_gui_py(tkinter.Tk):
                 # w miedzyczasie go zmienil, wykorzystamy do tego hashe dla plikow
                 try:
 
-                    with open(self.Zmienne.KatalogzUMP+a, 'rb') as f:
+                    with open(os.path.join(self.Zmienne.KatalogzUMP, a), 'rb') as f:
                         if hashlib.md5(f.read()).hexdigest() == self.frameInDiffCanvas.nazwapliku_Hash[a]:
                             if self.mdm_mode == 'edytor':
                                 #shutil.copy(self.Zmienne.KatalogRoboczy+a.replace('/','-'),self.Zmienne.KatalogzUMP+a.replace('/','\\'))
@@ -2497,7 +2497,7 @@ class mdm_gui_py(tkinter.Tk):
         if cvs_status:
             tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            if os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp'):
+            if os.path.isfile(os.path.join(self.Zmienne.KatalogRoboczy, 'wynik.mp')):
                 if tkinter.messagebox.askyesno(u'Plik wynik.mp istnieje',
                                                u'W katalogu roboczym istniej plik wynik.mp.\nCvs up może uniemożliwić demontaż. Czy kontynuować pomimo tego?'):
                     doCVS = cvsOutputReceaver(self, obszary, '', 'up')
@@ -2600,7 +2600,7 @@ class mdm_gui_py(tkinter.Tk):
         thread.start()
 
     def OnButtonClickEdit2(self, event):
-        if os.path.isfile(self.Zmienne.KatalogRoboczy + 'wynik.mp'):
+        if os.path.isfile(os.path.join(self.Zmienne.KatalogRoboczy, 'wynik.mp')):
             self.args.plikmp = None
             self.args.mapedit2 = True
             self.args.stderrqueue = self.stderrqueue
