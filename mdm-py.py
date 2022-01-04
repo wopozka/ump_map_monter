@@ -11,7 +11,7 @@ import sys
 
 DownloadEverything = 0
 try:
-    import mont_demont2 as mont_demont_py
+    import mont_demont as mont_demont_py
     import znajdz_wystajace
     import mdmkreatorOsmAnd
 except ImportError:
