@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: cp1250 -*-
 
-import string
 import sys
 import os
-from decimal import *
 import argparse
+
 
 class polygonObszaru:
     # klasa przechowujaca wspolrzedne obszaru ograniczajacego
@@ -27,7 +26,6 @@ class polygonObszaru:
         self.liniaGraniczna_constXvariableY = dict()
         self.liniaGraniczna_constYvariableX = dict()
         self.wczytajobszarytxt(nazwaobszaru)
-        aaa_tmp=0
         
         # aby sprawdzanie dzialalo poprawnie obszar musi byc zgodny z ruchem wskazowek zegara jesli nie
         # to zamieniamy wspolrzedne
@@ -74,7 +72,8 @@ class polygonObszaru:
     def wczytajobszarytxt(self, nazwaobszaru):
         koniecpliku = 0
         czyznalazlemobszar = 0
-        a = open(self.umphome + "/narzedzia/obszary.txt",encoding=self.Kodowanie, errors='ignore')
+        a = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'), encoding=self.Kodowanie,
+                 errors='ignore')
         linia = a.readline()
         while not koniecpliku:
             if linia.find(nazwaobszaru) >= 0:
@@ -88,24 +87,23 @@ class polygonObszaru:
                 if lista_wspolrzednych[-1] != lista_wspolrzednych[0]:
                     lista_wspolrzednych.append(lista_wspolrzednych[0])
                 for aa in lista_wspolrzednych:
-                    ##print(aa) -- DEBUG
                     xxx, yyy = aa.split(',')
                     x = float(xxx)
                     y = float(yyy)
                     if self.wspolrzedne:
-                            if x == self.wspolrzedne[-2]:
-                                if x not in self.liniaGraniczna_constXvariableY:
-                                    self.liniaGraniczna_constXvariableY[x] = [(min(y,self.wspolrzedne[-1]),
-                                                                              max(y, self.wspolrzedne[-1]),)]
-                                else:
-                                    self.liniaGraniczna_constXvariableY[x].append((min(y, self.wspolrzedne[-1]),
-                                                                              max(y, self.wspolrzedne[-1]),))
-                            if y == self.wspolrzedne[-1]:
-                                if y not in self.liniaGraniczna_constYvariableX:
-                                    self.liniaGraniczna_constYvariableX[y] = [(min(x, self.wspolrzedne[-2]),
-                                                                              max(x, self.wspolrzedne[-2]),)]
-                                else:
-                                    self.liniaGraniczna_constYvariableX[y].append((min(x, self.wspolrzedne[-2]),
+                        if x == self.wspolrzedne[-2]:
+                            if x not in self.liniaGraniczna_constXvariableY:
+                                self.liniaGraniczna_constXvariableY[x] = [(min(y, self.wspolrzedne[-1]),
+                                                                           max(y, self.wspolrzedne[-1]),)]
+                            else:
+                                self.liniaGraniczna_constXvariableY[x].append((min(y, self.wspolrzedne[-1]),
+                                                                               max(y, self.wspolrzedne[-1]),))
+                        if y == self.wspolrzedne[-1]:
+                            if y not in self.liniaGraniczna_constYvariableX:
+                                self.liniaGraniczna_constYvariableX[y] = [(min(x, self.wspolrzedne[-2]),
+                                                                          max(x, self.wspolrzedne[-2]),)]
+                            else:
+                                self.liniaGraniczna_constYvariableX[y].append((min(x, self.wspolrzedne[-2]),
                                                                                max(x, self.wspolrzedne[-2]),))
                     self.wspolrzedne.append(x)
                     self.wspolrzedne.append(y)
@@ -123,7 +121,7 @@ class polygonObszaru:
         # najpierw sprawdzmy czy dany punkt nie lezy przypadkiem na linii granicznej
         if x in self.liniaGraniczna_constXvariableY:
             for iterator in self.liniaGraniczna_constXvariableY[x]:
-                if iterator[0] <= y<= iterator[1]:
+                if iterator[0] <= y <= iterator[1]:
                     return True
         if y in self.liniaGraniczna_constYvariableX:
             for iterator in self.liniaGraniczna_constYvariableX[y]:
@@ -137,10 +135,10 @@ class polygonObszaru:
 
         p1x = polyx[0]
         p1y = polyy[0]
-        for i in range(1,n+1):
+        for i in range(1, n+1):
         #for i in range(n):
-            p2x = polyx[i%n]
-            p2y = polyy[i%n]
+            p2x = polyx[i % n]
+            p2y = polyy[i % n]
             if y > min(p1y, p2y):
                 if y <= max(p1y, p2y):
                     if x <= max(p1x, p2x):
@@ -170,7 +168,7 @@ class wspolrzedne:
     # funkcja wczytuje wspolrzedne z danego pliku. W zaleznosci czy pnt, adr czy txt
     def wczytajobiekt(self, nazwapliku):
         koniecpliku = 0
-        a = open(nazwapliku, encoding = self.Kodowanie,errors='ignore')
+        a = open(nazwapliku, encoding=self.Kodowanie, errors='ignore')
         if nazwapliku.endswith('.pnt') or nazwapliku.endswith('.adr'):
             while not koniecpliku:
                 linia = a.readline()
@@ -218,7 +216,7 @@ def update_progress(progress):
         progress = 1
         status = "Zrobione...\n"
     block = int(round(barLength*progress))
-    text = "\rProcent: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), int(progress*100), status)
+    text = "\rProcent: [{0}] {1}% {2}".format("#"*block + "-"*(barLength-block), int(progress*100), status)
     sys.stderr.write(text)
     sys.stderr.flush()
 
@@ -232,7 +230,8 @@ def main(argumenty):
     sys.stderr.write('Wczytuje granice obszaru: '+argumenty[0] + '\n')
     
     # zmienna aaa jest instancja klasy polygonObszaru, wywolujemy z dwoma argumentami
-    # argument[0].split... - wycina z UMP-PL-Lodz samo Lodz, z UMP-PL-Wroclaw samo Wrocal, bo w obszary.txt jest sam ten drugi czlon
+    # argument[0].split... - wycina z UMP-PL-Lodz samo Lodz, z UMP-PL-Wroclaw samo Wrocal,
+    # bo w obszary.txt jest sam ten drugi czlon
     # argument[1] to katalog domowy ump
     aaa = polygonObszaru(argumenty[0].split('-')[-1], argumenty[1] )
 
@@ -285,7 +284,7 @@ def main(argumenty):
         else:
             Kodowanie = 'cp1250'
         
-        plik = open(os.path.join(argumenty[2], 'wystajace.wpt'), 'w',encoding=Kodowanie, errors='ignore')
+        plik = open(os.path.join(argumenty[2], 'wystajace.wpt'), 'w', encoding=Kodowanie, errors='ignore')
         plik.write("OziExplorer Waypoint File Version 1.1\n")
         plik.write("WGS 84\n")
         plik.write("Reserved 2\n")
@@ -296,24 +295,20 @@ def main(argumenty):
             print(tmp_aaa)
             plik.write(",,0,1,3,255,65535,,,0,0,0,6,0,19\n")
         plik.close()
-        sys.stderr.write('zapisuje plik z wystajacymi '+ os.path.join(argumenty[2], 'wystajace.wpt'))
+        sys.stderr.write('zapisuje plik z wystajacymi ' + os.path.join(argumenty[2], 'wystajace.wpt'))
     sys.stderr.write('\nKoniec\n')
     sys.stderr.flush()
     
 def parsuj_args(args):
-    parser=argparse.ArgumentParser(description="szukanie wystajacych poza obszar punktow na danym obszarze mapy")
-    parser.add_argument('-r','--region',dest='umpregion', required="TRUE", help='region do przeszukania w formacie UMP-XX-ZZZZ, UMP-PL-Lodz, UMP-PL-Gdansk itd.')
-    parser.add_argument('-kz','--katalog-ze-zrodlami',dest='katalog_zrodel', required="TRUE", help='katalog ze zrodlami, np c:\\ump\\')
+    parser = argparse.ArgumentParser(description="szukanie wystajacych poza obszar punktow na danym obszarze mapy")
+    parser.add_argument('-r', '--region', dest='umpregion', required=True,
+                        help='region do przeszukania w formacie UMP-XX-ZZZZ, UMP-PL-Lodz, UMP-PL-Gdansk itd.')
+    parser.add_argument('-kz', '--katalog-ze-zrodlami', dest='katalog_zrodel', required=True,
+                        help='katalog ze zrodlami, np c:\\ump\\')
     
     args = parser.parse_args()
     # args.func(args)
-    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        if not args.katalog_zrodel.endswith('/'):
-            args.katalog_zrodel+='/'
-    else:
-        if not args.katalog_zrodel.endswith('\\'):
-            args.katalog_zrodel+='\\' 
-    main([args.umpregion,args.katalog_zrodel,args.katalog_zrodel+args.umpregion])
+    main([args.umpregion, args.katalog_zrodel, os.path.join(args.katalog_zrodel, args.umpregion)])
     
 if __name__ == "__main__":
     parsuj_args(sys.argv)

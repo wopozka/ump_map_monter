@@ -721,7 +721,7 @@ class mdmConfig(object):
         self.readConfig()
 
     def saveConfig(self):
-        with open(os.path.expanduser('~')+'/.mdm_config', 'w') as configfile:
+        with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'w') as configfile:
             for key in self.montDemontOptions.keys():
                 if self.montDemontOptions[key].get():
                     value = 1
@@ -730,11 +730,9 @@ class mdmConfig(object):
                 linia = key + '=' + str(value) + '\n'
                 configfile.write(linia)
 
-
     def readConfig(self):
-
         try:
-            with open(os.path.expanduser('~') + '/.mdm_config', 'r') as configfile:
+            with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'r') as configfile:
                 opcje = configfile.readlines()
             for a in opcje:
                 abc = a.split('=')
@@ -1069,12 +1067,9 @@ class cvsDialog(tkinter.Toplevel):
             self.initial_focus = self
 
         self.protocol("WM_DELETE_WINDOW", self.cancel)
-
-        self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
-                                    parent.winfo_rooty()+50))
-
-        #self.initial_focus.focus_set()
-        #ustawiamy focus na okienko do wpisywania logu, tak aby kursor do wpisywania od razu tam był.
+        self.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+        # self.initial_focus.focus_set()
+        # ustawiamy focus na okienko do wpisywania logu, tak aby kursor do wpisywania od razu tam był.
         self.logwindow.focus_set()
         self.wait_window(self)
 
@@ -1176,6 +1171,7 @@ class cvsDialog(tkinter.Toplevel):
                 lastlog.writelines(self.message)
         except FileNotFoundError:
             pass
+
 
 class cvsOutputReceaver(tkinter.Toplevel):
     # okienko które wyświetla wyjście z programu cvs
@@ -1569,7 +1565,7 @@ class zobaczDiffText(tkinter.Text):
 
 
 class ButtonZaleznyOdWynik(tkinter.ttk.Button):
-    def __init__(self, master,KatalogRoboczy,**options):
+    def __init__(self, master, KatalogRoboczy, **options):
         self.master = master
         self.statusqueue = queue.Queue()
         self.KatalogRoboczy = KatalogRoboczy
@@ -1763,7 +1759,6 @@ class SetupMode(object):
                 self.umpHome = abc
         os.makedirs(self.umpHome)
 
-
     def sciagnij_pliki(self):
         for plik in self.plikiDoSciagniecia:
             try:
@@ -1786,7 +1781,7 @@ class SetupMode(object):
                     status = status + chr(8)*(len(status)+1)
                     sys.stdout.write(status)
                     sys.stdout.flush()
-                    #print(status)
+                    # print(status)
 
                 f.close()
             except urllib.error.HTTPError:
@@ -1928,7 +1923,6 @@ class mdm_gui_py(tkinter.Tk):
         self.autopolypoly.grid(column=2, row=0, sticky='w')
         self.selectUnselect_aol(None)
 
-
         # wybor regionow
         self.regionVariableDictionary = {}
         self.regionCheckButtonDictionary = {}
@@ -2051,7 +2045,7 @@ class mdm_gui_py(tkinter.Tk):
                                                                        text=u'Specjalne traktowanie typów',
                                                                        variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
                                                                        onvalue=True, offvalue=False)
-        self.montOptionExtratypesCheckbutton.grid(column=0,row=3,sticky='W')
+        self.montOptionExtratypesCheckbutton.grid(column=0, row=3, sticky='W')
 
         # granice lokalne
         # self.graniceczesciowe=tkinter.BooleanVar()
@@ -2122,12 +2116,12 @@ class mdm_gui_py(tkinter.Tk):
         self.demontOptionExtratypesCheckbutton.grid(columnspan=2, row=3, sticky='W')
 
         # przycisk demontuj
-        self.demontButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy,text=u'Demontuj',
+        self.demontButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy, text=u'Demontuj',
                                                  command=self.OnButtonClickDemont)
         self.demontButton.grid(column=1, row=4)
 
         # przycisk sprawdź
-        self.sprawdzButton = ButtonZaleznyOdWynik(self.demontFrame,self.Zmienne.KatalogRoboczy, text=u'Sprawdź błędy',
+        self.sprawdzButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy, text=u'Sprawdź błędy',
                                                   command=self.OnButtonClickSprawdz)
         self.sprawdzButton.grid(column=0, row=4)
         createToolTip(self.sprawdzButton, 'LPM - uruchamia sprawdzanie błędów\nPPM - czyści okno błędów')
@@ -2148,8 +2142,7 @@ class mdm_gui_py(tkinter.Tk):
         diffScrollX.grid(column=0, row=1, sticky='EW')
 
         self.diffCanvas = tkinter.Canvas(self.diffFrame, yscrollcommand=diffScrollY.set,
-                                         xscrollcommand=diffScrollX.set,width=835,
-                                         height=160, highlightthickness=0)
+                                         xscrollcommand=diffScrollX.set, width=835, height=160, highlightthickness=0)
         self.diffCanvas.grid(column=0, row=0, sticky='nsew')
         self.diffCanvas.bind_class('movewheel', "<MouseWheel>", self._on_mousewheediffCanvas)
         self.diffCanvas.bind_class('movewheel', "<Button-4>", self._on_mousewheediffCanvas)
@@ -2160,13 +2153,13 @@ class mdm_gui_py(tkinter.Tk):
         diffScrollX.config(command=self.diffCanvas.xview)
 
         # ramka w canvas
-        self.frameInDiffCanvas=ListaPlikowFrame(self.diffCanvas, self.Zmienne)
+        self.frameInDiffCanvas = ListaPlikowFrame(self.diffCanvas, self.Zmienne)
         self.frameInDiffCanvas.grid(column=0, row=0)
         newtags = self.frameInDiffCanvas.bindtags()+('movewheel',)
         self.frameInDiffCanvas.bindtags(newtags)
 
         style1 = tkinter.ttk.Style()
-        style1.configure('Helvetica1.TLabel', font=('Helvetica',9))
+        style1.configure('Helvetica1.TLabel', font=('Helvetica', 9))
         plikLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Pliki', borderwidth=4, relief='raised', width=60,
                                       anchor='w', style='Helvetica1.TLabel')
         plikLabel.grid(row=0, column=0)
@@ -2195,7 +2188,7 @@ class mdm_gui_py(tkinter.Tk):
         self.diffCanvas.update_idletasks()
         self.diffCanvas.config(scrollregion=self.diffCanvas.bbox("all"))
 
-        self.diffFrameApplyButtonVariable=tkinter.StringVar()
+        self.diffFrameApplyButtonVariable = tkinter.StringVar()
         if self.mdm_mode == 'edytor':
             self.diffFrameApplyButtonVariable.set(u'Skopiuj pliki')
         else:
@@ -2218,14 +2211,14 @@ class mdm_gui_py(tkinter.Tk):
         # stderr będą wyświetlane tutaj
         # ###################################################
         self.stderrFrame = tkinter.ttk.LabelFrame(self, text=u'Błędy')
-        self.stderrFrame.grid(column=0, row=5,sticky='news')
+        self.stderrFrame.grid(column=0, row=5, sticky='news')
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(5, weight=1)
         self.stderrFrame.grid_columnconfigure(0, weight=1)
         self.stderrFrame.grid_rowconfigure(0, weight=1)
 
         self.stderrText = stdOutstdErrText(self.stderrFrame, width=60, height=6, wrap='none', font=('Courier', 8))
-        self.stderrText.grid(column=0,row=0,sticky='news')
+        self.stderrText.grid(column=0, row=0, sticky='news')
         self.stderrqueue = self.stderrText.inputqueue
         # Teraz dopiero można zbindować czyszczenie błędów
         self.sprawdzButton.bind('<Button-3>', self.stderrText.event_clear_all_event)
@@ -2240,8 +2233,7 @@ class mdm_gui_py(tkinter.Tk):
         self.stdoutFrame.grid_columnconfigure(0, weight=1)
         self.stdoutFrame.grid_rowconfigure(0, weight=1)
 
-
-        self.stdoutText=stdOutstdErrText(self.stdoutFrame, width=60, height=6, wrap='none', font=('Courier', 8))
+        self.stdoutText = stdOutstdErrText(self.stdoutFrame, width=60, height=6, wrap='none', font=('Courier', 8))
         self.stdoutText.grid(column=0, row=0, sticky='news')
 
         self.stdoutqueue = self.stdoutText.inputqueue
@@ -2282,7 +2274,6 @@ class mdm_gui_py(tkinter.Tk):
         except queue.Empty:
             pass
         self.after(100, self.sprawdzAktualnoscZrodelandPopupMessage)
-
 
     # bindowanie do skrótów klawiaturowych
     # włączanie i wyłączanie automatycznego rozkładu polylinii i polygonów
@@ -2332,7 +2323,6 @@ class mdm_gui_py(tkinter.Tk):
             time.sleep(0.1)
         self.OnButtonClickEdit()
 
-
     def aktywuj_montbutton(self, event):
         self.MontButtonStateSet()
 
@@ -2345,10 +2335,7 @@ class mdm_gui_py(tkinter.Tk):
         self.args.stdoutqueue = self.stdoutqueue
         mont_demont_py.czysc(self.args)
 
-
     # koniec bindowania do skrótów klawiaturowych
-
-
     def GenerujListeObszarow(self):
         args = Argumenty()
         style = tkinter.ttk.Style()
@@ -2356,9 +2343,9 @@ class mdm_gui_py(tkinter.Tk):
         listaNazwObszarow = mont_demont_py.listujobszary(args)
         for a in self.regionCheckButtonDictionary.keys():
             self.regionCheckButtonDictionary[a].destroy()
-        self.regionVariableDictionary={}
-        self.regionCheckButtonDictionary={}
-        #self.regionContexMenuDictionary={}
+        self.regionVariableDictionary = {}
+        self.regionCheckButtonDictionary = {}
+        # self.regionContexMenuDictionary={}
 
         for aaa in range(len(listaNazwObszarow)):
             self.regionVariableDictionary[listaNazwObszarow[aaa]] = tkinter.IntVar()
@@ -2377,11 +2364,9 @@ class mdm_gui_py(tkinter.Tk):
 
             self.regionCheckButtonDictionary[listaNazwObszarow[aaa]].grid(column=aaa % 8, row=aaa // 8, sticky='W')
 
-
-    #prawdopodobnie do usuniecia, chyba nadmiar
-    #def show_menu(self, e):
-    #	self.tk.call("tk_popup", self.menu, e.x_root, e.y_root)
-
+    # prawdopodobnie do usuniecia, chyba nadmiar
+    # def show_menu(self, e):
+    # 	self.tk.call("tk_popup", self.menu, e.x_root, e.y_root)
 
     def _on_mousewheelregionyCanvas(self, event):
         if self.os == 'Linux':
@@ -2416,8 +2401,8 @@ class mdm_gui_py(tkinter.Tk):
         self.MontButtonStateSet()
 
     def OnButtonClickApply(self):
-        #tymczasowo, dopoki nie dorobie przesylania pomiedzy watkami
-        #self.plikiDoCVS=[]
+        # tymczasowo, dopoki nie dorobie przesylania pomiedzy watkami
+        # self.plikiDoCVS=[]
 
         if self.mdm_mode != 'edytor' and len(self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania) > 0:
             plikzipname = 'UMP' + str(datetime.datetime.now().year) + str(datetime.datetime.now().month) + \
@@ -2425,7 +2410,7 @@ class mdm_gui_py(tkinter.Tk):
                           str(datetime.datetime.now().minute) + '.zip'
             plikzip = zipfile.ZipFile(os.path.join(self.Zmienne.KatalogRoboczy, plikzipname), 'w')
         for a in self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania.keys():
-            #zmienna IntVar nie moze byc odczytana bezposrednio, trzeba poprzez funkcje get()
+            # zmienna IntVar nie moze byc odczytana bezposrednio, trzeba poprzez funkcje get()
             if self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].get() == 1:
 
                 #przed kopiowaniem nalezy sprawdzic czy dany plik to naprawde dany plik, czy moze ktos
@@ -2451,7 +2436,7 @@ class mdm_gui_py(tkinter.Tk):
                             self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='lawn green')
                             self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
                         else:
-                            self.stderrqueue.put(u'Suma kontrolna pliku %s\nnie zgadza sie.\nPróbuję nałożyć łatki przy pomocy patch.\n'%a)
+                            self.stderrqueue.put(u'Suma kontrolna pliku %s\nnie zgadza sie.\nPróbuję nałożyć łatki przy pomocy patch.\n' % a)
                             patch_result = self.patchExe(a.replace(os.sep, '-') + '.diff')
                             b = self.frameInDiffCanvas.listaNazwPlikowDoObejrzenia.index(a)
                             if patch_result == 0:
@@ -2488,7 +2473,7 @@ class mdm_gui_py(tkinter.Tk):
         if self.mdm_mode != 'edytor' and len(self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania) > 0:
             plikzip.close()
 
-    #obsługa poleceń cvs
+    # obsługa poleceń cvs
     def pobierz_cvs(self):
         self.pobierz_pliki_z_internetu('http://ump.waw.pl/pliki/cvs.exe')
         tkinter.messagebox.showinfo(u'Pobieranie zakończone', u'Plik cvs.exe został pobrany i zapisany w katalogu.')
@@ -2497,7 +2482,6 @@ class mdm_gui_py(tkinter.Tk):
         url = 'https://www.geopainting.com/download/mapedit2-1-78-18.zip'
         self.pobierz_pliki_z_internetu('https://www.geopainting.com/download/mapedit2-1-78-18.zip')
         tkinter.messagebox.showinfo(u'Pobieranie zakończone', u'Program mapedit2 został pobrany i zapisany w katalogu.')
-
 
     def pobierz_mapedit_plus(self):
         url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
@@ -2531,7 +2515,6 @@ class mdm_gui_py(tkinter.Tk):
         a = mont_demont_py.patch(self.args)
         return a
 
-
     def OnButtonClickCvsUp(self):
         obszary = []
         obszarywszystkie = []
@@ -2558,22 +2541,22 @@ class mdm_gui_py(tkinter.Tk):
             else:
                 doCVS = cvsOutputReceaver(self, obszary, '', 'up')
 
-        #doCVS=cvsOutputReceaver(self,obszary,'','up')
+        # doCVS=cvsOutputReceaver(self,obszary,'','up')
 
     def OnButtonClickCvsCommit(self):
-       if len(self.plikiDoCVS) > 0:
-            oknodialogowe=cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
+        if len(self.plikiDoCVS) > 0:
+            oknodialogowe = cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
                 cvs_status = sprawdz_czy_cvs_obecny()
                 if cvs_status:
                     tkinter.messagebox.showwarning(message=cvs_status)
                 else:
                     doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
-                    self.plikiDoCVS=doCVS.uncommitedfiles[:]
+                    self.plikiDoCVS = doCVS.uncommitedfiles[:]
             else:
                 pass
 
-    def cvsSprawdzAktualnoscMontowanychObszarow(self,*obszary):
+    def cvsSprawdzAktualnoscMontowanychObszarow(self, *obszary):
         Needs_Patch = 0
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
@@ -2595,14 +2578,10 @@ class mdm_gui_py(tkinter.Tk):
             self.cvsstatusQueue.put('aktualne')
         return 0
 
-
     def OnButtonClickMont(self):
-
         # czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
-
         self.args.obszary = []
-
         for aaa in self.regionVariableDictionary.keys():
             if self.regionVariableDictionary[aaa].get() == 1:
                 self.args.obszary.append(aaa)
@@ -2633,7 +2612,6 @@ class mdm_gui_py(tkinter.Tk):
 
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
-
 
         # _thread.start_new_thread(mont_demont_py.montujpliki,(self.args,))
         thread = threading.Thread(target=mont_demont_py.montujpliki, args=(self.args,))
@@ -2696,7 +2674,7 @@ class mdm_gui_py(tkinter.Tk):
         # thread1=threading.Thread(target=self.wyswietlListePlikow,args=(my_queue,))
         # thread1.start()
         # for a in my_queue.get():
-        #	print(a)
+        #     print(a)
         self.frameInDiffCanvas.update_idletasks()
         self.diffCanvas.config(scrollregion=self.diffCanvas.bbox("all"))
 
@@ -2716,6 +2694,7 @@ class mdm_gui_py(tkinter.Tk):
 
     def GenerujListeLatek(self):
         pass
+
 
 if __name__ == "__main__":
 
