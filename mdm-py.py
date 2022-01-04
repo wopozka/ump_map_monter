@@ -555,7 +555,7 @@ class ConfigWindow(tkinter.Toplevel):
         umproboczy = tkinter.Label(umproboczyLabelFrame, textvariable=self.umpRoboczyValue)
         umproboczy.grid(row=0, column=0, sticky='w')
         umproboczyLabelFrame.grid_columnconfigure(0, weight=1)
-        umproboczyWybierzButton = tkinter.ttk.Button(umproboczyLabelFrame,text='Wybierz',
+        umproboczyWybierzButton = tkinter.ttk.Button(umproboczyLabelFrame, text='Wybierz',
                                                      command=self.OnButtonClickUMPRoboczy)
         umproboczyWybierzButton.grid(row=0, column=1, sticky='e')
 
@@ -2498,7 +2498,7 @@ class mdm_gui_py(tkinter.Tk):
         url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
         if platform.architecture() == '32bit':
             url = 'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
-        self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
+        self.pobierz_pliki_z_internetu(url)
         tkinter.messagebox.showinfo(u'Pobieranie zakończone',
                                     u'Program mapedit++ został pobrany i zapisany w katalogu.')
 
