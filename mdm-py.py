@@ -51,6 +51,40 @@ def sprawdz_czy_cvs_obecny():
         return 'Nie odnalazłem programu cvs. Zainstaluj go.'
 
 
+def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
+
+    nazwa_pliku = url.split('/')[-1]
+    try:
+        u = urllib.request.urlopen(url)
+        meta = u.info()
+        print(meta['Content-Length'])
+        inputqueue.put(('max', '100',))
+        filesize = int(meta['Content-Length'])
+        print("Downloading: %s Bytes: %s" % (nazwa_pliku, filesize))
+        file_size_dl = 0
+        block_sz = 8192
+        while True:
+            buffer = u.read(block_sz)
+            if not buffer:
+                break
+
+            file_size_dl += len(buffer)
+            # f.write(buffer)
+            temporary_file.write(buffer)
+            inputqueue.put(('act', str(int(file_size_dl * 100 / filesize)),))
+            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
+            status = status + chr(8) * (len(status) + 1)
+            sys.stdout.write(status)
+            sys.stdout.flush()
+            #print(status)
+
+    except urllib.error.HTTPError:
+        print('Nie moge sciagnac pliku:' + nazwa_pliku)
+        return
+    temporary_file.close()
+    inputqueue.put(('koniec', 'koniec', ))
+
+
 def createToolTip(widget, text):
     toolTip = ToolTip(widget)
 
@@ -134,8 +168,10 @@ class ModulCVS(object):
 
 class MyProgressBar(tkinter.Toplevel):
     """Progress bar używany podczas ściągania plików z internetu"""
-    def __init__(self, parent, **options):
-        tkinter.Toplevel.__init__(self, parent, **options)
+    def __init__(self, parent, temporary_file, url, **options):
+        tkinter.Toplevel.__init__(self, parent,  **options)
+        self.temporary_file = temporary_file
+        self.url = url
         self.transient(parent)
         self.title(u'Status pobierania z internetu')
         self.parent = parent
@@ -143,13 +179,38 @@ class MyProgressBar(tkinter.Toplevel):
         body.pack(padx=5, pady=5, fill='both', expand=1)
         self.progressbar = tkinter.ttk.Progressbar(body, mode='determinate', length=300)
         self.progressbar.pack()
+        self.progressbar["maximum"] = 100
         self.progress_var = tkinter.DoubleVar()
         self.geometry('320x60')
         self.grab_set()
-        self.wait_window(self)
+        # self.wait_window(self)
+        self.inputqueue = queue.Queue()
         # self.protocol("WM_DELETE_WINDOW", self.destroy)
         # self.bind('<Escape>', lambda event: self.destroy())
         # self.geometry("+%d+%d" % (parent.winfo_rootx()+50, parent.winfo_rooty()+50))
+        self.pobierz_plik()
+        self.update_me()
+
+    def pobierz_plik(self):
+        # temporary_file = tempfile.NamedTemporaryFile(delete=False)
+        thread1 = threading.Thread(target=pobierz_pliki_z_internetu, args=(self.temporary_file,
+                                                                           self.url, self.inputqueue))
+        thread1.start()
+
+    def update_me(self):
+        try:
+            while 1:
+                string1, string2 = self.inputqueue.get_nowait()
+                if string1.startswith('koniec'):
+                    self.destroy()
+                else:
+                    if string1 == 'max':
+                        self.progressbar["maximum"] = int(string2)
+                    else:
+                        self.progressbar["value"] = int(string2)
+        except queue.Empty:
+            pass
+        self.after(100, self.update_me)
 
 
 class ToolTip(object):
@@ -2424,67 +2485,37 @@ class mdm_gui_py(tkinter.Tk):
 
     #obsługa poleceń cvs
     def pobierz_cvs(self):
-        url = 'http://ump.waw.pl/pliki/cvs.exe'
-        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog dla cvs.exe')
-        if katalog_przeznaczenia:
-            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
+        self.pobierz_pliki_z_internetu('http://ump.waw.pl/pliki/cvs.exe')
+        tkinter.messagebox.showinfo(u'Pobieranie zakończone', u'Plik cvs.exe został pobrany i zapisany w katalogu.')
 
     def pobierz_mapedit2(self):
         url = 'https://www.geopainting.com/download/mapedit2-1-78-18.zip'
+        self.pobierz_pliki_z_internetu('https://www.geopainting.com/download/mapedit2-1-78-18.zip')
+        tkinter.messagebox.showinfo(u'Pobieranie zakończone', u'Program mapedit2 został pobrany i zapisany w katalogu.')
 
-        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog rozpakowania mapedit2')
-        if katalog_przeznaczenia:
-            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
 
     def pobierz_mapedit_plus(self):
         url = 'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
         if platform.architecture() == '32bit':
             url = 'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
-        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog do rozpakowania mapedit++')
-        if katalog_przeznaczenia:
-            self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
+        self.pobierz_pliki_z_internetu(katalog_przeznaczenia, url)
+        tkinter.messagebox.showinfo(u'Pobieranie zakończone',
+                                    u'Program mapedit++ został pobrany i zapisany w katalogu.')
 
-
-    def pobierz_pliki_z_internetu(self, katalog_przeznaczenia, url):
-        downloadProgressBar = MyProgressBar(self)
-        return
-        nazwa_pliku = url.split('/')[-1]
-        temporary_file = tempfile.NamedTemporaryFile(delete=False)
-        try:
-            u = urllib.request.urlopen(url)
-            # f = open(temporary_file, 'wb')
-            meta = u.info()
-            print(meta['Content-Length'])
-            filesize = int(meta['Content-Length'])
-            print("Downloading: %s Bytes: %s" % (nazwa_pliku, filesize))
-            file_size_dl = 0
-            block_sz = 8192
-            while True:
-                buffer = u.read(block_sz)
-                if not buffer:
-                    break
-
-                file_size_dl += len(buffer)
-                # f.write(buffer)
-                temporary_file.write(buffer)
-                status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
-                status = status + chr(8) * (len(status) + 1)
-                sys.stdout.write(status)
-                sys.stdout.flush()
-                #print(status)
-
-        except urllib.error.HTTPError:
-            print('Nie moge sciagnac pliku:' + nazwa_pliku)
+    def pobierz_pliki_z_internetu(self, url):
+        katalog_przeznaczenia = tkinter.filedialog.askdirectory(title=u'Wskaż katalog przeznaczenia')
+        if not katalog_przeznaczenia:
             return
-        temporary_file.close()
-        if url.endswith('.exe'):
-            shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
+        temporary_file = tempfile.NamedTemporaryFile(delete=False)
+        downloadProgressBar = MyProgressBar(self, temporary_file, url)
+        downloadProgressBar.wait_window()
+        if url.endswith('.zip') and \
+                tkinter.messagebox.askyesno('Kopiowanie', 'Czy rozpakować edytor do katalogu przeznaczenia?'):
+            with zipfile.ZipFile(temporary_file.name, 'r') as plikzip:
+                plikzip.extractall(path=katalog_przeznaczenia)
         else:
-            if tkinter.messagebox.askyesno('Kopiowanie', 'Czy rozpakować edytor do katalogu?'):
-                with zipfile.ZipFile(temporary_file.name, 'r') as plikzip:
-                    plikzip.extractall(path=katalog_przeznaczenia)
-            else:
-                shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
+            nazwa_pliku = url.split('/')[-1]
+            shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
         os.remove(temporary_file.name)
 
     def patchExe(self, pliki_diff):
