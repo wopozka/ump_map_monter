@@ -11,7 +11,7 @@ import sys
 
 DownloadEverything = 0
 try:
-    import mont_demont as mont_demont_py
+    import mont_demont2 as mont_demont_py
     import znajdz_wystajace
     import mdmkreatorOsmAnd
 except ImportError:
@@ -1893,6 +1893,11 @@ class mdm_gui_py(tkinter.Tk):
             menu_pobierz.add_command(label='mapedit++(64)1.0.61.513tb_3.zip', command=self.pobierz_mapedit_plus)
         menubar.add_cascade(label=u'Pobierz', menu=menu_pobierz)
 
+        # menu naloz latki
+        menu_patch = tkinter.Menu(menubar, tearoff=0)
+        menu_patch.add_command(label=u'Nałóż łatki', command=self.patchuj)
+        menubar.add_cascade(label=u'Paczuj', menu=menu_patch)
+
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
         menuPomoc.add_command(label=u'Skróty klawiaturowe', command=self.skrotyKlawiaturowe)
@@ -2506,6 +2511,14 @@ class mdm_gui_py(tkinter.Tk):
             nazwa_pliku = url.split('/')[-1]
             shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
         os.remove(temporary_file.name)
+
+    # obsługa menu patchuj
+    def patchuj(self):
+        # najpierw pobierz łatki do nałożenia
+        lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
+                                                                                          (u'pliki łatek', '*.patch'),
+                                                                                          (u'wszystkie pliki', '*.*')))
+        print(lista_latek)
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
