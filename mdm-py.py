@@ -23,8 +23,8 @@ if sys.version_info[0] < 3:
         'u\nUżywasz	pythona w wersji %s.%s.%s\n' % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     sys.stderr.write("Wymagany jest python w wersji conajmniej 3.\n")
     sys.exit(1)
-#	import	codecs
-#import	locale
+# import	codecs
+# import	locale
 import os
 import hashlib
 import difflib
@@ -76,7 +76,7 @@ def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
             status = status + chr(8) * (len(status) + 1)
             sys.stdout.write(status)
             sys.stdout.flush()
-            #print(status)
+            # print(status)
 
     except urllib.error.HTTPError:
         print('Nie moge sciagnac pliku:' + nazwa_pliku)
@@ -166,6 +166,7 @@ class ModulCVS(object):
         :return: None
         """
 
+
 class MyProgressBar(tkinter.Toplevel):
     """Progress bar używany podczas ściągania plików z internetu"""
     def __init__(self, parent, temporary_file, url, **options):
@@ -254,10 +255,10 @@ class ToolTip(object):
         self.id = self.widget.after(self.waittime, self.showtip(text))
 
     def unschedule(self):
-        id = self.id
+        tmp_id = self.id
         self.id = None
-        if id:
-            self.widget.after_cancel(id)
+        if tmp_id:
+            self.widget.after_cancel(tmp_id)
 
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
@@ -373,7 +374,9 @@ class ListaPlikowFrame(tkinter.Frame):
         self.after(500, self.update_me)
 
     def WyczyscPanelzListaPlikow(self):
-        for aaa in self.listaPlikowOknoZmienionePliki + self.listaDodanoOknoZmienionePliki + self.skasowanoPlikowOknoZmienionePliki + self.zobaczButtonPlikowOknoZmienionePliki + self.skopiujCheckButtonPlikowOknoZmienionePliki:
+        for aaa in self.listaPlikowOknoZmienionePliki + self.listaDodanoOknoZmienionePliki + \
+                   self.skasowanoPlikowOknoZmienionePliki + self.zobaczButtonPlikowOknoZmienionePliki + \
+                   self.skopiujCheckButtonPlikowOknoZmienionePliki:
             aaa.destroy()
 
         self.listaPlikowOknoZmienionePliki = []
@@ -599,7 +602,7 @@ class ConfigWindow(tkinter.Toplevel):
         umpmdmmodeLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Tryb pracy mdm')
         umpmdmmodeLabelFrame.grid(row=6, column=0, columnspan=2, sticky='we')
         umpmdmmodeRadio1 = tkinter.ttk.Radiobutton(umpmdmmodeLabelFrame, text='Edytor', value=1,
-                                                 variable=self.ump_mdm_mode)
+                                                   variable=self.ump_mdm_mode)
         umpmdmmodeRadio1.grid(row=0, column=0)
         umpmdmmodeRadio2 = tkinter.ttk.Radiobutton(umpmdmmodeLabelFrame, text='Wrzucacz', value=0,
                                                    variable=self.ump_mdm_mode)
@@ -717,9 +720,7 @@ class mdmConfig(object):
         self.montDemontOptions['autopolypoly'].set(False)
         self.readConfig()
 
-
     def saveConfig(self):
-        #try:
         with open(os.path.expanduser('~')+'/.mdm_config', 'w') as configfile:
             for key in self.montDemontOptions.keys():
                 if self.montDemontOptions[key].get():
@@ -762,8 +763,10 @@ class mdmConfig(object):
         except FileNotFoundError:
             pass
 
-# klasa dla okienek z błędami oraz z informacjami na dole okna mdm-py. Definicje kolejek do odbioru komunikatów, menu itd.
+
 class stdOutstdErrText(tkinter.scrolledtext.ScrolledText):
+    """klasa dla okienek z błędami oraz z informacjami na dole okna mdm-py. Definicje kolejek
+       do odbioru komunikatów, menu itd."""
     def __init__(self, master, **options):
         tkinter.scrolledtext.ScrolledText.__init__(self, master, **options)
         self.inputqueue = queue.Queue()
@@ -916,7 +919,8 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.args = args
         self.obszar = obszar
         self.zmienna = zmienna
-        # poniższa zmienna używana jest do cvs ci dla zaznaczonych obszarów, pozwala odczytać które obszary są zaznaczone
+        # poniższa zmienna używana jest do cvs ci dla zaznaczonych obszarów, pozwala odczytać
+        # które obszary są zaznaczone
         self.regionVariableDictionary = regionVariableDictionary
         tkinter.ttk.Checkbutton.__init__(self, master, **options)
         self.menu = tkinter.Menu(self, tearoff=0)
@@ -929,7 +933,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         self.menu.add_command(label=a, command=self.cvsci_zaznaczone_obszary)
         a = 'cvs diff -u ' + self.obszar
         self.menu.add_command(label=a, command=self.cvsdiff)
-        self.menu_testy=tkinter.Menu(self.menu, tearoff=0)
+        self.menu_testy = tkinter.Menu(self.menu, tearoff=0)
         self.menu_testy.add_command(label=u'Znajdź współrzędne poza obszarem', command=self.znajdz_wyst)
         self.menu_testy.add_command(label=u'Drogi bez wjazdu - bez jednokierunkowych',
                                     command=self.sprawdz_siatke_dwukierunkowa)
@@ -1008,7 +1012,7 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            oknodialogowe = cvsDialog(self, [self.obszar],title=u'Prześlij pliki do repozytorium cvs')
+            oknodialogowe = cvsDialog(self, [self.obszar], title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
                 doCVS = cvsOutputReceaver(self, [self.obszar], oknodialogowe.message, 'ci')
             else:
@@ -1153,9 +1157,9 @@ class cvsDialog(tkinter.Toplevel):
     def apply(self):
 
         self.iftocommit = 'tak'
-        #print('stosuje')
-        #doCVS=cvsOutputReceaver(self.parent,self.pliki,self.message,'ci')
-        #pass # override
+        # print('stosuje')
+        # doCVS=cvsOutputReceaver(self.parent,self.pliki,self.message,'ci')
+        # pass # override
 
     def read_last_commit_log(self):
         last_cvs_log = []
@@ -1205,14 +1209,13 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
         self.protocol("WM_DELETE_WINDOW", self.closewindows)
 
-        self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
-                                    parent.winfo_rooty()+50))
+        self.geometry("+%d+%d" % (parent.winfo_rootx()+50, parent.winfo_rooty()+50))
 
         self.initial_focus.focus_set()
 
         if cvscommand == 'up':
             thread = threading.Thread(target=self.cvsup, args=(obszary, self.stopthreadqueue,
-                                                             self.progreststartstopqueue))
+                                                               self.progreststartstopqueue))
             thread.start()
         elif cvscommand == 'diff':
             thread = threading.Thread(target=self.cvsdiff, args=(obszary, self.stopthreadqueue,
@@ -1224,7 +1227,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
             thread.start()
         else:
             thread = threading.Thread(target=self.cvsci, args=(obszary, message, self.stopthreadqueue,
-                                                            self.progreststartstopqueue))
+                                                               self.progreststartstopqueue))
             thread.start()
             # self.cvsci(self.args.obszary,self.args.message)
         # mont_demont_py.cvsup(self.args)
@@ -1262,26 +1265,25 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.config(wrap='none')
         self.outputwindow.pack(fill='both', expand=1)
 
-
     def buttonbox(self):
         # add standard button box. override if you don't want the
         # standard buttons
 
         box = tkinter.Frame(self)
 
-        self.progressbar=tkinter.ttk.Progressbar(box, mode='indeterminate', length=100)
+        self.progressbar = tkinter.ttk.Progressbar(box, mode='indeterminate', length=100)
         self.progressbar.pack(side='left', anchor='w', expand=1)
         self.OKButton = tkinter.Button(box, text="OK", width=10, command=self.ok, default='active')
         self.OKButton.pack(side='left', padx=5, pady=5, anchor='e')
-        #do guzika OK bindujemy klawisz Return, aby można było zamknąć enterem oraz klawiszem escape
+        # do guzika OK bindujemy klawisz Return, aby można było zamknąć enterem oraz klawiszem escape
         self.OKButton.bind('<Return>', self.ok)
         self.OKButton.bind('<Escape>', self.ok)
 
         self.przerwijButton = tkinter.Button(box, text="Przerwij", width=10, command=self.cancel)
         self.przerwijButton.pack(side='left', padx=5, pady=5, anchor='e')
 
-        #self.bind("<Return>", self.ok)
-        #self.bind("<Escape>", self.cancel)
+        # self.bind("<Return>", self.ok)
+        # self.bind("<Escape>", self.cancel)
 
         box.pack(fill='x', expand=0)
 
@@ -1289,7 +1291,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def ok(self, event=None):
 
         if self.validate():
-            self.initial_focus.focus_set() # put focus back
+            self.initial_focus.focus_set() #  put focus back
             return
 
         self.withdraw()
@@ -1303,8 +1305,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def cancel(self, event=None):
 
         # put focus back to the parent window
-        #self.parent.focus_set()
-        #self.destroy()
+        # self.parent.focus_set()
+        # self.destroy()
         self.stopthreadqueue.put('stop')
 
     #
@@ -1366,7 +1368,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                 if len(stdout) > 0:
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
-                        if line.decode(Zmienne.Kodowanie).find('<--  '+a.split('/')[-1])>=0:
+                        if line.decode(Zmienne.Kodowanie).find('<--  ' + a.split('/')[-1]) >= 0:
                             self.commitedfiles.append(a)
                     if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
@@ -1381,7 +1383,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
             if (a.find('/src') > 0) and (a not in self.commitedfiles):
                 self.uncommitedfiles.append(a)
 
-        if len(self.uncommitedfiles)>0:
+        if len(self.uncommitedfiles) > 0:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
                 self.outputwindow.inputqueue.put(('nieprzeslane' + a + '\n'))
@@ -1402,8 +1404,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put(('CVSROOT=' + CVSROOT + '\n'))
 
         for a in obszary:
-            self.outputwindow.inputqueue.put(('cvs diff -u ' + a + '/src\n'))
-            process = subprocess.Popen(['cvs', '-q', CVSROOT, 'diff', '-u', a+'/src'], stdout=subprocess.PIPE,
+            self.outputwindow.inputqueue.put(('cvs diff -u ' + a + os.sep + 'src\n'))
+            process = subprocess.Popen(['cvs', '-q', CVSROOT, 'diff', '-u', a + os.sep + 'src'], stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT)
             processexitstatus = process.poll()
 
@@ -1438,10 +1440,10 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put('\n\nGotowe\n')
         progreststartstopqueue.put('stop')
 
-    def cvsup (self, obszary, stopthreadqueue, progreststartstopqueue):
+    def cvsup(self, obszary, stopthreadqueue, progreststartstopqueue):
         self.cvsup_cvsco('up', obszary, stopthreadqueue, progreststartstopqueue)
 
-    def cvsco (self, obszary, stopthreadqueue, progreststartstopqueue):
+    def cvsco(self, obszary, stopthreadqueue, progreststartstopqueue):
         self.cvsup_cvsco('co', obszary, stopthreadqueue, progreststartstopqueue)
 
     def cvsup_cvsco(self, komenda, obszary, stopthreadqueue, progreststartstopqueue):
@@ -1462,7 +1464,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                                        stderr=subprocess.STDOUT)
             processexitstatus = process.poll()
 
-            while processexitstatus == None:
+            while processexitstatus is None:
                 try:
                     string = stopthreadqueue.get_nowait()
                     if string == 'stop':
@@ -1476,7 +1478,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                 if line.decode(Zmienne.Kodowanie) != '':
                     self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
 
-                #time.sleep(0.1)
+                # time.sleep(0.1)
                 processexitstatus = process.poll()
 
             if czyzatrzymac:
@@ -1486,17 +1488,19 @@ class cvsOutputReceaver(tkinter.Toplevel):
             self.outputwindow.inputqueue.put(u'Proces uaktualniania przerwany na żądanie użytkownika!\n')
 
         else:
-            #okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i trzeba doczytać tutaj.
+            # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
+            # trzeba doczytać tutaj.
             while line.decode(Zmienne.Kodowanie) != '':
                 line = process.stdout.readline()
                 self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
 
+
 class zobaczDiffText(tkinter.Text):
     def __init__(self, master, nazwapliku, **options):
         tkinter.Text.__init__(self, master, **options)
-        self.bind("<Double-Button-1>",self.event_double_click)
+        self.bind("<Double-Button-1>", self.event_double_click)
         self.typpliku = ''
         if nazwapliku.endswith('.txt'):
             self.typpliku = 'txt'
@@ -1509,7 +1513,7 @@ class zobaczDiffText(tkinter.Text):
         else:
             self.ofset = 1
 
-    def event_double_click(self,event):
+    def event_double_click(self, event):
         znaki_dla_wspolrzednych = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '(', ')', '.']
         znaki_dla_wsp_txt = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '.']
         self.focus_force()
@@ -1563,12 +1567,13 @@ class zobaczDiffText(tkinter.Text):
         self.event_generate("<<Copy>>")
         return 'break'
 
+
 class ButtonZaleznyOdWynik(tkinter.ttk.Button):
     def __init__(self, master,KatalogRoboczy,**options):
         self.master = master
-        self.statusqueue=queue.Queue()
-        self.KatalogRoboczy=KatalogRoboczy
-        #self.buttonName = options['text']
+        self.statusqueue = queue.Queue()
+        self.KatalogRoboczy = KatalogRoboczy
+        # self.buttonName = options['text']
         self.previousfile = 1
         self.actfile = 0
         self.funkcjaPrzyciskuPracuje = 0
@@ -1577,7 +1582,6 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
         self.bind('<Enter>', self.enter)
         self.bind('<Leave>', self.leave)
         self.update_me()
-
 
     def enter(self, event):
         if os.path.isfile(os.path.join(self.KatalogRoboczy, 'wynik.mp')) and not self.funkcjaPrzyciskuPracuje:
@@ -1617,7 +1621,7 @@ class ButtonZaleznyOdWynik(tkinter.ttk.Button):
                     self.configure(state='normal')
                 elif not self.actfile:
                     self.configure(state='disabled')
-                self.previousfile=self.actfile
+                self.previousfile = self.actfile
             # elif self.configure('state')[-1] == 'disabled':
         self.master.update_idletasks()
         self.after(100, self.update_me)
@@ -1631,6 +1635,7 @@ class Argumenty(object):
         self.obszary = []
         self.notopo = 0
 
+
 class SetupMode(object):
     def __init__(self):
         self.umpHome = None
@@ -1639,12 +1644,14 @@ class SetupMode(object):
 
         self.modulyCVSCheckboksy = {}
 
-        self.plikiDoSciagniecia = {'cvs.exe':'http://ump.waw.pl/pliki/cvs.exe',
-                                'mapedit2-1-78-18.zip':'https://www.geopainting.com/download/mapedit2-1-78-18.zip'}
+        self.plikiDoSciagniecia = {'cvs.exe': 'http://ump.waw.pl/pliki/cvs.exe',
+                                'mapedit2-1-78-18.zip': 'https://www.geopainting.com/download/mapedit2-1-78-18.zip'}
         if platform.architecture() == '32bit':
-            self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
+            self.plikiDoSciagniecia['mapedit++(32)1.0.61.513tb_3.zip'] = \
+                'http://wheart.bofh.net.pl/gps/mapedit++(32)1.0.61.513tb_3.zip'
         else:
-            self.plikiDoSciagniecia['mapedit++(64)1.0.61.513tb_3.zip']='http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
+            self.plikiDoSciagniecia['mapedit++(64)1.0.61.513tb_3.zip'] = \
+                'http://wheart.bofh.net.pl/gps/mapedit++(64)1.0.61.513tb_3.zip'
         # self.ListaObszarow = list()
         self.modulyCvsDoSciagniecia = list()
         self.utworz_katalog_ump()
@@ -1654,7 +1661,8 @@ class SetupMode(object):
         # budujemy okno z listą wszystkich obszarów
         self.glowneOknoDialkogCVS = tkinter.Tk(None)
         self.glowneOknoDialkogCVS.title(u'Lista obszarów do ściągnięcia')
-        glownaRamkaOknaDialogowego = tkinter.ttk.Labelframe(self.glowneOknoDialkogCVS, text=u'Wybierz obszary do ściągnięcia')
+        glownaRamkaOknaDialogowego = tkinter.ttk.Labelframe(self.glowneOknoDialkogCVS,
+                                                            text=u'Wybierz obszary do ściągnięcia')
         glownaRamkaOknaDialogowego.pack(side='left', anchor='center', fill='both', expand=1)
         listaObszarowScrollBar_pionowy = tkinter.Scrollbar(glownaRamkaOknaDialogowego)
         listaObszarowScrollBar_pionowy.pack(fill='both', anchor='center', expand=0, side='right')
@@ -1675,7 +1683,6 @@ class SetupMode(object):
         listaObszarowCanvas = tkinter.Canvas(glownaRamkaOknaDialogowego, width=900)
         listaObszarowCanvas.pack(side='left', fill='both', expand=1)
 
-
         listaObszarowScrollBar_pionowy.config(command=listaObszarowCanvas.yview)
         listaObszarowCanvas.config(yscrollcommand=listaObszarowScrollBar_pionowy.set)
         listaObszarowScrollBar_poziomy.config(command=listaObszarowCanvas.xview)
@@ -1693,9 +1700,9 @@ class SetupMode(object):
                 self.modulyCVSCheckboksy[abc].append(tkinter.ttk.Checkbutton(obszarFrame, width=25,
                                                                              text=self.modulyCVS.modulyCVS[abc][bbb],
                                                                              variable=self.modulyCVSCheckboksy[abc][-1]))
-                self.modulyCVSCheckboksy[abc][-1].grid(column=bbb%ilosc_kolumn, row=bbb//ilosc_kolumn)
-                #ilosc_wierszy_danego_obszaru = bbb//ilosc_kolumn
-                #print('ilosc kolumn danego obszaru: ', ilosc_wierszy_danego_obszaru)
+                self.modulyCVSCheckboksy[abc][-1].grid(column=bbb % ilosc_kolumn, row=bbb // ilosc_kolumn)
+                # ilosc_wierszy_danego_obszaru = bbb//ilosc_kolumn
+                # print('ilosc kolumn danego obszaru: ', ilosc_wierszy_danego_obszaru)
 
             obszarFrame.update_idletasks()
             wys_widgetu = obszarFrame.winfo_reqheight()
@@ -1707,7 +1714,6 @@ class SetupMode(object):
 
         listaObszarowCanvas.config(scrollregion=listaObszarowCanvas.bbox('all'))
         self.glowneOknoDialkogCVS.mainloop()
-
 
     def sciagnijButtonClick(self):
         # self.glowneOknoDialkogCVS.hide()
@@ -1792,14 +1798,15 @@ class SetupMode(object):
         for plik in self.plikiDoSciagniecia:
             if not plik == 'cvs.exe':
                 if plik.startswith('mapedit2'):
-                    dir = 'mapedit2'
+                    dest_directory = 'mapedit2'
                 else:
-                    dir = 'mapedit++'
+                    dest_directory = 'mapedit++'
                 with zipfile.ZipFile(plik, 'r') as plikzip:
-                    os.makedirs(dir)
+                    os.makedirs(dest_directory)
                     print(u'Rozpakowuję plik: ' + plik)
-                    plikzip.extractall(path=dir)
+                    plikzip.extractall(path=dest_directory)
                 os.remove(plik)
+
 
 class mdm_gui_py(tkinter.Tk):
     def __init__(self, parent):
@@ -1845,16 +1852,15 @@ class mdm_gui_py(tkinter.Tk):
 
     def initialize(self):
 
-        #wczytywanie zapisanych opcji montazu i demontazu:
+        # wczytywanie zapisanych opcji montazu i demontazu:
         self.protocol("WM_DELETE_WINDOW", self.Quit)
         self.mdmMontDemontOptions = mdmConfig()
 
-        #pliki zmienione, do wysłania na cvs
-        self.plikiDoCVS=[]
-        self.uncommitedfilesqueue=queue.Queue()
+        # pliki zmienione, do wysłania na cvs
+        self.plikiDoCVS = []
+        self.uncommitedfilesqueue = queue.Queue()
         self.args = Argumenty()
         self.grid()
-
 
         # menu Plik
         menubar = tkinter.Menu(self)
@@ -1893,12 +1899,11 @@ class mdm_gui_py(tkinter.Tk):
         menubar.add_cascade(label=u'Pobierz', menu=menu_pobierz)
 
         # menu Pomoc
-        menuPomoc=tkinter.Menu(menubar, tearoff=0)
+        menuPomoc = tkinter.Menu(menubar, tearoff=0)
         menuPomoc.add_command(label=u'Skróty klawiaturowe', command=self.skrotyKlawiaturowe)
         menubar.add_cascade(label=u'Pomoc', menu=menuPomoc)
 
         self.config(menu=menubar)
-
 
         self.regionyWersja = tkinter.Frame(self)
         self.regionyWersja.grid(columnspan=2, row=0, sticky='EW')
@@ -1909,13 +1914,14 @@ class mdm_gui_py(tkinter.Tk):
         self.mdm_mode = self.Zmienne.mdm_mode
         self.os = platform.system()
         self.osVersionVariable = tkinter.StringVar()
-        self.osVersionVariable.set(u'Python: %s.%s.%s na %s %s (%s)'%(sys.version_info[0], sys.version_info[1],
-                                                                      sys.version_info[0], platform.uname()[0],
-                                                                      platform.uname()[2], platform.architecture()[0]))
+        self.osVersionVariable.set(u'Python: %s.%s.%s na %s %s (%s)' % (sys.version_info[0], sys.version_info[1],
+                                                                        sys.version_info[0], platform.uname()[0],
+                                                                        platform.uname()[2],
+                                                                        platform.architecture()[0]))
         systemLabel = tkinter.ttk.Label(self.regionyWersja, textvariable=self.osVersionVariable)
         systemLabel.grid(column=0, row=0, sticky='w')
         self.guimodeVar = tkinter.StringVar()
-        self.guimodeVar.set(u'Tryb pracy mdm: %s'%self.Zmienne.mdm_mode)
+        self.guimodeVar.set(u'Tryb pracy mdm: %s' % self.Zmienne.mdm_mode)
         guiMode = tkinter.ttk.Label(self.regionyWersja, textvariable=self.guimodeVar)
         guiMode.grid(column=1, row=0, sticky='w')
         self.autopolypoly = tkinter.ttk.Label(self.regionyWersja, text=u'Automatyczny rozkład obszarów i linii')
@@ -1923,14 +1929,12 @@ class mdm_gui_py(tkinter.Tk):
         self.selectUnselect_aol(None)
 
 
-        #wybor regionow
-
+        # wybor regionow
         self.regionVariableDictionary = {}
         self.regionCheckButtonDictionary = {}
 
         self.regionyFrame = tkinter.ttk.LabelFrame(self, text=u'Wybór regionów')
         self.regionyFrame.grid(column=0, columnspan=2, row=1, sticky='ew')
-
 
         self.regionyFrame.bind_class('kolkomyszkiregiony', "<MouseWheel>", self._on_mousewheelregionyCanvas)
         self.regionyFrame.bind_class('kolkomyszkiregiony', "<Button-4>", self._on_mousewheelregionyCanvas)
@@ -1946,8 +1950,8 @@ class mdm_gui_py(tkinter.Tk):
         regionyScrollX = AutoScrollbar(self.regionyFrame, orient='horizontal')
         regionyScrollX.grid(column=0, row=1, sticky='EW')
 
-        #self.regionyListbox = tkinter.Listbox(self.regionyFrame,bd=1,highlightthickness=0,bg='SystemMenu',yscrollcommand = regionyScroll.set,height=4)
-        #self.regionyListbox.grid(column=0,row=0)
+        # self.regionyListbox = tkinter.Listbox(self.regionyFrame,bd=1,highlightthickness=0,bg='SystemMenu',yscrollcommand = regionyScroll.set,height=4)
+        # self.regionyListbox.grid(column=0,row=0)
 
         self.regionyCanvas = tkinter.Canvas(self.regionyFrame, yscrollcommand=regionyScroll.set,
                                             xscrollcommand=regionyScrollX.set, width=846, height=126,
@@ -1970,7 +1974,7 @@ class mdm_gui_py(tkinter.Tk):
         self.regionyCanvas.create_window(423, 0, anchor='n', window=self.regionyFrameInCanvas)
         self.regionyFrameInCanvas.update_idletasks()
         self.regionyCanvas.config(scrollregion=self.regionyCanvas.bbox("all"))
-        #regionyScroll.config(command=self.regionyListbox.yview)
+        # regionyScroll.config(command=self.regionyListbox.yview)
 
         buttonFrame = tkinter.Frame(self.regionyFrame)
         buttonFrame.grid_columnconfigure(0, weight=1)
@@ -1981,29 +1985,28 @@ class mdm_gui_py(tkinter.Tk):
         odswiezRegionyButton.grid(column=0, row=0)
 
         cvsUaktualnijZrodlaButton = tkinter.ttk.Button(buttonFrame, text=u'Uaktualnij źródła (cvs update)',
-                                                     command=self.OnButtonClickCvsUp)
+                                                       command=self.OnButtonClickCvsUp)
         cvsUaktualnijZrodlaButton.grid(column=1, row=0)
         buttonFrame.grid(column=0, columnspan=2, row=2, sticky='ew')
 
-
         ####################################
-        #montowanie
+        # montowanie
         ####################################
         self.montFrame = tkinter.ttk.LabelFrame(self, text=u'Montowanie i edycja')
         self.montFrame.grid(column=0, row=3)
 
-        #cityindex
-        #self.mdmMontDemontOptions.montDemontOptions['cityidx']
-        #self.cityidx= tkinter.BooleanVar()
-        #self.cityidx.set(False)
+        # cityindex
+        # self.mdmMontDemontOptions.montDemontOptions['cityidx']
+        # self.cityidx= tkinter.BooleanVar()
+        # self.cityidx.set(False)
         self.montOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Obsługa indeksu miast',
                                                                 variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
                                                                 onvalue=True, offvalue=False)
         self.montOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
-        #pliki adresow
-        #self.adrfile = tkinter.BooleanVar()
-        #self.adrfile.set(False)
+        # pliki adresow
+        # self.adrfile = tkinter.BooleanVar()
+        # self.adrfile.set(False)
         self.montOptionAdrCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij adresy',
                                                             variable=self.mdmMontDemontOptions.montDemontOptions['adrfile'],
                                                             onvalue=True, offvalue=False)
@@ -2044,17 +2047,18 @@ class mdm_gui_py(tkinter.Tk):
         # extratypes
         # self.extratypes= tkinter.BooleanVar()
         # self.extratypes.set(False)
-        self.montOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,text=u'Specjalne traktowanie typów',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
-                                                                    onvalue=True, offvalue=False)
+        self.montOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,
+                                                                       text=u'Specjalne traktowanie typów',
+                                                                       variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                       onvalue=True, offvalue=False)
         self.montOptionExtratypesCheckbutton.grid(column=0,row=3,sticky='W')
 
         # granice lokalne
         # self.graniceczesciowe=tkinter.BooleanVar()
         # self.graniceczesciowe.set(False)
-        self.montOptionGraniceCzescioweCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,text=u'Granice częściowe',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'],
-                                                                    onvalue=True, offvalue=False)
+        self.montOptionGraniceCzescioweCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Granice częściowe',
+                                                                             variable=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'],
+                                                                             onvalue=True, offvalue=False)
         self.montOptionGraniceCzescioweCheckbutton.grid(column=1, row=3, sticky='W')
 
         self.montButton = tkinter.ttk.Button(self.montFrame, text=u'Montuj', command=self.OnButtonClickMont,
@@ -2111,24 +2115,26 @@ class mdm_gui_py(tkinter.Tk):
         self.demontOptionZaokraglanieRadio6.grid(column=1, row=2, sticky='W')
 
         # extratypes
-        self.demontOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame,text=u'Specjalne traktowanie typów',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
-                                                                    onvalue=True, offvalue=False)
-        self.demontOptionExtratypesCheckbutton.grid(columnspan=2,row=3,sticky='W')
+        self.demontOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame,
+                                                                         text=u'Specjalne traktowanie typów',
+                                                                         variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                         onvalue=True, offvalue=False)
+        self.demontOptionExtratypesCheckbutton.grid(columnspan=2, row=3, sticky='W')
 
         # przycisk demontuj
-        self.demontButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy,text=u'Demontuj',command=self.OnButtonClickDemont)
+        self.demontButton = ButtonZaleznyOdWynik(self.demontFrame, self.Zmienne.KatalogRoboczy,text=u'Demontuj',
+                                                 command=self.OnButtonClickDemont)
         self.demontButton.grid(column=1, row=4)
 
         # przycisk sprawdź
-        self.sprawdzButton = ButtonZaleznyOdWynik(self.demontFrame,self.Zmienne.KatalogRoboczy,text=u'Sprawdź błędy',command=self.OnButtonClickSprawdz)
-        self.sprawdzButton.grid(column=0,row=4)
+        self.sprawdzButton = ButtonZaleznyOdWynik(self.demontFrame,self.Zmienne.KatalogRoboczy, text=u'Sprawdź błędy',
+                                                  command=self.OnButtonClickSprawdz)
+        self.sprawdzButton.grid(column=0, row=4)
         createToolTip(self.sprawdzButton, 'LPM - uruchamia sprawdzanie błędów\nPPM - czyści okno błędów')
 
-
-        ########################################################
+        # #######################################################
         # zmienione pliki do wyswietlenia, obejrzenia itd
-        ########################################################
+        # #######################################################
 
         self.diffFrame = tkinter.ttk.LabelFrame(self, text=u'Zmienione pliki')
         self.diffFrame.grid(columnspan=2, row=4)
@@ -2162,7 +2168,7 @@ class mdm_gui_py(tkinter.Tk):
         style1 = tkinter.ttk.Style()
         style1.configure('Helvetica1.TLabel', font=('Helvetica',9))
         plikLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Pliki', borderwidth=4, relief='raised', width=60,
-                                    anchor='w', style='Helvetica1.TLabel')
+                                      anchor='w', style='Helvetica1.TLabel')
         plikLabel.grid(row=0, column=0)
         newtags = plikLabel.bindtags() + ('movewheel',)
         plikLabel.bindtags(newtags)
@@ -2170,19 +2176,19 @@ class mdm_gui_py(tkinter.Tk):
         dodanoLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Dodano', borderwidth=4, relief='raised',
                                         width=10, anchor='center', style='Helvetica1.TLabel')
         dodanoLabel.grid(row=0, column=1)
-        newtags = dodanoLabel.bindtags()+('movewheel',)
+        newtags = dodanoLabel.bindtags() + ('movewheel',)
         dodanoLabel.bindtags(newtags)
 
         skasowanoLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Skasowano', borderwidth=4, relief='raised',
                                            width=10, anchor='center', style='Helvetica1.TLabel')
         skasowanoLabel.grid(row=0, column=2)
-        newtags = skasowanoLabel.bindtags()+('movewheel',)
+        newtags = skasowanoLabel.bindtags() + ('movewheel',)
         skasowanoLabel.bindtags(newtags)
 
         akcjeLabel = tkinter.ttk.Label(self.frameInDiffCanvas, text=u'Możliwe akcje', borderwidth=4, relief='raised',
                                        width=30, anchor='center', style='Helvetica1.TLabel')
         akcjeLabel.grid(row=0, columnspan=2, column=3)
-        newtags = akcjeLabel.bindtags()+('movewheel',)
+        newtags = akcjeLabel.bindtags() + ('movewheel',)
         akcjeLabel.bindtags(newtags)
 
         self.diffCanvas.create_window(0, 0, anchor='ne', window=self.frameInDiffCanvas)
@@ -2200,7 +2206,7 @@ class mdm_gui_py(tkinter.Tk):
         buttonFrame.grid_columnconfigure(1, weight=1)
 
         diffFrameApplyButton = tkinter.ttk.Button(buttonFrame, textvariable=self.diffFrameApplyButtonVariable,
-                                                command=self.OnButtonClickApply)
+                                                  command=self.OnButtonClickApply)
         diffFrameApplyButton.grid(column=1, row=0)
 
         diffFrameCVSCommitButton = tkinter.ttk.Button(buttonFrame, text=u'Zatwierdź zmiany (cvs commit)',
@@ -2208,10 +2214,9 @@ class mdm_gui_py(tkinter.Tk):
         diffFrameCVSCommitButton.grid(column=0, row=0)
         buttonFrame.grid(column=0, row=2, sticky='ew')
 
-        ####################################################
+        # ###################################################
         # stderr będą wyświetlane tutaj
-        ####################################################
-
+        # ###################################################
         self.stderrFrame = tkinter.ttk.LabelFrame(self, text=u'Błędy')
         self.stderrFrame.grid(column=0, row=5,sticky='news')
         self.grid_columnconfigure(0, weight=1)
@@ -2241,9 +2246,8 @@ class mdm_gui_py(tkinter.Tk):
 
         self.stdoutqueue = self.stdoutText.inputqueue
 
-        #self.stdoutText.configure(font=(size=10,))
-
-        #rozkład obszarów i linii włącza się i wyłącza skrótem klawiaturowym, tutaj robię bind do tego
+        # self.stdoutText.configure(font=(size=10,))
+        # rozkład obszarów i linii włącza się i wyłącza skrótem klawiaturowym, tutaj robię bind do tego
         self.bind_all("<Control-a><Control-o><Control-l>", self.selectUnselect_aol)
         # skrót klawiaturowy montuj
         self.bind("<Control-m>", self.montuj_shortcut)
@@ -2320,9 +2324,11 @@ class mdm_gui_py(tkinter.Tk):
             thread.start()
 
     def help_function_montuj_edit_shortcut(self):
-        while(os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp')):
+        # najpierw czekamy aż wynik.mp zostanie usuniety
+        while os.path.isfile(os.path.join(self.Zmienne.KatalogRoboczy, 'wynik.mp')):
             time.sleep(0.1)
-        while(not os.path.isfile(self.Zmienne.KatalogRoboczy+'wynik.mp')):
+        # teraz czekamy aż plik się pojawi po zamontowaniu
+        while not os.path.isfile(os.path.join(self.Zmienne.KatalogRoboczy, 'wynik.mp')):
             time.sleep(0.1)
         self.OnButtonClickEdit()
 
@@ -2417,7 +2423,7 @@ class mdm_gui_py(tkinter.Tk):
             plikzipname = 'UMP' + str(datetime.datetime.now().year) + str(datetime.datetime.now().month) + \
                           str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().hour) + '-' + \
                           str(datetime.datetime.now().minute) + '.zip'
-            plikzip = zipfile.ZipFile(self.Zmienne.KatalogRoboczy+plikzipname, 'w')
+            plikzip = zipfile.ZipFile(os.path.join(self.Zmienne.KatalogRoboczy, plikzipname), 'w')
         for a in self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania.keys():
             #zmienna IntVar nie moze byc odczytana bezposrednio, trzeba poprzez funkcje get()
             if self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].get() == 1:
@@ -2478,7 +2484,6 @@ class mdm_gui_py(tkinter.Tk):
                         self.frameInDiffCanvas.skopiujCheckButtonPlikowOknoZmienionePliki[b].configure(state='disabled')
                         self.frameInDiffCanvas.listaPlikowOknoZmienionePliki[b].configure(background='red')
                         self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].set(0)
-                #c:\\ump\roboczy\UMP-PL-Leszno\-src\-POI-Leszno.sklepy.pnt
 
         if self.mdm_mode != 'edytor' and len(self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania) > 0:
             plikzip.close()
