@@ -11,7 +11,7 @@ import sys
 
 DownloadEverything = 0
 try:
-    import mont_demont as mont_demont_py
+    import mont_demont2 as mont_demont_py
     import znajdz_wystajace
     import mdmkreatorOsmAnd
 except ImportError:
@@ -1542,7 +1542,7 @@ class zobaczDiffText(tkinter.Text):
                                 index0 -= 1
                             while linia[index1] in znaki_dla_wsp_txt:
                                 index1 += 1
-                            self.tag_add("sel", nr_linii + "." +str(index0 + 1), nr_linii+"." + str(index1))
+                            self.tag_add("sel", nr_linii + "." + str(index0 + 1), nr_linii+"." + str(index1))
                     else:
                         return 0
                 elif self.typpliku == 'pnt' or self.typpliku == 'adr':

@@ -243,13 +243,14 @@ def main(argumenty):
     
     # dla kazdego pliku w katalogu z obszarem wczytaj wspolrzedne
     # listujemy kazdy plik w katalogu umphome\obszar\src\
-    for arg in [f for f in os.listdir(argumenty[1] + argumenty[0] + '/src')]:
+    katalog_do_przeszukania = os.path.join(argumenty[1], os.path.join(argumenty[0], 'src'))
+    for arg in [f for f in os.listdir(katalog_do_przeszukania)]:
         # jeœli dany plik nie jest katalogiem
-        if not os.path.isdir(argumenty[1] + argumenty[0] + '/src/' + arg):
+        if not os.path.isdir(os.path.join(katalog_do_przeszukania, arg)):
             # poniewaz nie chce wczytywac plikow adr, to je tutaj wywalam. 
             if not arg.endswith('.adr'):
                 # wczytaj wszystkie wspolrzedne z danego pliku. Obsluguje zarowno txt, pnt jak i adr
-                bbb.wczytajobiekt(argumenty[1] + argumenty[0] + '/src/' + arg)
+                bbb.wczytajobiekt(os.path.join(katalog_do_przeszukania, arg))
 
     ilosc_punktow_do_sprawdzenia = len(bbb.listawspolrzednych)
     print('Wspolrzedne {} punktow wczytane, sprawdzam'.format(int(ilosc_punktow_do_sprawdzenia/2)))
@@ -284,7 +285,7 @@ def main(argumenty):
         else:
             Kodowanie = 'cp1250'
         
-        plik = open(argumenty[2] + '/wystajace.wpt', 'w',encoding=Kodowanie, errors='ignore')
+        plik = open(os.path.join(argumenty[2], 'wystajace.wpt'), 'w',encoding=Kodowanie, errors='ignore')
         plik.write("OziExplorer Waypoint File Version 1.1\n")
         plik.write("WGS 84\n")
         plik.write("Reserved 2\n")
@@ -295,10 +296,7 @@ def main(argumenty):
             print(tmp_aaa)
             plik.write(",,0,1,3,255,65535,,,0,0,0,6,0,19\n")
         plik.close()
-        if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            sys.stderr.write('zapisuje plik z wystajacymi '+ argumenty[2] + '/wystajace.wpt')
-        else:
-            sys.stderr.write('zapisuje plik z wystajacymi '+ argumenty[2] + '\\wystajace.wpt')
+        sys.stderr.write('zapisuje plik z wystajacymi '+ os.path.join(argumenty[2], 'wystajace.wpt'))
     sys.stderr.write('\nKoniec\n')
     sys.stderr.flush()
     
