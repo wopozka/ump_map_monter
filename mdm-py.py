@@ -2519,6 +2519,9 @@ class mdm_gui_py(tkinter.Tk):
                                                                                           (u'pliki łatek', '*.patch'),
                                                                                           (u'wszystkie pliki', '*.*')))
         print(lista_latek)
+        wynik_nakladania_latek = dict()
+        for latka in lista_latek:
+            wynik_nakladania_latek[latka] = self.patchExe(latka)
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]

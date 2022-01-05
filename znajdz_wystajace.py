@@ -11,7 +11,8 @@ class polygonObszaru:
     # oraz zawieraj¹ca funkcje sprawdzaj¹ce czy punkt w obszarze
     
     # konstruktor klasy. 
-    # argumenty: nazwa obszaru - nazwa obszaru z pliku obszary.txt np. ; Przemysl uproszczony PL -> Przemysl, ; Wroclaw PL -> Wroclaw itd
+    # argumenty: nazwa obszaru - nazwa obszaru z pliku obszary.txt np.
+    # ; Przemysl uproszczony PL -> Przemysl, ; Wroclaw PL -> Wroclaw itd
     #            umphome - katalog ze zrodlami do ump, np u mnie: c:\ump\
     #
     def __init__(self, nazwaobszaru, umphome):
@@ -72,14 +73,14 @@ class polygonObszaru:
     def wczytajobszarytxt(self, nazwaobszaru):
         koniecpliku = 0
         czyznalazlemobszar = 0
-        a = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'), encoding=self.Kodowanie,
-                 errors='ignore')
-        linia = a.readline()
+        plik_obszary = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'),
+                            encoding=self.Kodowanie, errors='ignore')
+        linia = plik_obszary.readline()
         while not koniecpliku:
             if linia.find(nazwaobszaru) >= 0:
                 czyznalazlemobszar = 1
                 while not linia.startswith('Data0='):
-                    linia = a.readline()
+                    linia = plik_obszary.readline()
                 linia = linia.split('=')[-1].strip()
 
                 # tworzymy liste wspolrzednych w formacie [x,y],[x1,y1],[x2,y2]
@@ -109,9 +110,9 @@ class polygonObszaru:
                     self.wspolrzedne.append(y)
                 print(self.wspolrzedne, file=sys.stderr)
                 koniecpliku = 1
-            linia = a.readline()
+            linia = plik_obszary.readline()
+        plik_obszary.close()
         if czyznalazlemobszar == 1:
-
             return 1
         else:
             return 0
@@ -136,7 +137,6 @@ class polygonObszaru:
         p1x = polyx[0]
         p1y = polyy[0]
         for i in range(1, n+1):
-        #for i in range(n):
             p2x = polyx[i % n]
             p2y = polyy[i % n]
             if y > min(p1y, p2y):
@@ -147,7 +147,6 @@ class polygonObszaru:
                             if p1x == p2x or x <= xinters:
                                 inside = not inside
             p1x, p1y = p2x, p2y
-
         return inside
 
 
@@ -200,10 +199,11 @@ class wspolrzedne:
                 elif linia == '':
                     koniecpliku = 1
 
-# zwykly progressbar zeby widac bylo postep przeszukiwania
+
 def update_progress(progress):
-    barLength=20
-    status=''
+    # zwykly progressbar zeby widac bylo postep przeszukiwania
+    barLength = 20
+    status = ''
     if isinstance(progress, int):
         progress = float(progress)
     if not isinstance(progress, float):
@@ -227,13 +227,13 @@ def main(argumenty):
     
     # zmienna z lista wystajacych poza obszar punktow
     lista_wystajacych = []
-    sys.stderr.write('Wczytuje granice obszaru: '+argumenty[0] + '\n')
+    sys.stderr.write('Wczytuje granice obszaru: ' + argumenty[0] + '\n')
     
     # zmienna aaa jest instancja klasy polygonObszaru, wywolujemy z dwoma argumentami
     # argument[0].split... - wycina z UMP-PL-Lodz samo Lodz, z UMP-PL-Wroclaw samo Wrocal,
     # bo w obszary.txt jest sam ten drugi czlon
     # argument[1] to katalog domowy ump
-    aaa = polygonObszaru(argumenty[0].split('-')[-1], argumenty[1] )
+    aaa = polygonObszaru(argumenty[0].split('-')[-1], argumenty[1])
 
     sys.stderr.write('\nWczytuje wspolrzedne punktow dla '+argumenty[0]+'\n')
 
@@ -262,7 +262,7 @@ def main(argumenty):
     for a in range(int(ilosc_punktow_do_sprawdzenia / 2)):
         # poniewa¿ progressbar ma przeskakiwaæ tylko co pe³ny procent robimy ma³y trick przed uaktualnieniem
         # i sprawdzamy czy zmieni³o siê o 1%.
-        if (a*100//(ilosc_punktow_do_sprawdzenia/2))>progres_previous:
+        if (a*100//(ilosc_punktow_do_sprawdzenia/2)) > progres_previous:
             progres_previous = a*100//(ilosc_punktow_do_sprawdzenia/2)
             update_progress(progres_previous / 100)
 
@@ -299,6 +299,7 @@ def main(argumenty):
     sys.stderr.write('\nKoniec\n')
     sys.stderr.flush()
     
+
 def parsuj_args(args):
     parser = argparse.ArgumentParser(description="szukanie wystajacych poza obszar punktow na danym obszarze mapy")
     parser.add_argument('-r', '--region', dest='umpregion', required=True,
@@ -310,5 +311,6 @@ def parsuj_args(args):
     # args.func(args)
     main([args.umpregion, args.katalog_zrodel, os.path.join(args.katalog_zrodel, args.umpregion)])
     
+
 if __name__ == "__main__":
     parsuj_args(sys.argv)
