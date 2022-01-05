@@ -99,6 +99,44 @@ def createToolTip(widget, text):
     widget.bind('<Leave>', leave)
 
 
+class PaczujResult(tkinter.Toplevel):
+    """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
+    def __init__(self, parent, spaczowane_pliki, *args, **kwargs):
+        """
+        spaczowane_pliki = dict() załatanych plików, gdzie klucz to nazwa pliku, wartość to wynik łatania
+        wartości mogą przyjować wartość 0, 1, 2 gdzie 0 to ok, 1 udało się z małymi problemami, 2 i więcej jest
+        dramat
+        """
+        super().__init__(parent, *args, **kwargs)
+        self.spaczowane_pliki = spaczowane_pliki
+        self.body = tkinter.Frame(self)
+        self.body.pack(padx=5, pady=5, fill='both', expand=1)
+        self.wypelnij_spaczowane_pliki()
+        self.initial_focus = self.focus_set()
+        self.grab_set()
+
+
+    def wypelnij_spaczowane_pliki(self):
+        for nazwa_pliku in self.spaczowane_pliki:
+            ramka_pliku = tkinter.ttk.LabelFrame(self.body)
+            ramka_pliku.pack()
+            nazwa_pliku_label = tkinter.Label(ramka_pliku, width=150, text=nazwa_pliku)
+            nazwa_pliku_label.pack(side='left')
+            if self.spaczowane_pliki[nazwa_pliku] == 0:
+                status_latania = 'OK'
+                kolor_statusu = 'green'
+            elif self.spaczowane_pliki[nazwa_pliku] == 1:
+                status_latania = 'z problemami'
+                kolor_statusu = 'yellow'
+            else:
+                status_latania = 'katastrofa'
+                kolor_statusu = 'red'
+            status_latania_label = tkinter.Label(ramka_pliku, width=15, text=status_latania, bg=kolor_statusu)
+            status_latania_label.pack(side='left')
+            zobacz_plik_button = tkinter.Button(ramka_pliku, text='Zobacz')
+            zobacz_plik_button.pack(side='left')
+
+
 class ModulCVS(object):
     def __init__(self):
         self.modulyCVS = {'AUSTRIA': ['UMP-AT-Graz', 'UMP-AT-Innsbruck', 'UMP-AT-Linz', 'UMP-AT-Wien'],
@@ -2515,13 +2553,20 @@ class mdm_gui_py(tkinter.Tk):
     # obsługa menu patchuj
     def patchuj(self):
         # najpierw pobierz łatki do nałożenia
-        lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
-                                                                                          (u'pliki łatek', '*.patch'),
-                                                                                          (u'wszystkie pliki', '*.*')))
-        print(lista_latek)
-        wynik_nakladania_latek = dict()
-        for latka in lista_latek:
-            wynik_nakladania_latek[latka] = self.patchExe(latka)
+        # lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
+        #                                                                                   (u'pliki łatek', '*.patch'),
+        #                                                                                   (u'wszystkie pliki', '*.*')))
+        # print(lista_latek)
+        # wynik_nakladania_latek = dict()
+        # for latka in lista_latek:
+        #     wynik_nakladania_latek[latka] = self.patchExe(latka)
+        wynik = dict()
+        wynik['AAA'] = 0
+        wynik['BBB'] = 1
+        wynik['CCC'] = 0
+        wynik['DDD'] = 2
+        paczuj_rezultaty = PaczujResult(self, wynik)
+        paczuj_rezultaty.wait_window()
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
