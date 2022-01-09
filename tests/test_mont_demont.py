@@ -143,20 +143,18 @@ TEST_ADR_TO_MP = (
          ';EntryPoint:(51.77364,17.46213)',
          '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
         ],
-        [';;Gmina=Rozdrazew', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
-         'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
-         'KodPoczt=63-708', 'Typ=ADR', 'EntryPoint=(51.77364,17.46213)', 'Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00',
-         '[END]\n'
+        [';;Gmina=Rozdrazew\n;;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00\n;EntryPoint:(51.77364,17.46213)',
+         '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec', 'Data0=(51.77364,17.46213)',
+         'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt=63-708', 'Typ=ADR', '[END]\n'
         ]
     ),
     (
-        [
-         ';;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00',
+        [';;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00',
          '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
         ],
-        ['[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
-         'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
-         'KodPoczt=63-708', 'Typ=ADR', 'Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00', '[END]\n'
+        [';;Otwarte=Mo-Sa 6:00-24:00; Su 7:00-24:00', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1',
+         'StreetDesc=Debowiec', 'Data0=(51.77364,17.46213)', 'Miasto=Debowiec',
+         'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt=63-708', 'Typ=ADR', '[END]\n'
         ]
     ),
     (
@@ -184,9 +182,29 @@ TEST_ADR_TO_MP = (
          ';EntryPoint:(51.77364,17.46213)',
          '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
         ],
+        [';EntryPoint:(51.77364,17.46213)', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
+         'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
+         'KodPoczt=63-708', 'Typ=ADR', '[END]\n'
+        ]
+    ),
+    (
+        [
+         ';;EntryPoint:(51.77364,17.46213)',
+         '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
+        ],
         ['[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
          'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
          'KodPoczt=63-708', 'Typ=ADR', 'EntryPoint=(51.77364,17.46213)', '[END]\n'
+        ]
+    ),
+    (
+        [
+         ';;;EntryPoint:(51.77364,17.46213)',
+         '51.77364,  17.46213,  0,1,Debowiec;1,Debowiec,ADR,63-708',
+        ],
+        [';;;EntryPoint:(51.77364,17.46213)', '[POI]', 'Type=0x2800', 'Label=1', 'HouseNumber=1', 'StreetDesc=Debowiec',
+         'Data0=(51.77364,17.46213)', 'Miasto=Debowiec', 'Plik=UMP-PL-Leszno/src/gRozdrazew_2017i.adr',
+         'KodPoczt=63-708', 'Typ=ADR', '[END]\n'
         ]
     ),
     (
@@ -204,6 +222,7 @@ TEST_ADR_TO_MP = (
 def test_plik_pnt_procesuj(target, answer):
     args = Args()
     args.cityidx = False
+    args.entry_otwarte_to_extras = True
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
@@ -447,8 +466,16 @@ def test_testuj_wielokrotne_data(target, answer):
     assert mont_demont.plikMP1.zaokraglij(data, dokladnosc) == answer
 
 TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
-    (([';;EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
-      [';;EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota', '[POI]', 'Type=0x2800',
+    (([';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
+      [';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota', '[POI]', 'Type=0x2800',
+       'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
+       'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
+    ([';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
+     [';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota', '[POI]', 'Type=0x2800', 'Label=78',
+      'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
+                        'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR'])),
+    (([';;EntryPoint:(55.55555,22.22222)\n;Otwarte:Pn-Nie\nala ma kota'],
+      [';;EntryPoint:(55.55555,22.22222)\n;Otwarte:Pn-Nie\nala ma kota', '[POI]', 'Type=0x2800',
        'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
        'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
     (['ala ma kota'], ['ala ma kota', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
@@ -459,10 +486,10 @@ TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
       [';;EntryPoint=(55.55555,22.22222)\nala ma kota\n;;otwarte=Pn-Nie', '[POI]', 'Type=0x2800',
        'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
        'Miasto=Zagerze', 'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR']),
-    (['ala ma kota'], ['ala ma kota', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
+    (['ala ma kota\n;;otwarte=Pn-Nie'], ['ala ma kota\n;;otwarte=Pn-Nie', '[POI]', 'Type=0x2800', 'Label=78', 'HouseNumber=78',
                         'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)', 'Miasto=Zagerze',
                         'Plik=UMP-PL-Lodz/src/gSlupia_2017i.adr', 'KodPoczt=96-128', 'Typ=ADR',
-                        'EntryPoint=(55.55555,22.22222)','Otwarte=Pn-Nie']),),
+                        'EntryPoint=(55.55555,22.22222)']),),
     (([';otwarte=Pn-Nie\n;;EntryPoint:(55.55555,22.22222)\nala ma kota'],
       [';otwarte=Pn-Nie\n;;EntryPoint:(55.55555,22.22222)\nala ma kota', '[POI]', 'Type=0x2800',
        'Label=78', 'HouseNumber=78', 'StreetDesc=Zagrze', 'Data0=(51.87048,19.94907)',
@@ -485,6 +512,7 @@ TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
 def test_testuj_wielokrotne_data(target, answer):
     args = Args()
     args.cityidx = False
+    args.entry_otwarte_to_extras = True
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, None)
     obiekt_na_mapie = mont_demont.ObiektNaMapie('jakis_plik', [], tabKonw, args)

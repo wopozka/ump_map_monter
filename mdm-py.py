@@ -11,7 +11,7 @@ import sys
 
 DownloadEverything = 0
 try:
-    import mont_demont2 as mont_demont_py
+    import mont_demont as mont_demont_py
     import znajdz_wystajace
     import mdmkreatorOsmAnd
 except ImportError:
@@ -718,6 +718,8 @@ class mdmConfig(object):
         self.montDemontOptions['X'].set('0')
         self.montDemontOptions['autopolypoly'] = tkinter.BooleanVar()
         self.montDemontOptions['autopolypoly'].set(False)
+        self.montDemontOptions['enty_otwarte_do_extras'] = tkinter.BooleanVar(False)
+        self.montDemontOptions['standaryzuj_komentarz'] = tkinter.BooleanVar(False)
         self.readConfig()
 
     def saveConfig(self):
@@ -1895,8 +1897,20 @@ class mdm_gui_py(tkinter.Tk):
 
         # menu naloz latki
         menu_patch = tkinter.Menu(menubar, tearoff=0)
-        menu_patch.add_command(label=u'Nałóż łatki', command=self.patchuj)
+        menu_patch.add_command(label=u'Nałóż łatki', command=self.paczuj)
         menubar.add_cascade(label=u'Paczuj', menu=menu_patch)
+
+        # menu opcje
+        menu_opcje = tkinter.Menu(menubar, tearoff=0)
+        menu_montuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
+        menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
+        menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'])
+        menu_demontuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
+        menu_opcje.add_cascade(label=u'Opcje demontażu', menu=menu_demontuj_opcje)
+        menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
+                                            variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
+        menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
@@ -2512,8 +2526,8 @@ class mdm_gui_py(tkinter.Tk):
             shutil.copy(temporary_file.name, os.path.join(katalog_przeznaczenia, nazwa_pliku))
         os.remove(temporary_file.name)
 
-    # obsługa menu patchuj
-    def patchuj(self):
+    # obsługa menu paczuj
+    def paczuj(self):
         # najpierw pobierz łatki do nałożenia
         lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
                                                                                           (u'pliki łatek', '*.patch'),
@@ -2622,6 +2636,8 @@ class mdm_gui_py(tkinter.Tk):
         self.args.graniceczesciowe = self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'].get()
         # ustawiamy tryb nieosmandowy, jest on uruchamiany tylko na potrzeby konwersji do OSNAnda
         self.args.trybosmand = 0
+        # ustawiamy przenoszenie otwarte i entrypointów do extras
+        self.args.entry_otwarte_to_extras = self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'].get()
 
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
@@ -2670,7 +2686,8 @@ class mdm_gui_py(tkinter.Tk):
         # self.args.extratypes=self.extratypes.get()
         self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
         self.montButton.configure(state='disabled')
-        # self.demontButton.configure(state='disabled')
+        # standaryzacja komentarzy, otwarte i entrypoints są standaryzowane
+        self.args.standaryzuj_komentarz = self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'].get()
 
         # _thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
         my_queue = queue.Queue()

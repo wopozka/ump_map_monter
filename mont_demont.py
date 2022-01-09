@@ -1709,17 +1709,15 @@ class plikMP1(object):
         Funkcja standaryzuje wpisy entrypoints in otwarte, tak aby w calym projekcie bylo to ujednolicone
         Robione jest to poprzez korekte komentarza przy demontazu
         Poprawne definicje to: ;;EntryPoint:, ;otwarte:
-        dane_do_zapisu['Komentarz'] zawiera komntarze oddzielone \n
+        dane_do_zapisu['Komentarz'] zawiera komentarze oddzielone \n
         """
         if not 'Komentarz' in dane_do_zapisu:
             return dane_do_zapisu
         tmp_kom = ''.join(dane_do_zapisu['Komentarz'])
         if 'otwarte' not in tmp_kom and 'entrypoint' not in tmp_kom.lower():
             return dane_do_zapisu
-        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=', ';EntryPoint:', ';EntryPoint=',) if
-                            ep in tmp_kom]
-        otwarte_defs = [otw for otw in (';;otwarte:', ';;Otwarte:', ';;otwarte=', ';;Otwarte=', ';otwarte:',
-                                       ';Otwarte:', ';otwarte=', ';Otwarte=',) if otw in tmp_kom]
+        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=',) if ep in tmp_kom]
+        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=',) if otw in tmp_kom]
         ep_set = set([ep.lstrip(';') for ep in entry_point_defs])
         otw_set = set([otw.lstrip(';') for otw in otwarte_defs])
         # je¶li nie ma ani otwarte ani entrypoint w komentarzu nie id¼ dalej
@@ -1733,16 +1731,20 @@ class plikMP1(object):
             elem_end = ''
             entrypoint_czy_otwarte = ''
             for elem in entry_point_defs + otwarte_defs:
-                if linia_z_komentarza.startswith(elem):
+                # linia musi siê zaczynaæ dok³±dnie jak dany element, czyli z jednym ¶rednikiem albo dwoma
+                # w zale¿no¶ci od tego czy to otwarte czy entrypoint. Jak jest wiêcej ¶redników to znaczy
+                # ¿e to komentarz, st±d wyrzucamy ;;otwarte i ;;;Entrypoint, bo to sugueruje ¿e zakomentowano
+                # rekord w pliku pnt
+                if linia_z_komentarza.startswith(elem) and not linia_z_komentarza.startswith(';' + elem):
                     elem_end = linia_z_komentarza.split(elem, 1)[-1].strip()
                     entrypoint_czy_otwarte = elem
                     break
             if not elem_end or not entrypoint_czy_otwarte:
                 komentarz.append(linia_z_komentarza)
             elif entrypoint_czy_otwarte in entry_point_defs:
-                komentarz.append(';;EntryPoint:' + elem_end)
+                komentarz.append(';;EntryPoint: ' + elem_end)
             else:
-                komentarz.append(';otwarte:' + elem_end)
+                komentarz.append(';otwarte: ' + elem_end)
 
         # komentarz[-1] = komentarz[-1].rstrip()
         dane_do_zapisu['Komentarz'] = komentarz
@@ -2044,10 +2046,10 @@ class ObiektNaMapie(object):
     def komentarz_na_entrypoint_i_otwarte(self):
         if not self.Komentarz:
             return 1
-        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=', ';EntryPoint:', ';EntryPoint=',) if
-                            ep in self.Komentarz[0]]
-        otwarte_defs = [otw for otw in (';;otwarte:', ';;Otwarte:', ';;otwarte=', ';;Otwarte=', ';otwarte:',
-                                       ';Otwarte:', ';otwarte=', ';Otwarte=',) if otw in self.Komentarz[0]]
+        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=',) if
+                            ep in self.Komentarz[0] and ';' + ep not in self.Komentarz[0]]
+        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=',)
+                        if otw in self.Komentarz[0] and ';' + otw not in self.Komentarz[0]]
         ep_set = set([ep.lstrip(';') for ep in entry_point_defs])
         otw_set = set([otw.lstrip(';') for otw in otwarte_defs])
         if not ep_set and not otw_set:
@@ -2062,10 +2064,10 @@ class ObiektNaMapie(object):
         self.Komentarz[0] = self.Komentarz[0].strip()
         tmp_entry_otwarte = list()
         for abcd in self.Komentarz[0].split('\n'):
-            if any(ep for ep in entry_point_defs if abcd.startswith(ep)):
+            if any(ep for ep in entry_point_defs if abcd.startswith(ep) and not abcd.startswith(';' + ep)):
                 entry_point = abcd.lstrip(';')[len('EntryPoint:'):].strip()
                 tmp_entry_otwarte.append('EntryPoint=' + entry_point)
-            elif any(otw for otw in otwarte_defs if abcd.startswith(otw)):
+            elif any(otw for otw in otwarte_defs if abcd.startswith(otw) and not abcd.startswith(';' + otw)):
                 otwarte = abcd.lstrip(';')[len('otwarte:'):].strip()
                 tmp_entry_otwarte.append('Otwarte=' + otwarte)
             else:
