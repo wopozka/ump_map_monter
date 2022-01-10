@@ -756,8 +756,10 @@ class mdmConfig(object):
         self.montDemontOptions['X'].set('0')
         self.montDemontOptions['autopolypoly'] = tkinter.BooleanVar()
         self.montDemontOptions['autopolypoly'].set(False)
-        self.montDemontOptions['enty_otwarte_do_extras'] = tkinter.BooleanVar(False)
-        self.montDemontOptions['standaryzuj_komentarz'] = tkinter.BooleanVar(False)
+        self.montDemontOptions['enty_otwarte_do_extras'] = tkinter.BooleanVar()
+        self.montDemontOptions['enty_otwarte_do_extras'].set(False)
+        self.montDemontOptions['standaryzuj_komentarz'] = tkinter.BooleanVar()
+        self.montDemontOptions['standaryzuj_komentarz'].set(False)
         self.readConfig()
 
     def saveConfig(self):
