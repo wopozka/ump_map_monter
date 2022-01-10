@@ -298,35 +298,24 @@ class Mapa(object):
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
 
-    def sprawdzNieciaglosciSiatkiRoutingowej(self):
-        # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
-        nodyRoutingoweDrog = []
-        #timer_start = timeit.default_timer()
-        nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-        #print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-        nodyRoutingoweDrog.append(nodyGranicznetmp)
-        procent = 0
-        for tmpaaa in self.Drogi:
-            nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
-        # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
+    def redukuj_ilosc_zbiorow_routingowych(self, nodyRoutingoweDrog):
         iloscdrog = len(nodyRoutingoweDrog)
         iloscdrogdlaprogress = iloscdrog
         iloscNone = 0
-        # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-        print('analizuje %s drog' %(iloscdrog))
+        procent = 0
         timer_start = timeit.default_timer()
         update_progress(0)
         tmpccc = -1
         while tmpccc:
             if tmpccc == -1:
                 tmpccc = 0
-        #for tmpccc in range(0, iloscdrog-1):
+            # for tmpccc in range(0, iloscdrog-1):
             if nodyRoutingoweDrog[tmpccc]:
                 udalosiezredukowac = 1
                 while udalosiezredukowac:
                     udalosiezredukowac = 0
                     numery_nodow_do_usuniecia = []
-                    for tmpbbb in range(tmpccc+1, iloscdrog):
+                    for tmpbbb in range(tmpccc + 1, iloscdrog):
 
                         if nodyRoutingoweDrog[tmpbbb]:
                             for zzz in nodyRoutingoweDrog[tmpbbb]:
@@ -339,30 +328,95 @@ class Mapa(object):
                                     iloscNone += 1
                                     udalosiezredukowac = 1
                                     break
-                        aktprocent = round(iloscNone/iloscdrogdlaprogress,2)
-                        if aktprocent*100>procent+1:
-                            procent = aktprocent*100
+                        aktprocent = round(iloscNone / iloscdrogdlaprogress, 2)
+                        if aktprocent * 100 > procent + 1:
+                            procent = aktprocent * 100
                             update_progress(aktprocent)
-                    #usun elementy:
+                    # usun elementy:
                     iter = 0
                     for zzz in numery_nodow_do_usuniecia:
-                        if nodyRoutingoweDrog[zzz-iter]:
+                        if nodyRoutingoweDrog[zzz - iter]:
                             print('Uwaga nie usuwam None')
-                        del nodyRoutingoweDrog[zzz-iter]
+                        del nodyRoutingoweDrog[zzz - iter]
                         iter += 1
-
 
             ##noweNody = [a for a in nodyRoutingoweDrog if a]
             ##nodyRoutingoweDrog = noweNody
             if nodyRoutingoweDrog[-1]:
                 nodyRoutingoweDrog.append(None)
                 iloscdrog += 1
-            if nodyRoutingoweDrog[tmpccc+1]:
+            if nodyRoutingoweDrog[tmpccc + 1]:
                 tmpccc += 1
             else:
                 tmpccc = None
-            print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
-        oddzielnegrafy = [a for a in nodyRoutingoweDrog if a]
+            print(iloscdrog, nodyRoutingoweDrog[iloscdrog - 1])
+        return nodyRoutingoweDrog
+
+    def sprawdzNieciaglosciSiatkiRoutingowej(self):
+        # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
+        nodyRoutingoweDrog = []
+        #timer_start = timeit.default_timer()
+        nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
+        #print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+        nodyRoutingoweDrog.append(nodyGranicznetmp)
+        for tmpaaa in self.Drogi:
+            nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
+        # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
+        # iloscdrog = len(nodyRoutingoweDrog)
+        # iloscdrogdlaprogress = iloscdrog
+        # iloscNone = 0
+        # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
+        print('analizuje %s drog' %(len(nodyRoutingoweDrog)))
+
+        timer_start = timeit.default_timer()
+        # update_progress(0)
+        # tmpccc = -1
+        # while tmpccc:
+        #     if tmpccc == -1:
+        #         tmpccc = 0
+        # #for tmpccc in range(0, iloscdrog-1):
+        #     if nodyRoutingoweDrog[tmpccc]:
+        #         udalosiezredukowac = 1
+        #         while udalosiezredukowac:
+        #             udalosiezredukowac = 0
+        #             numery_nodow_do_usuniecia = []
+        #             for tmpbbb in range(tmpccc+1, iloscdrog):
+        #
+        #                 if nodyRoutingoweDrog[tmpbbb]:
+        #                     for zzz in nodyRoutingoweDrog[tmpbbb]:
+        #                         if zzz in nodyRoutingoweDrog[tmpccc]:
+        #                             setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
+        #                             nodyRoutingoweDrog[tmpccc] = setwsp
+        #                             nodyRoutingoweDrog[tmpbbb] = None
+        #                             numery_nodow_do_usuniecia.append(tmpbbb)
+        #                             iloscdrog -= 1
+        #                             iloscNone += 1
+        #                             udalosiezredukowac = 1
+        #                             break
+        #                 aktprocent = round(iloscNone/iloscdrogdlaprogress,2)
+        #                 if aktprocent*100>procent+1:
+        #                     procent = aktprocent*100
+        #                     update_progress(aktprocent)
+        #             #usun elementy:
+        #             iter = 0
+        #             for zzz in numery_nodow_do_usuniecia:
+        #                 if nodyRoutingoweDrog[zzz-iter]:
+        #                     print('Uwaga nie usuwam None')
+        #                 del nodyRoutingoweDrog[zzz-iter]
+        #                 iter += 1
+        #
+        #
+        #     ##noweNody = [a for a in nodyRoutingoweDrog if a]
+        #     ##nodyRoutingoweDrog = noweNody
+        #     if nodyRoutingoweDrog[-1]:
+        #         nodyRoutingoweDrog.append(None)
+        #         iloscdrog += 1
+        #     if nodyRoutingoweDrog[tmpccc+1]:
+        #         tmpccc += 1
+        #     else:
+        #         tmpccc = None
+        #     print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
+        oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
 
         print()
         print('czas wykonania %s' %(timeit.default_timer() - timer_start))
