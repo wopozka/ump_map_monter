@@ -131,165 +131,166 @@ class Mapa(object):
         except PermissionError:
             self.stderr_stdout_writer.stderrorwrite('ME zapisuje plik. Uruchom sprawdzanie jeszcze raz!')
         else:
-            for a in zawartoscpliku.split('[END]\n'):
-                try:
-                    a = a.strip().split('[POLYLINE]')[1]
-                    my_type = a.split('Type=')[-1].split('\n', 1)[0].strip()
-                    if my_type in typyRoutingowe:
-                        # my_type = a.split('Type=')[-1].split('\n', 1)[0].strip(P)
-                        del self.WezlyDoSprawdzenia[:]
-                        del self.NodyDrogi[:]
-                        del self.WezlyDoOdrzucenia[:]
-                        uwzglednij_numeracje = 1
-                        # self.RoadId += 1
-                        # sprawdzamy czy mamy znacznik drogi jednokierunkowej
-                        DirIndicator = 0
-                        if a.find('DirIndicator=1') >= 0:
-                            DirIndicator = 1
-                        # wydzielamy Data0
-                        a = a.split('Data0=')[-1]
-                        try:
-                            Data0, a = a.split('\n', 1)
-                        except ValueError:
-                            # w przypadku gdy jest to koniec pliku i po Data nie ma już nic,
-                            # droga nieprzypisana do pliku
-                            Data0 = a
-                        # nody_tmp = Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')
-                        
-                        # jesli to zakaz to nie sprawdzaj zapetlenia
-                        if my_type not in ('0x19', '0x2f'):
-                            nody_tmp = self.sprawdzzapetlenie(
-                                Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),('))
-                            # gdy droga zapętlona nie sprawdzaj numeracji, robi to netgen i raportuje odpowiednio
-                            if len(nody_tmp) > 1:
-                                uwzglednij_numeracje = 0
-                        else:
-                            nody_tmp = [Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')]
+            # iteruję po rekordach pliku mp.
+            for rekord_pliku_mp in zawartoscpliku.split('[END]\n'):
+                if '[POLYLINE]' not in rekord_pliku_mp:
+                    continue
+                # usuwamy POLYLINE
+                rekord_pliku_mp = rekord_pliku_mp.strip().split('[POLYLINE]')[1]
+                my_type = rekord_pliku_mp.split('Type=')[-1].split('\n', 1)[0].strip()
+                if my_type in typyRoutingowe:
+                    # my_type = a.split('Type=')[-1].split('\n', 1)[0].strip(P)
+                    del self.WezlyDoSprawdzenia[:]
+                    del self.NodyDrogi[:]
+                    del self.WezlyDoOdrzucenia[:]
+                    uwzglednij_numeracje = 1
+                    # self.RoadId += 1
+                    # sprawdzamy czy mamy znacznik drogi jednokierunkowej
+                    DirIndicator = 0
+                    if rekord_pliku_mp.find('DirIndicator=1') >= 0:
+                        DirIndicator = 1
+                    # wydzielamy Data0
+                    rekord_pliku_mp = rekord_pliku_mp.split('Data0=')[-1]
+                    try:
+                        Data0, rekord_pliku_mp = rekord_pliku_mp.split('\n', 1)
+                    except ValueError:
+                        # w przypadku gdy jest to koniec pliku i po Data nie ma już nic,
+                        # droga nieprzypisana do pliku
+                        Data0 = rekord_pliku_mp
+                    # nody_tmp = Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')
 
-                        # jeśli droga jednokierunkowa dodaj skrajne nody do listy nodow jednokierunkowych
-                        # zrob to tylko w przypadku gdy droga nie jest zapętlona, bo w takim przypadku na pewno
-                        # nie będzie ślepa
-                        if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in ('0x19', '0x2f'):
-                            self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
-                            self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
-                        # nod pierwszy i ostatni mają być routingowe, więc dodaję je osobno
-                        # zapisujemy więc je w osobnym setcie
-                        # nody_tmp moze byc listą list z racji tego ze dzielimy zapetlone linie, dlatego
-                        for punkty_drogi in nody_tmp:
-                            self.RoadId += 1
-                            kolejnyNrNoda = 0
-                            nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
-                            for para_wspolrzednych in punkty_drogi:
-                                if my_type not in ('0x19', '0x2f'):
-                                    if para_wspolrzednych in self.WszystkieNody:
-                                        self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
-                                        self.WszystkieNody[para_wspolrzednych].RoadIds.append(self.RoadId)
-                                        self.WszystkieNody[para_wspolrzednych].numerParyWspDlaDanejDrogi[self.RoadId] \
-                                            = (kolejnyNrNoda, DirIndicator)
-                                        self.NodyDrogi.append(para_wspolrzednych)
-                                    else:
-                                        self.WszystkieNody[para_wspolrzednych] = Node(para_wspolrzednych, self.RoadId,
-                                                                                      (kolejnyNrNoda, DirIndicator), 1)
-                                        self.NodyDrogi.append(para_wspolrzednych)
-                                    #nody skrajne powinny być z definicji routingowe
-                                    if para_wspolrzednych in nodyskrajne:
-                                        self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
+                    # jesli to zakaz to nie sprawdzaj zapetlenia
+                    if my_type not in ('0x19', '0x2f'):
+                        nody_tmp = self.sprawdzzapetlenie(
+                            Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),('))
+                        # gdy droga zapętlona nie sprawdzaj numeracji, robi to netgen i raportuje odpowiednio
+                        if len(nody_tmp) > 1:
+                            uwzglednij_numeracje = 0
+                    else:
+                        nody_tmp = [Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')]
 
-                                else:
-                                    # zakazy spisujemy osobno, aby pozniej je dodac i przerobic
-                                    if self.RoadId not in self.Zakazy:
-                                        self.Zakazy[self.RoadId] = Zakaz(self.stderr_stdout_writer)
-                                    self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
-                                kolejnyNrNoda += 1
+                    # jeśli droga jednokierunkowa dodaj skrajne nody do listy nodow jednokierunkowych
+                    # zrob to tylko w przypadku gdy droga nie jest zapętlona, bo w takim przypadku na pewno
+                    # nie będzie ślepa
+                    if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in ('0x19', '0x2f'):
+                        self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
+                        self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
+                    # nod pierwszy i ostatni mają być routingowe, więc dodaję je osobno
+                    # zapisujemy więc je w osobnym setcie
+                    # nody_tmp moze byc listą list z racji tego ze dzielimy zapetlone linie, dlatego
+                    for punkty_drogi in nody_tmp:
+                        self.RoadId += 1
+                        kolejnyNrNoda = 0
+                        nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
+                        for para_wspolrzednych in punkty_drogi:
                             if my_type not in ('0x19', '0x2f'):
-                                self.Drogi[self.RoadId] = self.NodyDrogi[:]
-                                if DirIndicator:
-                                    self.DrogiJednokierunkowe.append(self.RoadId)
+                                if para_wspolrzednych in self.WszystkieNody:
+                                    self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
+                                    self.WszystkieNody[para_wspolrzednych].RoadIds.append(self.RoadId)
+                                    self.WszystkieNody[para_wspolrzednych].numerParyWspDlaDanejDrogi[self.RoadId] \
+                                        = (kolejnyNrNoda, DirIndicator)
+                                    self.NodyDrogi.append(para_wspolrzednych)
+                                else:
+                                    self.WszystkieNody[para_wspolrzednych] = Node(para_wspolrzednych, self.RoadId,
+                                                                                  (kolejnyNrNoda, DirIndicator), 1)
+                                    self.NodyDrogi.append(para_wspolrzednych)
+                                #nody skrajne powinny być z definicji routingowe
+                                if para_wspolrzednych in nodyskrajne:
+                                    self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
 
-                            # teraz czas sprawdzic czy droga nie byla zapetlona, jesli tak to dzialamy
-                            # zapetlenie = (self.sprawdzzapetlenie(self.NodyDrogi))
-                            # if len(zapetlenie)>1:
-                            #   print('zapetlenie:',zapetlenie)
-
-                        for tmpbbb in a.split('\n'):
-                            if tmpbbb.startswith('Numbers') and not tmpbbb.startswith('NumbersExt') and \
-                                    uwzglednij_numeracje and not self.mode:
-                                # print(tmpbbb)
-                                Numery = tmpbbb.split('=')[-1].split(',')
-                                # print(Numery)
-                                # zapisujemy numery wezlow aby pozniej sprawdzic czy routingowe
-                                if Numery[1] == 'N' and Numery[4] == 'N':
-                                    self.WezlyDoOdrzucenia.append(int(Numery[0]))
-                                self.WezlyDoSprawdzenia.append(int(Numery[0]))
-                                # sprawdzamy poprawnosc danych
-                                parzystosc = self.sprawdzParzystosc(Numery[:])
-                                if parzystosc:
-                                    self.stderr_stdout_writer.stderrorwrite(
-                                        '%s przy %s' % (parzystosc, self.NodyDrogi[int(Numery[0])]))
-                                del Numery[:]
-
-                        # przypadek gdy ostatni segment jest ponumerowany, wtedy ostatni węzeł nie dostaje nic. Trzeba
-                        # wtedy sprawdzić co jest pomiędzy. Taki przypadek będzie gdy ostatni węzeł z numerami będzie
-                        # będzie zawierał coś innego niż -1,-1 czyli będzie na liście węzłów do sprawdzenia, ale
-                        # nie będzie na liście węzłów do wyrzucenia
-
-                        if self.WezlyDoSprawdzenia[-1] not in self.WezlyDoOdrzucenia:
-                            self.WezlyDoSprawdzenia.append(len(self.NodyDrogi)-1)
-
-                        for current, my_next in zip(self.WezlyDoSprawdzenia, self.WezlyDoSprawdzenia[1:]):
-                            if current + 1 == my_next:
-                                pass
-                            elif current in self.WezlyDoOdrzucenia:
-                                pass
                             else:
-                                # print(current)
-                                punkty_drogi = current + 1
-                                while punkty_drogi < my_next:
-                                    # if tmpccc not in self.WezlyDoOdrzucenia:
-                                    # print(tmpccc)
-                                    self.NodyDoSprawdzenia.append(self.NodyDrogi[punkty_drogi])
-                                    # print(self.NodyDoSprawdzenia)
-                                    punkty_drogi += 1
+                                # zakazy spisujemy osobno, aby pozniej je dodac i przerobic
+                                if self.RoadId not in self.Zakazy:
+                                    self.Zakazy[self.RoadId] = Zakaz(self.stderr_stdout_writer)
+                                self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
+                            kolejnyNrNoda += 1
+                        if my_type not in ('0x19', '0x2f'):
+                            self.Drogi[self.RoadId] = self.NodyDrogi[:]
+                            if DirIndicator:
+                                self.DrogiJednokierunkowe.append(self.RoadId)
 
-                        # no i czyścimy liste wezłów do sprawdzenia dla danej drogi, oraz nody drogi
-                    elif my_type in typLiniiGranicznej:
-                        a = a.split('Data0=')[-1]
-                        try:
-                            Data0, a = a.split('\n', 1)
-                        except ValueError:
-                            # w przypadku gdy jest to koniec pliku i po Data nie ma już nic,
-                            # droga nieprzypisana do pliku
-                            Data0 = a
-                        for para_wspolrzednych in Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),('):
-                            self.NodyGraniczne.append(para_wspolrzednych)
-                            # dodajemy też z dokładnością 6 cyfr, bo Wrocław tak ma
-                            a, b = para_wspolrzednych.split(',')
-                            self.NodyGraniczne.append(a + '0' + ',' + b + '0')
+                        # teraz czas sprawdzic czy droga nie byla zapetlona, jesli tak to dzialamy
+                        # zapetlenie = (self.sprawdzzapetlenie(self.NodyDrogi))
+                        # if len(zapetlenie)>1:
+                        #   print('zapetlenie:',zapetlenie)
 
+                    for tmpbbb in rekord_pliku_mp.split('\n'):
+                        if tmpbbb.startswith('Numbers') and not tmpbbb.startswith('NumbersExt') and \
+                                uwzglednij_numeracje and not self.mode:
+                            # print(tmpbbb)
+                            Numery = tmpbbb.split('=')[-1].split(',')
+                            # print(Numery)
+                            # zapisujemy numery wezlow aby pozniej sprawdzic czy routingowe
+                            if Numery[1] == 'N' and Numery[4] == 'N':
+                                self.WezlyDoOdrzucenia.append(int(Numery[0]))
+                            self.WezlyDoSprawdzenia.append(int(Numery[0]))
+                            # sprawdzamy poprawnosc danych
+                            parzystosc = self.sprawdzParzystosc(Numery[:])
+                            if parzystosc:
+                                self.stderr_stdout_writer.stderrorwrite(
+                                    '%s przy %s' % (parzystosc, self.NodyDrogi[int(Numery[0])]))
+                            del Numery[:]
 
-                # nie mamy polyline, mamy poi albo polygon, albo jeszcze cos innego
-                except IndexError:
-                    pass
+                    # przypadek gdy ostatni segment jest ponumerowany, wtedy ostatni węzeł nie dostaje nic. Trzeba
+                    # wtedy sprawdzić co jest pomiędzy. Taki przypadek będzie gdy ostatni węzeł z numerami będzie
+                    # będzie zawierał coś innego niż -1,-1 czyli będzie na liście węzłów do sprawdzenia, ale
+                    # nie będzie na liście węzłów do wyrzucenia
+
+                    if self.WezlyDoSprawdzenia and self.WezlyDoSprawdzenia[-1] not in self.WezlyDoOdrzucenia:
+                        self.WezlyDoSprawdzenia.append(len(self.NodyDrogi)-1)
+
+                    for current, my_next in zip(self.WezlyDoSprawdzenia, self.WezlyDoSprawdzenia[1:]):
+                        if current + 1 == my_next:
+                            pass
+                        elif current in self.WezlyDoOdrzucenia:
+                            pass
+                        else:
+                            # print(current)
+                            punkty_drogi = current + 1
+                            while punkty_drogi < my_next:
+                                # if tmpccc not in self.WezlyDoOdrzucenia:
+                                # print(tmpccc)
+                                self.NodyDoSprawdzenia.append(self.NodyDrogi[punkty_drogi])
+                                # print(self.NodyDoSprawdzenia)
+                                punkty_drogi += 1
+
+                    # no i czyścimy liste wezłów do sprawdzenia dla danej drogi, oraz nody drogi
+                elif my_type in typLiniiGranicznej:
+                    rekord_pliku_mp = rekord_pliku_mp.split('Data0=')[-1]
+                    try:
+                        Data0, rekord_pliku_mp = rekord_pliku_mp.split('\n', 1)
+                    except ValueError:
+                        # w przypadku gdy jest to koniec pliku i po Data nie ma już nic,
+                        # droga nieprzypisana do pliku
+                        Data0 = rekord_pliku_mp
+                    for para_wspolrzednych in Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),('):
+                        self.NodyGraniczne.append(para_wspolrzednych)
+                        # dodajemy też z dokładnością 6 cyfr, bo Wrocław tak ma
+                        dlugosc, szerokosc = para_wspolrzednych.split(',')
+                        self.NodyGraniczne.append(dlugosc + '0' + ',' + szerokosc + '0')
+
 
             # obrabiamy zakazy iterujemy po RoadID zakazow
             if not self.mode:
-                for para_wspolrzednych in self.Zakazy:
-                    for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
-                        if tmpbbb in self.WszystkieNody:
-                            self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
-                            self.Zakazy[para_wspolrzednych].Nodes.append(self.WszystkieNody[tmpbbb])
-                        else:
-                            self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
-                            self.Zakazy[para_wspolrzednych].Nodes.append(None)
-                    self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
-                # teraz czas sprawdzić czy wezły niektóre nie są routingowe
+                self.przetwarzania_zakazow()
+                # for para_wspolrzednych in self.Zakazy:
+                #     for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
+                #         if tmpbbb in self.WszystkieNody:
+                #             self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
+                #             self.Zakazy[para_wspolrzednych].Nodes.append(self.WszystkieNody[tmpbbb])
+                #         else:
+                #             self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
+                #             self.Zakazy[para_wspolrzednych].Nodes.append(None)
+                #     self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
+                # # teraz czas sprawdzić czy wezły niektóre nie są routingowe
                 self.sprawdzCzyRoutingowe()
 
             # obrabiamy ślepe jednokierunkowe
             if not self.mode:
-                for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
-                    if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2 and para_wspolrzednych not in self.NodyGraniczne:
-                        self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
+                self.sprawdz_jednokierunkowe_slepe()
+                # for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
+                #     if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2 and para_wspolrzednych not in self.NodyGraniczne:
+                #         self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
 
             # poszukajmy nieciągłości w siatce routingowej
 
@@ -298,6 +299,22 @@ class Mapa(object):
                     self.sprawdzNieciaglosciSiatkiRoutingowej()
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
+
+    def przetwarzania_zakazow(self):
+        for para_wspolrzednych in self.Zakazy:
+            for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
+                if tmpbbb in self.WszystkieNody:
+                    self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
+                    self.Zakazy[para_wspolrzednych].Nodes.append(self.WszystkieNody[tmpbbb])
+                else:
+                    self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
+                    self.Zakazy[para_wspolrzednych].Nodes.append(None)
+            self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
+
+    def sprawdz_jednokierunkowe_slepe(self):
+        for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
+            if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2 and para_wspolrzednych not in self.NodyGraniczne:
+                self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
 
     def redukuj_ilosc_zbiorow_routingowych(self, nodyRoutingoweDrog):
         iloscdrog = len(nodyRoutingoweDrog)
@@ -449,16 +466,17 @@ class Mapa(object):
 
             # obrabiamy drogi jednokierunkowe, jeśli kończy się i zaczyna w tym samym segmencie to można dodać bez patrzenia
             # do danego segmentu
-
-            for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-                for tmpbbb in range(0, len(nodyRoutingoweDrog)):
-                    if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
-                            (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
-                        nodyRoutingoweDrog[tmpbbb]=nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
-                        #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
-                        #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
-                        nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
-                        break
+            self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu()
+            # for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
+            #     for tmpbbb in range(0, len(nodyRoutingoweDrog)):
+            #         if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
+            #                 (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
+            #             nodyRoutingoweDrog[tmpbbb] = \
+            #                 nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
+            #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
+            #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
+            #             nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
+            #             break
 
             iloscdrog = len(nodyRoutingoweDrog)
             iloscdrogdlaprogress = iloscdrog
@@ -543,31 +561,31 @@ class Mapa(object):
                         if inside:
                             nodyRoutingoweDrogJednokierunkowych[bbb] = None
 
-            print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
             paryJednokierunkoweBezGrafu = []
             polaczeniaPomiedzyGrafami = []
             print('sprawdzam polaczenia jednokierunkowe miedzy grafami')
             timer_start = timeit.default_timer()
-            for aaa  in [a for a in nodyRoutingoweDrogJednokierunkowych if a]:
+            for aaa in (a for a in nodyRoutingoweDrogJednokierunkowych if a):
                 for bbb in range(0, len(aaa)-1):
                     n = aaa[bbb]
                     n_plus_1 = aaa[bbb+1]
-                    for ccc in range(0,len(oddzielnegrafy)):
+                    for ccc in range(0, len(oddzielnegrafy)):
                         if aaa[bbb] in oddzielnegrafy[ccc]:
                             n = str(ccc)
                             break
-                    for ccc in range(0,len(oddzielnegrafy)):
+                    for ccc in range(0, len(oddzielnegrafy)):
                         if aaa[bbb+1] in oddzielnegrafy[ccc]:
                             n_plus_1 = str(ccc)
                             break
                     if n == n_plus_1:
                         pass
                     elif n.isdigit() and n_plus_1.isdigit():
-                        if ((n,n_plus_1)) not in polaczeniaPomiedzyGrafami:
-                            polaczeniaPomiedzyGrafami.append((n,n_plus_1))
+                        if ((n, n_plus_1)) not in polaczeniaPomiedzyGrafami:
+                            polaczeniaPomiedzyGrafami.append((n, n_plus_1))
                     else:
-                        if ((n,n_plus_1)) not in paryJednokierunkoweBezGrafu:
-                            paryJednokierunkoweBezGrafu.append((n,n_plus_1))
+                        if ((n, n_plus_1)) not in paryJednokierunkoweBezGrafu:
+                            paryJednokierunkoweBezGrafu.append((n, n_plus_1))
 
             polaczeniaPomiedzyGrafami.sort()
             print(polaczeniaPomiedzyGrafami)
@@ -576,7 +594,7 @@ class Mapa(object):
             print(len(paryJednokierunkoweBezGrafu))
 
             print()
-            print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
             #print(len([a for a in nodyRoutingoweDrogJednokierunkowych if a]))
             print('Redukuje ilosc osobnych grafow')
             slownikRedukcji = {}
@@ -783,6 +801,22 @@ class Mapa(object):
 
             file.close()
             print('Utworzono plik %s.' %(self.nazwaplikudlaoutput))
+
+    def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(self):
+        # jeśli jednokierunkowa zaczya się i kończy w tym samym zbiorze, to znaczy, że z każdego dowolnego
+        # punktu tej jednokierunkowej można dojechać do tego zbioru. Można więc spokojnie połączyć te dwa zbiory
+
+        for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
+            for tmpbbb in range(0, len(nodyRoutingoweDrog)):
+                if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
+                        (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
+                    nodyRoutingoweDrog[tmpbbb] = \
+                        nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
+                    # print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
+                    # print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
+                    nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
+                    break
+
     def sprawdzzapetlenie(self, nodydrogi):
         ''' funkcja sprawdza czy droga nie jest ze sobą zapętlona, jeśli jest, to wtedy dzieli ją na pół aż rozpętli'''
         # nodydrogi to zmienna przechowująca pary współrzędnych danej drogi np.:
@@ -816,8 +850,6 @@ class Mapa(object):
                 c.append(b[0])
             # print(c)
             return c
-
-
 
 
     def sprawdzCzyRoutingowe(self):
@@ -872,7 +904,7 @@ class Mapa(object):
 
 
 class Node(object):
-    def __init__(self, paraWsp, RoadId, nrwsp ,skrajna=0):
+    def __init__(self, paraWsp, RoadId, nrwsp , skrajna=0):
 
         # mowi samo za siebie
         self.wspolrzedne = paraWsp
@@ -882,8 +914,8 @@ class Node(object):
         self.wezelRoutingowy = 0
         # id drogi. Jesli takie samo oznacza to ze wezly naleza do jednej linii
         self.RoadIds = [RoadId]
-        # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla kierunkowosc (0 brak, 1 jednokierunkowa).
-        # jesli bedzie kilka drog to bedzie tez kilka numerow id
+        # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla
+        # kierunkowosc (0 brak, 1 jednokierunkowa). jesli bedzie kilka drog to bedzie tez kilka numerow id
         self.numerParyWspDlaDanejDrogi = {RoadId: nrwsp}
         #print(self.numerParyWspDlaDanejDrogi[RoadId])
 
