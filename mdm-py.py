@@ -108,6 +108,7 @@ class PaczujResult(tkinter.Toplevel):
         dramat
         """
         super().__init__(parent, *args, **kwargs)
+        self.geometry('920x320')
         self.spaczowane_pliki = spaczowane_pliki
         self.body = tkinter.Frame(self)
         self.body.pack(padx=5, pady=5, fill='both', expand=1)
@@ -117,24 +118,41 @@ class PaczujResult(tkinter.Toplevel):
 
 
     def wypelnij_spaczowane_pliki(self):
-        for nazwa_pliku in self.spaczowane_pliki:
-            ramka_pliku = tkinter.ttk.LabelFrame(self.body)
-            ramka_pliku.pack()
-            nazwa_pliku_label = tkinter.Label(ramka_pliku, width=150, text=nazwa_pliku)
-            nazwa_pliku_label.pack(side='left')
-            if self.spaczowane_pliki[nazwa_pliku] == 0:
-                status_latania = 'OK'
-                kolor_statusu = 'green'
-            elif self.spaczowane_pliki[nazwa_pliku] == 1:
-                status_latania = 'z problemami'
-                kolor_statusu = 'yellow'
-            else:
-                status_latania = 'katastrofa'
-                kolor_statusu = 'red'
-            status_latania_label = tkinter.Label(ramka_pliku, width=15, text=status_latania, bg=kolor_statusu)
-            status_latania_label.pack(side='left')
-            zobacz_plik_button = tkinter.Button(ramka_pliku, text='Zobacz')
-            zobacz_plik_button.pack(side='left')
+        canvas_i_scroll_pionowy = tkinter.ttk.LabelFrame(self.body)
+        canvas_i_scroll_pionowy.pack(expand=True, fill='both')
+        ramka_pliku_canvas = tkinter.Canvas(canvas_i_scroll_pionowy, width=1200, heigh=1200)
+        ramka_pliku_canvas.pack(side='left')
+        belka_przewijania_pionowa = tkinter.ttk.Scrollbar(canvas_i_scroll_pionowy, orient='vertical')
+        belka_przewijania_pionowa.pack(side='right', fill='both')
+        belka_przewijania_pozioma = tkinter.ttk.Scrollbar(self.body, orient='horizontal')
+        belka_przewijania_pozioma.pack(fill='both')
+        ramka_pliku = tkinter.ttk.LabelFrame(ramka_pliku_canvas)
+        # ramka_pliku.pack()
+        ramka_pliku_canvas.config(yscrollcommand=belka_przewijania_pionowa.set)
+        ramka_pliku_canvas.config(xscrollcommand=belka_przewijania_pozioma.set)
+        belka_przewijania_pozioma.config(command=ramka_pliku_canvas.xview)
+        belka_przewijania_pionowa.config(command=ramka_pliku_canvas.yview)
+        for iterator in (range(10)):
+            for nazwa_pliku in self.spaczowane_pliki:
+                wynik_paczowania_frame = tkinter.Frame(ramka_pliku)
+                wynik_paczowania_frame.pack()
+                nazwa_pliku_label = tkinter.Label(wynik_paczowania_frame, width=120, text=nazwa_pliku)
+                nazwa_pliku_label.pack(side='left')
+                if self.spaczowane_pliki[nazwa_pliku] == 0:
+                    status_latania = 'OK'
+                    kolor_statusu = 'green'
+                elif self.spaczowane_pliki[nazwa_pliku] == 1:
+                    status_latania = 'z problemami'
+                    kolor_statusu = 'yellow'
+                else:
+                    status_latania = 'katastrofa'
+                    kolor_statusu = 'red'
+                status_latania_label = tkinter.Label(wynik_paczowania_frame, width=15, text=status_latania, bg=kolor_statusu)
+                status_latania_label.pack(side='left')
+                zobacz_plik_button = tkinter.Button(wynik_paczowania_frame, text='Zobacz')
+                zobacz_plik_button.pack(side='left')
+        ramka_pliku_canvas.create_window(30, 30, window=ramka_pliku, anchor='nw')
+        ramka_pliku_canvas.config(scrollregion=ramka_pliku_canvas.bbox("all"))
 
 
 class ModulCVS(object):
