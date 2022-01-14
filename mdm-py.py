@@ -117,7 +117,7 @@ class PaczujResult(tkinter.Toplevel):
 
 
     def wypelnij_spaczowane_pliki(self):
-        canvas_i_scroll_pionowy = tkinter.ttk.LabelFrame(self.body)
+        canvas_i_scroll_pionowy = tkinter.Frame(self.body)
         canvas_i_scroll_pionowy.pack(expand=True, fill='both')
         ramka_pliku_canvas = tkinter.Canvas(canvas_i_scroll_pionowy, width=900, heigh=500)
         ramka_pliku_canvas.pack(side='left', anchor='n')
@@ -131,9 +131,17 @@ class PaczujResult(tkinter.Toplevel):
                                   yscrollcommand=belka_przewijania_pionowa.set)
         ramka_pliku = tkinter.Frame(ramka_pliku_canvas)
 
+        wynik_paczowania_frame = tkinter.Frame(ramka_pliku)
+        wynik_paczowania_frame.pack(anchor='w', expand=True)
+        nazwa_pliku_label = tkinter.Label(wynik_paczowania_frame, width=100, text='Nazwa pliku', relief='groove')
+        nazwa_pliku_label.pack(side='left')
+        status_latania_label = tkinter.Label(wynik_paczowania_frame, width=15, text=u'Status łatania', relief='groove')
+        status_latania_label.pack(side='left')
+        mozliwe_akcje_label = tkinter.Label(wynik_paczowania_frame, text=u'Możliwe akcje', relief='groove')
+        mozliwe_akcje_label.pack(side='right')
         for nazwa_pliku in self.spaczowane_pliki:
             wynik_paczowania_frame = tkinter.Frame(ramka_pliku)
-            wynik_paczowania_frame.pack()
+            wynik_paczowania_frame.pack(anchor='w', expand=True)
             nazwa_pliku_label = tkinter.Label(wynik_paczowania_frame, width=100, text=nazwa_pliku)
             nazwa_pliku_label.pack(side='left')
             if self.spaczowane_pliki[nazwa_pliku] == 0:
@@ -149,7 +157,7 @@ class PaczujResult(tkinter.Toplevel):
                                                  bg=kolor_statusu)
             status_latania_label.pack(side='left')
             zobacz_plik_button = tkinter.Button(wynik_paczowania_frame, text='Zobacz')
-            zobacz_plik_button.pack(side='left')
+            zobacz_plik_button.pack(side='right')
         ramka_pliku_canvas.create_window(30, 30, window=ramka_pliku, anchor='nw')
         ramka_pliku_canvas.update_idletasks()
         ramka_pliku_canvas.config(scrollregion=ramka_pliku_canvas.bbox("all"))
@@ -2587,19 +2595,13 @@ class mdm_gui_py(tkinter.Tk):
     # obsługa menu paczuj
     def paczuj(self):
         # najpierw pobierz łatki do nałożenia
-        # lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
-        #                                                                                   (u'pliki łatek', '*.patch'),
-        #                                                                                   (u'wszystkie pliki', '*.*')))
-        # print(lista_latek)
-        # wynik_nakladania_latek = dict()
-        # for latka in lista_latek:
-        #     wynik_nakladania_latek[latka] = self.patchExe(latka)
-        wynik = dict()
-        wynik['AAA'] = 0
-        wynik['BBB'] = 1
-        wynik['CCC'] = 0
-        wynik['DDD'] = 2
-        paczuj_rezultaty = PaczujResult(self, wynik)
+        lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
+                                                                                          (u'pliki łatek', '*.patch'),
+                                                                                          (u'wszystkie pliki', '*.*')))
+        wynik_nakladania_latek = dict()
+        for latka in lista_latek:
+            wynik_nakladania_latek[latka] = self.patchExe(latka)
+        paczuj_rezultaty = PaczujResult(self, wynik_nakladania_latek)
         paczuj_rezultaty.wait_window()
 
     def patchExe(self, pliki_diff):
