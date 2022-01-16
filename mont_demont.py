@@ -261,6 +261,11 @@ class PaczerGranicCzesciowych(object):
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
     def konwertujLatke(self, granice_czesciowe_diff):
+        """
+        konwersja latki ktora jest stworzona dla granicy czesciowej na latki stworzona dla pliku granice z narzedzi.
+        :param granice_czesciowe_diff:
+        :return: 0 w przypadku sukcesu, 1 w przypadku bledu
+        """
         granice_czesciowe_rekordy = []
         rekord_granic_czesciowych = []
         for a in granice_czesciowe_diff[:]:
