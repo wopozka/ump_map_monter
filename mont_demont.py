@@ -1239,7 +1239,7 @@ class plikMP1(object):
         if plik.find('granice-czesciowe.txt') > 0:
             plikdootwarcia = plik
         else:
-            plikdootwarcia = os.path.join(self.Zmienne.KatalogzUMP , plik)
+            plikdootwarcia = os.path.join(self.Zmienne.KatalogzUMP, plik)
 
         with open(plikdootwarcia, 'rb') as f:
             if hashlib.md5(f.read()).hexdigest() != wartosc_hash:
