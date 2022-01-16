@@ -950,7 +950,8 @@ class autoPolylinePolygone(object):
 
         # zmienna bedzie zawierac slownik z obszarami. Klucze slownika beda wskazywaly na inny slownik w ktorym beda
         # pliki wraz z ich wspolrzednymi w postaci kd-tree
-        self.autoObszar = {}
+        # self.autoObszar = {}
+        self.autoObszar = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
         # self.autoTypyPlikowwObszarze={}
         # self.autoPliki={}
 
@@ -1047,14 +1048,7 @@ class autoPolylinePolygone(object):
                             for wspolrzedne in zawartoscpliku.strip().lstrip('(').rstrip(')').split('),(')[1::10]:
                                 szerokosc, dlugosc = wspolrzedne.split(',')
                                 tree.add([float(dlugosc), float(szerokosc)])
-                    nazwa_kdtree = {a: tree}
-                    if obszar not in self.autoObszar:
-                        self.autoObszar[obszar] = {}
-                    if typpliku not in self.autoObszar[obszar]:
-                        self.autoObszar[obszar][typpliku] = {}
                     self.autoObszar[obszar][typpliku][a] = tree
-            else:
-                pass
 
     def znajdz_najblizszy(self, obszar, typ_pliku, wspolrzedne):
         y, x = wspolrzedne.split(',')
