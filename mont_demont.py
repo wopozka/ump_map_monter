@@ -1213,7 +1213,11 @@ class plikMP1(object):
             if not self.sprawdz_poprawnosc_sciezki(plik):
                 self.sciezka_zwalidowana.add(plik)
 
-    def cyfryHash(self, liniazCyframiHashem, katalogzUMP, zaokraglij):
+    def cyfryHash(self, liniazCyframiHashem, zaokraglij):
+        """
+        Wczytuje dokladnosc danego pliku oraz hash tego pliku zapisany w pliku mp. Nastepnie otwiera plik z dysku.
+        Jesli oba hashe sa sobie rowne wtedy zwraca 0, w przeciwnym wypadku 1. Gdy nie ma hasha - jest pusty zwraca 2
+        """
         plik, dokladnosc, wartosc_hash, Miasto = liniazCyframiHashem.strip().split(';', 4)
         if zaokraglij != '0':
             dokladnosc = zaokraglij
@@ -1235,7 +1239,7 @@ class plikMP1(object):
         if plik.find('granice-czesciowe.txt') > 0:
             plikdootwarcia = plik
         else:
-            plikdootwarcia = os.path.join(katalogzUMP, plik)
+            plikdootwarcia = os.path.join(self.Zmienne.KatalogzUMP , plik)
 
         with open(plikdootwarcia, 'rb') as f:
             if hashlib.md5(f.read()).hexdigest() != wartosc_hash:
@@ -1610,7 +1614,7 @@ class plikMP1(object):
             self.stdoutwrite('Wczytuje dokladnosc pliku i sprawdzam sumy kontrolne.')
             for dokladnosc_i_hash_pliku in dokladnosci_hashe_plikow.strip().split('\n'):
                 try:
-                    if self.cyfryHash(dokladnosc_i_hash_pliku, self.Zmienne.KatalogzUMP, args.X):
+                    if self.cyfryHash(dokladnosc_i_hash_pliku, args.X):
                         if args.hash:
                             self.stderrorwrite('[...] %s [FALSE].' % dokladnosc_i_hash_pliku.split(';')[0])
                         else:
