@@ -771,14 +771,15 @@ class tabelaKonwersjiTypow(object):
     def read_pnt2poi_txt(self):
         sekcja = ''
         nr_linii = 0
+        plik_pnt2poi = 'narzedzia' + os.sep + 'pnt2poi.txt'
         try:
-            with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/pnt2poi.txt'), encoding=self.Zmienne.Kodowanie,
+            with open(os.path.join(self.Zmienne.KatalogzUMP, plik_pnt2poi), encoding=self.Zmienne.Kodowanie,
                       errors=self.Zmienne.ReadErrors) as f:
                 # zawartosc_pliku_pnt2poi = f.read().split('[END]')
                 zawartosc_pliku_pnt2poi = f.readlines()
         # w przypadku gdyby pliku nie bylo obsluz wyjatek i pozostan przy ustawieniach domyslnych
         except FileNotFoundError:
-            self.stderr_stdout_writer.stderrorwrite('Brak pliku narzedzia/pnt2poi.txt, wczytuje definicje domyslne')
+            self.stderr_stdout_writer.stderrorwrite('Brak pliku ' + plik_pnt2poi + ', wczytuje definicje domyslne')
             return 1
         else:
             for a in zawartosc_pliku_pnt2poi:
@@ -788,17 +789,20 @@ class tabelaKonwersjiTypow(object):
                 if a:
                     if a.startswith('[DEF-POI]'):
                         if sekcja:
-                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku narzedzia/pnt2poi.txt')
+                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
+                                                                    plik_pnt2poi)
                             self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
                         sekcja = '[DEF-POI]'
                     elif a.startswith('[DEF-LINE]'):
                         if sekcja:
-                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku narzedzia/pnt2poi.txt')
+                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
+                                                                    plik_pnt2poi)
                             self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
                         sekcja = '[DEF-LINE]'
                     elif a.startswith('[DEF-REVPOI]'):
                         if sekcja:
-                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku narzedzia/pnt2poi.txt')
+                            self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
+                                                                    plik_pnt2poi)
                             self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
                         sekcja = '[DEF-REVPOI]'
                     elif a.startswith('[END'):
@@ -815,7 +819,8 @@ class tabelaKonwersjiTypow(object):
                                 type = type.split('#')[0].strip()
                                 alias = alias.strip()
                                 if alias in self.alias2TypeFromFile:
-                                    self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu %s w pliku narzedzia/pnt2poi.txt' % alias)
+                                    self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu %s w pliku ' +
+                                    plik_pnt2poi + '.' % alias)
                                 self.alias2TypeFromFile[alias] = type
             # print(self.alias2TypeFromFile)
             return 0
@@ -828,7 +833,7 @@ class Obszary(object):
     """
     def __init__(self, obszary, Zmienne):
         self.polygonyObszarow = {}
-        with open(os.path.join(Zmienne.KatalogzUMP, 'narzedzia/obszary.txt'), encoding=Zmienne.Kodowanie,
+        with open(os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'obszary.txt'), encoding=Zmienne.Kodowanie,
                   errors=Zmienne.ReadErrors) as f:
             zawartosc_pliku_obszary = f.read().split('[END]')
         for a in zawartosc_pliku_obszary:
@@ -1126,7 +1131,7 @@ class plikMP1(object):
         if Montuj:
             self.plikDokladnosc = {}
             try:
-                self.naglowek = open(os.path.join(Zmienne.KatalogzUMP, 'narzedzia/header.txt'),
+                self.naglowek = open(os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt'),
                                      encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors).read()
             # self.zawartosc.append(self.naglowek.rstrip()+'\n')
             except FileNotFoundError:
