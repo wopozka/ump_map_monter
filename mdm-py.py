@@ -2633,7 +2633,7 @@ class mdm_gui_py(tkinter.Tk):
         # doCVS=cvsOutputReceaver(self,obszary,'','up')
 
     def OnButtonClickCvsCommit(self):
-        if len(self.plikiDoCVS) > 0:
+        if self.plikiDoCVS:
             oknodialogowe = cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
             if oknodialogowe.iftocommit == 'tak':
                 cvs_status = sprawdz_czy_cvs_obecny()
