@@ -786,16 +786,18 @@ class mdmConfig(object):
         self.montDemontOptions['enty_otwarte_do_extras'].set(False)
         self.montDemontOptions['standaryzuj_komentarz'] = tkinter.BooleanVar()
         self.montDemontOptions['standaryzuj_komentarz'].set(False)
+        self.montDemontOptions['oszczedzaj_pamiec'] = tkinter.BooleanVar(value=False)
+        self.montDemontOptions['format_indeksow'] = tkinter.StringVar(value='cityidx')
         self.readConfig()
 
     def saveConfig(self):
         with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'w') as configfile:
-            for key in self.montDemontOptions.keys():
-                if self.montDemontOptions[key].get():
-                    value = 1
+            for key in self.montDemontOptions:
+                if key in ('format_indeksow',):
+                    value = self.montDemontOptions[key].get()
                 else:
-                    value = 0
-                linia = key + '=' + str(value) + '\n'
+                    value = str(int(self.montDemontOptions[key].get()))
+                linia = key + '=' + value + '\n'
                 configfile.write(linia)
 
     def readConfig(self):
@@ -803,27 +805,20 @@ class mdmConfig(object):
             with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'r') as configfile:
                 opcje = configfile.readlines()
             for a in opcje:
-                abc = a.split('=')
-                if abc[0] not in self.montDemontOptions:
+                a = a.strip()
+                if not a and '=' not in a:
+                    continue
+                klucz, wartosc = a.split('=', 1)
+                if klucz not in self.montDemontOptions:
                     pass
                 else:
-                    if abc[0] != 'X':
-                        if abc[1].startswith('0'):
-                            self.montDemontOptions[abc[0]].set(False)
-                        elif abc[1].startswith('1'):
-                            self.montDemontOptions[abc[0]].set(True)
-                        else:
-                            pass
-                    elif abc[0] == 'X':
-                        print('ustawiam dokladnosc zaokraglania')
-                        if abc[1].startswith('0'):
-                            self.montDemontOptions[abc[0]].set('0')
-                        elif abc[1].startswith('5'):
-                            self.montDemontOptions[abc[0]].set('5')
-                        elif abc[1].startswith('6'):
-                            self.montDemontOptions[abc[0]].set('6')
-                        else:
-                            pass
+                    if klucz not in ('X', 'format_indeksow'):
+                        self.montDemontOptions[klucz].set(int(wartosc))
+                    elif klucz == 'X':
+                        if wartosc in ('0', '5', '6'):
+                            self.montDemontOptions[klucz].set(wartosc)
+                    if klucz in ('format_indeksow',):
+                        self.montDemontOptions[klucz].set(wartosc)
                     else:
                         pass
         except FileNotFoundError:
@@ -1972,10 +1967,22 @@ class mdm_gui_py(tkinter.Tk):
         menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
                                           variable=self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'])
+        menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
+        menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
+        menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
+                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
+                                                        'format_indeksow'])
+        menu_montuj_format_indeksow.add_radiobutton(label=u'cityname',
+                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
+                                                        'format_indeksow'])
+        menu_montuj_opcje.add_cascade(label=u'Format indeksu miast', menu=menu_montuj_format_indeksow)
         menu_demontuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje demontażu', menu=menu_demontuj_opcje)
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
                                             variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
+        menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
         # menu Pomoc
@@ -2708,7 +2715,10 @@ class mdm_gui_py(tkinter.Tk):
         self.args.trybosmand = 0
         # ustawiamy przenoszenie otwarte i entrypointów do extras
         self.args.entry_otwarte_to_extras = self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'].get()
-
+        # ustawiamy oszczedzanie pamieci
+        self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
+        # ustawiamy format indeksow miast
+        self.args.format_indeksow = self.mdmMontDemontOptions.montDemontOptions['format_indeksow'].get()
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
 
@@ -2758,7 +2768,8 @@ class mdm_gui_py(tkinter.Tk):
         self.montButton.configure(state='disabled')
         # standaryzacja komentarzy, otwarte i entrypoints są standaryzowane
         self.args.standaryzuj_komentarz = self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'].get()
-
+        # ustawiamy oszczedzanie pamieci
+        self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
         # _thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
         my_queue = queue.Queue()
         # self.args.queue=my_queue
