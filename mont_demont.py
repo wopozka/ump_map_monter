@@ -1685,7 +1685,7 @@ class plikMP1(object):
                             dane_do_zapisu['Komentarz'].append(linia)
                         else:
                             dane_do_zapisu['Komentarz'] = [linia]
-                elif  linia == '[POI]' or linia == '[POLYGON]' or linia == '[POLYLINE]':
+                elif linia == '[POI]' or linia == '[POLYGON]' or linia == '[POLYLINE]':
                     dane_do_zapisu['POIPOLY'] = linia
                 else:
                     self.stderrorwrite('Dziwna linia %s w rekordach\n %s.' % (linia, string_z_rekordem))
@@ -1702,7 +1702,7 @@ class plikMP1(object):
                     if 'Dziwne' in dane_do_zapisu:
                         dane_do_zapisu['Dziwne'].append(linia)
                     else:
-                        dane_do_zapisu['Dziwne']= [linia]
+                        dane_do_zapisu['Dziwne'] = [linia]
         return dane_do_zapisu
 
     def zaokraglij_klucze_ze_wspolrzednymi(self, dane_do_zapisu):
@@ -1894,10 +1894,10 @@ class plikMP1(object):
 
     def koreguj_wpisy_dla_miast(self, dane_do_zapisu):
          # Miasta < od 1000 dostaj¹ typ 0xe00
-        if dane_do_zapisu['Type'] in ['0xf00', '0x1000', '0x1100']:
+        if dane_do_zapisu['Type'] in ('0xf00', '0x1000', '0x1100'):
             dane_do_zapisu['Type'] = '0xe00'
         # miasta > od 1000000 dostaja typ 0x0400
-        elif dane_do_zapisu['Type'] in ['0x300', '0x200', '0x100']:
+        elif dane_do_zapisu['Type'] in ('0x300', '0x200', '0x100'):
             dane_do_zapisu['Type'] = '0x400'
         if 'Rozmiar' not in dane_do_zapisu:
             dane_do_zapisu['Rozmiar'] = City.type2Rozmiar[dane_do_zapisu['Type']]
@@ -3188,7 +3188,7 @@ def sprawdz(args):
             for b in bledy[typBledu]:
                 errorcoord = b.rstrip().split(',')[2:4]
                 error = typBledu + ' ' + errorcoord[0] + ',' + errorcoord[1]
-                if typBledu not in ['nieuzywany slepy', 'nieuzywany przeciecie']:
+                if typBledu not in ('nieuzywany slepy', 'nieuzywany przeciecie'):
                     stderr_stdout_writer.stderrorwrite(error)
             with open(os.path.join(Zmienne.KatalogRoboczy, typBledu.replace(' ', '-') + '.wpt'), 'w',
                       encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:

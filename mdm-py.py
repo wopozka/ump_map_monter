@@ -1084,11 +1084,8 @@ class myCheckbutton(tkinter.ttk.Checkbutton):
         if cvs_status:
             aaa = tkinter.messagebox.showwarning(message=cvs_status)
         else:
-            zaznaczone_obszary = []
-            for aaa in self.regionVariableDictionary.keys():
-                if self.regionVariableDictionary[aaa].get() == 1:
-                    print(aaa)
-                    zaznaczone_obszary.append(aaa)
+            zaznaczone_obszary = [aaa for aaa in self.regionVariableDictionary if
+                                  self.regionVariableDictionary[aaa].get()]
             if not zaznaczone_obszary:
                 tkinter.messagebox.showwarning(u'Brak wybranego obszaru!', u'Nie zaznaczyłeś żadnego obszaru do wysłania na serwer. Wybierz chociaż jeden.')
                 return
@@ -1887,18 +1884,11 @@ class mdm_gui_py(tkinter.Tk):
         aaa = HelpWindow(self)
 
     def kreatorMapaOSMAnd(self):
-        # return 0
-        obszary = list()
-        for a in self.regionVariableDictionary.keys():
-            if self.regionVariableDictionary[a].get() == 1:
-                obszary.append(a)
+        obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
         aaa = mdmkreatorOsmAnd.OSMAndKreator(self, obszary)
 
     def kreatorKlasDrog(self):
-        obszary = list()
-        for a in self.regionVariableDictionary.keys():
-            if self.regionVariableDictionary[a].get() == 1:
-                obszary.append(a)
+        obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
         aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
 
     def cvs_co(self, obszar):
@@ -2433,7 +2423,7 @@ class mdm_gui_py(tkinter.Tk):
         style = tkinter.ttk.Style()
         style.configure('Helvetica.TCheckbutton', font=('Helvetica', 9))
         listaNazwObszarow = mont_demont_py.listujobszary(args)
-        for a in self.regionCheckButtonDictionary.keys():
+        for a in self.regionCheckButtonDictionary:
             self.regionCheckButtonDictionary[a].destroy()
         self.regionVariableDictionary = {}
         self.regionCheckButtonDictionary = {}
@@ -2479,8 +2469,7 @@ class mdm_gui_py(tkinter.Tk):
             self.diffCanvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def MontButtonStateSet(self):
-        self.args.obszary = [a for a in self.regionVariableDictionary.keys()
-                             if self.regionVariableDictionary[a].get() == 1]
+        self.args.obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
         if len(self.args.obszary) > 0:
             self.montButton.configure(state='normal')
         else:
@@ -2501,7 +2490,7 @@ class mdm_gui_py(tkinter.Tk):
                           str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().hour) + '-' + \
                           str(datetime.datetime.now().minute) + '.zip'
             plikzip = zipfile.ZipFile(os.path.join(self.Zmienne.KatalogRoboczy, plikzipname), 'w')
-        for a in self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania.keys():
+        for a in self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania:
             # zmienna IntVar nie moze byc odczytana bezposrednio, trzeba poprzez funkcje get()
             if self.frameInDiffCanvas.listaPlikowDiffDoSkopiowania[a].get() == 1:
 
@@ -2620,12 +2609,8 @@ class mdm_gui_py(tkinter.Tk):
         return a
 
     def OnButtonClickCvsUp(self):
-        obszary = []
-        obszarywszystkie = []
-        for aaa in self.regionVariableDictionary.keys():
-            obszarywszystkie.append(aaa)
-            if self.regionVariableDictionary[aaa].get() == 1:
-                obszary.append(aaa)
+        obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
+        obszarywszystkie = [aaa for aaa in self.regionVariableDictionary]
         if not obszary:
             obszary = obszarywszystkie
             obszary.append('narzedzia')
@@ -2685,10 +2670,7 @@ class mdm_gui_py(tkinter.Tk):
     def OnButtonClickMont(self):
         # czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
-        self.args.obszary = []
-        for aaa in self.regionVariableDictionary.keys():
-            if self.regionVariableDictionary[aaa].get() == 1:
-                self.args.obszary.append(aaa)
+        self.args.obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
 
         self.args.plikmp = 'wynik.mp'
         # self.args.adrfile=self.adrfile.get()
