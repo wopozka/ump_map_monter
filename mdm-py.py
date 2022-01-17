@@ -1988,7 +1988,10 @@ class mdm_gui_py(tkinter.Tk):
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
                                             variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
         menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
+                                            variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
+        menu_demontuj_opcje.add_checkbutton(label=u'Automatyczny rozkład obszarów i linii',
+                                            variable=self.mdmMontDemontOptions.montDemontOptions['autopolypoly'],
+                                            command=lambda: self.selectUnselect_aol(None))
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
         # menu Pomoc
