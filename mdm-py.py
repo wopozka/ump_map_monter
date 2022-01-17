@@ -51,6 +51,22 @@ def sprawdz_czy_cvs_obecny():
         return 'Nie odnalazłem programu cvs. Zainstaluj go.'
 
 
+def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia):
+    """
+    funkcja sprawdza czy w plikach zaznaczonych do commitu nie ma konfliktow jesli sa to zwraca ich nazwy
+    w postaci tupli, jesli nie ma zwraca pusta tuple
+    """
+    pliki_z_bledami = list()
+    for nazwa_pliku in pliki_do_sprawdzenia:
+        with open(nazwa_pliku, 'r') as plik_w_cvs:
+            for zawartosc in plik_w_cvs.readlines():
+                if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
+                        or zawartosc.startswith(">>>>>>>"):
+                    pliki_z_bledami.append(nazwa_pliku)
+                    break
+    return tuple(pliki_z_bledami)
+
+
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
 
     nazwa_pliku = url.split('/')[-1]
@@ -2634,16 +2650,22 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickCvsCommit(self):
         if self.plikiDoCVS:
-            oknodialogowe = cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
-            if oknodialogowe.iftocommit == 'tak':
-                cvs_status = sprawdz_czy_cvs_obecny()
-                if cvs_status:
-                    tkinter.messagebox.showwarning(message=cvs_status)
-                else:
-                    doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
-                    self.plikiDoCVS = doCVS.uncommitedfiles[:]
+            pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS)
+            if pliki_z_konfliktami:
+                informacja = u'Uwaga. W następujacych plikach w cvs są konflikty. Usuń je przed kontynuacją.\n' + \
+                             '\n'.join(pliki_z_konfliktami)
+                tkinter.messagebox.showwarning(message=informacja)
             else:
-                pass
+                oknodialogowe = cvsDialog(self, self.plikiDoCVS, title=u'Prześlij pliki do repozytorium cvs')
+                if oknodialogowe.iftocommit == 'tak':
+                    cvs_status = sprawdz_czy_cvs_obecny()
+                    if cvs_status:
+                        tkinter.messagebox.showwarning(message=cvs_status)
+                    else:
+                        doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
+                        self.plikiDoCVS = doCVS.uncommitedfiles[:]
+                else:
+                    pass
 
     def cvsSprawdzAktualnoscMontowanychObszarow(self, *obszary):
         Needs_Patch = 0
