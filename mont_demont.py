@@ -1136,8 +1136,9 @@ class plikMP1(object):
         if Montuj:
             self.plikDokladnosc = {}
             try:
-                self.naglowek = open(os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt'),
-                                     encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors).read()
+                plik_naglowka_nazwa = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt')
+                with open(plik_naglowka_nazwa, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as plik_naglowka:
+                    self.naglowek = plik_naglowka.read()
             # self.zawartosc.append(self.naglowek.rstrip()+'\n')
             except FileNotFoundError:
                 self.stderrorwrite('nie moge zaladowac pliku header.txt')
@@ -1154,11 +1155,11 @@ class plikMP1(object):
             self.obszary = None
             self.autoobszary = autoPolylinePolygone(self.Zmienne, self.plik_nowosci_txt)
 
-    def stderrorwrite(self, string):
-        self.errOutWriter.stderrorwrite(string)
+    def stderrorwrite(self, error_msg):
+        self.errOutWriter.stderrorwrite(error_msg)
 
-    def stdoutwrite(self, string):
-        self.errOutWriter.stdoutwrite(string)
+    def stdoutwrite(self, info_msg):
+        self.errOutWriter.stdoutwrite(info_msg)
 
     def dodaj(self, aaa):
         """
