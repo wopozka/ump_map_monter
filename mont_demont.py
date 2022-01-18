@@ -251,27 +251,45 @@ class TestyPoprawnosciDanych(object):
         return ''
 
 class PaczerGranicCzesciowych(object):
-    def __init__(self, Zmienne):
+    def __init__(self, Zmienne, plik_z_granicami=None):
+        """
+        Klasa obsluguje latanie granic czesciowych. Przy demontazu granic czesciowych dostajemy plik diff dla tylko
+        granic czesciowych. Poniewaz mdm kopiuje pliki, dlatego nie ma jak skopiowac pliku z granicami czesciowymi
+        na oryginalny plik z narzedzia/granice.txt. W tym celu do katalogu roboczego kopiowany jest oryginalny plik
+        z granice.txt pod nazwa narzedzia-granice.txt i na niego nakladana jest latka po konwersji. Jesli wszystko sie
+        uda, wtedy mozna spokojnie skopiowac plik do katalogu narzedzia
+        :param Zmienne:
+        :param plik_z_granicami: plik z granicami, uzywany do testow jednostkowych
+        """
         self.Zmienne = Zmienne
-        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt'), 'r',
-                  encoding=self.Zmienne.Kodowanie) as f:
+        self.tryb_testowy = False
+        if plik_z_granicami:
+            self.tryb_testowy = True
+        plik_z_granicami_txt = plik_z_granicami
+        if not plik_z_granicami:
+            plik_z_granicami_txt = os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt')
+            self.tryb_testowy = True
+        with open(plik_z_granicami_txt, 'r', encoding=self.Zmienne.Kodowanie) as f:
             self.granice_txt = f.readlines()
             self.granice_orig = self.granice_txt[:]
-        with open(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt'), 'rb') as f:
+        with open(plik_z_granicami_txt, 'rb') as f:
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
     def konwertujLatke(self, granice_czesciowe_diff):
         """
         konwersja latki ktora jest stworzona dla granicy czesciowej na latki stworzona dla pliku granice z narzedzi.
         :param granice_czesciowe_diff:
-        :return: 0 w przypadku sukcesu, 1 w przypadku bledu
+        :return: list() nowy diff w przypadku sukcesu, pusta liste w przypadku porazki
         """
         granice_czesciowe_rekordy = []
         rekord_granic_czesciowych = []
         for a in granice_czesciowe_diff[:]:
             if a.startswith('+++') or a.startswith('---'):
                 pass
+            # jesli mamy @@ oznacza to ze zaczyna sie nowy oddzielny rekord
             elif a.startswith('@@'):
+                # jesli sa juz jakies dane w rekordzie granic czesciowych dolacz go to granicy_czesciowe i
+                # zacznij od nowa, przypisujac mu wartosc z @@
                 if len(rekord_granic_czesciowych) > 0:
                     granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
                 rekord_granic_czesciowych = [a]
@@ -282,10 +300,16 @@ class PaczerGranicCzesciowych(object):
         zamien_co = []
         zamien_na_co = []
         czypasuje = True
+
+        # tworzymy dwie osobne listy, zamien_co zawiera informacje co zamienic, zamien na co informacje na co zamienic
         for a in granice_czesciowe_rekordy[:]:
             for b in a[:]:
+                # @ jest czescia latki, wiec to nalezy zignorowac
                 if b.startswith('@'):
                     pass
+                # od srednika zaczyna sie komentarz, komentarz ktory sie lapie to niestety nie ten z poczatku ale ten
+                # z konca rekordu. Trzeba to zignorowac, ale z drugiej strony trzeba miec pewnosc ze wystepuje on na
+                # koncu rekordu. Dlatego mamy a[-1] == b, w srodku rekordu moze byc i nie stanowi to zadnego problemu
                 elif b.startswith(' ;') and a[-1] == b:
                     pass
                 elif b.startswith(' '):
@@ -319,20 +343,19 @@ class PaczerGranicCzesciowych(object):
             zamien_co = []
             zamien_na_co = []
 
+        granice_po_konw = list()
         if czypasuje:
-            with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt'), 'w',
-                      encoding=self.Zmienne.Kodowanie) as f:
-                f.writelines(self.granice_txt)
-            with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt.diff'), 'w',
-                      encoding=self.Zmienne.Kodowanie) as f:
-                f.writelines(
-                    difflib.unified_diff(self.granice_orig, self.granice_txt,
-                                         fromfile='narzedzia' + os.sep + 'granice.txt',
-                                         tofile='narzedzia-Nowe' + os.sep + 'granice.txt')
-                )
-                return 0
-        else:
-            return 1
+            granice_po_konw = list(difflib.unified_diff(self.granice_orig, self.granice_txt,
+                                                        fromfile='narzedzia' + os.sep + 'granice.txt',
+                                                        tofile='narzedzia-Nowe' + os.sep + 'granice.txt'))
+            if not self.tryb_testowy:
+                with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt'), 'w',
+                          encoding=self.Zmienne.Kodowanie) as f:
+                    f.writelines(self.granice_txt)
+                with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt.diff'), 'w',
+                          encoding=self.Zmienne.Kodowanie) as f:
+                    f.writelines(granice_po_konw)
+        return granice_po_konw
 
 
 # ustawienia poczatkowe
@@ -1176,32 +1199,8 @@ class plikMP1(object):
         self.plikDokladnosc[nazwapliku] = 0
         return
 
-
     def ustawDokladnosc(self, nazwaPliku, dokladnosc):
         self.plikDokladnosc[nazwaPliku] = dokladnosc + ';' + self.plikHash[nazwaPliku]
-
-    def ustalDokladnosc(self, nazwapliku, LiniaZPliku, typpliku):
-        if LiniaZPliku == '0':
-            self.plikDokladnosc[nazwapliku] = str(-1) + ';' + self.plikHash[nazwapliku]
-            return 1
-
-        else:
-            if typpliku == 'txt':
-                if LiniaZPliku.startswith('Data'):
-                    dokladnoscWsp = len(LiniaZPliku.split(',', 1)[0].split('.')[1])
-                else:
-                    dokladnoscWsp = 0
-            else:
-                if LiniaZPliku[0].find('.') > 0:
-                    dokladnoscWsp = len(LiniaZPliku[0].split('.')[1])
-                else:
-                    dokladnoscWsp = 0
-            if dokladnoscWsp <= 5:
-                self.plikDokladnosc[nazwapliku] = str(5) + ';' + self.plikHash[nazwapliku]
-                return 0
-            else:
-                self.plikDokladnosc[nazwapliku] = str(6) + ';' + self.plikHash[nazwapliku]
-                return 0
 
     def ustawObszary(self):
         # ustala zamontowane obszary oraz ustawia je pod zmienna self.obszary,
@@ -2425,13 +2424,17 @@ class plikTXT(object):
         return self.sciezkaNazwa, self.domyslneMiasto
 
     def ustalDokladnosc(self, LiniaZPliku):
+        """
+        Funkcja ustala dokladnosc pliku pnt
+        :param LiniaZPliku: string w postaci linii pliku
+        :return: 0 jesli dokladnosc udalo sie ustalic, 1 jesli dokladnosci nie udalo sie ustalic
+        """
         if not LiniaZPliku:
             self.Dokladnosc = '-1'
             return 1
         if LiniaZPliku[0].startswith('Data'):
-            if len(LiniaZPliku[0].split(',', 1)[0].split('.')[1]) <= 5:
-                self.Dokladnosc = '5'
-            else:
+            self.Dokladnosc = '5'
+            if len(LiniaZPliku[0].split(',', 1)[0].split('.')[1]) >= 6:
                 self.Dokladnosc = '6'
             return 0
         else:
@@ -2446,11 +2449,8 @@ class plikTXT(object):
         for tmpaaa in self.txt2rekordy(zawartoscPlikuTXT):
             self.punktzTXT.rekord2Dane(tmpaaa, self.domyslneMiasto)
             if self.Dokladnosc not in ('5', '6') and self.punktzTXT.DataX:
-                if not self.ustalDokladnosc(self.punktzTXT.DataX):
-                    pass
-                else:
+                if self.ustalDokladnosc(self.punktzTXT.DataX):
                     self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
-
             self.Dane1.extend(self.punktzTXT.Dane1)
             self.punktzTXT.wyczyscRekordy()
         return self.Dane1
@@ -2504,15 +2504,19 @@ class plikPNT(object):
             return zawartoscPliku
 
     def ustalDokladnosc(self, LiniaZPliku):
+        """
+                Funkcja ustala dokladnosc pliku txt
+                :param LiniaZPliku: string w postaci linii pliku
+                :return: 0 jesli dokladnosc udalo sie ustalic, 1 jesli dokladnosci nie udalo sie ustalic
+        """
         if not LiniaZPliku:
             self.Dokladnosc = '-1'
             return 1
         else:
             wsp1 = LiniaZPliku.split(',')[0]
             if wsp1.find('.') > 0:
-                if len(wsp1.split('.')[1]) <= 5:
-                    self.Dokladnosc = '5'
-                else:
+                self.Dokladnosc = '5'
+                if len(wsp1.split('.')[1]) >= 6:
                     self.Dokladnosc = '6'
                 return 0
             else:
@@ -2540,10 +2544,7 @@ class plikPNT(object):
                         komentarz = ''
                     self.punktzPntAdrCiti.liniaZPliku2Dane(rekordy, liniaPliku)
                     if not self.Dokladnosc or self.Dokladnosc == '0':
-                        if not self.ustalDokladnosc(liniaPliku):
-                            pass
-                        # print('Dokladnosc %s'%zawartoscPlikuMp.plikDokladnosc[pliki])
-                        else:
+                        if self.ustalDokladnosc(liniaPliku):
                             self.punktzPntAdrCiti.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
                                                                 % self.NazwaPliku)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
@@ -2556,7 +2557,7 @@ def zwroc_dane_do_gui(args, listaDiffow, slownikHash):
         args.queue.put([listaDiffow, slownikHash])
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Koniec')
-    return listaDiffow,
+    return listaDiffow, slownikHash
 
 
 def update_progress(progress, args):
@@ -2970,8 +2971,12 @@ def demontuj(args):
                     plikMp.plikizMp[nazwa_pliku].append('\\ No new line at the end of file\n')
                 elif plikMp.plikizMp[nazwa_pliku][-1][-1] != '\n':
                     plikMp.plikizMp[nazwa_pliku][-1][-1] += '\\ No new line at the end of file\n'
+                if 'granice-czesciowe.txt' not in nazwa_pliku:
+                    tofile = nazwa_pliku.replace('UMP', 'Nowe_UMP').replace('narzedzia', 'Nowe_narzedzia')
+                else:
+                    tofile = os.path.join(os.path.dirname(nazwa_pliku) + '_Nowe', os.path.basename(nazwa_pliku))
                 for line in difflib.unified_diff(orgPlikZawartosc, plikMp.plikizMp[nazwa_pliku], fromfile=nazwa_pliku,
-                                                 tofile=nazwa_pliku.replace('UMP', 'NoweUMP')):
+                                                 tofile=tofile):
                     # sys.stdout.write(line)
                     if line.endswith('\\ No new line at the end of file\n'):
                         a, b = line.split('\\')
@@ -2996,12 +3001,12 @@ def demontuj(args):
                     # bawimy sie z latkami. Jesli montowane byly granice czesciowe sprobujmy je przerobic na ogolne
                     if nazwa_pliku.find('granice-czesciowe.txt') > 0:
                         graniceczesciowe = PaczerGranicCzesciowych(Zmienne)
-                        if not graniceczesciowe.konwertujLatke(plikDiff):
+                        if graniceczesciowe.konwertujLatke(plikDiff):
                             listaDiffow.append('narzedzia' + os.sep + 'granice.txt')
                             slownikHash['narzedzia' + os.sep + 'granice.txt'] = graniceczesciowe.granice_txt_hash
                         else:
                             stderr_stdout_writer.stderrorwrite('Nie udalo sie skonwertowac granic lokalnych na narzedzia' + os.sep + 'granice.txt.\nMusisz nalozyc latki recznie.')
-                            listaDiffow.append(nazwa_pliku.split(Zmienne.KatalogRoboczy, 1)[1])
+                            listaDiffow.append(os.path.join(os.path.basename(nazwa_pliku)))
                             slownikHash['granice-czesciowe.txt'] = 'NOWY_PLIK'
                             with open(plikdootwarcia + '.diff', 'w', encoding=Zmienne.Kodowanie,
                                       errors=Zmienne.WriteErrors) as f:

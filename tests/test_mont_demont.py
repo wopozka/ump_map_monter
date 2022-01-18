@@ -528,3 +528,18 @@ TEST_KIERUNKOWOSC_RONDA = {
 @pytest.mark.parametrize('target, answer', TEST_KIERUNKOWOSC_RONDA)
 def testuj_clockwisecheck(target, answer):
     assert mont_demont.TestyPoprawnosciDanych.clockwisecheck(target) == answer
+
+TEST_PACZOWANIE_GRANIC_CZESCIOWYCH = (
+        ('granice_1.diff', 'granice_1_OK.diff',),
+        ('granice_2.diff', 'granice_2_OK.diff',),
+#        ('granice_3.diff', 'granice_3_OK.diff',)
+)
+@pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH)
+def testuj_konwertuj_latke(target, answer):
+    Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+    paczer_granic = mont_demont.PaczerGranicCzesciowych(Zmienne, 'granice.txt')
+    with open(target, 'r') as granice_test_file:
+        granice_test_target = granice_test_file.readlines()
+    with open(answer, 'r') as granice_test_answer_file:
+        granice_test_answer = granice_test_answer_file.readlines()
+    assert paczer_granic.konwertujLatke(granice_test_target) == granice_test_answer
