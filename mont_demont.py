@@ -2466,26 +2466,6 @@ class plikPNT(object):
         self.errOutWriter = errOutWriter(args)
         self.Dane1 = []
 
-    def zwrocRekord(self, OtwartyPlik):
-        """funkcja zwraca rekord danych z pliku pnt"""
-        RekordPNT = []
-        KomentarzPNT = []
-        liniazPlikuPNT = OtwartyPlik.readline()
-        # liniazPlikuPNT.rstrip('\n')
-        liniazPlikuPNT.rstrip('\r\n')
-        if liniazPlikuPNT == '':
-            RekordPNT.append(liniazPlikuPNT)
-            return KomentarzPNT, RekordPNT
-        else:
-            if liniazPlikuPNT[0] == ';':
-                while liniazPlikuPNT[0] == ';':
-                    KomentarzPNT.append(liniazPlikuPNT)
-                    liniazPlikuPNT = OtwartyPlik.readline()
-                    # liniazPlikuPNT.rstrip('\n')
-                    liniazPlikuPNT.rstrip('\r\n')
-            RekordPNT.append(liniazPlikuPNT)
-            return KomentarzPNT, RekordPNT
-
     def usunNaglowek(self, zawartoscPliku):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         # pomijaj wszystko od pocz¹tku do wyst¹pienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
@@ -2650,7 +2630,8 @@ def listujobszary(args):
     else:
         return listaobszarow
 
-def testoj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
+
+def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
     if dane_do_zapisu['POIPOLY'] == '[POI]':
         tester_poprawnosci_danych.testy_poprawnosci_danych_poi(dane_do_zapisu)
     else:
@@ -2813,10 +2794,9 @@ def montujpliki(args):
         if hasattr(args, 'savememory') and args.savememory:
             print('oszczedzam pamiec')
             plikMP.writelines("{}\n".format(x) for x in globalneIndeksy.sekcja_cityidx)
-            plikMP.write('[END-Cities]\n\n')
         else:
             plikMP.write('\n'.join(globalneIndeksy.sekcja_cityidx))
-            plikMP.write('\n[END-Cities]\n\n')
+        plikMP.write('\n[END-Cities]\n\n')
 
     if not args.trybosmand:
         # zapisujemy dokladnosc
@@ -2918,7 +2898,7 @@ def demontuj(args):
         dane_do_zapisu = plikMp.zwroc_rekord_pliku_mp(rekord_z_pliku_mp.strip())
         # tester_queue.put(dane_do_zapisu)
         plikMp.procesuj_rekordy_mp(dane_do_zapisu)
-        testoj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu)
+        testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu)
     # wylaczam proces odpowiedzialny za testowanie danych
     # tester_queue.put([])
 
