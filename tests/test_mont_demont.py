@@ -534,8 +534,9 @@ TEST_PACZOWANIE_GRANIC_CZESCIOWYCH = (
     ('granice_2.diff', 'granice_2_OK.diff',),
     ('granice_3.diff', 'granice_3_OK.diff',),
     ('granice_4.diff', 'granice_4_OK.diff',),
-    ('granice_4.diff', 'granice_4_OK.diff',),
+    ('granice_5.diff', 'granice_5_OK.diff',),
 )
+
 @pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH)
 def testuj_konwertuj_latke(target, answer):
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')

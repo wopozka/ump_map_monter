@@ -335,12 +335,10 @@ class PaczerGranicCzesciowych(object):
             if not self.granice_txt:
                 return []
 
-        granice_po_konw = list()
         granice_po_konw = list(difflib.unified_diff(self.granice_orig, self.granice_txt,
                                                     fromfile='narzedzia' + self.separator + 'granice.txt',
                                                     tofile='narzedzia_Nowe' + self.separator + 'granice.txt'))
         if not self.tryb_testowy:
-            print('zapisuje granice')
             with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt'), 'w',
                       encoding=self.Zmienne.Kodowanie) as f:
                 f.writelines(self.granice_txt)
@@ -360,15 +358,10 @@ class PaczerGranicCzesciowych(object):
         elif all(a == 'kontekst' for a in zamien_co_kontekst):
             # jesli piszemy na koncu pliku
             if zamien_na_co_kontekst[-1] == '+' and zamien_na_co_kontekst[0] == 'kontekst':
-                przesuniecie = len(self.granice_txt) - len(zamien_co_kontekst)
-                granice_przed = self.granice_txt[:przesuniecie]
-                aaa = granice_przed[-3]
-                aaa = granice_przed[-2]
-                aaa = granice_przed[-1]
-                return granice_przed + zamien_na_co
+                przesuniecie = len(zamien_co_kontekst)
+                return self.granice_txt + zamien_na_co[przesuniecie:]
             # jesli piszemy na poczatku pliku
             elif not zamien_na_co_kontekst[0] == '+' and zamien_na_co_kontekst[-1] == 'kontekst':
-                przesuniecie = 0
                 return []
             else:
                 return []
