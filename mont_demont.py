@@ -251,7 +251,7 @@ class TestyPoprawnosciDanych(object):
         return ''
 
 class PaczerGranicCzesciowych(object):
-    def __init__(self, Zmienne, plik_z_granicami=None):
+    def __init__(self, Zmienne, plik_z_granicami_do_testow=None):
         """
         Klasa obsluguje latanie granic czesciowych. Przy demontazu granic czesciowych dostajemy plik diff dla tylko
         granic czesciowych. Poniewaz mdm kopiuje pliki, dlatego nie ma jak skopiowac pliku z granicami czesciowymi
@@ -263,12 +263,15 @@ class PaczerGranicCzesciowych(object):
         """
         self.Zmienne = Zmienne
         self.tryb_testowy = False
-        if plik_z_granicami:
+        self.separator = os.sep
+        if plik_z_granicami_do_testow:
             self.tryb_testowy = True
-        plik_z_granicami_txt = plik_z_granicami
-        if not plik_z_granicami:
+            # w testach jednostkowych potrzebujemy aby byly niezalezne od systemu, dlatego separator ustawiamy
+            # na sztywno
+            self.separator = '/'
+            plik_z_granicami_txt = plik_z_granicami_do_testow
+        else:
             plik_z_granicami_txt = os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'granice.txt')
-            self.tryb_testowy = True
         with open(plik_z_granicami_txt, 'r', encoding=self.Zmienne.Kodowanie) as f:
             self.granice_txt = f.readlines()
             self.granice_orig = self.granice_txt[:]
@@ -297,12 +300,13 @@ class PaczerGranicCzesciowych(object):
                 rekord_granic_czesciowych.append(a)
         granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
 
-        zamien_co = []
-        zamien_na_co = []
-        czypasuje = True
 
         # tworzymy dwie osobne listy, zamien_co zawiera informacje co zamienic, zamien na co informacje na co zamienic
         for a in granice_czesciowe_rekordy[:]:
+            zamien_co = []
+            zamien_co_kontekst = []
+            zamien_na_co = []
+            zamien_na_co_kontekst = []
             for b in a[:]:
                 # @ jest czescia latki, wiec to nalezy zignorowac
                 if b.startswith('@'):
@@ -313,14 +317,63 @@ class PaczerGranicCzesciowych(object):
                 elif b.startswith(' ;') and a[-1] == b:
                     pass
                 elif b.startswith(' '):
-                    zamien_co.append(b.replace(' ', '', 1))
-                    zamien_na_co.append(b.replace(' ', '', 1))
+                    linia_tmp = b.replace(' ', '', 1)
+                    zamien_co.append(linia_tmp)
+                    zamien_co_kontekst.append('kontekst')
+                    zamien_na_co.append(linia_tmp)
+                    zamien_na_co_kontekst.append('kontekst')
                 elif b.startswith('-'):
                     zamien_co.append(b.replace('-', '', 1))
+                    zamien_co_kontekst.append('-')
                 elif b.startswith('+'):
                     zamien_na_co.append(b.replace('+', '', 1))
+                    zamien_na_co_kontekst.append('+')
+            zamien_co = zamien_co
+            zamien_na_co = zamien_na_co
+            self.granice_txt = self.zwroc_zalatane_granice(zamien_co, zamien_co_kontekst,
+                                                           zamien_na_co, zamien_na_co_kontekst)
+            if not self.granice_txt:
+                return []
 
-            # nalepszym wyznacznikiem pozycji bedzie jakies data, dlatego szukamy data w tym co trzeba zamienic
+        granice_po_konw = list()
+        granice_po_konw = list(difflib.unified_diff(self.granice_orig, self.granice_txt,
+                                                    fromfile='narzedzia' + self.separator + 'granice.txt',
+                                                    tofile='narzedzia_Nowe' + self.separator + 'granice.txt'))
+        if not self.tryb_testowy:
+            print('zapisuje granice')
+            with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt'), 'w',
+                      encoding=self.Zmienne.Kodowanie) as f:
+                f.writelines(self.granice_txt)
+            with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt.diff'), 'w',
+                      encoding=self.Zmienne.Kodowanie) as f:
+                f.writelines(granice_po_konw)
+        return granice_po_konw
+
+    def zwroc_zalatane_granice(self, zamien_co, zamien_co_kontekst, zamien_na_co, zamien_na_co_kontekst):
+        przesuniecie = -1
+        # jesli plik jest pusty dopisujemy do niego od poczatku, wtedy nie zajmujmy sie takim przypadkiem
+        # niech user sie martwi
+        if not zamien_co_kontekst:
+            return []
+        # jesli linijki zostaly dopisane na koncu albo na poczatku pliku z granicami, wtedy caly
+        # plik zamien_co_kontekst bedzie tylko kontekstem
+        elif all(a == 'kontekst' for a in zamien_co_kontekst):
+            # jesli piszemy na koncu pliku
+            if zamien_na_co_kontekst[-1] == '+' and zamien_na_co_kontekst[0] == 'kontekst':
+                przesuniecie = len(self.granice_txt) - len(zamien_co_kontekst)
+                granice_przed = self.granice_txt[:przesuniecie]
+                aaa = granice_przed[-3]
+                aaa = granice_przed[-2]
+                aaa = granice_przed[-1]
+                return granice_przed + zamien_na_co
+            # jesli piszemy na poczatku pliku
+            elif not zamien_na_co_kontekst[0] == '+' and zamien_na_co_kontekst[-1] == 'kontekst':
+                przesuniecie = 0
+                return []
+            else:
+                return []
+        # nalepszym wyznacznikiem pozycji bedzie jakies data, dlatego szukamy data w tym co trzeba zamienic
+        else:
             DataX = ''
             DataX_index = -1
             for b in zamien_co[:]:
@@ -328,34 +381,19 @@ class PaczerGranicCzesciowych(object):
                     DataX = b
                     DataX_index = zamien_co.index(DataX)
                     break
-
+            if DataX_index == -1:
+                return []
             przesuniecie = self.granice_txt.index(DataX) - DataX_index
-            czypasuje = True
             for b in range(len(zamien_co)):
+                aaa = zamien_co[b]
+                bbb = self.granice_txt[przesuniecie + b]
                 if zamien_co[b] == self.granice_txt[przesuniecie + b]:
                     pass
                 else:
-                    czypasuje = False
-
+                    return []
             granice_przed = self.granice_txt[:przesuniecie]
             granice_po = self.granice_txt[przesuniecie + len(zamien_co):]
-            self.granice_txt = granice_przed + zamien_na_co + granice_po
-            zamien_co = []
-            zamien_na_co = []
-
-        granice_po_konw = list()
-        if czypasuje:
-            granice_po_konw = list(difflib.unified_diff(self.granice_orig, self.granice_txt,
-                                                        fromfile='narzedzia' + os.sep + 'granice.txt',
-                                                        tofile='narzedzia-Nowe' + os.sep + 'granice.txt'))
-            if not self.tryb_testowy:
-                with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt'), 'w',
-                          encoding=self.Zmienne.Kodowanie) as f:
-                    f.writelines(self.granice_txt)
-                with open(os.path.join(self.Zmienne.KatalogRoboczy, 'narzedzia-granice.txt.diff'), 'w',
-                          encoding=self.Zmienne.Kodowanie) as f:
-                    f.writelines(granice_po_konw)
-        return granice_po_konw
+            return granice_przed + zamien_na_co + granice_po
 
 
 # ustawienia poczatkowe
@@ -2972,7 +3010,7 @@ def demontuj(args):
                 elif plikMp.plikizMp[nazwa_pliku][-1][-1] != '\n':
                     plikMp.plikizMp[nazwa_pliku][-1][-1] += '\\ No new line at the end of file\n'
                 if 'granice-czesciowe.txt' not in nazwa_pliku:
-                    tofile = nazwa_pliku.replace('UMP', 'Nowe_UMP').replace('narzedzia', 'Nowe_narzedzia')
+                    tofile = nazwa_pliku.replace('UMP', 'UMP_Nowe').replace('narzedzia', 'narzedzia_Nowe')
                 else:
                     tofile = os.path.join(os.path.dirname(nazwa_pliku) + '_Nowe', os.path.basename(nazwa_pliku))
                 for line in difflib.unified_diff(orgPlikZawartosc, plikMp.plikizMp[nazwa_pliku], fromfile=nazwa_pliku,

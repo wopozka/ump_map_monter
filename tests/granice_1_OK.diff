@@ -1,5 +1,5 @@
 --- narzedzia/granice.txt
-+++ narzedzia-Nowe/granice.txt
++++ narzedzia_Nowe/granice.txt
 @@ -1073,7 +1073,7 @@
  [POLYLINE]
  Type=0x4b
