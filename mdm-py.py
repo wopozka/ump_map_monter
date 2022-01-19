@@ -51,14 +51,14 @@ def sprawdz_czy_cvs_obecny():
         return 'Nie odnalazłem programu cvs. Zainstaluj go.'
 
 
-def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia):
+def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia, zmienne):
     """
     funkcja sprawdza czy w plikach zaznaczonych do commitu nie ma konfliktow jesli sa to zwraca ich nazwy
     w postaci tupli, jesli nie ma zwraca pusta tuple
     """
     pliki_z_bledami = list()
     for nazwa_pliku in pliki_do_sprawdzenia:
-        with open(nazwa_pliku, 'r') as plik_w_cvs:
+        with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
             for zawartosc in plik_w_cvs.readlines():
                 if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
                         or zawartosc.startswith(">>>>>>>"):
@@ -2653,7 +2653,7 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickCvsCommit(self):
         if self.plikiDoCVS:
-            pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS)
+            pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS, self.Zmienne)
             if pliki_z_konfliktami:
                 informacja = u'Uwaga. W następujacych plikach w cvs są konflikty. Usuń je przed kontynuacją.\n' + \
                              '\n'.join(pliki_z_konfliktami)
