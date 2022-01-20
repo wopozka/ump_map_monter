@@ -96,6 +96,8 @@ class TestyPoprawnosciDanych(object):
             return ''
         if 'Label' in dane_do_zapisu and dane_do_zapisu['Label']:
             return ''
+        if 'adrLabel' in dane_do_zapisu and dane_do_zapisu['adrLabel']:
+            return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
             if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
                 data = [a for a in dane_do_zapisu if a.startswith('Data')]
