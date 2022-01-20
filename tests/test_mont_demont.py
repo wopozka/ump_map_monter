@@ -261,6 +261,8 @@ def test_modyfikuj_plik_dla_poi(target, answer):
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.bankomaty.pnt': [], 'UMP-PL-Lodz/src/cities-Lodz.pnt': []}
+    plikMp.zwaliduj_sciezki_do_plikow()
     assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target)) == OrderedDict(answer)
 
 TEST_MODYFIKUJ_PLIK_DLA_POLY = (
@@ -286,6 +288,9 @@ def test_modyfikuj_plik_dla_polygon_polyline(target, answer):
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
     plikMp.obszary = mont_demont.Obszary(['Lodz'], Zmienne)
+    plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.obszary.txt': [], 'UMP-PL-Lodz/src/LODZ.budynki.txt': [],
+                       'UMP-PL-Lodz/src/LODZ.kolej.txt': [], 'UMP-PL-Lodz/src/LODZ.zakazy.txt': []}
+    plikMp.zwaliduj_sciezki_do_plikow()
     plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(['UMP-PL-Lodz/src/LODZ.obszary.txt',
                                                       'UMP-PL-Lodz/src/LODZ.budynki.txt',
                                                       'UMP-PL-Lodz/src/LODZ.kolej.txt',
@@ -535,6 +540,9 @@ TEST_PACZOWANIE_GRANIC_CZESCIOWYCH = (
     ('granice_3.diff', 'granice_3_OK.diff',),
     ('granice_4.diff', 'granice_4_OK.diff',),
     ('granice_5.diff', 'granice_5_OK.diff',),
+    ('granice_6.diff', 'granice_6_OK.diff',),
+    ('granice_7.diff', 'granice_7_OK.diff',),
+    ('granice_8.diff', 'granice_8_OK.diff',),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH)

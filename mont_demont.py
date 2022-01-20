@@ -1184,6 +1184,7 @@ class plikMP1(object):
         self.errOutWriter = errOutWriter(args)
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = autoPlikDlaPoi()
+        self.dozwolone_obszary_dla_plikow = set()
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
         self.plikHash = {}
@@ -1243,7 +1244,26 @@ class plikMP1(object):
         self.obszary = Obszary(tmp_obszary, self.Zmienne)
         return 0
 
+    def zbuduj_dozwolone_obszary_dla_plikow(self):
+        # tworzymy zbior obszarow dla plikow ktore sa zamontowane + plik z granicami. Ma to zabezpieczac
+        # w przypadku gdybysmy przez pomylke wpisali do Plik= obszar spoza ktorego byly montowane pliki. Powodowalo
+        # to usuwanie wszystkich danych z danego pliku.
+        tmp_pliki = []
+        for nazwa_pliku in self.plikizMp:
+            if nazwa_pliku.startswith('UMP-'):
+                tmp_pliki.append(os.path.split(os.path.split(nazwa_pliku)[0]))
+            else:
+                tmp_pliki.append(nazwa_pliku)
+        self.dozwolone_obszary_dla_plikow = set(tmp_pliki)
+
+    def czy_nazwa_obszar_dla_pliku_jest_dozwolony(self, nazwa_pliku):
+        if nazwa_pliku.startswith('UMP'):
+            return os.path.split(os.path.split(nazwa_pliku)[0]) in self.dozwolone_obszary_dla_plikow
+        return nazwa_pliku in self.dozwolone_obszary_dla_plikow
+
     def zwaliduj_sciezki_do_plikow(self):
+        if not self.dozwolone_obszary_dla_plikow:
+            self.zbuduj_dozwolone_obszary_dla_plikow()
         for plik in self.plikizMp:
             if not self.sprawdz_poprawnosc_sciezki(plik):
                 self.sciezka_zwalidowana.add(plik)
@@ -1309,6 +1329,8 @@ class plikMP1(object):
         return noweData.lstrip(',')
 
     def sprawdz_poprawnosc_sciezki(self, sciezka):
+        if not self.czy_nazwa_obszar_dla_pliku_jest_dozwolony(sciezka):
+            return 1
         if sciezka in self.sciezka_zwalidowana:
             return 0
         if 'granice-czesciowe' in sciezka or 'narzedzia' + os.sep + 'granice.txt' in sciezka:
