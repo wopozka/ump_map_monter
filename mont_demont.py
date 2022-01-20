@@ -91,6 +91,18 @@ class TestyPoprawnosciDanych(object):
         ]
         self.ruchLewostronny = ['UMP-GB']
 
+    def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
+            return ''
+        if 'Label' in dane_do_zapisu and dane_do_zapisu['Label']:
+            return ''
+        if any(a.startswith('Numbers') for a in dane_do_zapisu):
+            if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
+                data = [a for a in dane_do_zapisu if a.startswith('Data')]
+                self.error_out_writer.stderrorwrite('Numeracja drogi bez Label %s' % dane_do_zapisu[data[0]])
+                return 'brak_label_przy_numeracji'
+            return ''
+
     def sprawdzData0Only(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]':
             return ''
@@ -230,6 +242,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.testuj_label(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
