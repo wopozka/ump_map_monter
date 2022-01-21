@@ -91,6 +91,20 @@ class TestyPoprawnosciDanych(object):
         ]
         self.ruchLewostronny = ['UMP-GB']
 
+    def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
+            return ''
+        if 'Label' in dane_do_zapisu and dane_do_zapisu['Label']:
+            return ''
+        if 'adrLabel' in dane_do_zapisu and dane_do_zapisu['adrLabel']:
+            return ''
+        if any(a.startswith('Numbers') for a in dane_do_zapisu):
+            if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
+                data = [a for a in dane_do_zapisu if a.startswith('Data')]
+                self.error_out_writer.stderrorwrite('Numeracja drogi bez Label %s' % dane_do_zapisu[data[0]])
+                return 'brak_label_przy_numeracji'
+            return ''
+
     def sprawdzData0Only(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]':
             return ''
@@ -230,6 +244,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.testuj_label(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
@@ -793,23 +808,24 @@ class tabelaKonwersjiTypow(object):
         :return: typ dokladny, typ najlepiej pasujacy
         jesli typ dokladny nie moze byc ustalony to zwraca '', typ najelpiej pasujacy
         """
+        if Type not in self.type2Alias:
+            return '', Type
         if Label in self.name2Alias:
             return self.name2Alias[Label], '0x0'
+        if len(set(a.lower() for a in self.type2Alias[Type])) == 1:
+            return self.type2Alias[Type][-1].upper(), '0x0'
         else:
-            if Type in self.type2Alias:
-                pasujaceTypy = [a for a in Label.strip().split(' ') if a.lower() in self.type2Alias[Type]]
-                if pasujaceTypy:
-                    if len(pasujaceTypy) > 1:
-                        self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
-                                                                '\nUzywam pierwszej wartosci z listy: %s'
-                                                                % pasujaceTypy[0])
-                    return '', pasujaceTypy[0]
-                self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
-                                                        '\nUzywam pierwszej wartosci z listy: %s'
-                                                        % self.type2Alias[Type][0])
-                return '', self.type2Alias[Type][0]
-            else:
-                return '', Type
+            pasujaceTypy = [a for a in Label.strip().split(' ') if a.lower() in self.type2Alias[Type]]
+            if pasujaceTypy:
+                if len(pasujaceTypy) > 1:
+                    self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
+                                                            '\nUzywam pierwszej wartosci z listy: %s'
+                                                            % pasujaceTypy[0])
+                return '', pasujaceTypy[0].upper()
+            self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
+                                                    '\nUzywam pierwszej wartosci z listy: %s'
+                                                    % self.type2Alias[Type][0])
+            return '', self.type2Alias[Type][0].upper()
 
     def merge_alias2TypeFromFile_and_alias2Type(self):
         for a in self.alias2TypeFromFile:
@@ -1184,6 +1200,7 @@ class plikMP1(object):
         self.errOutWriter = errOutWriter(args)
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = autoPlikDlaPoi()
+        self.dozwolone_obszary_dla_plikow = set()
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
         self.plikHash = {}
@@ -1243,7 +1260,26 @@ class plikMP1(object):
         self.obszary = Obszary(tmp_obszary, self.Zmienne)
         return 0
 
+    def zbuduj_dozwolone_obszary_dla_plikow(self):
+        # tworzymy zbior obszarow dla plikow ktore sa zamontowane + plik z granicami. Ma to zabezpieczac
+        # w przypadku gdybysmy przez pomylke wpisali do Plik= obszar spoza ktorego byly montowane pliki. Powodowalo
+        # to usuwanie wszystkich danych z danego pliku.
+        tmp_pliki = []
+        for nazwa_pliku in self.plikizMp:
+            if nazwa_pliku.startswith('UMP-'):
+                tmp_pliki.append(os.path.split(os.path.split(nazwa_pliku)[0]))
+            else:
+                tmp_pliki.append(nazwa_pliku)
+        self.dozwolone_obszary_dla_plikow = set(tmp_pliki)
+
+    def czy_nazwa_obszar_dla_pliku_jest_dozwolony(self, nazwa_pliku):
+        if nazwa_pliku.startswith('UMP'):
+            return os.path.split(os.path.split(nazwa_pliku)[0]) in self.dozwolone_obszary_dla_plikow
+        return nazwa_pliku in self.dozwolone_obszary_dla_plikow
+
     def zwaliduj_sciezki_do_plikow(self):
+        if not self.dozwolone_obszary_dla_plikow:
+            self.zbuduj_dozwolone_obszary_dla_plikow()
         for plik in self.plikizMp:
             if not self.sprawdz_poprawnosc_sciezki(plik):
                 self.sciezka_zwalidowana.add(plik)
@@ -1309,6 +1345,8 @@ class plikMP1(object):
         return noweData.lstrip(',')
 
     def sprawdz_poprawnosc_sciezki(self, sciezka):
+        if not self.czy_nazwa_obszar_dla_pliku_jest_dozwolony(sciezka):
+            return 1
         if sciezka in self.sciezka_zwalidowana:
             return 0
         if 'granice-czesciowe' in sciezka or 'narzedzia' + os.sep + 'granice.txt' in sciezka:
@@ -1489,7 +1527,7 @@ class plikMP1(object):
                                                (daneDoZapisu['Type'], daneDoZapisu[tmpData[0]]))
                             daneDoZapisu['Typ'] = '0x0'
                         else:
-                            daneDoZapisu['Typ'] = zgdanietyTypPoAliasie.upper()
+                            daneDoZapisu['Typ'] = zgdanietyTypPoAliasie
                 else:
                     try:
                         daneDoZapisu['Typ'] = self.tabela_konwersji_typow.type2Alias[daneDoZapisu['Type']][0].upper()
@@ -1953,7 +1991,7 @@ class plikMP1(object):
                                            (dane_do_zapisu['Type'], dane_do_zapisu[tmpData[0]]))
                         dane_do_zapisu['Typ'] = '0x0'
                     else:
-                        dane_do_zapisu['Typ'] = zgdanietyTypPoAliasie.upper()
+                        dane_do_zapisu['Typ'] = zgdanietyTypPoAliasie
             else:
                 try:
                     dane_do_zapisu['Typ'] = self.tabela_konwersji_typow.type2Alias[dane_do_zapisu['Type']][0].upper()
@@ -2335,7 +2373,7 @@ class City(ObiektNaMapie):
         self.Dane1.append('Miasto=' + Miasto)
         self.ustaw_wartosc_zmiennej_cityidx(Miasto)
         if self.czyDodacCityIdx:
-            self.dodaj_indeksy_miast_do_obiektu(Miasto)
+            self.dodaj_indeksy_miast_do_obiektu(Miasto)upper
         # Tworzymy plik
         self.Dane1.append('Plik=' + self.Plik)
         # tworzymy rozmiar
@@ -2536,7 +2574,7 @@ class plikPNT(object):
 
     def ustalDokladnosc(self, LiniaZPliku):
         """
-                Funkcja ustala dokladnosc pliku txt
+                Funkcja ustala dokladnosc pliku txtupper
                 :param LiniaZPliku: string w postaci linii pliku
                 :return: 0 jesli dokladnosc udalo sie ustalic, 1 jesli dokladnosci nie udalo sie ustalic
         """
