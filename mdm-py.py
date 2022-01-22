@@ -2667,8 +2667,8 @@ class mdm_gui_py(tkinter.Tk):
                     else:
                         doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
                         self.plikiDoCVS = doCVS.uncommitedfiles[:]
-                else:
-                    pass
+        else:
+            tkinter.messagebox.showwarning('Brak plików do wysłania', message='Nie mam żadnych plików do wysłania.')
 
     def cvsSprawdzAktualnoscMontowanychObszarow(self, *obszary):
         Needs_Patch = 0
