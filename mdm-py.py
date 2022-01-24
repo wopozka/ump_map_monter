@@ -774,38 +774,38 @@ class ConfigWindow(tkinter.Toplevel):
 class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało
     def __init__(self):
-        self.montDemontOptions = {'cityidx': tkinter.BooleanVar()}
-        self.montDemontOptions['cityidx'].set(False)
-        self.montDemontOptions['adrfile'] = tkinter.BooleanVar()
-        self.montDemontOptions['adrfile'].set(False)
-        self.montDemontOptions['noszlaki'] = tkinter.BooleanVar()
-        self.montDemontOptions['noszlaki'].set(False)
-        self.montDemontOptions['nocity'] = tkinter.BooleanVar()
-        self.montDemontOptions['nocity'].set(False)
-        self.montDemontOptions['nopnt'] = tkinter.BooleanVar()
-        self.montDemontOptions['nopnt'].set(False)
-        self.montDemontOptions['monthash'] = tkinter.BooleanVar()
-        self.montDemontOptions['monthash'].set(False)
-        self.montDemontOptions['extratypes'] = tkinter.BooleanVar()
-        self.montDemontOptions['extratypes'].set(False)
-        self.montDemontOptions['graniceczesciowe'] = tkinter.BooleanVar()
-        self.montDemontOptions['graniceczesciowe'].set(False)
-        self.montDemontOptions['demonthash'] = tkinter.BooleanVar()
-        self.montDemontOptions['demonthash'].set(False)
-        self.montDemontOptions['autopoi'] = tkinter.BooleanVar()
-        self.montDemontOptions['autopoi'].set(False)
-        self.montDemontOptions['X'] = tkinter.StringVar()
-        self.montDemontOptions['X'].set('0')
-        self.montDemontOptions['autopolypoly'] = tkinter.BooleanVar()
-        self.montDemontOptions['autopolypoly'].set(False)
-        self.montDemontOptions['enty_otwarte_do_extras'] = tkinter.BooleanVar()
-        self.montDemontOptions['enty_otwarte_do_extras'].set(False)
-        self.montDemontOptions['standaryzuj_komentarz'] = tkinter.BooleanVar()
-        self.montDemontOptions['standaryzuj_komentarz'].set(False)
-        self.montDemontOptions['oszczedzaj_pamiec'] = tkinter.BooleanVar(value=False)
-        self.montDemontOptions['format_indeksow'] = tkinter.StringVar(value='cityidx')
-        self.montDemontOptions['usun_puste_numery'] = tkinter.BooleanVar(value=False)
+        self.montDemontOptions = {}
+        self.mont_opcje = {'cityidx': False, 'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False,
+                           'monthash': False, 'extratypes': False, 'graniceczesciowe': False,
+                           'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx' }
+        self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
+                             'standaryzuj_komentarz': False, 'usun_puste_numery': False}
+        self.mont_demont_opcje = {'oszczedzaj_pamiec': False}
+        self.stworz_zmienne_mont_demont(self.mont_opcje)
+        self.stworz_zmienne_mont_demont(self.demont_opcje)
+        self.stworz_zmienne_mont_demont(self.mont_demont_opcje)
         self.readConfig()
+
+    def stworz_zmienne_mont_demont(self, zmienne):
+        for key in zmienne:
+            if isinstance(zmienne[key], bool):
+                self.montDemontOptions[key] = tkinter.BooleanVar(value=zmienne[key])
+            else:
+                self.montDemontOptions[key] = tkinter.StringVar(value=zmienne[key])
+
+    def zwroc_args_do_mont(self):
+        return self.zwroc_args(self.mont_opcje)
+
+    def zwroc_args_do_demont(self):
+        return self.zwroc_args(self.demont_opcje)
+
+    def zwroc_args(self, argumenty):
+        args = Argumenty()
+        for atrybut in argumenty:
+            setattr(args, atrybut, argumenty[atrybut])
+        for atrybut in self.mont_demont_opcje:
+            setattr(args, atrybut, self.mont_demont_opcje[atrybut])
+        return args
 
     def saveConfig(self):
         with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'w') as configfile:
@@ -1973,7 +1973,7 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'])
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'])
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
                                           variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
@@ -2724,7 +2724,7 @@ class mdm_gui_py(tkinter.Tk):
         # ustawiamy tryb nieosmandowy, jest on uruchamiany tylko na potrzeby konwersji do OSNAnda
         self.args.trybosmand = 0
         # ustawiamy przenoszenie otwarte i entrypointów do extras
-        self.args.entry_otwarte_to_extras = self.mdmMontDemontOptions.montDemontOptions['enty_otwarte_do_extras'].get()
+        self.args.entry_otwarte_to_extras = self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'].get()
         # ustawiamy oszczedzanie pamieci
         self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
         # ustawiamy format indeksow miast
