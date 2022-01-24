@@ -1395,6 +1395,15 @@ class cvsOutputReceaver(tkinter.Toplevel):
         pass  # override
 
     def cvsci(self, obszary, message, stopthreadqueue, progreststartstopqueue):
+        """
+        Commitowanie zmian przy pomocy cvs
+        :param obszary: list(), lista plików do zacommitowania w postaci sciezki np. w wersji dla win będzie
+                                ['UMP-PL-Lodz\\src\\LODZ.zielone.txt', 'UMP-PL-Lodz\\src\\SKIERNIEWICE.drogi.txt']
+        :param message: string, log to commita
+        :param stopthreadqueue: queue, kolejka z której przychodzi komunikat o przerwaniu dzialania
+        :param progreststartstopqueue: queue, kolejka do progressbarru, start, stop
+        :return:
+        """
 
         progreststartstopqueue.put('start')
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
@@ -1452,10 +1461,10 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     self.commitedfiles.append(a)
 
         for a in obszary:
-            if (a.find('/src') > 0) and (a not in self.commitedfiles):
+            if os.path.dirname(a).endswith('src') and (a not in self.commitedfiles):
                 self.uncommitedfiles.append(a)
 
-        if len(self.uncommitedfiles) > 0:
+        if self.uncommitedfiles:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
                 self.outputwindow.inputqueue.put(('nieprzeslane' + a + '\n'))
