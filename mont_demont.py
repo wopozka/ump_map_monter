@@ -1437,6 +1437,8 @@ class plikMP1(object):
         if dane_do_zapisu['POIPOLY'] == '[POLYLINE]' or dane_do_zapisu['POIPOLY'] == '[POLYGON]':
             dane_do_zapisu = self.modyfikuj_plik_dla_polygon_polyline(dane_do_zapisu)
             dane_do_zapisu = self.zaokraglij_klucze_ze_wspolrzednymi(dane_do_zapisu)
+            if self.args.usun_puste_numery:
+                dane_do_zapisu = self.usun_pusta_numeracje(dane_do_zapisu)
             self.zapiszTXT(dane_do_zapisu)
         elif dane_do_zapisu['POIPOLY'] == '[POI]':
             if dane_do_zapisu['Type'] in City.rozmiar2Type:
@@ -2019,6 +2021,17 @@ class plikMP1(object):
         dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
         return dane_do_zapisu
 
+
+    @staticmethod
+    def usun_pusta_numeracje(dane_do_zapisu):
+        wszystkie_numeracje = [a for a in dane_do_zapisu if a.startswith('Numbers')]
+        numeracja_do_usuniecia = [a for a in wszystkie_numeracje if 'N,-1,-1,N,-1,-1' in dane_do_zapisu[a]]
+        if numeracja_do_usuniecia and len(numeracja_do_usuniecia) == len(wszystkie_numeracje):
+            for numeracja in wszystkie_numeracje:
+                del(dane_do_zapisu[numeracja])
+        return dane_do_zapisu
+
+
 class PlikiDoMontowania(object):
     def __init__(self, katalog_ze_zrodlami, args):
         if not hasattr(args, 'montuj_wedlug_klas'):
@@ -2373,7 +2386,7 @@ class City(ObiektNaMapie):
         self.Dane1.append('Miasto=' + Miasto)
         self.ustaw_wartosc_zmiennej_cityidx(Miasto)
         if self.czyDodacCityIdx:
-            self.dodaj_indeksy_miast_do_obiektu(Miasto)upper
+            self.dodaj_indeksy_miast_do_obiektu(Miasto)
         # Tworzymy plik
         self.Dane1.append('Plik=' + self.Plik)
         # tworzymy rozmiar
@@ -3501,6 +3514,7 @@ def main(argumenty):
                                  help='specjalne traktowanie typow')
     parser_demontuj.add_argument('-sk', '--standaryzuj-komentarz', action='store_true', help='Standaryzuj otwawrte '
                                                                                              'i EntryPoints')
+    parser_demontuj.add_argument('-upn', '--usun-puste-numery', action='store_true', help='Usun pusta numeracje')
     parser_demontuj.set_defaults(func=demontuj)
 
     # parser dla komendy listuj

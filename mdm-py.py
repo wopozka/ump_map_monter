@@ -804,6 +804,7 @@ class mdmConfig(object):
         self.montDemontOptions['standaryzuj_komentarz'].set(False)
         self.montDemontOptions['oszczedzaj_pamiec'] = tkinter.BooleanVar(value=False)
         self.montDemontOptions['format_indeksow'] = tkinter.StringVar(value='cityidx')
+        self.montDemontOptions['usun_puste_numery'] = tkinter.BooleanVar(value=False)
         self.readConfig()
 
     def saveConfig(self):
@@ -1994,6 +1995,8 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_opcje.add_cascade(label=u'Format indeksu miast', menu=menu_montuj_format_indeksow)
         menu_demontuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje demontażu', menu=menu_demontuj_opcje)
+        menu_demontuj_opcje.add_checkbutton(label=u'Usuń pustą numeracją',
+                                            variable=self.mdmMontDemontOptions.montDemontOptions['usun_puste_numery'])
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
                                             variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
         menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
@@ -2786,7 +2789,10 @@ class mdm_gui_py(tkinter.Tk):
         self.args.standaryzuj_komentarz = self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'].get()
         # ustawiamy oszczedzanie pamieci
         self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
+        # usuwamy pustą numerację
+        self.args.usun_puste_numery = self.mdmMontDemontOptions.montDemontOptions['usun_puste_numery'].get()
         # _thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
+
         my_queue = queue.Queue()
         # self.args.queue=my_queue
         self.args.queue = self.frameInDiffCanvas.queueListaPlikowFrame
