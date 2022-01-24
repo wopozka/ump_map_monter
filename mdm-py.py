@@ -1217,7 +1217,6 @@ class cvsDialog(tkinter.Toplevel):
         self.destroy()
         return 'break'
 
-    # command hooks
     def validate(self):
         a = self.logwindow.get(1.0, 'end')
         if len(a) <= 1:
@@ -1227,11 +1226,7 @@ class cvsDialog(tkinter.Toplevel):
             return 0
 
     def apply(self):
-
         self.iftocommit = 'tak'
-        # print('stosuje')
-        # doCVS=cvsOutputReceaver(self.parent,self.pliki,self.message,'ci')
-        # pass # override
 
     def read_last_commit_log(self):
         last_cvs_log = []
@@ -1253,7 +1248,6 @@ class cvsDialog(tkinter.Toplevel):
 class cvsOutputReceaver(tkinter.Toplevel):
     # okienko które wyświetla wyjście z programu cvs
     def __init__(self, parent, obszary, message, cvscommand, title=None):
-
         tkinter.Toplevel.__init__(self, parent)
         self.parent = parent
         self.transient(parent)
@@ -1289,19 +1283,16 @@ class cvsOutputReceaver(tkinter.Toplevel):
         if cvscommand == 'up':
             thread = threading.Thread(target=self.cvsup, args=(obszary, self.stopthreadqueue,
                                                                self.progreststartstopqueue))
-            thread.start()
         elif cvscommand == 'diff':
             thread = threading.Thread(target=self.cvsdiff, args=(obszary, self.stopthreadqueue,
                                                                  self.progreststartstopqueue))
-            thread.start()
         elif cvscommand == 'co':
             thread = threading.Thread(target=self.cvsco, args=(obszary, self.stopthreadqueue,
                                                                self.progreststartstopqueue))
-            thread.start()
         else:
             thread = threading.Thread(target=self.cvsci, args=(obszary, message, self.stopthreadqueue,
                                                                self.progreststartstopqueue))
-            thread.start()
+        thread.start()
             # self.cvsci(self.args.obszary,self.args.message)
         # mont_demont_py.cvsup(self.args)
         self.progres_start_stop_check()
@@ -1412,8 +1403,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
         cvs_string = ''
 
         os.chdir(Zmienne.KatalogzUMP)
-        self.outputwindow.inputqueue.put(('cd '+Zmienne.KatalogzUMP+'\n'))
-        self.outputwindow.inputqueue.put(('CVSROOT='+CVSROOT+'\n\n'))
+        self.outputwindow.inputqueue.put(('cd ' + Zmienne.KatalogzUMP + '\n'))
+        self.outputwindow.inputqueue.put(('CVSROOT=' + CVSROOT + '\n'))
         for a in obszary:
             self.outputwindow.inputqueue.put(('cvs ci -m "' + message.strip() + '" ' + a + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
