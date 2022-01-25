@@ -1406,6 +1406,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put(('cd ' + Zmienne.KatalogzUMP + '\n'))
         self.outputwindow.inputqueue.put(('CVSROOT=' + CVSROOT + '\n'))
         for a in obszary:
+            print('obszar', a)
             self.outputwindow.inputqueue.put(('cvs ci -m "' + message.strip() + '" ' + a + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
@@ -1441,7 +1442,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                 if len(stdout) > 0:
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
-                        if line.decode(Zmienne.Kodowanie).find('<--  ' + a.split('/')[-1]) >= 0:
+                        if line.decode(Zmienne.Kodowanie).find('<--  ' + os.path.basename(a)) >= 0:
                             self.commitedfiles.append(a)
                     if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
