@@ -2618,11 +2618,12 @@ class mdm_gui_py(tkinter.Tk):
         lista_latek = tkinter.filedialog.askopenfilenames(title="Wskaż łatki", filetypes=((u'pliki łatek', '*.diff'),
                                                                                           (u'pliki łatek', '*.patch'),
                                                                                           (u'wszystkie pliki', '*.*')))
-        wynik_nakladania_latek = dict()
-        for latka in lista_latek:
-            wynik_nakladania_latek[latka] = self.patchExe(latka)
-        paczuj_rezultaty = PaczujResult(self, wynik_nakladania_latek)
-        paczuj_rezultaty.wait_window()
+        if lista_latek:
+            wynik_nakladania_latek = dict()
+            for latka in lista_latek:
+                wynik_nakladania_latek[latka] = self.patchExe(latka)
+            paczuj_rezultaty = PaczujResult(self, wynik_nakladania_latek)
+            paczuj_rezultaty.wait_window()
 
     def patchExe(self, pliki_diff):
         self.args.pliki_diff = [pliki_diff]
