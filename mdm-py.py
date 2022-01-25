@@ -1406,11 +1406,9 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow.inputqueue.put(('cd ' + Zmienne.KatalogzUMP + '\n'))
         self.outputwindow.inputqueue.put(('CVSROOT=' + CVSROOT + '\n'))
         for a in obszary:
-            print('obszar', a)
             self.outputwindow.inputqueue.put(('cvs ci -m "' + message.strip() + '" ' + a + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'ci', '-m', message, a], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
-
             while process.poll() is None:
                 try:
                     cvs_string = stopthreadqueue.get_nowait()
@@ -1419,9 +1417,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                         break
                 except queue.Empty:
                     pass
-
                 time.sleep(1)
-
             stderr = process.stderr.readlines()
             stdout = process.stdout.readlines()
 
