@@ -1690,7 +1690,7 @@ class plikMP1(object):
             for dokladnosc_i_hash_pliku in dokladnosci_hashe_plikow.strip().split('\n'):
                 try:
                     if self.cyfryHash(dokladnosc_i_hash_pliku, args.X):
-                        if args.hash:
+                        if args.demonthash:
                             self.stderrorwrite('[...] %s [FALSE].' % dokladnosc_i_hash_pliku.split(';')[0])
                         else:
                             self.stderrorwrite('[...] %s [FALSE].\nSuma kontrolna nie zgadza sie albo jej brak.'
@@ -2789,14 +2789,14 @@ def montujpliki(args):
             stderr_stdout_writer.stderrorwrite('Nie moge otworzyæ pliku %s' % os.path.join(Zmienne.KatalogzUMP, pliki))
         else:
             zawartoscPlikuMp.dodajplik(pliki)
-            if args.hash:
+            if args.monthash:
                 zawartoscPlikuMp.plikHash[pliki] = ''
             else:
                 if pliki.find('granice-czesciowe.txt') > 0:
                     zawartoscPlikuMp.plikHash[pliki] = hashlib.md5(open(pliki, 'rb').read()).hexdigest()
                 else:
                     zawartoscPlikuMp.plikHash[pliki] = hashlib.md5(open(os.path.join(Zmienne.KatalogzUMP, pliki),
-                                                                      'rb').read()).hexdigest()
+                                                                        'rb').read()).hexdigest()
 
             # print('Udalo sie otworzyc pliku %s'%(pliki))
 
@@ -2875,7 +2875,6 @@ def montujpliki(args):
     if args.cityidx and args.format_indeksow == 'cityidx':
         stderr_stdout_writer.stdoutwrite('zapisuje cityidx')
         if hasattr(args, 'savememory') and args.savememory:
-            print('oszczedzam pamiec')
             plikMP.writelines("{}\n".format(x) for x in globalneIndeksy.sekcja_cityidx)
         else:
             plikMP.write('\n'.join(globalneIndeksy.sekcja_cityidx))
@@ -3383,7 +3382,7 @@ def rozdziel_na_klasy(args):
     args.nocity = 1
     args.nopnt = 1
     args.plikmp = 'wynik.mp'
-    args.hash = 1
+    args.monthash = 1
     args.extratypes = 0
     args.graniceczesciowe = 0
     args.trybosmand = 0
@@ -3483,7 +3482,7 @@ def main(argumenty):
     parser_montuj.add_argument('-np', '--no-pnt', action='store_true', dest='nopnt', help='nie montuj plikow pnt')
     parser_montuj.add_argument('-o', '--output-file', dest='plikmp', default='wynik.mp',
                                help='nazwa pliku wynikowego. Domyslnie wynik.mp')
-    parser_montuj.add_argument('-nh', '--no-hash', dest='hash', action='store_true',
+    parser_montuj.add_argument('-nh', '--no-hash', dest='monthash', action='store_true',
                                help='nie generuj sum kontrolnych dla montowanych plikow')
     parser_montuj.add_argument('-et', '--extra-types', dest='extratypes', action='store_true',
                                help='specjalne traktowanie typow')
@@ -3502,7 +3501,7 @@ def main(argumenty):
                                  help='nazwa pliku do demontazu, domyslnie wynik.mp')
     parser_demontuj.add_argument('-idx', '--city-idx', action="store_true", dest='cityidx',
                                  help="nadpisuj Miasto= wartoscia indeksu miast")
-    parser_demontuj.add_argument('-nh', '--no-hash', action='store_true', dest='hash',
+    parser_demontuj.add_argument('-nh', '--no-hash', action='store_true', dest='demonthash',
                                  help='ignoruj sumy kontrolne plikow z cvs')
     parser_demontuj.add_argument('-r', '--round', dest='X', default='0', choices=['5', '6'],
                                  help='zaokraglij wspolrzedne do X cyfr znaczacych. Dozwolone wartosci 5 i 6')

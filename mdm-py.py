@@ -775,12 +775,12 @@ class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało
     def __init__(self):
         self.montDemontOptions = {}
-        self.mont_opcje = {'cityidx': False, 'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False,
-                           'monthash': False, 'extratypes': False, 'graniceczesciowe': False,
+        self.mont_opcje = {'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False,
+                           'monthash': False, 'graniceczesciowe': False,
                            'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx' }
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
                              'standaryzuj_komentarz': False, 'usun_puste_numery': False}
-        self.mont_demont_opcje = {'oszczedzaj_pamiec': False}
+        self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
         self.stworz_zmienne_mont_demont(self.demont_opcje)
         self.stworz_zmienne_mont_demont(self.mont_demont_opcje)
@@ -794,17 +794,22 @@ class mdmConfig(object):
                 self.montDemontOptions[key] = tkinter.StringVar(value=zmienne[key])
 
     def zwroc_args_do_mont(self):
-        return self.zwroc_args(self.mont_opcje)
+        args = self.zwroc_args(self.mont_opcje)
+        args.plikmp = 'wynik.mp'
+        return args
+
 
     def zwroc_args_do_demont(self):
-        return self.zwroc_args(self.demont_opcje)
+        args = self.zwroc_args(self.demont_opcje)
+        args.katrob = None
+        return args
 
     def zwroc_args(self, argumenty):
         args = Argumenty()
         for atrybut in argumenty:
-            setattr(args, atrybut, argumenty[atrybut])
+            setattr(args, atrybut, self.montDemontOptions[atrybut].get())
         for atrybut in self.mont_demont_opcje:
-            setattr(args, atrybut, self.mont_demont_opcje[atrybut])
+            setattr(args, atrybut, self.montDemontOptions[atrybut].get())
         return args
 
     def saveConfig(self):
@@ -1885,6 +1890,7 @@ class mdm_gui_py(tkinter.Tk):
         self.cvsstatusQueue = queue.Queue()
         self.modul_cvs = ModulCVS()
         self.Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
+        self.args = Argumenty()
         self.initialize()
         if os.path.isfile(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/ikonki/UMPlogo32.gif')):
             iconimg = tkinter.PhotoImage(file=os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia/ikonki/UMPlogo32.gif'))
@@ -1921,7 +1927,6 @@ class mdm_gui_py(tkinter.Tk):
         # pliki zmienione, do wysłania na cvs
         self.plikiDoCVS = []
         self.uncommitedfilesqueue = queue.Queue()
-        self.args = Argumenty()
         self.grid()
 
         # menu Plik
@@ -1972,7 +1977,7 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
                                           variable=self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'])
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
                                                     variable=self.mdmMontDemontOptions.montDemontOptions[
@@ -1988,7 +1993,7 @@ class mdm_gui_py(tkinter.Tk):
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
                                             variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
         menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'])
+                                            variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
         menu_demontuj_opcje.add_checkbutton(label=u'Automatyczny rozkład obszarów i linii',
                                             variable=self.mdmMontDemontOptions.montDemontOptions['autopolypoly'],
                                             command=lambda: self.selectUnselect_aol(None))
@@ -2695,47 +2700,15 @@ class mdm_gui_py(tkinter.Tk):
     def OnButtonClickMont(self):
         # czyscimy liste plikow ktore pozostaly z poprzedniego demontazu
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
+        self.args = self.mdmMontDemontOptions.zwroc_args_do_mont()
         self.args.obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-
-        self.args.plikmp = 'wynik.mp'
-        # self.args.adrfile=self.adrfile.get()
-        self.args.adrfile = self.mdmMontDemontOptions.montDemontOptions['adrfile'].get()
-        # self.args.cityidx=self.cityidx.get()
-        self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
-
-        # self.args.notopo=self.notopo.get()
-        # self.args.notopo=self.mdmMontDemontOptions.montDemontOptions['notopo'].get()
-
-        # self.args.nocity=self.nocity.get()
-        self.args.nocity = self.mdmMontDemontOptions.montDemontOptions['nocity'].get()
-        # self.args.noszlaki=self.noszlaki.get()
-        self.args.noszlaki = self.mdmMontDemontOptions.montDemontOptions['noszlaki'].get()
-        # self.args.nopnt=self.nopnt.get()
-        self.args.nopnt = self.mdmMontDemontOptions.montDemontOptions['nopnt'].get()
-        # self.args.hash=self.monthash.get()
-        self.args.hash = self.mdmMontDemontOptions.montDemontOptions['monthash'].get()
-        # self.args.extratypes=self.extratypes.get()
-        self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
-        # self.args.graniceczesciowe=self.graniceczesciowe.get()
-        self.args.graniceczesciowe = self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'].get()
-        # ustawiamy tryb nieosmandowy, jest on uruchamiany tylko na potrzeby konwersji do OSNAnda
         self.args.trybosmand = 0
-        # ustawiamy przenoszenie otwarte i entrypointów do extras
-        self.args.entry_otwarte_to_extras = self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'].get()
-        # ustawiamy oszczedzanie pamieci
-        self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
-        # ustawiamy format indeksow miast
-        self.args.format_indeksow = self.mdmMontDemontOptions.montDemontOptions['format_indeksow'].get()
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
-
-        # _thread.start_new_thread(mont_demont_py.montujpliki,(self.args,))
         thread = threading.Thread(target=mont_demont_py.montujpliki, args=(self.args,))
         thread.start()
-
         thread1 = threading.Thread(target=self.cvsSprawdzAktualnoscMontowanychObszarow, args=(self.args.obszary))
         thread1.start()
-
         self.montButton.configure(state='disabled')
 
     def OnButtonClickEdit(self):
@@ -2755,47 +2728,15 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickDemont(self):
         self.frameInDiffCanvas.WyczyscPanelzListaPlikow()
-        self.args.plikmp = None
-        self.args.katrob = None
-        self.args.umphome = None
-
-        # autoobszary
-        self.args.autopolypoly = self.mdmMontDemontOptions.montDemontOptions['autopolypoly'].get()
-
-        # self.args.X=self.X.get()
-        self.args.X = self.mdmMontDemontOptions.montDemontOptions['X'].get()
-        # self.args.autopoi=self.autopoi.get()
-        self.args.autopoi = self.mdmMontDemontOptions.montDemontOptions['autopoi'].get()
-        # self.args.cityidx=self.cityidx.get()
-        self.args.cityidx = self.mdmMontDemontOptions.montDemontOptions['cityidx'].get()
-        # self.args.hash=self.demonthash.get()
-        self.args.hash = self.mdmMontDemontOptions.montDemontOptions['demonthash'].get()
-        # self.args.extratypes=self.extratypes.get()
-        self.args.extratypes = self.mdmMontDemontOptions.montDemontOptions['extratypes'].get()
-        self.montButton.configure(state='disabled')
-        # standaryzacja komentarzy, otwarte i entrypoints są standaryzowane
-        self.args.standaryzuj_komentarz = self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'].get()
-        # ustawiamy oszczedzanie pamieci
-        self.args.savememory = self.mdmMontDemontOptions.montDemontOptions['oszczedzaj_pamiec'].get()
-        # usuwamy pustą numerację
-        self.args.usun_puste_numery = self.mdmMontDemontOptions.montDemontOptions['usun_puste_numery'].get()
-        # _thread.start_new_thread(mont_demont_py.demontuj,(self.args,))
-
+        self.args = self.mdmMontDemontOptions.zwroc_args_do_demont()
         my_queue = queue.Queue()
-        # self.args.queue=my_queue
         self.args.queue = self.frameInDiffCanvas.queueListaPlikowFrame
         self.args.stderrqueue = self.stderrqueue
         self.args.stdoutqueue = self.stdoutqueue
         # kolejka do informowania guzika że właśnie działa i żeby się wyłączył
         self.args.buttonqueue = self.demontButton.statusqueue
         thread = threading.Thread(target=mont_demont_py.demontuj, args=(self.args,))
-        # thread=threading.Thread(target=self.demont,args=(my_queue,))
         thread.start()
-        # thread.join()
-        # thread1=threading.Thread(target=self.wyswietlListePlikow,args=(my_queue,))
-        # thread1.start()
-        # for a in my_queue.get():
-        #     print(a)
         self.frameInDiffCanvas.update_idletasks()
         self.diffCanvas.config(scrollregion=self.diffCanvas.bbox("all"))
 

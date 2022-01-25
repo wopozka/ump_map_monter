@@ -554,3 +554,12 @@ def testuj_konwertuj_latke(target, answer):
     with open(answer, 'r') as granice_test_answer_file:
         granice_test_answer = granice_test_answer_file.readlines()
     assert paczer_granic.konwertujLatke(granice_test_target) == granice_test_answer
+
+TEST_USUN_PUSTA_NUMERACJE = (
+    (OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}), OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}),),
+    (OrderedDict({'Numbers21': '23,N,-1,-1,N,-1,-1'}), OrderedDict({},),),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_USUN_PUSTA_NUMERACJE)
+def testuj_usun_pusta_numeracje(target, answer):
+    assert mont_demont.plikMP1.usun_pusta_numeracje(target) == answer
