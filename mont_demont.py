@@ -1746,7 +1746,7 @@ class plikMP1(object):
 
     def zwroc_rekord_pliku_mp(self, string_z_rekordem):
         dane_do_zapisu = OrderedDict()
-        ostatni_id_dla_data = {'Data0': -1, 'Data1': -1, 'Data2': -1, 'Data3': -1, 'Data4': -1}
+        ostatni_id_dla_data = defaultdict(lambda: -1)
         for linia in string_z_rekordem.strip().split('\n'):
             linia = linia.strip()
             if 'POIPOLY' not in dane_do_zapisu:

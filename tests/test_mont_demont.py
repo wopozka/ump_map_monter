@@ -74,6 +74,24 @@ TEST_ZWROC_REKORD_PLIKU_MP = (
             'Plik': 'UMP-PL-Leszno/src/ZMIGROD.ulice.txt'
          }),
     ),
+(
+        '[POLYLINE]\nType=0x6\nLabel=Krasickiego\nEndLevel=1\nDirIndicator=1\nData0=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData0=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData10=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData11=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nNumbers1=0,E,14,14,O,9,3\nNumbers2=1,N,-1,-1,O,1,1\nMiasto=Zmigrod\nPlik=UMP-PL-Leszno/src/ZMIGROD.ulice.txt\n',
+         ({
+            'POIPOLY': '[POLYLINE]',
+            'Type': '0x6',
+            'Label': 'Krasickiego',
+            'EndLevel': '1',
+            'DirIndicator': '1',
+            'Data0_0': '(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)',
+            'Data0_1': '(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)',
+            'Data10_0': '(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)',
+            'Data11_0': '(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)',
+            'Numbers1': '0,E,14,14,O,9,3',
+            'Numbers2': '1,N,-1,-1,O,1,1',
+            'Miasto': 'Zmigrod',
+            'Plik': 'UMP-PL-Leszno/src/ZMIGROD.ulice.txt'
+         }),
+    ),
     (
         '[POLYLINE]\nType=0x6\nLabel=Krasickiego\nEndLevel=1\nDirIndicator=1\nData0=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData0=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData1=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nData1=(51.46427,16.90135),(51.46412,16.90261),(51.46404,16.90367)\nNumbers1=0,E,14,14,O,9,3\nNumbers2=1,N,-1,-1,O,1,1\nMiasto=Zmigrod\nPlik=UMP-PL-Leszno/src/ZMIGROD.ulice.txt\nTutaj dziwna linia\nTutaj dziwna linia2\n',
          ({
