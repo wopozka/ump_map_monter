@@ -2204,10 +2204,10 @@ class Poi(ObiektNaMapie):
         ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
         self.dlugoscRekordowMax = 8
         self.dlugoscRekordowMin = 7
-        if hasattr(args, 'entry_otwarte_to_extras'):
-            self.entry_otwarte_to_extras = args.entry_otwarte_to_extras
+        if hasattr(args, 'entry_otwarte_do_extras'):
+            self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
         else:
-            self.entry_otwarte_to_extras = False
+            self.entry_otwarte_do_extras = False
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.pnt2Dane(LiniaZPliku, orgLinia)
@@ -2266,7 +2266,7 @@ class Poi(ObiektNaMapie):
         if len(LiniaZPliku) == 8:
             self.Dane1.append('KodPoczt=' + LiniaZPliku[7])
         self.Dane1.append('Typ=' + LiniaZPliku[6])
-        if self.entry_otwarte_to_extras:
+        if self.entry_otwarte_do_extras:
             self.komentarz_na_entrypoint_i_otwarte()
         self.Dane1.append('[END]\n')
         return
@@ -2341,7 +2341,7 @@ class Adr(Poi):
         if len(LiniaZPliku) == 8:
             self.Dane1.append('KodPoczt=' + LiniaZPliku[7])
         self.Dane1.append('Typ=' + LiniaZPliku[6])
-        if self.entry_otwarte_to_extras:
+        if self.entry_otwarte_do_extras:
             self.komentarz_na_entrypoint_i_otwarte()
         self.Dane1.append('[END]\n')
         return
@@ -3490,7 +3490,7 @@ def main(argumenty):
                                help='dolacz tylko granice montowanych obszarow')
     parser_montuj.add_argument('-toa', '--tryb-osmand', dest='trybosmand', action='store_true',
                                help='ogranicza ilosc montowanych danych dla konwersji do OSMAnd')
-    parser_montuj.add_argument('--entry-otwarte-to-extras', action='store_true', default=False,
+    parser_montuj.add_argument('-eoe', '--entry-otwarte-do-extras', action='store_true', default=False,
                                help='Przenosi otarte i entrypoints z komentarza do extras. Uwaga, u¿ywaæ '
                                     'ostro¿nie')
     parser_montuj.set_defaults(func=montujpliki)
