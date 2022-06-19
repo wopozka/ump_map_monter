@@ -3207,7 +3207,7 @@ def sprawdz(args):
     bledy = {'slepy': [], 'przeciecie': [], 'blad routingu': [], 'za bliskie': [], 'zygzak': [],
              'zapetlona numeracja': [], 'nieuzywany slepy': [], 'nieuzywany przeciecie': []}
     NetgenConfFile = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'netgen.cfg'))
-    process = subprocess.Popen([Zmienne.NetGen, '-cbxj', '-a60', '-e0', '-r0.00007', '-s0.0003',
+    process = subprocess.Popen([Zmienne.NetGen, '-cbxj', '-a60', '-e0', '-r0.0000315', '-s0.0003',
                                 '-N', '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     line, err = process.communicate()
