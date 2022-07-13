@@ -90,6 +90,79 @@ class TestyPoprawnosciDanych(object):
             'Z',  # województwo zachodniopomorskie
         ]
         self.ruchLewostronny = ['UMP-GB']
+        self.dozwolone_klucze = set(('Type', 'Typ', 'EndLevel', 'Label', 'Label2', 'Label3', 'EndLevel', 'POIPOLY',
+                                     'DirIndicator', 'Miasto', 'Plik', 'Komentarz', 'RouteParam', 'ForceSpeed',
+                                     'adrLabel', 'LA', 'Speed', 'ForceClass', 'Height_f', 'Height_m', 'Transit',
+                                     'MaxWeight', 'Moto', 'Sign', 'SignPos', 'RestrParam', 'MaxHeight', 'HouseNumber',
+                                     'Oplata', 'Oplata:moto', 'StreetDesc', 'Phone', 'KodPoczt', 'MiscInfo', 'City',
+                                     'Rozmiar', 'Highway', 'MaxWidth', 'CityIdx', 'OrigType', 'SignAngle', 'Lanes'))
+        self.dozwolone_klucze_przestarzale = set(('Rampa',))
+
+        self.dozwolone_klucze_z_numerem = set(('Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'))
+
+    def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
+        for klucz in dane_do_zapisu:
+            if klucz not in self.dozwolone_klucze:
+                klucz_z_numerem_znaleziony = False
+                for klucz_z_numerem in self.dozwolone_klucze_z_numerem:
+                    if klucz.startswith(klucz_z_numerem):
+                        klucz_z_numerem_znaleziony = True
+                        break
+                if not klucz_z_numerem_znaleziony:
+                    coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                    if klucz in self.dozwolone_klucze_przestarzale:
+                        self.error_out_writer.stderrorwrite('Nieu¿ywany klucz %s %s, mo¿na usun±æ.' % (klucz, coords))
+                    else:
+                        self.error_out_writer.stderrorwrite('Nieznany klucz: %s %s'  % (klucz, coords))
+        return ''
+
+    def sprawdz_poprawnosc_wartosci_klucza(self, dane_do_zapisu):
+        if 'Sign' in dane_do_zapisu:
+            if not self.dozwolona_wartosc_dla_Sign(dane_do_zapisu['Sign']):
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                self.error_out_writer.stderrorwrite('Bledna wartosc dla Sign: %s %s'
+                                                    % (dane_do_zapisu['Sign'], coords))
+
+        if 'SignPos' in dane_do_zapisu:
+            if not self.dozwolona_wartosc_dla_SignPos(dane_do_zapisu['SignPos']):
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                self.error_out_writer.stderrorwrite('B³edna wartosc dla SignPos: %s %s'
+                                                    % (dane_do_zapisu['SignPos'], coords))
+                self.error_out_writer.stderrorwrite('Poprawny format: (XX.XXXXX,YY.YYYYY)')
+
+        return ''
+
+    def dozwolona_wartosc_dla_SignPos(self, wartosc):
+        if not (wartosc.startswith('(') and wartosc.endswith(')')):
+            return False
+        if ',' not in wartosc:
+            return False
+        try:
+            for val in  wartosc[1:-1].split(',', 1):
+                float(val)
+        except ValueError:
+            return False
+        return True
+
+
+    def dozwolona_wartosc_dla_Sign(self, wartosc):
+        return wartosc in ('BRAK' ,'NAKAZ_BRAK', 'brak', 'ZAKAZ' , 'RESTRYKCJA', 'ZAKAZ_PROSTO', 'Z_PROSTO',
+                           'ZAKAZ_LEWO', 'Z_LEWO', 'ZAKAZ_PRAWO' ,'Z_PRAWO', 'ZAKAZ_ZAWRACANIA' ,
+                           'Z_ZAWRACANIA,NO_UTURN', 'NAKAZ_PRAWO', 'N_PRAWO', 'NAKAZ_LEWO' , 'N_LEWO', 'NAKAZ_PROSTO',
+                           'N_PROSTO', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO' , 'NAKAZ_PROSTO_PRAWO', 'N_PROSTO_PRAWO',
+                           'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO', 'N_PROSTO_LEWO',
+                           'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO', 'N_PRAWO_LEWO')
+
+
+    def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
+        for tmpkey in dane_do_zapisu:
+            if tmpkey.startswith('Data'):
+                if '),(' in dane_do_zapisu[tmpkey]:
+                    return dane_do_zapisu[tmpkey].split('),(', 1)[0] + ')'
+                else:
+                    return dane_do_zapisu[tmpkey]
+        return '()'
+
 
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
@@ -238,6 +311,7 @@ class TestyPoprawnosciDanych(object):
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
+        self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
         wyniki_testow = list()
@@ -245,6 +319,9 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.testuj_label(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
+
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
