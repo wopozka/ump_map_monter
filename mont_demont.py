@@ -90,15 +90,36 @@ class TestyPoprawnosciDanych(object):
             'Z',  # województwo zachodniopomorskie
         ]
         self.ruchLewostronny = ['UMP-GB']
-        self.dozwolone_klucze = set(('Type', 'Typ', 'EndLevel', 'Label', 'Label2', 'Label3', 'EndLevel', 'POIPOLY',
-                                     'DirIndicator', 'Miasto', 'Plik', 'Komentarz', 'RouteParam', 'ForceSpeed',
-                                     'adrLabel', 'LA', 'Speed', 'ForceClass', 'Height_f', 'Height_m', 'Transit',
-                                     'MaxWeight', 'Moto', 'Sign', 'SignPos', 'RestrParam', 'MaxHeight', 'HouseNumber',
-                                     'Oplata', 'Oplata:moto', 'StreetDesc', 'Phone', 'KodPoczt', 'MiscInfo', 'City',
-                                     'Rozmiar', 'Highway', 'MaxWidth', 'CityIdx', 'OrigType', 'SignAngle', 'Lanes'))
+        self.dozwolone_klucze = set(('adrLabel',
+                                     'City', 'CityIdx', 'Czas',
+                                     'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
+                                     'EndLevel',
+                                     'Floors', 'ForceClass', 'ForceSpeed', 'FullLabel',
+                                     'HouseNumber', 'Height_f', 'Height_m', 'Highway',
+                                     'KodPoczt', 'Komentarz',
+                                     'Label', 'Label2', 'Label3', 'Lanes',
+                                     'MaxWeight', 'MiscInfo',
+                                     'Typ', 'Type',
+                                     'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
+                                     'LA', 'lokalLabel',
+                                     'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OvernightParking',
+                                     'Phone', 'Plik', 'POIPOLY',
+                                     'Rodzaj', 'RouteParam',
+                                     'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
+                                     'TLanes', 'Transit',
+                                     'RestrParam', 'Rozmiar',
+                                     'WebPage',
+                                     'Zip'
+                                     ))
         self.dozwolone_klucze_przestarzale = set(('Rampa',))
 
         self.dozwolone_klucze_z_numerem = set(('Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'))
+        self.dozwolone_wart_kluczy_funkcje = {'EndLevel': self.dozwolona_wartosc_dla_EndLevel,
+                                              'Sign': self.dozwolona_wartosc_dla_Sign,
+                                              'SignPos': self.dozwolona_wartosc_dla_SignPos,
+                                              'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
+                                              'ForceClass': self.dozwolona_wartosc_dla_ForceClass
+                                              }
 
     def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
         for klucz in dane_do_zapisu:
@@ -117,41 +138,48 @@ class TestyPoprawnosciDanych(object):
         return ''
 
     def sprawdz_poprawnosc_wartosci_klucza(self, dane_do_zapisu):
-        if 'Sign' in dane_do_zapisu:
-            if not self.dozwolona_wartosc_dla_Sign(dane_do_zapisu['Sign']):
-                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-                self.error_out_writer.stderrorwrite('Bledna wartosc dla Sign: %s %s'
-                                                    % (dane_do_zapisu['Sign'], coords))
-
-        if 'SignPos' in dane_do_zapisu:
-            if not self.dozwolona_wartosc_dla_SignPos(dane_do_zapisu['SignPos']):
-                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-                self.error_out_writer.stderrorwrite('B³edna wartosc dla SignPos: %s %s'
-                                                    % (dane_do_zapisu['SignPos'], coords))
-                self.error_out_writer.stderrorwrite('Poprawny format: (XX.XXXXX,YY.YYYYY)')
-
+        coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+        for klucz in self.dozwolone_wart_kluczy_funkcje:
+            if klucz in dane_do_zapisu:
+                czy_ok, info_blad = self.dozwolone_wart_kluczy_funkcje[klucz](dane_do_zapisu[klucz])
+                if not czy_ok:
+                    self.error_out_writer.stderrorwrite('Bledna wartosc dla %s: %s %s'
+                                                        % (klucz, dane_do_zapisu[klucz], coords))
+                    self.error_out_writer.stderrorwrite('Dozwolone wartosci: %s' % info_blad)
         return ''
+
+    def dozwolona_wartosc_dla_ForceSpeed(self, wartosc):
+        dozw_wart = ('0', '1', '2', '3', '4', '5', '6', '7', 'faster', 'slower')
+        return wartosc in dozw_wart, ", ".join(dozw_wart)
+
+    def dozwolona_wartosc_dla_ForceClass(self, wartosc):
+        dozw_wart = ('0', '1', '2', '3', '4')
+        return wartosc in dozw_wart, ", ".join(dozw_wart)
+
+    def dozwolona_wartosc_dla_EndLevel(self, wartosc):
+        dozw_wart = ('0', '1', '2', '3', '4', '5')
+        return wartosc in dozw_wart, ", ".join(dozw_wart)
 
     def dozwolona_wartosc_dla_SignPos(self, wartosc):
         if not (wartosc.startswith('(') and wartosc.endswith(')')):
-            return False
+            return False, '(XX.XXXXX,YY.YYYYY)'
         if ',' not in wartosc:
-            return False
+            return False, '(XX.XXXXX,YY.YYYYY)'
         try:
             for val in  wartosc[1:-1].split(',', 1):
                 float(val)
         except ValueError:
-            return False
-        return True
+            return False, '(XX.XXXXX,YY.YYYYY)'
+        return True, '(XX.XXXXX,YY.YYYYY)'
 
 
     def dozwolona_wartosc_dla_Sign(self, wartosc):
         return wartosc in ('BRAK' ,'NAKAZ_BRAK', 'brak', 'ZAKAZ' , 'RESTRYKCJA', 'ZAKAZ_PROSTO', 'Z_PROSTO',
                            'ZAKAZ_LEWO', 'Z_LEWO', 'ZAKAZ_PRAWO' ,'Z_PRAWO', 'ZAKAZ_ZAWRACANIA' ,
-                           'Z_ZAWRACANIA,NO_UTURN', 'NAKAZ_PRAWO', 'N_PRAWO', 'NAKAZ_LEWO' , 'N_LEWO', 'NAKAZ_PROSTO',
+                           'Z_ZAWRACANIA' ,'NO_UTURN', 'NAKAZ_PRAWO', 'N_PRAWO', 'NAKAZ_LEWO' , 'N_LEWO', 'NAKAZ_PROSTO',
                            'N_PROSTO', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO' , 'NAKAZ_PROSTO_PRAWO', 'N_PROSTO_PRAWO',
                            'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO', 'N_PROSTO_LEWO',
-                           'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO', 'N_PRAWO_LEWO')
+                           'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO', 'N_PRAWO_LEWO'), 'sprawdz na wiki'
 
 
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
