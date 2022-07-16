@@ -134,7 +134,7 @@ class TestyPoprawnosciDanych(object):
                     if klucz in self.dozwolone_klucze_przestarzale:
                         self.error_out_writer.stderrorwrite('Nieu¿ywany klucz %s %s, mo¿na usun±æ.' % (klucz, coords))
                     else:
-                        self.error_out_writer.stderrorwrite('Nieznany klucz: %s %s'  % (klucz, coords))
+                        self.error_out_writer.stderrorwrite('Nieznany klucz: %s %s' % (klucz, coords))
         return ''
 
     def sprawdz_poprawnosc_wartosci_klucza(self, dane_do_zapisu):
@@ -172,7 +172,6 @@ class TestyPoprawnosciDanych(object):
             return False, '(XX.XXXXX,YY.YYYYY)'
         return True, '(XX.XXXXX,YY.YYYYY)'
 
-
     def dozwolona_wartosc_dla_Sign(self, wartosc):
         return wartosc in ('BRAK' ,'NAKAZ_BRAK', 'brak', 'ZAKAZ' , 'RESTRYKCJA', 'ZAKAZ_PROSTO', 'Z_PROSTO',
                            'ZAKAZ_LEWO', 'Z_LEWO', 'ZAKAZ_PRAWO' ,'Z_PRAWO', 'ZAKAZ_ZAWRACANIA' ,
@@ -180,7 +179,6 @@ class TestyPoprawnosciDanych(object):
                            'N_PROSTO', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO' , 'NAKAZ_PROSTO_PRAWO', 'N_PROSTO_PRAWO',
                            'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO', 'N_PROSTO_LEWO',
                            'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO', 'N_PRAWO_LEWO'), 'sprawdz na wiki'
-
 
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
         for tmpkey in dane_do_zapisu:
@@ -190,7 +188,6 @@ class TestyPoprawnosciDanych(object):
                 else:
                     return dane_do_zapisu[tmpkey]
         return '()'
-
 
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
