@@ -213,10 +213,9 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
             return ''
-        if 'Label' in dane_do_zapisu and dane_do_zapisu['Label']:
-            return ''
-        if 'adrLabel' in dane_do_zapisu and dane_do_zapisu['adrLabel']:
-            return ''
+        for tmp_label in ('Label', 'adrLabel'):
+            if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
+                return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
             if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
                 data = [a for a in dane_do_zapisu if a.startswith('Data')]
