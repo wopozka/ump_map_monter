@@ -90,36 +90,58 @@ class TestyPoprawnosciDanych(object):
             'Z',  # województwo zachodniopomorskie
         ]
         self.ruchLewostronny = ['UMP-GB']
-        self.dozwolone_klucze = set(('adrLabel',
-                                     'City', 'CityIdx', 'Czas',
-                                     'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
-                                     'EndLevel',
-                                     'Floors', 'ForceClass', 'ForceSpeed', 'FullLabel',
-                                     'HouseNumber', 'Height_f', 'Height_m', 'Highway',
-                                     'KodPoczt', 'Komentarz',
-                                     'Label', 'Label2', 'Label3', 'Lanes',
-                                     'MaxWeight', 'MiscInfo',
-                                     'Typ', 'Type',
-                                     'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
-                                     'LA', 'lokalLabel',
-                                     'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OvernightParking',
-                                     'Phone', 'Plik', 'POIPOLY',
-                                     'Rodzaj', 'RouteParam',
-                                     'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
-                                     'TLanes', 'Transit',
-                                     'RestrParam', 'Rozmiar',
-                                     'WebPage',
-                                     'Zip'
-                                     ))
-        self.dozwolone_klucze_przestarzale = set(('Rampa',))
+        self.dozwolone_klucze = {'adrLabel',
+                                 'City', 'CityIdx', 'Czas',
+                                 'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
+                                 'EndLevel',
+                                 'Floors', 'ForceClass', 'ForceSpeed', 'FullLabel',
+                                 'HouseNumber', 'Height_f', 'Height_m', 'Highway',
+                                 'KodPoczt', 'Komentarz',
+                                 'Label', 'Label2', 'Label3', 'Lanes',
+                                 'MaxWeight', 'MiscInfo',
+                                 'Typ', 'Type',
+                                 'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
+                                 'LA', 'lokalLabel',
+                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OvernightParking',
+                                 'Phone', 'Plik', 'POIPOLY',
+                                 'Rodzaj', 'RouteParam',
+                                 'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
+                                 'TLanes', 'Transit',
+                                 'RestrParam', 'Rozmiar',
+                                 'WebPage',
+                                 'Zip'
+                                 }
+        self.dozwolone_klucze_przestarzale = {'Rampa'}
 
-        self.dozwolone_klucze_z_numerem = set(('Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'))
+        self.dozwolone_klucze_z_numerem = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
         self.dozwolone_wart_kluczy_funkcje = {'EndLevel': self.dozwolona_wartosc_dla_EndLevel,
                                               'Sign': self.dozwolona_wartosc_dla_Sign,
                                               'SignPos': self.dozwolona_wartosc_dla_SignPos,
+                                              'SignAngle': self.dozwolona_wartosc_dla_SignAngle,
                                               'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
                                               'ForceClass': self.dozwolona_wartosc_dla_ForceClass
                                               }
+        self.dozwolone_wartosci_dla_sign = {'BRAK' ,'NAKAZ_BRAK', 'brak', # brak zakazu
+                                            'B-1', 'B1', 'ZAKAZ' , 'RESTRYKCJA', # inna restrykcja
+                                            'B-2', 'B2', 'ZAKAZ_PROSTO', 'Z_PROSTO', # zakaz na wprost
+                                            'B-21', 'B21', 'ZAKAZ_LEWO', 'Z_LEWO', # zakaz w lewo
+                                            'B-22', 'B22', 'ZAKAZ_PRAWO' ,'Z_PRAWO', # zakaz w prawo
+                                            'B-23', 'B23', 'ZAKAZ_ZAWRACANIA', 'Z_ZAWRACANIA' ,'NO_UTURN', # zakaz zawracania
+                                            'C-2', 'C2', 'NAKAZ_PRAWO', 'N_PRAWO', # nakaz w prawo
+                                            'C-4', 'C4', 'NAKAZ_LEWO' , 'N_LEWO', # nakaz w lewo
+                                            'C-5', 'C5', 'NAKAZ_PROSTO', 'N_PROSTO', # nakaz prosto
+                                            'C-6', 'C6', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO', 'NAKAZ_PROSTO_PRAWO',
+                                            'N_PROSTO_PRAWO', # nakaz prosto lub w prawo
+                                            'C-7', 'C7', 'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO',
+                                            'N_PROSTO_LEWO', # nakaz prosto lub w lewo
+                                            'C-8', 'C8', 'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO',
+                                            'N_PRAWO_LEWO' # nakaz prawo lub w lewo
+                                            }
+        self.dozwolone_wartosci_dla_ForceSpeed = {'0', '1', '2', '3', '4', '5', '6', '7', 'faster', 'slower'}
+        self.dozwolone_wartosci_dla_ForceClass = {'0', '1', '2', '3', '4'}
+        self.dozwolone_wartosci_dla_EndLevel = {'0', '1', '2', '3', '4', '5'}
+
+
 
     def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
         for klucz in dane_do_zapisu:
@@ -149,16 +171,20 @@ class TestyPoprawnosciDanych(object):
         return ''
 
     def dozwolona_wartosc_dla_ForceSpeed(self, wartosc):
-        dozw_wart = ('0', '1', '2', '3', '4', '5', '6', '7', 'faster', 'slower')
-        return wartosc in dozw_wart, ", ".join(dozw_wart)
+        return wartosc in self.dozwolone_wartosci_dla_ForceSpeed, ", ".join(self.dozwolone_wartosci_dla_ForceSpeed)
 
     def dozwolona_wartosc_dla_ForceClass(self, wartosc):
-        dozw_wart = ('0', '1', '2', '3', '4')
-        return wartosc in dozw_wart, ", ".join(dozw_wart)
+        return wartosc in self.dozwolone_wartosci_dla_ForceClass, ", ".join(self.dozwolone_wartosci_dla_ForceClass)
 
     def dozwolona_wartosc_dla_EndLevel(self, wartosc):
-        dozw_wart = ('0', '1', '2', '3', '4', '5')
-        return wartosc in dozw_wart, ", ".join(dozw_wart)
+        return wartosc in self.dozwolone_wartosci_dla_EndLevel, ", ".join(self.dozwolone_wartosci_dla_EndLevel)
+        
+    def dozwolona_wartosc_dla_SignAngle(self, wartosc):
+        try:
+            wartosc_int = int(wartosc)
+        except ValueError:
+            return False, 'dozwolone wartosci: -360 do 360'
+        return -360 <= wartosc_int <= 360, 'dozwolone wartosci: -360 do 360'
 
     def dozwolona_wartosc_dla_SignPos(self, wartosc):
         if not (wartosc.startswith('(') and wartosc.endswith(')')):
@@ -166,19 +192,14 @@ class TestyPoprawnosciDanych(object):
         if ',' not in wartosc:
             return False, '(XX.XXXXX,YY.YYYYY)'
         try:
-            for val in  wartosc[1:-1].split(',', 1):
+            for val in wartosc[1:-1].split(',', 1):
                 float(val)
         except ValueError:
             return False, '(XX.XXXXX,YY.YYYYY)'
         return True, '(XX.XXXXX,YY.YYYYY)'
 
     def dozwolona_wartosc_dla_Sign(self, wartosc):
-        return wartosc in ('BRAK' ,'NAKAZ_BRAK', 'brak', 'ZAKAZ' , 'RESTRYKCJA', 'ZAKAZ_PROSTO', 'Z_PROSTO',
-                           'ZAKAZ_LEWO', 'Z_LEWO', 'ZAKAZ_PRAWO' ,'Z_PRAWO', 'ZAKAZ_ZAWRACANIA' ,
-                           'Z_ZAWRACANIA' ,'NO_UTURN', 'NAKAZ_PRAWO', 'N_PRAWO', 'NAKAZ_LEWO' , 'N_LEWO', 'NAKAZ_PROSTO',
-                           'N_PROSTO', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO' , 'NAKAZ_PROSTO_PRAWO', 'N_PROSTO_PRAWO',
-                           'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO', 'N_PROSTO_LEWO',
-                           'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO', 'N_PRAWO_LEWO'), 'sprawdz na wiki'
+        return wartosc in self.dozwolone_wartosci_dla_sign, 'sprawdz na wiki: http://ump.fuw.edu.pl/wiki/Restrykcje'
 
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
         for tmpkey in dane_do_zapisu:
