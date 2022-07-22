@@ -2393,23 +2393,18 @@ class Poi(ObiektNaMapie):
         self.Dane1.append('[END]\n')
         return
 
-    def rozdzielUlNrTelUrl(self, UlNrTelUrl):
+    @staticmethod
+    def rozdzielUlNrTelUrl(UlNrTelUrl):
         """ulica, numer domu, numer telefonu oraz url sa podane w jednej linii.
             Funkcja ta rozdziela je na oddzielne pola
             :return Ulica, NumerDomu, Telefon, Url"""
         if not UlNrTelUrl:
             return '', '', '', ''
-        aaa = UlNrTelUrl.split(';', 4)
+        return_val = ['', '', '', '']
+        for licznik, aaa in enumerate(UlNrTelUrl.split(';', 4)):
+            return_val[licznik] = aaa
+        return return_val
         len_aaa = len(aaa)
-        if len_aaa == 1:
-            return aaa[0], '', '', ''
-        elif len_aaa == 2:
-            return aaa[0], aaa[1], '', ''
-        elif len_aaa == 3:
-            return aaa[0], aaa[1], aaa[2], ''
-        else:
-            return aaa[0], aaa[1], aaa[2], aaa[3]
-
 
 class Adr(Poi):
     def __init__(self, Plik, IndeksyMiast, alias2Type, args):
