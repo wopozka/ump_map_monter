@@ -217,11 +217,10 @@ class TestyPoprawnosciDanych(object):
             if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
                 return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
-            if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
-                data = [a for a in dane_do_zapisu if a.startswith('Data')]
-                self.error_out_writer.stderrorwrite('Numeracja drogi bez Label %s' % dane_do_zapisu[data[0]])
-                return 'brak_label_przy_numeracji'
-            return ''
+            data = [a for a in dane_do_zapisu if a.startswith('Data')]
+            self.error_out_writer.stderrorwrite('Numeracja drogi bez Label %s' % dane_do_zapisu[data[0]])
+            return 'brak_label_przy_numeracji'
+        return ''
 
     def sprawdzData0Only(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]':
