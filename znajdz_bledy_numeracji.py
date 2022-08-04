@@ -115,7 +115,7 @@ class Mapa(object):
         self.stderr_stdout_writer = stderr_stdout_writer
         self.mode = mode
         self.RoadId = -1
-        self.Zakazy = dict()
+        self.Zakazy = defaultdict(lambda: Zakaz(self.stderr_stdout_writer))
         self.Drogi = dict()
         self.DrogiJednokierunkowe = []
         # poniższe pomaga wyszukiwać dróg jednokierunkowych bez wjazdu albo bez wyjazdu
@@ -199,9 +199,6 @@ class Mapa(object):
                                     self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
 
                             else:
-                                # zakazy spisujemy osobno, aby pozniej je dodac i przerobic
-                                if self.RoadId not in self.Zakazy:
-                                    self.Zakazy[self.RoadId] = Zakaz(self.stderr_stdout_writer)
                                 self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
                             kolejnyNrNoda += 1
                         if my_type not in ('0x19', '0x2f'):
@@ -225,10 +222,11 @@ class Mapa(object):
                                 self.WezlyDoOdrzucenia.append(int(Numery[0]))
                             self.WezlyDoSprawdzenia.append(int(Numery[0]))
                             # sprawdzamy poprawnosc danych
-                            parzystosc = self.sprawdzParzystosc(Numery[:])
+                            parzystosc = self.sprawdzParzystosc(tuple(Numery))
                             if parzystosc:
-                                self.stderr_stdout_writer.stderrorwrite(
-                                    '%s przy %s' % (parzystosc, self.NodyDrogi[int(Numery[0])]))
+                                for error_msg in parzystosc:
+                                    self.stderr_stdout_writer.stderrorwrite(
+                                        '%s przy %s' % (error_msg, self.NodyDrogi[int(Numery[0])]))
                             del Numery[:]
 
                     # przypadek gdy ostatni segment jest ponumerowany, wtedy ostatni węzeł nie dostaje nic. Trzeba
@@ -272,27 +270,12 @@ class Mapa(object):
 
             # obrabiamy zakazy iterujemy po RoadID zakazow
             if not self.mode:
-                self.przetwarzania_zakazow()
-                # for para_wspolrzednych in self.Zakazy:
-                #     for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
-                #         if tmpbbb in self.WszystkieNody:
-                #             self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
-                #             self.Zakazy[para_wspolrzednych].Nodes.append(self.WszystkieNody[tmpbbb])
-                #         else:
-                #             self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
-                #             self.Zakazy[para_wspolrzednych].Nodes.append(None)
-                #     self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
-                # # teraz czas sprawdzić czy wezły niektóre nie są routingowe
+                self.przetwarzanie_zakazow()
                 self.sprawdzCzyRoutingowe()
 
             # obrabiamy ślepe jednokierunkowe
             if not self.mode:
                 self.sprawdz_jednokierunkowe_slepe()
-                # for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
-                #     if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2 and para_wspolrzednych not in self.NodyGraniczne:
-                #         self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
-
-            # poszukajmy nieciągłości w siatce routingowej
 
             if self.mode:
                 if self.mode == 'sprawdz_siatke_dwukierunkowa':
@@ -300,7 +283,7 @@ class Mapa(object):
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
 
-    def przetwarzania_zakazow(self):
+    def przetwarzanie_zakazow(self):
         for para_wspolrzednych in self.Zakazy:
             for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
                 if tmpbbb in self.WszystkieNody:
@@ -387,53 +370,6 @@ class Mapa(object):
         print('analizuje %s drog' %(len(nodyRoutingoweDrog)))
 
         timer_start = timeit.default_timer()
-        # update_progress(0)
-        # tmpccc = -1
-        # while tmpccc:
-        #     if tmpccc == -1:
-        #         tmpccc = 0
-        # #for tmpccc in range(0, iloscdrog-1):
-        #     if nodyRoutingoweDrog[tmpccc]:
-        #         udalosiezredukowac = 1
-        #         while udalosiezredukowac:
-        #             udalosiezredukowac = 0
-        #             numery_nodow_do_usuniecia = []
-        #             for tmpbbb in range(tmpccc+1, iloscdrog):
-        #
-        #                 if nodyRoutingoweDrog[tmpbbb]:
-        #                     for zzz in nodyRoutingoweDrog[tmpbbb]:
-        #                         if zzz in nodyRoutingoweDrog[tmpccc]:
-        #                             setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
-        #                             nodyRoutingoweDrog[tmpccc] = setwsp
-        #                             nodyRoutingoweDrog[tmpbbb] = None
-        #                             numery_nodow_do_usuniecia.append(tmpbbb)
-        #                             iloscdrog -= 1
-        #                             iloscNone += 1
-        #                             udalosiezredukowac = 1
-        #                             break
-        #                 aktprocent = round(iloscNone/iloscdrogdlaprogress,2)
-        #                 if aktprocent*100>procent+1:
-        #                     procent = aktprocent*100
-        #                     update_progress(aktprocent)
-        #             #usun elementy:
-        #             iter = 0
-        #             for zzz in numery_nodow_do_usuniecia:
-        #                 if nodyRoutingoweDrog[zzz-iter]:
-        #                     print('Uwaga nie usuwam None')
-        #                 del nodyRoutingoweDrog[zzz-iter]
-        #                 iter += 1
-        #
-        #
-        #     ##noweNody = [a for a in nodyRoutingoweDrog if a]
-        #     ##nodyRoutingoweDrog = noweNody
-        #     if nodyRoutingoweDrog[-1]:
-        #         nodyRoutingoweDrog.append(None)
-        #         iloscdrog += 1
-        #     if nodyRoutingoweDrog[tmpccc+1]:
-        #         tmpccc += 1
-        #     else:
-        #         tmpccc = None
-        #     print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
         oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
 
         print()
@@ -858,51 +794,29 @@ class Mapa(object):
                 # print('Brakujący węzeł w %s'%a)
                 self.stderr_stdout_writer.stderrorwrite('Numeracja-brakujący węzeł w %s' % a)
 
-    def sprawdzParzystosc(self, Numery):
+    @staticmethod
+    def sprawdzParzystosc(Numery):
         returnVal = []
-        if Numery[1] == 'O':
-            liczba1 = int(Numery[2])
-            liczba2 = int(Numery[3])
-            if liczba1 < 0 or liczba2 < 0:
-                returnVal = 'Numeracja-niezdefiniowany koniec (' + Numery[1] + ',' + (Numery[2]) + ',' + (Numery[3]) + ')'
-            if not (liczba1 % 2 and liczba2 % 2):
-                returnVal = 'Numeracja-nieprawidłowa parzystość (' + (Numery[1]) + ',' + (Numery[2]) + ',' + (Numery[3]) + ')'
-
-        if Numery[1] == 'E':
-            liczba1 = int(Numery[2])
-            liczba2 = int(Numery[3])
-            if liczba1 < 0 or liczba2 < 0:
-                returnVal = 'Numeracja-niezdefiniowany koniec (' + (Numery[1]) + ',' + (Numery[2]) + ',' + (Numery[3]) + ')'
-            if liczba1 % 2 or liczba2 % 2:
-                if liczba1 > 0 or liczba2 > 0:
-                    returnVal = 'Numeracja-nieprawidłowa parzystość (' + (Numery[1]) + ',' + (Numery[2]) + ',' + (Numery[3]) + ')'
-        if Numery[1] == 'N':
-            pass
-
-        if Numery[4] == 'O':
-            liczba1 = int(Numery[5])
-            liczba2 = int(Numery[6])
-            if liczba1 < 0 or liczba2 < 0:
-                returnVal = 'Numeracja-niezdefiniowany koniec (' + (Numery[4]) + ',' + (Numery[5]) + ',' + (Numery[6]) + ')'
-            if not (liczba1 % 2 and liczba2 % 2):
-                returnVal = 'Numeracja-nieprawidłowa parzystość (' + (Numery[4]) + ',' + (Numery[5]) + ',' + (Numery[6]) + ')'
-
-        if Numery[4] == 'E':
-            liczba1 = int(Numery[5])
-            liczba2 = int(Numery[6])
-            if liczba1 < 0 or liczba2 < 0:
-                returnVal = 'Numeracja-niezdefiniowany koniec (' + (Numery[4]) + ',' + (Numery[5]) + ',' + (Numery[6]) + ')'
-            if (liczba1 % 2 or liczba2 % 2):
-                if liczba1 > 0 or liczba2 > 0:
-                    returnVal = 'Numeracja-nieprawidłowa parzystość (' + (Numery[4]) + ',' + (Numery[5]) + ',' + (Numery[6]) + ')'
-
-        if Numery[4] == 'N':
-            pass
+        for kol_num in (1, 4):
+            if Numery[kol_num] == 'N':
+                continue
+            liczba1 = int(Numery[kol_num + 1])
+            liczba2 = int(Numery[kol_num + 2])
+            if liczba1 <= 0 or liczba2 <= 0:
+                returnVal.append('Numeracja-niezdefiniowany koniec (' + Numery[kol_num] + ',' + (Numery[kol_num + 1]) +
+                                 ',' + (Numery[kol_num + 2]) + ')')
+            if Numery[kol_num] == 'O':
+                if not (liczba1 % 2) or not(liczba2 % 2):
+                    returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
+                                     (Numery[kol_num + 1]) + ',' + (Numery[kol_num + 2]) + ')')
+            elif Numery[kol_num] == 'E':
+                if liczba1 % 2 or liczba2 % 2:
+                    returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
+                                     (Numery[kol_num + 1]) + ',' + (Numery[kol_num + 2]) + ')')
         return returnVal
 
+
 # nazwa klasy mylaca ale niech bedzie
-
-
 class Node(object):
     def __init__(self, paraWsp, RoadId, nrwsp , skrajna=0):
 
