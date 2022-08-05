@@ -10,8 +10,8 @@ from multiprocessing import cpu_count
 import time
 
 def update_progress(progress):
-    barLength=20
-    status=''
+    barLength = 20
+    status = ''
     if isinstance(progress, int):
         progress = float(progress)
     if not isinstance(progress, float):
@@ -24,22 +24,22 @@ def update_progress(progress):
         progress = 1
         status = "Zrobione...\n"
     block = int(round(barLength*progress))
-    text = "\rProcent: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), int(progress*100), status)
+    text = "\rProcent: [{0}] {1}% {2}".format("#"*block + "-"*(barLength-block), int(progress*100), status)
     sys.stdout.write(text)
     sys.stdout.flush()
 
-#Class to represent a graph
+
+# Class to represent a graph
 class Graph(object):
 
-    def __init__(self,vertices):
+    def __init__(self, vertices):
         self.vertices = vertices
-        self.V= len(vertices) #No. of vertices
+        self.V = len(vertices) # No. of vertices
         self.graph = [] # default dictionary to store graph
         self.infinity = float('Inf')
 
-
     # function to add an edge to graph
-    def addEdge(self,u,v,w):
+    def addEdge(self, u, v, w):
         self.graph.append([u, v, w])
 
     # utility function used to print the solution
@@ -59,7 +59,7 @@ class Graph(object):
         # dist = dict()
         # for a in self.vertices:
         #     dist[a] = self.infinity
-        dist = {a:self.infinity for a in self.vertices}
+        dist = {a: self.infinity for a in self.vertices}
         dist[src] = 0
 
         # Step 2: Relax all edges |V| - 1 times. A simple shortest
@@ -72,7 +72,7 @@ class Graph(object):
             for u, v, w in self.graph:
                 # if dist[u] != float("Inf") and dist[u] + w < dist[v]:
                 if dist[u] != self.infinity and dist[u] + w < dist[v]:
-                        dist[v] = dist[u] + w
+                    dist[v] = dist[u] + w
 
         # Step 3: check for negative-weight cycles.  The above step
         # guarantees shortest distances if graph doesn't contain
@@ -89,10 +89,10 @@ class Graph(object):
         wynik = []
         # for i in range(self.V):
         for i in self.vertices:
-            #print("%s \t\t %s" % (i, str(dist[i])))
+            # print("%s \t\t %s" % (i, str(dist[i])))
             if dist[i] == self.infinity:
                 wynik.append((str(src)+'->'+str(i), str(dist[i])))
-        #queue.put(wynik)
+        # ueue.put(wynik)
         return wynik
 
         #return
@@ -194,7 +194,7 @@ class Mapa(object):
                                     self.WszystkieNody[para_wspolrzednych] = Node(para_wspolrzednych, self.RoadId,
                                                                                   (kolejnyNrNoda, DirIndicator), 1)
                                     self.NodyDrogi.append(para_wspolrzednych)
-                                #nody skrajne powinny być z definicji routingowe
+                                # nody skrajne powinny być z definicji routingowe
                                 if para_wspolrzednych in nodyskrajne:
                                     self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
 
@@ -266,7 +266,6 @@ class Mapa(object):
                         # dodajemy też z dokładnością 6 cyfr, bo Wrocław tak ma
                         dlugosc, szerokosc = para_wspolrzednych.split(',')
                         self.NodyGraniczne.append(dlugosc + '0' + ',' + szerokosc + '0')
-
 
             # obrabiamy zakazy iterujemy po RoadID zakazow
             if not self.mode:
@@ -342,8 +341,8 @@ class Mapa(object):
                         del nodyRoutingoweDrog[zzz - iter]
                         iter += 1
 
-            ##noweNody = [a for a in nodyRoutingoweDrog if a]
-            ##nodyRoutingoweDrog = noweNody
+            # noweNody = [a for a in nodyRoutingoweDrog if a]
+            # nodyRoutingoweDrog = noweNody
             if nodyRoutingoweDrog[-1]:
                 nodyRoutingoweDrog.append(None)
                 iloscdrog += 1
@@ -357,9 +356,9 @@ class Mapa(object):
     def sprawdzNieciaglosciSiatkiRoutingowej(self):
         # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
         nodyRoutingoweDrog = []
-        #timer_start = timeit.default_timer()
+        # timer_start = timeit.default_timer()
         nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-        #print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+        # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
         nodyRoutingoweDrog.append(nodyGranicznetmp)
         for tmpaaa in self.Drogi:
             nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
@@ -368,14 +367,14 @@ class Mapa(object):
         # iloscdrogdlaprogress = iloscdrog
         # iloscNone = 0
         # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-        print('analizuje %s drog' %(len(nodyRoutingoweDrog)))
+        print('analizuje %s drog' % len(nodyRoutingoweDrog))
 
         timer_start = timeit.default_timer()
         oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
 
         print()
-        print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-        if len(oddzielnegrafy)>1:
+        print('czas wykonania %s' % timeit.default_timer() - timer_start)
+        if len(oddzielnegrafy) > 1:
             for a in range(1, len(oddzielnegrafy)):
                 print(str(oddzielnegrafy[a]))
 
@@ -383,9 +382,9 @@ class Mapa(object):
             # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
             nodyRoutingoweDrog = []
             nodyRoutingoweDrogJednokierunkowych = []
-            #timer_start = timeit.default_timer()
+            # timer_start = timeit.default_timer()
             nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-            #print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+            # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
             # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
             nodyRoutingoweDrog.append(nodyGranicznetmp)
             procent = 0
@@ -419,14 +418,14 @@ class Mapa(object):
             iloscdrogdlaprogress = iloscdrog
             iloscNone = 0
             # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-            print('analizuje %s drog' %(iloscdrog))
+            print('analizuje %s drog' % iloscdrog)
             timer_start = timeit.default_timer()
             update_progress(0)
             tmpccc = -1
             while tmpccc:
                 if tmpccc == -1:
                     tmpccc = 0
-            #for tmpccc in range(0, iloscdrog-1):
+            # for tmpccc in range(0, iloscdrog-1):
                 if nodyRoutingoweDrog[tmpccc]:
                     udalosiezredukowac = 1
                     while udalosiezredukowac:
@@ -548,18 +547,20 @@ class Mapa(object):
                 for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
                     print(aaa)
                     if polaczeniaPomiedzyGrafami[aaa]:
-                        pOdwr = (polaczeniaPomiedzyGrafami[aaa][1],polaczeniaPomiedzyGrafami[aaa][0])
+                        pOdwr = (polaczeniaPomiedzyGrafami[aaa][1], polaczeniaPomiedzyGrafami[aaa][0])
                         print('polaczenia', polaczeniaPomiedzyGrafami[aaa], pOdwr)
                         if pOdwr in polaczeniaPomiedzyGrafami:
                             print('odwrotne w polaczeniach')
                             indeks = polaczeniaPomiedzyGrafami.index(pOdwr)
-                            min_ = str(min(int(polaczeniaPomiedzyGrafami[aaa][0]),int(polaczeniaPomiedzyGrafami[aaa][1])))
-                            max_ = str(max(int(polaczeniaPomiedzyGrafami[aaa][0]),int(polaczeniaPomiedzyGrafami[aaa][1])))
+                            min_ = str(min(int(polaczeniaPomiedzyGrafami[aaa][0]),
+                                           int(polaczeniaPomiedzyGrafami[aaa][1])))
+                            max_ = str(max(int(polaczeniaPomiedzyGrafami[aaa][0]),
+                                           int(polaczeniaPomiedzyGrafami[aaa][1])))
                             if min_ in slownikRedukcji:
                                 if min_ != max_:
                                     slownikRedukcji[min_].append(max_)
                             else:
-                                slownikRedukcji[min_]=[max_]
+                                slownikRedukcji[min_] = [max_]
                             polaczeniaPomiedzyGrafami[aaa] = None
                             polaczeniaPomiedzyGrafami[indeks] = None
                             # teraz wiemy, że dana para jest tozszama (0,100) i (100,0). Czyli 100 laduje w tym przypadku
@@ -578,7 +579,7 @@ class Mapa(object):
                                     if a == b:
                                         polaczeniaPomiedzyGrafami[bbb] = None
                                     else:
-                                        polaczeniaPomiedzyGrafami[bbb] = (a,b)
+                                        polaczeniaPomiedzyGrafami[bbb] = (a, b)
                                     # print(polaczeniaPomiedzyGrafami[bbb])
                     iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
 
@@ -606,7 +607,7 @@ class Mapa(object):
                                 slownikRedukcji[tmpbbb] = None
             slownikRedukcji = {a: slownikRedukcji[a] for a in slownikRedukcji if slownikRedukcji[a]}
             print('slownik redukcji', slownikRedukcji)
-            #mapujemy co na co zamienić
+            # mapujemy co na co zamienić
             slownikSubstytucji = dict()
             print('oddzielne grafy przed', oddzielnegrafy)
             for aaa in slownikRedukcji:
@@ -625,9 +626,9 @@ class Mapa(object):
                     print('lewe znalezione ', paryJednokierunkoweBezGrafu[aaa])
                     bbb = (slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][0]], paryJednokierunkoweBezGrafu[aaa][1])
                     paryJednokierunkoweBezGrafu[aaa] = bbb
-                    print('lewe zamieenione ',bbb)
+                    print('lewe zamieenione ', bbb)
                 if paryJednokierunkoweBezGrafu[aaa][1] in slownikSubstytucji:
-                    print('prawe znalezione ',paryJednokierunkoweBezGrafu[aaa])
+                    print('prawe znalezione ', paryJednokierunkoweBezGrafu[aaa])
                     bbb = (paryJednokierunkoweBezGrafu[aaa][0], slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][1]])
                     paryJednokierunkoweBezGrafu[aaa] = bbb
                     print('prawe znalezione ', bbb)
@@ -646,7 +647,6 @@ class Mapa(object):
             print('polaczenia pomiedzy grafami po ', polaczeniaPomiedzyGrafami)
             paryJednokierunkoweBezGrafu = list(set(paryJednokierunkoweBezGrafu))
             print(len(paryJednokierunkoweBezGrafu))
-
 
             wierzcholkiGrafu = []
             print('Buduje wierzcholki grafu')
@@ -669,7 +669,6 @@ class Mapa(object):
                 if tmpaaa[1] not in wierzcholkiGrafu:
                     wierzcholkiGrafu.append(tmpaaa[1])
 
-            
             graf = Graph(wierzcholkiGrafu)
             for tmpaaa in polaczeniaPomiedzyGrafami:
                 graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
@@ -678,10 +677,9 @@ class Mapa(object):
 
             print('spradzam polaczenia')
 
-
             pool = Pool(cpu_count())
             # ponizsze to jakis artefakt, chyba nie rzumiem o co chodzi
-            #wierzcholkiGrafu = [a for a in wierzcholkiGrafu]
+            # wierzcholkiGrafu = [a for a in wierzcholkiGrafu]
             # rs = pool.map_async(graf.BellmanFord, wierzcholkiGrafu)
 
             rs = []
@@ -693,7 +691,7 @@ class Mapa(object):
             timer_start = timeit.default_timer()
             incomplete_count_previous = 0
             incomplete_count = 0
-            while (1):
+            while 1:
                 incomplete_count_previous = incomplete_count
                 incomplete_count = sum(1 for x in rs if not x.ready())
                 if incomplete_count == 0:
@@ -701,7 +699,7 @@ class Mapa(object):
                     break
                 if incomplete_count_previous and incomplete_count_previous == incomplete_count:
                     time_of_break += 1
-                    #print(time_of_break)
+                    # print(time_of_break)
                 else:
                     time_of_running_in_seconds = round(timeit.default_timer() - timer_start)
                     if incomplete_count < progress100:
@@ -709,9 +707,8 @@ class Mapa(object):
                         if ETA_int <= 120:
                             ETA = str(ETA_int) + ' s'
                         else:
-                            ETA = str(round(ETA_int/60,1))+' min'
+                            ETA = str(round(ETA_int/60, 1))+' min'
                         print('Pozostało ' + str(incomplete_count) + ' wierzchołków do sprawdzenia. ETA: ' + ETA)
-
 
                 time.sleep(time_of_break)
 
@@ -721,8 +718,8 @@ class Mapa(object):
                 if wynikAnalizy.get(timeout=1):
                     for tmpbbb in wynikAnalizy.get(timeout=1):
                         print(tmpbbb)
-                        skaddokad,infinity = tmpbbb
-                        skad,dokad = skaddokad.split('->')
+                        skaddokad, infinity = tmpbbb
+                        skad, dokad = skaddokad.split('->')
                         try:
                             # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
                             skad = skad + '(' + list(oddzielnegrafy[int(skad)])[0] + ')'
@@ -737,7 +734,7 @@ class Mapa(object):
                         file.write(skad + '->' + dokad + ' brak polaczenia\n')
 
             file.close()
-            print('Utworzono plik %s.' %(self.nazwaplikudlaoutput))
+            print('Utworzono plik %s.' % self.nazwaplikudlaoutput)
 
     def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(self):
         # jeśli jednokierunkowa zaczya się i kończy w tym samym zbiorze, to znaczy, że z każdego dowolnego
@@ -755,11 +752,11 @@ class Mapa(object):
                     break
 
     def sprawdzzapetlenie(self, nodydrogi):
-        ''' funkcja sprawdza czy droga nie jest ze sobą zapętlona, jeśli jest, to wtedy dzieli ją na pół aż rozpętli'''
+        """ funkcja sprawdza czy droga nie jest ze sobą zapętlona, jeśli jest, to wtedy dzieli ją na pół aż rozpętli"""
         # nodydrogi to zmienna przechowująca pary współrzędnych danej drogi np.:
         # '51.79507,19.45560', '51.79538,19.45566', '51.79529,19.45543'
         # wyszukujemy nody podwojne
-        nodypodwojne = [a for a in nodydrogi if nodydrogi.count(a)>1]
+        nodypodwojne = [a for a in nodydrogi if nodydrogi.count(a) > 1]
         # print('nodypodwojne',  nodypodwojne)
         for a in nodypodwojne:
             if a == nodydrogi[(nodydrogi.index(a)+1)]:
@@ -774,20 +771,19 @@ class Mapa(object):
             # idea jest taka. Dzielimy na pół, sprawdzamy czy nadal zapętlone, jeśli tak to ten z zapętleniem
             # dzielimy dalej na pół itd
             a = self.sprawdzzapetlenie(nodydrogi[:len(nodydrogi) // 2 + 1])
-            if len(a)>1:
+            if len(a) > 1:
                 c = [a[0], a[1]]
             else:
                 c = [a[0]]
             # print(c)
             b = self.sprawdzzapetlenie(nodydrogi[len(nodydrogi) // 2:])
-            if len(b)>1:
+            if len(b) > 1:
                 c.append(b[0])
                 c.append(b[1])
             else:
                 c.append(b[0])
             # print(c)
             return c
-
 
     def sprawdzCzyRoutingowe(self):
         for a in self.NodyDoSprawdzenia:
@@ -828,7 +824,7 @@ class Node(object):
         # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla
         # kierunkowosc (0 brak, 1 jednokierunkowa). jesli bedzie kilka drog to bedzie tez kilka numerow id
         self.numerParyWspDlaDanejDrogi = {RoadId: nrwsp}
-        #print(self.numerParyWspDlaDanejDrogi[RoadId])
+        # print(self.numerParyWspDlaDanejDrogi[RoadId])
 
 
 class Zakaz(object):
@@ -851,8 +847,8 @@ class Zakaz(object):
         # probujemy to samo tylko lekko inaczej, kazdy obiekt Node zawiera w sobie informacje
         # o drogach ktorych czescia jest oraz o ktorym z kolei wezelem tej drogi jest
         # moze uda sie wiec pozbyc Drogi
-        #tmpIndeksA = WszystkieNody[lNody[0]].numerParyWspDlaDanejDrogi[lRoadId][0]
-        #tmpIndeksB = WszystkieNody[lNody[1]].numerParyWspDlaDanejDrogi[lRoadId][0]
+        # tmpIndeksA = WszystkieNody[lNody[0]].numerParyWspDlaDanejDrogi[lRoadId][0]
+        # tmpIndeksB = WszystkieNody[lNody[1]].numerParyWspDlaDanejDrogi[lRoadId][0]
 
         step = 1 if indeksA < indeksB else -1
         for abcde in range(indeksA + step, indeksB, step):
