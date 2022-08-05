@@ -4,6 +4,7 @@
 import sys
 import timeit
 from collections import defaultdict
+from collections import OrderedDict
 from multiprocessing import Pool
 from multiprocessing import Queue
 from multiprocessing import cpu_count
@@ -292,7 +293,8 @@ class Mapa(object):
                 else:
                     self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
                     self.Zakazy[para_wspolrzednych].Nodes.append(None)
-            self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
+            # self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
+            self.Zakazy[para_wspolrzednych].ustawFromViaTo1(self.WszystkieNody, self.Drogi)
 
     def sprawdz_jednokierunkowe_slepe(self):
         for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
@@ -863,6 +865,31 @@ class Zakaz(object):
                 self.stderr_stdout_writer.stderrorwrite('Błąd zakazu. Pomiędzy węzłami %s, %s\n'%(lNody[0], lNody[1]))
                 self.stderr_stdout_writer.stderrorwrite('istnieje węzeł routingowy %s.'%wspolrzedna)
 
+    def ustawFromViaTo1(self, wszystkie_nody, drogi):
+        # WszystkieNody to slownik: klucz to para wsp, wartosc to obiekt typu Node
+        # Drogi to slownik roadid jako klucz a wartosc to wszystkie nody danej drogi
+        from_via_to = OrderedDict({'FromRoadId': [], 'ViaRoadId': [], 'ToRoadId': []})
+        elementy_zakazu = ('FromRoadId', 'ViaRoadId', 'ToRoadId') if len(self.Nody) == 4 else ('FromRoadId', 'ToRoadId')
+
+        for numer, from_via_to_item in enumerate(elementy_zakazu):
+            if self.Nody[numer] in wszystkie_nody and self.Nody[numer + 1] in wszystkie_nody:
+                for abcd in wszystkie_nody[self.Nody[numer]].RoadIds:
+                    from_via_to[from_via_to_item].append(abcd)
+                for abcd in wszystkie_nody[self.Nody[numer + 1]].RoadIds:
+                    from_via_to[from_via_to_item].append(abcd)
+                from_via_to[from_via_to_item] = list(set(a for a in from_via_to[from_via_to_item] if
+                                                         from_via_to[from_via_to_item].count(a) > 1))
+                # gdy nie ma chociaz 1 drogi laczacej dwa wezly zakazu wtedy self.FromRoadId bedzie puste
+                if from_via_to[from_via_to_item]:
+                    # sprawdzamy czy nody drogi From nie są rozdzielone wezłem routingowym
+                    self.sprawdz_czy_pomiedzy_sa_wezly_routingowe(drogi, wszystkie_nody,
+                                                                  from_via_to[from_via_to_item][0],
+                                                                  self.Nody[numer:numer + 2])
+
+        self.FromRoadId, self.ViaRoadId, self.ToRoadId = from_via_to['FromRoadId'], from_via_to['ViaRoadId'], \
+                                                         from_via_to['ToRoadId']
+        self.sprawdz_zakaz1()
+
     def ustawFromViaTo(self, WszystkieNody, Drogi):
         # WszystkieNody to slownik: klucz to para wsp, wartosc to obiekt typu Node
         # Drogi to slownik roadid jako klucz a wartosc to wszystkie nody danej drogi
@@ -907,6 +934,31 @@ class Zakaz(object):
             # przechwycamy go i obslugujemy taki blad pozniej
 
         self.sprawdz_zakaz()
+
+    def sprawdz_zakaz1(self):
+        # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
+        if not 3 <= len(self.Nody) <= 4:
+            self.stderr_stdout_writer.stderrorwrite(
+                'Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s' % (
+                len(self.Nody), self.Nody[0], self.Nody[1]))
+
+        from_via_to = (self.FromRoadId, self.ViaRoadId, self.ToRoadId) if len(self.Nody) == 4 else \
+            (self.FromRoadId, self.ToRoadId)
+        for numer, from_via_to_item in enumerate(from_via_to):
+            a = len(from_via_to_item)
+            if a == 0:
+                self.stderr_stdout_writer.stderrorwrite(
+                    'Błąd zakazu!\nBrak pojedynczej drogi łączącej węzły: %s %s ' %
+                    (self.Nody[numer], self.Nody[numer + 1]))
+            elif a > 1:
+                self.stderr_stdout_writer.stderrorwrite(
+                    'Błąd zakazu! %s drogi łączą węzły: %s %s ' % (a, self.Nody[numer], self.Nody[numer + 1]))
+            else:
+                if self.Nodes[numer].numerParyWspDlaDanejDrogi[from_via_to_item[0]][1]:
+                    if self.Nodes[numer].numerParyWspDlaDanejDrogi[from_via_to_item[0]][0] > \
+                            self.Nodes[numer + 1].numerParyWspDlaDanejDrogi[from_via_to_item[0]][0]:
+                        self.stderr_stdout_writer.stderrorwrite(
+                            'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[numer], self.Nody[numer + 1]))
 
     def sprawdz_zakaz(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
