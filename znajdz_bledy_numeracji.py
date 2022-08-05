@@ -775,7 +775,7 @@ class Mapa(object):
             # dzielimy dalej na pół itd
             a = self.sprawdzzapetlenie(nodydrogi[:len(nodydrogi) // 2 + 1])
             if len(a)>1:
-                c = [a[0],a[1]]
+                c = [a[0], a[1]]
             else:
                 c = [a[0]]
             # print(c)
