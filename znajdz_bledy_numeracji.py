@@ -4,7 +4,6 @@
 import sys
 import timeit
 from collections import defaultdict
-from collections import OrderedDict
 from multiprocessing import Pool
 from multiprocessing import Queue
 from multiprocessing import cpu_count
@@ -868,7 +867,7 @@ class Zakaz(object):
     def ustawFromViaTo1(self, wszystkie_nody, drogi):
         # WszystkieNody to slownik: klucz to para wsp, wartosc to obiekt typu Node
         # Drogi to slownik roadid jako klucz a wartosc to wszystkie nody danej drogi
-        from_via_to = OrderedDict({'FromRoadId': [], 'ViaRoadId': [], 'ToRoadId': []})
+        from_via_to = {'FromRoadId': [], 'ViaRoadId': [], 'ToRoadId': []}
         elementy_zakazu = ('FromRoadId', 'ViaRoadId', 'ToRoadId') if len(self.Nody) == 4 else ('FromRoadId', 'ToRoadId')
 
         for numer, from_via_to_item in enumerate(elementy_zakazu):
