@@ -5,7 +5,7 @@ import sys
 import timeit
 from collections import defaultdict
 from multiprocessing import Pool
-from multiprocessing import Queue
+import os.path
 from multiprocessing import cpu_count
 import time
 
@@ -107,7 +107,7 @@ class Mapa(object):
         else:
             encoding = 'cp1250'
         self.WszystkieNody = {}
-        self.nazwaplikudlaoutput = nazwapliku.rstrip('.mp') + 'ciaglosc_routingu.txt'
+        self.nazwaplikudlaoutput = os.path.splitext(nazwapliku)[0] + 'ciaglosc_routingu.txt'
         self.NodyDoSprawdzenia = []
         self.NodyDrogi = []
         self.WezlyDoSprawdzenia = []
@@ -445,11 +445,11 @@ class Mapa(object):
                                         iloscNone += 1
                                         udalosiezredukowac = 1
                                         break
-                            aktprocent = round(iloscNone/iloscdrogdlaprogress,2)
-                            if aktprocent*100>procent+1:
-                                procent = aktprocent*100
+                            aktprocent = round(iloscNone/iloscdrogdlaprogress, 2)
+                            if aktprocent * 100 > procent + 1:
+                                procent = aktprocent * 100
                                 update_progress(aktprocent)
-                        #usun elementy:
+                        # usun elementy:
                         # iter = 0
                         numery_nodow_do_usuniecia.reverse()
                         for zzz in numery_nodow_do_usuniecia:
@@ -461,9 +461,8 @@ class Mapa(object):
                             # del nodyRoutingoweDrog[zzz-iter]
                             # iter += 1
 
-
-                ##noweNody = [a for a in nodyRoutingoweDrog if a]
-                ##nodyRoutingoweDrog = noweNody
+                # noweNody = [a for a in nodyRoutingoweDrog if a]
+                # nodyRoutingoweDrog = noweNody
                 if nodyRoutingoweDrog[-1]:
                     nodyRoutingoweDrog.append(None)
                     iloscdrog += 1
@@ -478,8 +477,8 @@ class Mapa(object):
             #     print(a, oddzielnegrafy[a])
 
             print(len(oddzielnegrafy))
-            print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-            #if len(oddzielnegrafy)>1:
+            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
+            # if len(oddzielnegrafy)>1:
             #    for a in range(1, len(oddzielnegrafy)):
             #        print(str(oddzielnegrafy[a]))
 
@@ -525,7 +524,7 @@ class Mapa(object):
 
             polaczeniaPomiedzyGrafami.sort()
             print(polaczeniaPomiedzyGrafami)
-            print((paryJednokierunkoweBezGrafu))
+            print(paryJednokierunkoweBezGrafu)
             print(len(polaczeniaPomiedzyGrafami))
             print(len(paryJednokierunkoweBezGrafu))
 
