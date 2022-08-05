@@ -854,15 +854,12 @@ class Zakaz(object):
         #tmpIndeksA = WszystkieNody[lNody[0]].numerParyWspDlaDanejDrogi[lRoadId][0]
         #tmpIndeksB = WszystkieNody[lNody[1]].numerParyWspDlaDanejDrogi[lRoadId][0]
 
-        if indeksA < indeksB:
-            step = 1
-        else:
-            step = -1
+        step = 1 if indeksA < indeksB else -1
         for abcde in range(indeksA + step, indeksB, step):
             wspolrzedna = Drogi[lRoadId][abcde]
             if WszystkieNody[wspolrzedna].wezelRoutingowy:
-                self.stderr_stdout_writer.stderrorwrite('Błąd zakazu. Pomiędzy węzłami %s, %s\n'%(lNody[0], lNody[1]))
-                self.stderr_stdout_writer.stderrorwrite('istnieje węzeł routingowy %s.'%wspolrzedna)
+                self.stderr_stdout_writer.stderrorwrite('Błąd zakazu. Pomiędzy węzłami %s, %s\n' % (lNody[0], lNody[1]))
+                self.stderr_stdout_writer.stderrorwrite('istnieje węzeł routingowy %s.' % wspolrzedna)
 
     def ustawFromViaTo1(self, wszystkie_nody, drogi):
         # WszystkieNody to slownik: klucz to para wsp, wartosc to obiekt typu Node
