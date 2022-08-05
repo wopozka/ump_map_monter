@@ -240,7 +240,7 @@ TEST_ADR_TO_MP = (
 def test_plik_pnt_procesuj(target, answer):
     args = Args()
     args.cityidx = False
-    args.entry_otwarte_to_extras = True
+    args.entry_otwarte_do_extras = True
     stderr_stdout_writer = mont_demont.errOutWriter(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)

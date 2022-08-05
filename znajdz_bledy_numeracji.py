@@ -798,21 +798,19 @@ class Mapa(object):
     def sprawdzParzystosc(Numery):
         returnVal = []
         for kol_num in (1, 4):
-            if Numery[kol_num] == 'N':
+            if Numery[kol_num] in ('N', 'B'):
                 continue
             liczba1 = int(Numery[kol_num + 1])
             liczba2 = int(Numery[kol_num + 2])
             if liczba1 <= 0 or liczba2 <= 0:
                 returnVal.append('Numeracja-niezdefiniowany koniec (' + Numery[kol_num] + ',' + (Numery[kol_num + 1]) +
                                  ',' + (Numery[kol_num + 2]) + ')')
+            parzystosc = 0
             if Numery[kol_num] == 'O':
-                if not (liczba1 % 2) or not(liczba2 % 2):
-                    returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
-                                     (Numery[kol_num + 1]) + ',' + (Numery[kol_num + 2]) + ')')
-            elif Numery[kol_num] == 'E':
-                if liczba1 % 2 or liczba2 % 2:
-                    returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
-                                     (Numery[kol_num + 1]) + ',' + (Numery[kol_num + 2]) + ')')
+                parzystosc = 1
+            if liczba1 % 2 != parzystosc or liczba2 % 2 != parzystosc:
+                returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
+                                 (Numery[kol_num + 1]) + ',' + (Numery[kol_num + 2]) + ')')
         return returnVal
 
 

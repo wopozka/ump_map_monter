@@ -12,5 +12,5 @@ class Args(object):
 
 TEST_POINT_INSIDE = ()
 
-@pytest.mark.parametrize('target, answer', )
-def test_point_inside_polygone(target, answer)
+# @pytest.mark.parametrize('target, answer', )
+# def test_point_inside_polygone(target, answer)
