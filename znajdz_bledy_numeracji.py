@@ -269,7 +269,8 @@ class Mapa(object):
 
             # obrabiamy zakazy iterujemy po RoadID zakazow
             if not self.mode:
-                self.przetwarzanie_zakazow()
+                self.ustaw_wezly_zakazow_jako_routingowe()
+                self.ustaw_from_via_to_dla_zakazow()
                 self.sprawdzCzyRoutingowe()
 
             # obrabiamy ślepe jednokierunkowe
@@ -282,17 +283,24 @@ class Mapa(object):
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
 
-    def przetwarzanie_zakazow(self):
-        for para_wspolrzednych in self.Zakazy:
-            for tmpbbb in self.Zakazy[para_wspolrzednych].Nody:
+    def ustaw_wezly_zakazow_jako_routingowe(self):
+        for zakaz_id in self.Zakazy:
+            for tmpbbb in self.Zakazy[zakaz_id].Nody:
                 if tmpbbb in self.WszystkieNody:
                     self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
-                    self.Zakazy[para_wspolrzednych].Nodes.append(self.WszystkieNody[tmpbbb])
+                    self.Zakazy[zakaz_id].Nodes.append(self.WszystkieNody[tmpbbb])
                 else:
                     self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
-                    self.Zakazy[para_wspolrzednych].Nodes.append(None)
-            # self.Zakazy[para_wspolrzednych].ustawFromViaTo(self.WszystkieNody, self.Drogi)
-            self.Zakazy[para_wspolrzednych].ustawFromViaTo1(self.WszystkieNody, self.Drogi)
+                    self.Zakazy[zakaz_id].Nodes.append(None)
+                    # ten zakaz już ma wyświetlony błąd, nie sprawdzaj go ponownie
+                    self.Zakazy[zakaz_id] = None
+
+    def ustaw_from_via_to_dla_zakazow(self):
+        for zakaz_id in self.Zakazy:
+            if self.Zakazy[zakaz_id] is None:
+                continue
+            else:
+                self.Zakazy[zakaz_id].ustawFromViaTo1(self.WszystkieNody, self.Drogi)
 
     def sprawdz_jednokierunkowe_slepe(self):
         for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
