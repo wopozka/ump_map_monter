@@ -9,8 +9,9 @@ import os.path
 from multiprocessing import cpu_count
 import time
 
+
 def update_progress(progress):
-    barLength = 20
+    bar_length = 20
     status = ''
     if isinstance(progress, int):
         progress = float(progress)
@@ -23,8 +24,8 @@ def update_progress(progress):
     if progress >= 1:
         progress = 1
         status = "Zrobione...\n"
-    block = int(round(barLength*progress))
-    text = "\rProcent: [{0}] {1}% {2}".format("#"*block + "-"*(barLength-block), int(progress*100), status)
+    block = int(round(bar_length*progress))
+    text = "\rProcent: [{0}] {1}% {2}".format("#"*block + "-"*(bar_length-block), int(progress*100), status)
     sys.stdout.write(text)
     sys.stdout.flush()
 
@@ -34,8 +35,8 @@ class Graph(object):
 
     def __init__(self, vertices):
         self.vertices = vertices
-        self.V = len(vertices) # No. of vertices
-        self.graph = [] # default dictionary to store graph
+        self.V = len(vertices)  # No. of vertices
+        self.graph = []  # default dictionary to store graph
         self.infinity = float('Inf')
 
     # function to add an edge to graph
@@ -55,7 +56,7 @@ class Graph(object):
     def BellmanFord(self, src):
         # Step 1: Initialize distances from src to all other vertices
         # as INFINITE
-        #dist = [float("Inf")] * self.V
+        # dist = [float("Inf")] * self.V
         # dist = dict()
         # for a in self.vertices:
         #     dist[a] = self.infinity
@@ -95,8 +96,9 @@ class Graph(object):
         # ueue.put(wynik)
         return wynik
 
-        #return
+        # return
         
+
 class Mapa(object):
     def __init__(self, nazwapliku, stderr_stdout_writer, mode):
         typyRoutingowe = ('0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
@@ -387,361 +389,362 @@ class Mapa(object):
                 print(str(oddzielnegrafy[a]))
 
     def sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc(self):
-            # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
-            nodyRoutingoweDrog = []
-            nodyRoutingoweDrogJednokierunkowych = []
-            # timer_start = timeit.default_timer()
-            nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-            # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-            # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
-            nodyRoutingoweDrog.append(nodyGranicznetmp)
-            procent = 0
-            for tmpaaa in self.Drogi:
-                #if self.WszystkieNody[self.Drogi[tmpaaa][0]].numerParyWspDlaDanejDrogi[self.Drogi[tmpaaa][0]][1]:
-                if tmpaaa in self.DrogiJednokierunkowe:
-                    njedn = [c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy]
-                    if njedn[0] == njedn[-1]:
-                        #print('droga zapetlona', self.Drogi[tmpaaa])
-                        nodyRoutingoweDrog.append(set(njedn))
-                    else:
-                        nodyRoutingoweDrogJednokierunkowych.append(njedn)
+        # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
+        nodyRoutingoweDrog = []
+        nodyRoutingoweDrogJednokierunkowych = []
+        # timer_start = timeit.default_timer()
+        nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
+        # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
+        # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
+        nodyRoutingoweDrog.append(nodyGranicznetmp)
+        procent = 0
+        for tmpaaa in self.Drogi:
+            # if self.WszystkieNody[self.Drogi[tmpaaa][0]].numerParyWspDlaDanejDrogi[self.Drogi[tmpaaa][0]][1]:
+            if tmpaaa in self.DrogiJednokierunkowe:
+                njedn = [c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy]
+                if njedn[0] == njedn[-1]:
+                    # print('droga zapetlona', self.Drogi[tmpaaa])
+                    nodyRoutingoweDrog.append(set(njedn))
                 else:
-                    nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
+                    nodyRoutingoweDrogJednokierunkowych.append(njedn)
+            else:
+                nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
 
-            # obrabiamy drogi jednokierunkowe, jeśli kończy się i zaczyna w tym samym segmencie to można dodać bez patrzenia
-            # do danego segmentu
-            self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu()
-            # for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-            #     for tmpbbb in range(0, len(nodyRoutingoweDrog)):
-            #         if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
-            #                 (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
-            #             nodyRoutingoweDrog[tmpbbb] = \
-            #                 nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
-            #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
-            #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
-            #             nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
-            #             break
+        # obrabiamy drogi jednokierunkowe, jeśli kończy się i zaczyna w tym samym segmencie to można dodać bez patrzenia
+        # do danego segmentu
+        self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu()
+        # for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
+        #     for tmpbbb in range(0, len(nodyRoutingoweDrog)):
+        #         if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
+        #                 (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
+        #             nodyRoutingoweDrog[tmpbbb] = \
+        #                 nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
+        #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
+        #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
+        #             nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
+        #             break
 
-            iloscdrog = len(nodyRoutingoweDrog)
-            iloscdrogdlaprogress = iloscdrog
-            iloscNone = 0
-            # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-            print('analizuje %s drog' % iloscdrog)
-            timer_start = timeit.default_timer()
-            update_progress(0)
-            tmpccc = -1
-            while tmpccc:
-                if tmpccc == -1:
-                    tmpccc = 0
-            # for tmpccc in range(0, iloscdrog-1):
-                if nodyRoutingoweDrog[tmpccc]:
-                    udalosiezredukowac = 1
-                    while udalosiezredukowac:
-                        udalosiezredukowac = 0
-                        numery_nodow_do_usuniecia = []
-                        for tmpbbb in range(tmpccc+1, iloscdrog):
+        iloscdrog = len(nodyRoutingoweDrog)
+        iloscdrogdlaprogress = iloscdrog
+        iloscNone = 0
+        # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
+        print('analizuje %s drog' % iloscdrog)
+        timer_start = timeit.default_timer()
+        update_progress(0)
+        tmpccc = -1
+        while tmpccc:
+            if tmpccc == -1:
+                tmpccc = 0
+        # for tmpccc in range(0, iloscdrog-1):
+            if nodyRoutingoweDrog[tmpccc]:
+                udalosiezredukowac = 1
+                while udalosiezredukowac:
+                    udalosiezredukowac = 0
+                    numery_nodow_do_usuniecia = []
+                    for tmpbbb in range(tmpccc+1, iloscdrog):
 
-                            if nodyRoutingoweDrog[tmpbbb]:
-                                for zzz in nodyRoutingoweDrog[tmpbbb]:
-                                    if zzz in nodyRoutingoweDrog[tmpccc]:
-                                        setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
-                                        nodyRoutingoweDrog[tmpccc] = setwsp
-                                        nodyRoutingoweDrog[tmpbbb] = None
-                                        numery_nodow_do_usuniecia.append(tmpbbb)
-                                        # uaktualniamy dane do paska postepu
-                                        iloscdrog -= 1
-                                        iloscNone += 1
-                                        udalosiezredukowac = 1
-                                        break
-                            aktprocent = round(iloscNone/iloscdrogdlaprogress, 2)
-                            if aktprocent * 100 > procent + 1:
-                                procent = aktprocent * 100
-                                update_progress(aktprocent)
-                        # usun elementy:
-                        # iter = 0
-                        numery_nodow_do_usuniecia.reverse()
-                        for zzz in numery_nodow_do_usuniecia:
-                            if nodyRoutingoweDrog[zzz]:
-                                print('Uwaga nie usuwam None')
-                            del nodyRoutingoweDrog[zzz]
-                            # if nodyRoutingoweDrog[zzz-iter]:
-                            #     print('Uwaga nie usuwam None')
-                            # del nodyRoutingoweDrog[zzz-iter]
-                            # iter += 1
+                        if nodyRoutingoweDrog[tmpbbb]:
+                            for zzz in nodyRoutingoweDrog[tmpbbb]:
+                                if zzz in nodyRoutingoweDrog[tmpccc]:
+                                    setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
+                                    nodyRoutingoweDrog[tmpccc] = setwsp
+                                    nodyRoutingoweDrog[tmpbbb] = None
+                                    numery_nodow_do_usuniecia.append(tmpbbb)
+                                    # uaktualniamy dane do paska postepu
+                                    iloscdrog -= 1
+                                    iloscNone += 1
+                                    udalosiezredukowac = 1
+                                    break
+                        aktprocent = round(iloscNone/iloscdrogdlaprogress, 2)
+                        if aktprocent * 100 > procent + 1:
+                            procent = aktprocent * 100
+                            update_progress(aktprocent)
+                    # usun elementy:
+                    # iter = 0
+                    numery_nodow_do_usuniecia.reverse()
+                    for zzz in numery_nodow_do_usuniecia:
+                        if nodyRoutingoweDrog[zzz]:
+                            print('Uwaga nie usuwam None')
+                        del nodyRoutingoweDrog[zzz]
+                        # if nodyRoutingoweDrog[zzz-iter]:
+                        #     print('Uwaga nie usuwam None')
+                        # del nodyRoutingoweDrog[zzz-iter]
+                        # iter += 1
 
-                # noweNody = [a for a in nodyRoutingoweDrog if a]
-                # nodyRoutingoweDrog = noweNody
-                if nodyRoutingoweDrog[-1]:
-                    nodyRoutingoweDrog.append(None)
-                    iloscdrog += 1
-                if nodyRoutingoweDrog[tmpccc+1]:
-                    tmpccc += 1
+            # noweNody = [a for a in nodyRoutingoweDrog if a]
+            # nodyRoutingoweDrog = noweNody
+            if nodyRoutingoweDrog[-1]:
+                nodyRoutingoweDrog.append(None)
+                iloscdrog += 1
+            if nodyRoutingoweDrog[tmpccc+1]:
+                tmpccc += 1
+            else:
+                tmpccc = None
+            print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
+        oddzielnegrafy = [a for a in nodyRoutingoweDrog if a]
+        # print('oddzielne grafy')
+        # for a in range(len(oddzielnegrafy)):
+        #     print(a, oddzielnegrafy[a])
+
+        print(len(oddzielnegrafy))
+        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
+        # if len(oddzielnegrafy)>1:
+        #    for a in range(1, len(oddzielnegrafy)):
+        #        print(str(oddzielnegrafy[a]))
+
+        timer_start = timeit.default_timer()
+        print('Redukuje drogi jednokierunkowe')
+        print(len(nodyRoutingoweDrogJednokierunkowych))
+        for aaa in range(0, len(oddzielnegrafy)):
+            for bbb in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
+                if nodyRoutingoweDrogJednokierunkowych[bbb]:
+                    inside = 1
+                    for ccc in nodyRoutingoweDrogJednokierunkowych[bbb]:
+                        if ccc not in oddzielnegrafy[aaa]:
+                            inside = 0
+                            break
+                    if inside:
+                        nodyRoutingoweDrogJednokierunkowych[bbb] = None
+
+        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
+        paryJednokierunkoweBezGrafu = []
+        polaczeniaPomiedzyGrafami = []
+        print('sprawdzam polaczenia jednokierunkowe miedzy grafami')
+        timer_start = timeit.default_timer()
+        for aaa in (a for a in nodyRoutingoweDrogJednokierunkowych if a):
+            for bbb in range(0, len(aaa)-1):
+                n = aaa[bbb]
+                n_plus_1 = aaa[bbb+1]
+                for ccc in range(0, len(oddzielnegrafy)):
+                    if aaa[bbb] in oddzielnegrafy[ccc]:
+                        n = str(ccc)
+                        break
+                for ccc in range(0, len(oddzielnegrafy)):
+                    if aaa[bbb+1] in oddzielnegrafy[ccc]:
+                        n_plus_1 = str(ccc)
+                        break
+                if n == n_plus_1:
+                    pass
+                elif n.isdigit() and n_plus_1.isdigit():
+                    if ((n, n_plus_1)) not in polaczeniaPomiedzyGrafami:
+                        polaczeniaPomiedzyGrafami.append((n, n_plus_1))
                 else:
-                    tmpccc = None
-                print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
-            oddzielnegrafy = [a for a in nodyRoutingoweDrog if a]
-            # print('oddzielne grafy')
-            # for a in range(len(oddzielnegrafy)):
-            #     print(a, oddzielnegrafy[a])
+                    if ((n, n_plus_1)) not in paryJednokierunkoweBezGrafu:
+                        paryJednokierunkoweBezGrafu.append((n, n_plus_1))
 
-            print(len(oddzielnegrafy))
-            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
-            # if len(oddzielnegrafy)>1:
-            #    for a in range(1, len(oddzielnegrafy)):
-            #        print(str(oddzielnegrafy[a]))
+        polaczeniaPomiedzyGrafami.sort()
+        print(polaczeniaPomiedzyGrafami)
+        print(paryJednokierunkoweBezGrafu)
+        print(len(polaczeniaPomiedzyGrafami))
+        print(len(paryJednokierunkoweBezGrafu))
 
-            timer_start = timeit.default_timer()
-            print('Redukuje drogi jednokierunkowe')
-            print(len(nodyRoutingoweDrogJednokierunkowych))
-            for aaa in range(0, len(oddzielnegrafy)):
-                for bbb in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-                    if nodyRoutingoweDrogJednokierunkowych[bbb]:
-                        inside = 1
-                        for ccc in nodyRoutingoweDrogJednokierunkowych[bbb]:
-                            if ccc not in oddzielnegrafy[aaa]:
-                                inside = 0
-                                break
-                        if inside:
-                            nodyRoutingoweDrogJednokierunkowych[bbb] = None
+        print()
+        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
+        # print(len([a for a in nodyRoutingoweDrogJednokierunkowych if a]))
+        print('Redukuje ilosc osobnych grafow')
+        slownikRedukcji = {}
 
-            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
-            paryJednokierunkoweBezGrafu = []
-            polaczeniaPomiedzyGrafami = []
-            print('sprawdzam polaczenia jednokierunkowe miedzy grafami')
-            timer_start = timeit.default_timer()
-            for aaa in (a for a in nodyRoutingoweDrogJednokierunkowych if a):
-                for bbb in range(0, len(aaa)-1):
-                    n = aaa[bbb]
-                    n_plus_1 = aaa[bbb+1]
-                    for ccc in range(0, len(oddzielnegrafy)):
-                        if aaa[bbb] in oddzielnegrafy[ccc]:
-                            n = str(ccc)
-                            break
-                    for ccc in range(0, len(oddzielnegrafy)):
-                        if aaa[bbb+1] in oddzielnegrafy[ccc]:
-                            n_plus_1 = str(ccc)
-                            break
-                    if n == n_plus_1:
-                        pass
-                    elif n.isdigit() and n_plus_1.isdigit():
-                        if ((n, n_plus_1)) not in polaczeniaPomiedzyGrafami:
-                            polaczeniaPomiedzyGrafami.append((n, n_plus_1))
-                    else:
-                        if ((n, n_plus_1)) not in paryJednokierunkoweBezGrafu:
-                            paryJednokierunkoweBezGrafu.append((n, n_plus_1))
+        # Redukujemy ilość osobnych grafów. Trzeba to zrobić kilkakrotnie, ponieważ przy zamianie elementy które
+        # już raz zamieniliśmy mogą ponownie ulce zamianie. Poza tym powstają elementy typu (0,0) które należy
+        # zamienić na none.
 
-            polaczeniaPomiedzyGrafami.sort()
-            print(polaczeniaPomiedzyGrafami)
-            print(paryJednokierunkoweBezGrafu)
-            print(len(polaczeniaPomiedzyGrafami))
-            print(len(paryJednokierunkoweBezGrafu))
+        iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
+        iloscNonePomiedzyGrafami_poprzedni = -1
 
-            print()
-            print('czas wykonania %s' % (timeit.default_timer() - timer_start))
-            #print(len([a for a in nodyRoutingoweDrogJednokierunkowych if a]))
-            print('Redukuje ilosc osobnych grafow')
-            slownikRedukcji = {}
-
-            # Redukujemy ilość osobnych grafów. Trzeba to zrobić kilkakrotnie, ponieważ przy zamianie elementy które
-            # już raz zamieniliśmy mogą ponownie ulce zamianie. Poza tym powstają elementy typu (0,0) które należy
-            # zamienić na none.
-
-            iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
-            iloscNonePomiedzyGrafami_poprzedni = -1
-
-            while iloscNonePomiedzyGrafami > iloscNonePomiedzyGrafami_poprzedni:
-                iloscNonePomiedzyGrafami_poprzedni = iloscNonePomiedzyGrafami
-                for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
-                    print(aaa)
-                    if polaczeniaPomiedzyGrafami[aaa]:
-                        pOdwr = (polaczeniaPomiedzyGrafami[aaa][1], polaczeniaPomiedzyGrafami[aaa][0])
-                        print('polaczenia', polaczeniaPomiedzyGrafami[aaa], pOdwr)
-                        if pOdwr in polaczeniaPomiedzyGrafami:
-                            print('odwrotne w polaczeniach')
-                            indeks = polaczeniaPomiedzyGrafami.index(pOdwr)
-                            min_ = str(min(int(polaczeniaPomiedzyGrafami[aaa][0]),
-                                           int(polaczeniaPomiedzyGrafami[aaa][1])))
-                            max_ = str(max(int(polaczeniaPomiedzyGrafami[aaa][0]),
-                                           int(polaczeniaPomiedzyGrafami[aaa][1])))
-                            if min_ in slownikRedukcji:
-                                if min_ != max_:
-                                    slownikRedukcji[min_].append(max_)
-                            else:
-                                slownikRedukcji[min_] = [max_]
-                            polaczeniaPomiedzyGrafami[aaa] = None
-                            polaczeniaPomiedzyGrafami[indeks] = None
-                            # teraz wiemy, że dana para jest tozszama (0,100) i (100,0). Czyli 100 laduje w tym przypadku
-                            # calkowicie w 0. W tym przypadku nalezy wszystkie
-                            # 100 w pozostałych elementach pozamieniac na 0. Dlatego iterujemy po wszystkich elementach i dokonujemy
-                            # stosownych korekt. Bo de facto ten element (100) znika już wiec dobrze go zastapic nowym.
-                            for bbb in range(0, len(polaczeniaPomiedzyGrafami)):
-                                if polaczeniaPomiedzyGrafami[bbb]:
-                                    a, b = polaczeniaPomiedzyGrafami[bbb]
-                                    if a == max_:
-                                        a = min_
-                                        print('zamieniam pierwszy element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + a)
-                                    if b == max_:
-                                        b = min_
-                                        print('zamieniam drugi element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + b)
-                                    if a == b:
-                                        polaczeniaPomiedzyGrafami[bbb] = None
-                                    else:
-                                        polaczeniaPomiedzyGrafami[bbb] = (a, b)
-                                    # print(polaczeniaPomiedzyGrafami[bbb])
-                    iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
-
-            print(polaczeniaPomiedzyGrafami)
-            polaczeniaPomiedzyGrafami = [a for a in polaczeniaPomiedzyGrafami if a]
-            print(len(polaczeniaPomiedzyGrafami))
-
-            # musze uporzadkowac slownik redukcji, bo z racji wieloprzebiegowosci poprzedniej czesci niektore elementy
-            # nie sa calkowicie zastapione i moga sie dublowac. np
-            # 1: 10,12,45 i 10: 77, trzeba uporzadkowac tak 1: 10.12.45.77
-            print('slownik redukcji', slownikRedukcji)
-            kluczeRedukcji = sorted([int(a) for a in slownikRedukcji])
-            kluczeRedukcji = [str(a) for a in kluczeRedukcji]
-            kluczeRedukcjiOdwrotne = kluczeRedukcji
-            kluczeRedukcjiOdwrotne.reverse()
-
-            for tmpaaa in kluczeRedukcji:
-                if slownikRedukcji[tmpaaa]:
-                    for tmpbbb in kluczeRedukcjiOdwrotne:
-                        if tmpbbb == tmpaaa:
-                            break
-                        else:
-                            if slownikRedukcji[tmpbbb] and tmpbbb in slownikRedukcji[tmpaaa]:
-                                slownikRedukcji[tmpaaa] = slownikRedukcji[tmpaaa] + slownikRedukcji[tmpbbb]
-                                slownikRedukcji[tmpbbb] = None
-            slownikRedukcji = {a: slownikRedukcji[a] for a in slownikRedukcji if slownikRedukcji[a]}
-            print('slownik redukcji', slownikRedukcji)
-            # mapujemy co na co zamienić
-            slownikSubstytucji = dict()
-            print('oddzielne grafy przed', oddzielnegrafy)
-            for aaa in slownikRedukcji:
-                for bbb in slownikRedukcji[aaa]:
-                    slownikSubstytucji[bbb] = aaa
-                    oddzielnegrafy[int(bbb)] = None
-            print('oddzielne grafy po', oddzielnegrafy)
-
-            print('slownik substytucji ', slownikSubstytucji)
-            for aaa in oddzielnegrafy:
-                print(aaa)
-
-            print('redukuje pary jednokierunkowe bez grafu')
-            for aaa in range(0, len(paryJednokierunkoweBezGrafu)):
-                if paryJednokierunkoweBezGrafu[aaa][0] in slownikSubstytucji:
-                    print('lewe znalezione ', paryJednokierunkoweBezGrafu[aaa])
-                    bbb = (slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][0]], paryJednokierunkoweBezGrafu[aaa][1])
-                    paryJednokierunkoweBezGrafu[aaa] = bbb
-                    print('lewe zamieenione ', bbb)
-                if paryJednokierunkoweBezGrafu[aaa][1] in slownikSubstytucji:
-                    print('prawe znalezione ', paryJednokierunkoweBezGrafu[aaa])
-                    bbb = (paryJednokierunkoweBezGrafu[aaa][0], slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][1]])
-                    paryJednokierunkoweBezGrafu[aaa] = bbb
-                    print('prawe znalezione ', bbb)
-
-            print('polaczenia pomiedzy grafami przed', polaczeniaPomiedzyGrafami)
+        while iloscNonePomiedzyGrafami > iloscNonePomiedzyGrafami_poprzedni:
+            iloscNonePomiedzyGrafami_poprzedni = iloscNonePomiedzyGrafami
             for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
+                print(aaa)
                 if polaczeniaPomiedzyGrafami[aaa]:
-                    if polaczeniaPomiedzyGrafami[aaa][0] in slownikSubstytucji:
-                        bbb = (slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][0]], polaczeniaPomiedzyGrafami[aaa][1])
-                        polaczeniaPomiedzyGrafami[aaa] = bbb
-                    if polaczeniaPomiedzyGrafami[aaa][1] in slownikSubstytucji:
-                        bbb = (polaczeniaPomiedzyGrafami[aaa][0], slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][1]])
-                        polaczeniaPomiedzyGrafami[aaa] = bbb
+                    pOdwr = (polaczeniaPomiedzyGrafami[aaa][1], polaczeniaPomiedzyGrafami[aaa][0])
+                    print('polaczenia', polaczeniaPomiedzyGrafami[aaa], pOdwr)
+                    if pOdwr in polaczeniaPomiedzyGrafami:
+                        print('odwrotne w polaczeniach')
+                        indeks = polaczeniaPomiedzyGrafami.index(pOdwr)
+                        min_ = str(min(int(polaczeniaPomiedzyGrafami[aaa][0]),
+                                       int(polaczeniaPomiedzyGrafami[aaa][1])))
+                        max_ = str(max(int(polaczeniaPomiedzyGrafami[aaa][0]),
+                                       int(polaczeniaPomiedzyGrafami[aaa][1])))
+                        if min_ in slownikRedukcji:
+                            if min_ != max_:
+                                slownikRedukcji[min_].append(max_)
+                        else:
+                            slownikRedukcji[min_] = [max_]
+                        polaczeniaPomiedzyGrafami[aaa] = None
+                        polaczeniaPomiedzyGrafami[indeks] = None
+                        # teraz wiemy, że dana para jest tozszama (0,100) i (100,0). Czyli 100 laduje w tym przypadku
+                        # calkowicie w 0. W tym przypadku nalezy wszystkie
+                        # 100 w pozostałych elementach pozamieniac na 0. Dlatego iterujemy po wszystkich elementach i
+                        # dokonujemy stosownych korekt. Bo de facto ten element (100) znika już wiec dobrze go
+                        # zastapic nowym.
+                        for bbb in range(0, len(polaczeniaPomiedzyGrafami)):
+                            if polaczeniaPomiedzyGrafami[bbb]:
+                                a, b = polaczeniaPomiedzyGrafami[bbb]
+                                if a == max_:
+                                    a = min_
+                                    print('zamieniam pierwszy element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + a)
+                                if b == max_:
+                                    b = min_
+                                    print('zamieniam drugi element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + b)
+                                if a == b:
+                                    polaczeniaPomiedzyGrafami[bbb] = None
+                                else:
+                                    polaczeniaPomiedzyGrafami[bbb] = (a, b)
+                                # print(polaczeniaPomiedzyGrafami[bbb])
+                iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
 
-            polaczeniaPomiedzyGrafami = list(set(polaczeniaPomiedzyGrafami))
-            print('polaczenia pomiedzy grafami po ', polaczeniaPomiedzyGrafami)
-            paryJednokierunkoweBezGrafu = list(set(paryJednokierunkoweBezGrafu))
-            print(len(paryJednokierunkoweBezGrafu))
+        print(polaczeniaPomiedzyGrafami)
+        polaczeniaPomiedzyGrafami = [a for a in polaczeniaPomiedzyGrafami if a]
+        print(len(polaczeniaPomiedzyGrafami))
 
-            wierzcholkiGrafu = []
-            print('Buduje wierzcholki grafu')
-            for tmpaaa in range(0, len(oddzielnegrafy)):
-                print(tmpaaa, oddzielnegrafy[tmpaaa])
-                if oddzielnegrafy[tmpaaa]:
-                    wierzcholkiGrafu.append(str(tmpaaa))
-            print(wierzcholkiGrafu)
-            for tmpaaa in polaczeniaPomiedzyGrafami:
-                if tmpaaa:
-                    print(tmpaaa)
-                    if tmpaaa[0] not in wierzcholkiGrafu:
-                        wierzcholkiGrafu.append(tmpaaa[0])
-                    if tmpaaa[1] not in wierzcholkiGrafu:
-                        wierzcholkiGrafu.append(tmpaaa[1])
-            for tmpaaa in paryJednokierunkoweBezGrafu:
+        # musze uporzadkowac slownik redukcji, bo z racji wieloprzebiegowosci poprzedniej czesci niektore elementy
+        # nie sa calkowicie zastapione i moga sie dublowac. np
+        # 1: 10,12,45 i 10: 77, trzeba uporzadkowac tak 1: 10.12.45.77
+        print('slownik redukcji', slownikRedukcji)
+        kluczeRedukcji = sorted([int(a) for a in slownikRedukcji])
+        kluczeRedukcji = [str(a) for a in kluczeRedukcji]
+        kluczeRedukcjiOdwrotne = kluczeRedukcji
+        kluczeRedukcjiOdwrotne.reverse()
+
+        for tmpaaa in kluczeRedukcji:
+            if slownikRedukcji[tmpaaa]:
+                for tmpbbb in kluczeRedukcjiOdwrotne:
+                    if tmpbbb == tmpaaa:
+                        break
+                    else:
+                        if slownikRedukcji[tmpbbb] and tmpbbb in slownikRedukcji[tmpaaa]:
+                            slownikRedukcji[tmpaaa] = slownikRedukcji[tmpaaa] + slownikRedukcji[tmpbbb]
+                            slownikRedukcji[tmpbbb] = None
+        slownikRedukcji = {a: slownikRedukcji[a] for a in slownikRedukcji if slownikRedukcji[a]}
+        print('slownik redukcji', slownikRedukcji)
+        # mapujemy co na co zamienić
+        slownikSubstytucji = dict()
+        print('oddzielne grafy przed', oddzielnegrafy)
+        for aaa in slownikRedukcji:
+            for bbb in slownikRedukcji[aaa]:
+                slownikSubstytucji[bbb] = aaa
+                oddzielnegrafy[int(bbb)] = None
+        print('oddzielne grafy po', oddzielnegrafy)
+
+        print('slownik substytucji ', slownikSubstytucji)
+        for aaa in oddzielnegrafy:
+            print(aaa)
+
+        print('redukuje pary jednokierunkowe bez grafu')
+        for aaa in range(0, len(paryJednokierunkoweBezGrafu)):
+            if paryJednokierunkoweBezGrafu[aaa][0] in slownikSubstytucji:
+                print('lewe znalezione ', paryJednokierunkoweBezGrafu[aaa])
+                bbb = (slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][0]], paryJednokierunkoweBezGrafu[aaa][1])
+                paryJednokierunkoweBezGrafu[aaa] = bbb
+                print('lewe zamieenione ', bbb)
+            if paryJednokierunkoweBezGrafu[aaa][1] in slownikSubstytucji:
+                print('prawe znalezione ', paryJednokierunkoweBezGrafu[aaa])
+                bbb = (paryJednokierunkoweBezGrafu[aaa][0], slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][1]])
+                paryJednokierunkoweBezGrafu[aaa] = bbb
+                print('prawe znalezione ', bbb)
+
+        print('polaczenia pomiedzy grafami przed', polaczeniaPomiedzyGrafami)
+        for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
+            if polaczeniaPomiedzyGrafami[aaa]:
+                if polaczeniaPomiedzyGrafami[aaa][0] in slownikSubstytucji:
+                    bbb = (slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][0]], polaczeniaPomiedzyGrafami[aaa][1])
+                    polaczeniaPomiedzyGrafami[aaa] = bbb
+                if polaczeniaPomiedzyGrafami[aaa][1] in slownikSubstytucji:
+                    bbb = (polaczeniaPomiedzyGrafami[aaa][0], slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][1]])
+                    polaczeniaPomiedzyGrafami[aaa] = bbb
+
+        polaczeniaPomiedzyGrafami = list(set(polaczeniaPomiedzyGrafami))
+        print('polaczenia pomiedzy grafami po ', polaczeniaPomiedzyGrafami)
+        paryJednokierunkoweBezGrafu = list(set(paryJednokierunkoweBezGrafu))
+        print(len(paryJednokierunkoweBezGrafu))
+
+        wierzcholkiGrafu = []
+        print('Buduje wierzcholki grafu')
+        for tmpaaa in range(0, len(oddzielnegrafy)):
+            print(tmpaaa, oddzielnegrafy[tmpaaa])
+            if oddzielnegrafy[tmpaaa]:
+                wierzcholkiGrafu.append(str(tmpaaa))
+        print(wierzcholkiGrafu)
+        for tmpaaa in polaczeniaPomiedzyGrafami:
+            if tmpaaa:
                 print(tmpaaa)
                 if tmpaaa[0] not in wierzcholkiGrafu:
                     wierzcholkiGrafu.append(tmpaaa[0])
                 if tmpaaa[1] not in wierzcholkiGrafu:
                     wierzcholkiGrafu.append(tmpaaa[1])
+        for tmpaaa in paryJednokierunkoweBezGrafu:
+            print(tmpaaa)
+            if tmpaaa[0] not in wierzcholkiGrafu:
+                wierzcholkiGrafu.append(tmpaaa[0])
+            if tmpaaa[1] not in wierzcholkiGrafu:
+                wierzcholkiGrafu.append(tmpaaa[1])
 
-            graf = Graph(wierzcholkiGrafu)
-            for tmpaaa in polaczeniaPomiedzyGrafami:
-                graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
-            for tmpaaa in paryJednokierunkoweBezGrafu:
-                graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
+        graf = Graph(wierzcholkiGrafu)
+        for tmpaaa in polaczeniaPomiedzyGrafami:
+            graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
+        for tmpaaa in paryJednokierunkoweBezGrafu:
+            graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
 
-            print('spradzam polaczenia')
+        print('spradzam polaczenia')
 
-            pool = Pool(cpu_count())
-            # ponizsze to jakis artefakt, chyba nie rzumiem o co chodzi
-            # wierzcholkiGrafu = [a for a in wierzcholkiGrafu]
-            # rs = pool.map_async(graf.BellmanFord, wierzcholkiGrafu)
+        pool = Pool(cpu_count())
+        # ponizsze to jakis artefakt, chyba nie rzumiem o co chodzi
+        # wierzcholkiGrafu = [a for a in wierzcholkiGrafu]
+        # rs = pool.map_async(graf.BellmanFord, wierzcholkiGrafu)
 
-            rs = []
-            for wierzch in wierzcholkiGrafu:
-                rs.append(pool.apply_async(graf.BellmanFord, [wierzch]))
+        rs = []
+        for wierzch in wierzcholkiGrafu:
+            rs.append(pool.apply_async(graf.BellmanFord, [wierzch]))
 
-            progress100 = len(wierzcholkiGrafu)
-            time_of_break = 1
-            timer_start = timeit.default_timer()
-            incomplete_count_previous = 0
-            incomplete_count = 0
-            while 1:
-                incomplete_count_previous = incomplete_count
-                incomplete_count = sum(1 for x in rs if not x.ready())
-                if incomplete_count == 0:
-                    print('Skończone')
-                    break
-                if incomplete_count_previous and incomplete_count_previous == incomplete_count:
-                    time_of_break += 1
-                    # print(time_of_break)
-                else:
-                    time_of_running_in_seconds = round(timeit.default_timer() - timer_start)
-                    if incomplete_count < progress100:
-                        ETA_int = round(incomplete_count/((progress100-incomplete_count)/time_of_running_in_seconds))
-                        if ETA_int <= 120:
-                            ETA = str(ETA_int) + ' s'
-                        else:
-                            ETA = str(round(ETA_int/60, 1))+' min'
-                        print('Pozostało ' + str(incomplete_count) + ' wierzchołków do sprawdzenia. ETA: ' + ETA)
+        progress100 = len(wierzcholkiGrafu)
+        time_of_break = 1
+        timer_start = timeit.default_timer()
+        incomplete_count_previous = 0
+        incomplete_count = 0
+        while 1:
+            incomplete_count_previous = incomplete_count
+            incomplete_count = sum(1 for x in rs if not x.ready())
+            if incomplete_count == 0:
+                print('Skończone')
+                break
+            if incomplete_count_previous and incomplete_count_previous == incomplete_count:
+                time_of_break += 1
+                # print(time_of_break)
+            else:
+                time_of_running_in_seconds = round(timeit.default_timer() - timer_start)
+                if incomplete_count < progress100:
+                    ETA_int = round(incomplete_count/((progress100-incomplete_count)/time_of_running_in_seconds))
+                    if ETA_int <= 120:
+                        ETA = str(ETA_int) + ' s'
+                    else:
+                        ETA = str(round(ETA_int/60, 1))+' min'
+                    print('Pozostało ' + str(incomplete_count) + ' wierzchołków do sprawdzenia. ETA: ' + ETA)
 
-                time.sleep(time_of_break)
+            time.sleep(time_of_break)
 
-            file = open(self.nazwaplikudlaoutput, 'w')
-            for wynikAnalizy in rs:
-                # wyninkAnalizy ma postac [('53.27990,16.45933->53.32999,16.02584', 'inf')]
-                if wynikAnalizy.get(timeout=1):
-                    for tmpbbb in wynikAnalizy.get(timeout=1):
-                        print(tmpbbb)
-                        skaddokad, infinity = tmpbbb
-                        skad, dokad = skaddokad.split('->')
-                        try:
-                            # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
-                            skad = skad + '(' + list(oddzielnegrafy[int(skad)])[0] + ')'
-                        except ValueError:
-                            pass
-                        try:
-                            # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
-                            dokad = dokad + '(' + list(oddzielnegrafy[int(dokad)])[0] + ')'
-                        except ValueError:
-                            pass
-                        print(skad + '->' + dokad + ' brak polaczenia')
-                        file.write(skad + '->' + dokad + ' brak polaczenia\n')
+        file = open(self.nazwaplikudlaoutput, 'w')
+        for wynikAnalizy in rs:
+            # wyninkAnalizy ma postac [('53.27990,16.45933->53.32999,16.02584', 'inf')]
+            if wynikAnalizy.get(timeout=1):
+                for tmpbbb in wynikAnalizy.get(timeout=1):
+                    print(tmpbbb)
+                    skaddokad, infinity = tmpbbb
+                    skad, dokad = skaddokad.split('->')
+                    try:
+                        # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
+                        skad = skad + '(' + list(oddzielnegrafy[int(skad)])[0] + ')'
+                    except ValueError:
+                        pass
+                    try:
+                        # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
+                        dokad = dokad + '(' + list(oddzielnegrafy[int(dokad)])[0] + ')'
+                    except ValueError:
+                        pass
+                    print(skad + '->' + dokad + ' brak polaczenia')
+                    file.write(skad + '->' + dokad + ' brak polaczenia\n')
 
-            file.close()
-            print('Utworzono plik %s.' % self.nazwaplikudlaoutput)
+        file.close()
+        print('Utworzono plik %s.' % self.nazwaplikudlaoutput)
 
     def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(self):
         # jeśli jednokierunkowa zaczya się i kończy w tym samym zbiorze, to znaczy, że z każdego dowolnego
@@ -770,7 +773,7 @@ class Mapa(object):
                 self.stderr_stdout_writer.stderrorwrite("Zdublowane punkty drogi " + a + "\npomijam sprawdzanie.")
                 return [nodydrogi]
             
-        #print(nodypodwojne)
+        # print(nodypodwojne)
         if not nodypodwojne:
             return [nodydrogi]
         else:
@@ -818,7 +821,7 @@ class Mapa(object):
 
 # nazwa klasy mylaca ale niech bedzie
 class Node(object):
-    def __init__(self, paraWsp, RoadId, nrwsp , skrajna=0):
+    def __init__(self, paraWsp, RoadId, nrwsp, skrajna=0):
 
         # mowi samo za siebie
         self.wspolrzedne = paraWsp
@@ -929,17 +932,16 @@ class Zakaz(object):
             self.ToRoadId = list(set(self.ToRoadId))
             if self.ToRoadId:
                 self.sprawdz_czy_pomiedzy_sa_wezly_routingowe(Drogi, WszystkieNody, self.ToRoadId[0], self.Nody[-2:])
-            # gdy nie ma pojedynczej drogi laczacej dwa wezly zakazu generowany jest wyjatek albo KeyError albo IndexError
-            # przechwycamy go i obslugujemy taki blad pozniej
+            # gdy nie ma pojedynczej drogi laczacej dwa wezly zakazu generowany jest wyjatek albo KeyError albo
+            # IndexError przechwycamy go i obslugujemy taki blad pozniej
 
         self.sprawdz_zakaz()
 
     def sprawdz_zakaz1(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
         if not 3 <= len(self.Nody) <= 4:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s' % (
-                len(self.Nody), self.Nody[0], self.Nody[1]))
+            self.stderr_stdout_writer.stderrorwrite('Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s'
+                                                    % (len(self.Nody), self.Nody[0], self.Nody[1]))
 
         from_via_to = (self.FromRoadId, self.ViaRoadId, self.ToRoadId) if len(self.Nody) == 4 else \
             (self.FromRoadId, self.ToRoadId)
@@ -962,8 +964,8 @@ class Zakaz(object):
     def sprawdz_zakaz(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
         if not 3 <= len(self.Nody) <= 4:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s' % (len(self.Nody), self.Nody[0], self.Nody[1]))
+            self.stderr_stdout_writer.stderrorwrite('Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s'
+                                                    % (len(self.Nody), self.Nody[0], self.Nody[1]))
                 
         # sekcja analizujaca from
         a = len(self.FromRoadId)
