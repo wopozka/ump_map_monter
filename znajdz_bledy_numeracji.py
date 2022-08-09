@@ -290,6 +290,22 @@ class Mapa(object):
                           '0xc', '0x16', '0x19', '0xd', '0xe', '0xf', '0x2f', '0x1a', '0x117'}
         typLiniiGranicznej = {'0x4b'}
         typy_zakazow_drogowskazow = {'0x19', '0x2f'}
+        drogi = []
+        zakazy = []
+        token = ''
+        num_rekordu = 0
+        while num_rekordu < len(zawartosc_pliku):
+            linia = zawartosc_pliku[num_rekordu].strip()
+            if linia == '[POLYLINE]':
+                num_rekordu += 1
+                linia = zawartosc_pliku[num_rekordu].strip()
+                rekord = dict()
+                while linia != '[END]':
+
+
+            klucz, wartosc = linia.strip().split('=', 1)
+
+
 
     def ustaw_wezly_zakazow_jako_routingowe(self):
         for zakaz_id in self.Zakazy:
