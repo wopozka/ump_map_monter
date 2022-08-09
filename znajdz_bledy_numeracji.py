@@ -285,6 +285,12 @@ class Mapa(object):
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
 
+    def zwroc_rekordy_pliku_mp(self, zawartosc_pliku):
+        typyRoutingowe = {'0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
+                          '0xc', '0x16', '0x19', '0xd', '0xe', '0xf', '0x2f', '0x1a', '0x117'}
+        typLiniiGranicznej = {'0x4b'}
+        typy_zakazow_drogowskazow = {'0x19', '0x2f'}
+
     def ustaw_wezly_zakazow_jako_routingowe(self):
         for zakaz_id in self.Zakazy:
             for tmpbbb in self.Zakazy[zakaz_id].Nody:
