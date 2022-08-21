@@ -104,6 +104,7 @@ class Mapa(object):
         typyRoutingowe = ('0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
                           '0xc', '0x16', '0x19', '0xd', '0xe', '0xf', '0x2f', '0x1a', '0x117')
         typLiniiGranicznej = ('0x4b',)
+        typy_zakazow = ('0x16', '0x2f')
         if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             encoding = 'latin2'
         else:
@@ -162,7 +163,7 @@ class Mapa(object):
                     # nody_tmp = Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')
 
                     # jesli to zakaz to nie sprawdzaj zapetlenia
-                    if my_type not in ('0x19', '0x2f'):
+                    if my_type not in typy_zakazow:
                         nody_tmp = self.sprawdzzapetlenie(
                             Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),('))
                         # gdy droga zapętlona nie sprawdzaj numeracji, robi to netgen i raportuje odpowiednio
@@ -174,7 +175,7 @@ class Mapa(object):
                     # jeśli droga jednokierunkowa dodaj skrajne nody do listy nodow jednokierunkowych
                     # zrob to tylko w przypadku gdy droga nie jest zapętlona, bo w takim przypadku na pewno
                     # nie będzie ślepa
-                    if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in ('0x19', '0x2f'):
+                    if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in typy_zakazow:
                         self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
                         self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
                     # nod pierwszy i ostatni mają być routingowe, więc dodaję je osobno
@@ -185,7 +186,7 @@ class Mapa(object):
                         kolejnyNrNoda = 0
                         nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
                         for para_wspolrzednych in punkty_drogi:
-                            if my_type not in ('0x19', '0x2f'):
+                            if my_type not in typy_zakazow:
                                 if para_wspolrzednych in self.WszystkieNody:
                                     self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
                                     self.WszystkieNody[para_wspolrzednych].RoadIds.append(self.RoadId)
@@ -203,7 +204,7 @@ class Mapa(object):
                             else:
                                 self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
                             kolejnyNrNoda += 1
-                        if my_type not in ('0x19', '0x2f'):
+                        if my_type not in typy_zakazow:
                             self.Drogi[self.RoadId] = self.NodyDrogi[:]
                             if DirIndicator:
                                 self.DrogiJednokierunkowe.append(self.RoadId)
@@ -285,26 +286,54 @@ class Mapa(object):
                 elif self.mode == 'sprawdz_siatke_jednokierunkowa':
                     self.sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc()
 
-    def zwroc_rekordy_pliku_mp(self, zawartosc_pliku):
-        typyRoutingowe = {'0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
-                          '0xc', '0x16', '0x19', '0xd', '0xe', '0xf', '0x2f', '0x1a', '0x117'}
-        typLiniiGranicznej = {'0x4b'}
+    @staticmethod
+    def zwroc_rekordy_pliku_mp(zawartosc_pliku):
+        typy_routingowe = {'0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
+                           '0xc', '0xd', '0xe', '0xf', '0x1a', '0x117'}
+        typ_linii_granicznej = {'0x4b'}
         typy_zakazow_drogowskazow = {'0x19', '0x2f'}
-        drogi = []
-        zakazy = []
+        drogi, zakazy, granice = [], [], []
         token = ''
         num_rekordu = 0
-        while num_rekordu < len(zawartosc_pliku):
-            linia = zawartosc_pliku[num_rekordu].strip()
+        rekord_pliku_mp = dict()
+        for tmp_linia in zawartosc_pliku:
+            linia = tmp_linia.strip()
             if linia == '[POLYLINE]':
-                num_rekordu += 1
-                linia = zawartosc_pliku[num_rekordu].strip()
-                rekord = dict()
-                while linia != '[END]':
-
-
-            klucz, wartosc = linia.strip().split('=', 1)
-
+                # gdy nie zamknelismy POLYLINE slowem kluczowy END, wtedy olej wszystko co do tej pory zapisales
+                if token:
+                    rekord_pliku_mp.clear()
+                token = 'in polyline'
+                continue
+            elif linia in ('[POLYGONE]', '[POI]'):
+                # gdy nie zamknelismy POLYLINE slowem kluczowy END, wtedy olej wszystko co do tej pory zapisales
+                if token:
+                    rekord_pliku_mp.clear()
+                token = ''
+                continue
+            elif token and linia == '[END]':
+                if rekord_pliku_mp and 'Type' in rekord_pliku_mp:
+                    if rekord_pliku_mp['Type'] in typy_routingowe:
+                        drogi.append(rekord_pliku_mp)
+                    elif rekord_pliku_mp['Type'] in typy_zakazow_drogowskazow:
+                        zakazy.append(rekord_pliku_mp)
+                    elif rekord_pliku_mp['Type'] in typ_linii_granicznej:
+                        granice.append(rekord_pliku_mp)
+                rekord_pliku_mp = dict()
+                token = ''
+                continue
+            if token:
+                if '=' not in linia:
+                    continue
+                klucz, wartosc = linia.split('=', 1)
+                if klucz.startswith('Type'):
+                    rekord_pliku_mp[klucz] = wartosc
+                elif klucz.startswith('Numbers') and not klucz.startswith('NumbersExt'):
+                    rekord_pliku_mp[klucz] = wartosc
+                elif klucz.startswith('Data0'):
+                    rekord_pliku_mp[klucz] = wartosc
+                else:
+                    continue
+        return drogi, zakazy, granice
 
 
     def ustaw_wezly_zakazow_jako_routingowe(self):
