@@ -57,7 +57,8 @@ def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia, zmienne):
     w postaci tupli, jesli nie ma zwraca pusta tuple
     """
     pliki_z_bledami = list()
-    for nazwa_pliku in pliki_do_sprawdzenia:
+    for n_pliku in pliki_do_sprawdzenia:
+        nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
         with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
             for zawartosc in plik_w_cvs.readlines():
                 if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
