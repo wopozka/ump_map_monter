@@ -141,11 +141,11 @@ class TestyPoprawnosciDanych(object):
         self.dozwolone_wartosci_dla_ForceClass = {'0', '1', '2', '3', '4'}
         self.dozwolone_wartosci_dla_EndLevel = {'0', '1', '2', '3', '4', '5'}
 
-    def sprawdz_czy_endlevel_wieksze_od_data(self, danwyke_do_zapisu):
+    def sprawdz_czy_endlevel_wieksze_od_data(self, dane_do_zapisu):
         if 'EndLevel' not in dane_do_zapisu:
             return ''
         max_data = max(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
-        if max_data > int(dane_do_zapisu['EndLevel']):
+        if max_data >= int(dane_do_zapisu['EndLevel']):
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
             self.error_out_writer.stderrorwrite('EndLevel=%s dla Data%s %s' % (dane_do_zapisu['EndLevel'],
                                                                                max_data, coords))
