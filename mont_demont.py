@@ -141,7 +141,16 @@ class TestyPoprawnosciDanych(object):
         self.dozwolone_wartosci_dla_ForceClass = {'0', '1', '2', '3', '4'}
         self.dozwolone_wartosci_dla_EndLevel = {'0', '1', '2', '3', '4', '5'}
 
-
+    def sprawdz_czy_endlevel_wieksze_od_data(self, danwyke_do_zapisu):
+        if 'EndLevel' not in dane_do_zapisu:
+            return ''
+        max_data = max(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
+        if max_data > int(dane_do_zapisu['EndLevel']):
+            coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+            self.error_out_writer.stderrorwrite('EndLevel=%s dla Data%s %s' % (dane_do_zapisu['EndLevel'],
+                                                                               max_data, coords))
+            return 'error'
+        return ''
 
     def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
         for klucz in dane_do_zapisu:
@@ -356,6 +365,7 @@ class TestyPoprawnosciDanych(object):
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
+        self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
         wyniki_testow = list()
@@ -364,6 +374,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.testuj_label(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
+        self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
 
         if wyniki_testow:
