@@ -66,9 +66,10 @@ class TestyPoprawnosciDanych(object):
             '0xa',  # unpaved road
             '0xb',  # highway connector
             '0xc',  # roundabout
+            '0xd',  # droga dla rowerow
             '0x16',  # walkway]
-            # '0x1a',#ferry
-            # ' 0x1b'#water or rail ferry
+            # '0x1a',  # ferry
+            # '0x1b'  # water or rail ferry
         ]
         self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15']
         self.literyWojewodztw = [
