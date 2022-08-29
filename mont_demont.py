@@ -232,19 +232,26 @@ class TestyPoprawnosciDanych(object):
             return 'brak_label_przy_numeracji'
         return ''
 
+    def sprawdz_join_zamiast_merge(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] == '[POLYLINE]' and dane_do_zapisu['Type'] in self.typy_data_0_only:
+            data = [a for a in dane_do_zapisu if a.startswith('Data0')]
+            if len(data) > 1:
+                self.error_out_writer.stderrorwrite('Uzyte join zamiast merge dla drogi %s' % dane_do_zapisu[data[0]])
+                return 'Data1'
+        return ''
+
     def sprawdzData0Only(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]':
             return ''
-        data = [a for a in dane_do_zapisu if a.startswith('Data')]
-        if dane_do_zapisu['POIPOLY'] == '[POI]' and len(data) > 1:
-            self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla drogi/kolei %s' % dane_do_zapisu[data[0]])
+        data = [a for a in dane_do_zapisu if a.startswith('Data') and not a.startswith('Data0')]
+        if not data:
+            return ''
+        if dane_do_zapisu['POIPOLY'] == '[POI]':
+            self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla POI %s' % dane_do_zapisu[data[0]])
             return 'Data1'
         elif dane_do_zapisu['Type'] in self.typy_data_0_only:
-            if len(data) == 1 and data[0].startswith('Data0'):
-                return ''
-            else:
-                self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla drogi/kolei %s' % dane_do_zapisu[data[0]])
-                return 'Data1'
+            self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla drogi/kolei %s' % dane_do_zapisu[data[0]])
+            return 'Data1'
         else:
             return ''
 
@@ -372,10 +379,11 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow = list()
         wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_join_zamiast_merge(dane_do_zapisu))
         wyniki_testow.append(self.testuj_label(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
-        self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
 
         if wyniki_testow:
