@@ -569,7 +569,7 @@ class HelpWindow(tkinter.Toplevel):
                     'ctrl + prawy klawisz myszy', ' -> ', u'włącz klawisz Montuj\n',
                     'E', '                          -> ', u'zamontuj źródła i uruchom mapedit\n',
                     'ctrl + lewy klawisz myszy', '  -> ', u'zamontuj źródła i uruchom mapedit\n',
-                    'ctrl + shift + c', '                   -> ', u'wyczyść katalog roboczy z plików źródłowych, diff i wynik.mp\n',
+                    'ctrl + shift + c', '           -> ', u'wyczyść katalog roboczy z plików źródłowych, diff i wynik.mp\n',
                     '\n',
                     u'Skróty dla wyboru obszarów\n',
                     'ctrl + lewy klawisz myszy', ' -> ', u'zaznaczenie obszaru i wywołanie cvs up',
