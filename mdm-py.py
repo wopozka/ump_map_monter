@@ -2365,7 +2365,7 @@ class mdm_gui_py(tkinter.Tk):
         # skrót do sprawdź
         self.bind("<Control-s>", self.sprawdz_shortcut)
         # skrót do usuń zawartość katalogu roboczego
-        self.bind("<Control-C>", self.czysc_shortcut)
+        self.bind("<Control-Shift-KeyPress-C>", self.czysc_shortcut)
         # skrót klawiaturowy do pomocy
         self.bind('<F1>', lambda event: self.skrotyKlawiaturowe())
 
