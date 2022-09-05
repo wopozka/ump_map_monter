@@ -141,6 +141,26 @@ class TestyPoprawnosciDanych(object):
         self.dozwolone_wartosci_dla_ForceSpeed = {'0', '1', '2', '3', '4', '5', '6', '7', 'faster', 'slower'}
         self.dozwolone_wartosci_dla_ForceClass = {'0', '1', '2', '3', '4'}
         self.dozwolone_wartosci_dla_EndLevel = {'0', '1', '2', '3', '4', '5'}
+        self.typy_bez_forceclass = {'0x1',  # motorway
+                                    '0x2',  # principal highway
+                                    '0x8',  # highway ramp, low-speed
+                                    '0x9',  # highway ramp, high-speed
+                                    '0xb',  # highway connector
+                                    '0xc',  # roundabout
+                                    '0xe',  # tunnel
+                                    '0x1a',  # ferry
+                                    }
+
+    def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]':
+            return ''
+        if dane_do_zapisu['Type'] not in self.typy_bez_forceclass:
+            return ''
+        if 'ForceClass' in dane_do_zapisu:
+            coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+            self.error_out_writer.stderrorwrite('Niepotrzebne ForceClass dla drogi %s' % coords)
+            return 'ForceClass'
+        return ''
 
     def sprawdz_czy_endlevel_wieksze_od_data(self, dane_do_zapisu):
         if 'EndLevel' not in dane_do_zapisu:
@@ -385,7 +405,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
-
+        wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
