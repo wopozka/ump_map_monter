@@ -152,9 +152,7 @@ class TestyPoprawnosciDanych(object):
                                     }
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
-        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]':
-            return ''
-        if dane_do_zapisu['Type'] not in self.typy_bez_forceclass:
+        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]' or dane_do_zapisu['Type'] not in self.typy_bez_forceclass:
             return ''
         if 'ForceClass' in dane_do_zapisu:
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
@@ -166,7 +164,7 @@ class TestyPoprawnosciDanych(object):
         if 'EndLevel' not in dane_do_zapisu:
             return ''
         max_data = max(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
-        if max_data > int(dane_do_zapisu['EndLevel']):
+        if max_data and max_data >= int(dane_do_zapisu['EndLevel']):
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
             self.error_out_writer.stderrorwrite('EndLevel=%s dla Data%s %s' % (dane_do_zapisu['EndLevel'],
                                                                                max_data, coords))
