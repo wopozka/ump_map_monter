@@ -164,6 +164,7 @@ class TestyPoprawnosciDanych(object):
         if 'EndLevel' not in dane_do_zapisu:
             return ''
         max_data = max(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
+        # jesli max_data == 0, wtedy mamy data0 tylko. W takim przypadku nie sprawdzaj EndLevel
         if max_data and max_data >= int(dane_do_zapisu['EndLevel']):
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
             self.error_out_writer.stderrorwrite('EndLevel=%s dla Data%s %s' % (dane_do_zapisu['EndLevel'],
