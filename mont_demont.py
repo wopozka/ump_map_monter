@@ -166,10 +166,8 @@ class TestyPoprawnosciDanych(object):
         if end_level == 0:
             return ''
         data_levels = set(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
-        max_data = max(data_levels)
         min_data = min(data_levels)
         # jesli max_data == 0, wtedy mamy data0 tylko. W takim przypadku nie sprawdzaj EndLevel
-        blad = False
         kom_bledu = ''
         # EndLevel nie powinien byc rowny jakiemukolwiek DataX danym rekordzie, jesli jest to jest blad
         if end_level in data_levels:
