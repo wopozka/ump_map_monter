@@ -152,23 +152,46 @@ class TestyPoprawnosciDanych(object):
                                     }
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
-        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]' or dane_do_zapisu['Type'] not in self.typy_bez_forceclass:
+        if 'ForceClass' not in dane_do_zapisu or dane_do_zapisu['POIPOLY'] != '[POLYLINE]' \
+                or dane_do_zapisu['Type'] not in self.typy_bez_forceclass:
             return ''
-        if 'ForceClass' in dane_do_zapisu:
-            coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-            self.error_out_writer.stderrorwrite('Niepotrzebne ForceClass dla drogi %s' % coords)
-            return 'ForceClass'
-        return ''
+        coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+        self.error_out_writer.stderrorwrite('Niepotrzebne ForceClass dla drogi %s' % coords)
+        return 'ForceClass'
 
     def sprawdz_czy_endlevel_wieksze_od_data(self, dane_do_zapisu):
         if 'EndLevel' not in dane_do_zapisu:
             return ''
-        max_data = max(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
+        end_level = int(dane_do_zapisu['EndLevel'])
+        if end_level == 0:
+            return ''
+        data_levels = set(int(a.split('_')[0].split('Data')[1]) for a in dane_do_zapisu if a.startswith('Data'))
+        max_data = max(data_levels)
+        min_data = min(data_levels)
         # jesli max_data == 0, wtedy mamy data0 tylko. W takim przypadku nie sprawdzaj EndLevel
-        if max_data and max_data >= int(dane_do_zapisu['EndLevel']):
+        blad = False
+        kom_bledu = ''
+        # EndLevel nie powinien byc rowny jakiemukolwiek DataX danym rekordzie, jesli jest to jest blad
+        if end_level in data_levels:
+            blad = True
+            kom_bledu = 'EndLevel=%s dla Data%s' % (end_level, end_level)
+        # jesli EndLevel jest mniejszy od najni¿szego DataX to jest blad
+        elif end_level < min_data:
+            blad = True
+            kom_bledu = 'EndLevel=%s mniejsze niz Data%s' % (end_level, min_data)
+        # EndLevel moze byc wiekszy tylko od min_data, nie mo¿e byæ wiêkszy od dwóch, bo wtedy nie wiadomo co generowac
+        # na przyk³ad mamy Data0, Data1 i Data3, a EndLevel=2, co by znaczylo ze zarowno Data0 jak i Data1 powinny byc
+        # podniesione do poziomu 2
+        elif len([a for a in data_levels if a < end_level]) > 1:
+            blad = True
+            kom_bledu = 'EndLevel=%s dla wielokrotnego ' % end_level
+            for tmp_ in (a for a in data_levels if a < end_level):
+                kom_bledu += 'Data%s, ' % tmp_
+            kom_bledu = kom_bledu.rstrip(', ')
+        if blad:
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-            self.error_out_writer.stderrorwrite('EndLevel=%s dla Data%s %s' % (dane_do_zapisu['EndLevel'],
-                                                                               max_data, coords))
+            wspolrzedne = ' %s' %coords
+            self.error_out_writer.stderrorwrite(kom_bledu + wspolrzedne)
             return 'error'
         return ''
 
