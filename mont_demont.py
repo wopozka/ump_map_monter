@@ -173,22 +173,19 @@ class TestyPoprawnosciDanych(object):
         kom_bledu = ''
         # EndLevel nie powinien byc rowny jakiemukolwiek DataX danym rekordzie, jesli jest to jest blad
         if end_level in data_levels:
-            blad = True
             kom_bledu = 'EndLevel=%s dla Data%s' % (end_level, end_level)
         # jesli EndLevel jest mniejszy od najni¿szego DataX to jest blad
         elif end_level < min_data:
-            blad = True
             kom_bledu = 'EndLevel=%s mniejsze niz Data%s' % (end_level, min_data)
         # EndLevel moze byc wiekszy tylko od min_data, nie mo¿e byæ wiêkszy od dwóch, bo wtedy nie wiadomo co generowac
         # na przyk³ad mamy Data0, Data1 i Data3, a EndLevel=2, co by znaczylo ze zarowno Data0 jak i Data1 powinny byc
         # podniesione do poziomu 2
         elif len([a for a in data_levels if a < end_level]) > 1:
-            blad = True
             kom_bledu = 'EndLevel=%s dla wielokrotnego ' % end_level
             for tmp_ in (a for a in data_levels if a < end_level):
                 kom_bledu += 'Data%s, ' % tmp_
             kom_bledu = kom_bledu.rstrip(', ')
-        if blad:
+        if kom_bledu:
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
             wspolrzedne = ' %s' %coords
             self.error_out_writer.stderrorwrite(kom_bledu + wspolrzedne)
