@@ -3629,6 +3629,18 @@ def dodaj_dane_routingowe(args):
     with open(os.path.join(Zmienne.KatalogRoboczy, args.output_filename[0]), 'w') as file_name:
         file_name.writelines(plik_mp_z_klasami.decode(Zmienne.Kodowanie))
 
+
+def kompiluj_mape(args):
+    stderr_stdout_writer = errOutWriter(args)
+    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+    # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
+    # dodaj_dane_routingowe(args)
+    stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
+    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    process = subprocess.Popen(['java', '-jar', mkg_map, '--route', '--gmapsupp', '--code-page=1250', '--lower-case',
+                                '--output-dir=' + Zmienne.KatalogRoboczy, wynik_mp])
+
 def main(argumenty):
 
     # glowny parser:
@@ -3755,6 +3767,10 @@ def main(argumenty):
                                                                           'domy¶lnie wynik.mp',
                                               action='store', default=['wynik.mp'], nargs=1)
     parser_dodaj_dane_routingowe.set_defaults(func=dodaj_dane_routingowe)
+
+    # parser dla komendy kompiluj mape
+    parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
+    parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
     args = parser.parse_args()
     args.func(args)
