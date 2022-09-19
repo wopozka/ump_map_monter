@@ -3626,20 +3626,32 @@ def dodaj_dane_routingowe(args):
 
     plik_mp_z_klasami, err = process.communicate()
     stderr_stdout_writer.stdoutwrite('Zapisuje plik wyjsciowy %s z danymi routingowymi' % args.output_filename[0])
-    with open(os.path.join(Zmienne.KatalogRoboczy, args.output_filename[0]), 'w') as file_name:
-        file_name.writelines(plik_mp_z_klasami.decode(Zmienne.Kodowanie))
+    plik_mp_do_zapisu = []
+    for linia in plik_mp_z_klasami.decode(Zmienne.Kodowanie).split('\n'):
+        plik_mp_do_zapisu.append(linia.strip().replace('Routeparam', 'RouteParam') + '\n')
+    with open(os.path.join(Zmienne.KatalogRoboczy, args.output_filename[0]), 'w', encoding=Zmienne.Kodowanie) \
+            as file_name:
+        file_name.writelines(plik_mp_do_zapisu)
 
 
 def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+    java_call_args = ['java', '-jar', mkg_map, '--code-page=1250', '--lower-case', '--index']
+    if not args.norouting:
+        java_call_args += ['--route', '--drive-on=detect,right']
+    if args.gmapsupp:
+        java_call_args += ['--gmapsupp']
+    if not args.noindex:
+        java_call_args += ['--index', '--split-name-index']
+    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    java_call_args += ['--output-dir=' + Zmienne.KatalogRoboczy, wynik_mp]
     # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
     # dodaj_dane_routingowe(args)
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
-    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    process = subprocess.Popen(['java', '-jar', mkg_map, '--route', '--gmapsupp', '--code-page=1250', '--lower-case',
-                                '--output-dir=' + Zmienne.KatalogRoboczy, wynik_mp])
+    print(' '.join(java_call_args))
+    process = subprocess.Popen(java_call_args)
 
 def main(argumenty):
 
@@ -3770,6 +3782,12 @@ def main(argumenty):
 
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
+    parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
+                                      help="Generuj plik gmapsupp.img")
+    parser_kompiluj_mape.add_argument('-r', '--norouting', action='store_true', default=False,
+                                      help="Generuj mape z routingiem")
+    parser_kompiluj_mape.add_argument('-i', '--noindex', action='store_true', default=False,
+                                      help="Generuj index do wyszukiwania adresow")
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
     args = parser.parse_args()
