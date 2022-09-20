@@ -3634,6 +3634,21 @@ def dodaj_dane_routingowe(args):
         file_name.writelines(plik_mp_do_zapisu)
 
 
+def wojkuj(args):
+    stderr_stdout_writer = errOutWriter(args)
+    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
+    else:
+        wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek.exe')
+    wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'dzielnik-slownik.txt')
+    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
+    wojek_call = [wojek_exe, '-s ', wojek_slownik_txt, '-k ', mapa_woj_mp, '-f ', wynik_mp, '-F ', wynik_mp]
+    print(wojek_call)
+    process = subprocess.Popen(wojek_call)
+
+
 def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
@@ -3779,6 +3794,10 @@ def main(argumenty):
                                                                           'domy¶lnie wynik.mp',
                                               action='store', default=['wynik.mp'], nargs=1)
     parser_dodaj_dane_routingowe.set_defaults(func=dodaj_dane_routingowe)
+
+    # parser dla komendy wojkuj
+    parser_wojkuj_mape= subparsers.add_parser('wojkuj', help="Dodane dane przy pomocy wojka")
+    parser_wojkuj_mape.set_defaults(func=wojkuj)
 
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
