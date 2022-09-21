@@ -3641,10 +3641,11 @@ def wojkuj(args):
         wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
     else:
         wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek.exe')
-    wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'dzielnik-slownik.txt')
+    wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek-slownik-osm.txt')
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    wynik_mp_wojek = os.path.join(Zmienne.KatalogRoboczy, 'wynik_.mp')
     mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
-    wojek_call = [wojek_exe, '-s ', wojek_slownik_txt, '-k ', mapa_woj_mp, '-f ', wynik_mp, '-F ', wynik_mp]
+    wojek_call = [wojek_exe, '-s', wojek_slownik_txt, '-k', mapa_woj_mp' -f ', wynik_mp, '-F ', wynik_mp_wojek]
     print(wojek_call)
     process = subprocess.Popen(wojek_call)
 
