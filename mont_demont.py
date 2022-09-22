@@ -3658,11 +3658,11 @@ def kompiluj_mape(args):
     else:
         mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
     java_call_args = ['java', '-jar', mkg_map, '--code-page=1250', '--lower-case', '--index']
-    if not args.norouting:
+    if args.routing:
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
         java_call_args += ['--gmapsupp']
-    if not args.noindex:
+    if args.index:
         java_call_args += ['--index', '--split-name-index']
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     java_call_args += ['--output-dir=' + Zmienne.KatalogRoboczy, wynik_mp]
@@ -3808,9 +3808,9 @@ def main(argumenty):
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default=None, help='Sciezka do programu mkgmap')
     parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
                                       help="Generuj plik gmapsupp.img")
-    parser_kompiluj_mape.add_argument('-r', '--norouting', action='store_true', default=False,
+    parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,
                                       help="Generuj mape z routingiem")
-    parser_kompiluj_mape.add_argument('-i', '--noindex', action='store_true', default=False,
+    parser_kompiluj_mape.add_argument('-i', '--index', action='store_true', default=False,
                                       help="Generuj index do wyszukiwania adresow")
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
