@@ -22,6 +22,7 @@ import kdtree
 import znajdz_bledy_numeracji
 from collections import OrderedDict
 from collections import defaultdict
+from datetime import date
 
 
 class errOutWriter(object):
@@ -3079,6 +3080,64 @@ def montujpliki(args):
     stderr_stdout_writer.stdoutwrite('Gotowe!')
     return 0
 
+###############################################################################
+# montaz dla mkgmap
+###############################################################################
+def montuj_mkgmap(args):
+    # wczytaj liste map
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
+    n_pliku = os.path.join(os.path.join(os.path.join(zmienne.KatalogzUMP, 'narzedzia'), 'widzimisie'), 'lista-map.txt')
+    with open(n_pliku, 'r') as plik_lista_map:
+        miasto_img_id = {a.split('=')[0].split('-')[-1]: a.split('=')[1].split('.')[0]
+                         for a in plik_lista_map.readlines() if a.strip()}
+
+    naglowek = OrderedDict({'[IMG ID]': '', 'ID': '', 'FamilyID': '4800', 'Name': '', 'Datum': 'W84', 'TreSize': '3096',
+                            'RgnLimit': '1024', 'Levels': '6', 'Level0': '24', 'Level1': '22', 'Level2': '20',
+                            'Level3': '18', 'Level4': '16', 'Level5': '15', 'POIIndex': 'Y', 'MG': 'Y',
+                            'Numbering': 'Y', 'POINumberFirst': 'N', 'POIZipFirst': 'Y', 'Routing': 'Y',
+                            'DrawPriority': '23', 'Copyright': 'ump.waw.pl debest', 'Elevation': 'm',
+                            'DefaultRegionCountry': '', 'LBLcoding': '9', 'Codepage': '1250', 'LeftSideTraffic': 'N',
+                            '[END-IMG ID]': ''
+                            })
+
+    # lewostronni: Brytania * 3, Irlandia, Cypr, Malta
+    # if [ $ID = 44100001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    # if [ $ID = 44130001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    # if [ $ID = 44280001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    # if [ $ID = 35300001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    # if [ $ID = 35700001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    # if [ $ID = 35600001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
+    ruch_lewostronny = (str(a) for a in (44100001, 44130001, 44280001, 35300001, 35700001, 35600001))
+
+    obszary = tuple(args.obszary)
+    for obszar in obszary:
+        args.verbose = False
+        args.umphome = ''
+        args.katrob = ''
+        args.savememory = False
+        args.obszary = [obszar]
+        args.cityidx = True
+        args.format_indeksow = 'cityname'
+        args.adrfile = True
+        args.notopo = False
+        args.noszlaki = False
+        args.nocity = False
+        args.nopnt = False
+        args.plikmp = 'wynik.mp'
+        args.monthash = False
+        args.extratypes = False
+        args.trybosmand = False
+        args.entry_otwarte_do_extras = False
+        miasto = obszar.split('-')[-1].strip()
+        naglowek['ID'] = miasto_img_id[miasto]
+        naglowek['DefaultRegionCountry'] = miasto
+        if naglowek['ID'] in ruch_lewostronny:
+            naglowek['LeftSideTraffic'] = 'Y'
+        data_kompilacji = date.today()
+        naglowek['Name'] = 'UMP-' + miasto + '-' + data_kompilacji.strftime('%d') + data_kompilacji.strftime('%B')[0:3]
+
+        print(naglowek)
+
 
 ###############################################################################
 # Demontaz
@@ -3710,6 +3769,11 @@ def main(argumenty):
                                help='Przenosi otarte i entrypoints z komentarza do extras. Uwaga, u¿ywaæ '
                                     'ostro¿nie')
     parser_montuj.set_defaults(func=montujpliki)
+
+    # parser dla komendy montuj_mkgmap
+    parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
+    parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
+    parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
     # parser dla komendy demontuj/demont
     parser_demontuj = subparsers.add_parser('demont', help='demontaz pliku mp')
