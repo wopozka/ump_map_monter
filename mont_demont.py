@@ -3653,7 +3653,10 @@ def wojkuj(args):
 def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+    if args.mkgmap_path is not None:
+        mkg_map = args.mkgmap_path
+    else:
+        mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
     java_call_args = ['java', '-jar', mkg_map, '--code-page=1250', '--lower-case', '--index']
     if not args.norouting:
         java_call_args += ['--route', '--drive-on=detect,right']
@@ -3802,6 +3805,7 @@ def main(argumenty):
 
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
+    parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default=None, help='Sciezka do programu mkgmap')
     parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
                                       help="Generuj plik gmapsupp.img")
     parser_kompiluj_mape.add_argument('-r', '--norouting', action='store_true', default=False,
