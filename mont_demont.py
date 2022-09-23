@@ -587,8 +587,12 @@ class PaczerGranicCzesciowych(object):
 class UstawieniaPoczatkowe(object):
     def __init__(self, plikmp):
         self.KatalogzUMP = "c:\\ump"
-        self.OutputFile = plikmp
-        self.InputFile = plikmp
+        if isinstance(plikmp, list):
+            self.OutputFile = plikmp[0]
+            self.InputFile = plikmp[0]
+        else:
+            self.OutputFile = plikmp
+            self.InputFile = plikmp
         self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy')
         self.MapEditExe = 'c:\\ump\\mapedit++\\MapEdit++.exe'
         self.MapEdit2Exe = 'c:\\ump\\mapedit\\mapedit.exe'
@@ -1365,7 +1369,7 @@ class IndeksyMiast(object):
 
 class plikMP1(object):
     """przechowuje zawartosc pliku mp do zapisu"""
-    def __init__(self, Zmienne, args, tabela_konwersji_typow, Montuj=1):
+    def __init__(self, Zmienne, args, tabela_konwersji_typow, Montuj=1, naglowek_mapy=''):
 
         # zawartosc nowo tworzonego pliku mp, zawartosc z plikow skladowych do montazu
         self.zawartosc = []
@@ -1385,15 +1389,18 @@ class plikMP1(object):
         self.plikHash = {}
         if Montuj:
             self.plikDokladnosc = {}
-            try:
-                plik_naglowka_nazwa = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt')
-                with open(plik_naglowka_nazwa, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as plik_naglowka:
-                    self.naglowek = plik_naglowka.read()
-            # self.zawartosc.append(self.naglowek.rstrip()+'\n')
-            except FileNotFoundError:
-                self.stderrorwrite('nie moge zaladowac pliku header.txt')
+            if not naglowek_mapy:
+                try:
+                    plik_naglowka_nazwa = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt')
+                    with open(plik_naglowka_nazwa, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as plik_naglowka:
+                        self.naglowek = plik_naglowka.read()
+                # self.zawartosc.append(self.naglowek.rstrip()+'\n')
+                except FileNotFoundError:
+                    self.stderrorwrite('nie moge zaladowac pliku naglowka: ' + plik_naglowka_nazwa)
+                else:
+                    self.stdoutwrite('Wczytalem naglowek mapy z pliku :' + plik_naglowka_nazwa)
             else:
-                self.stdoutwrite('Wczytalem naglowek mapy z pliku header.txt')
+                self.naglowek = naglowek_mapy
         else:
             self.plikDokladnosc = {self.plik_nowosci_txt: '5', self.plik_nowosci_pnt: '5'}
             self.plikizMp = {self.plik_nowosci_txt: [], self.plik_nowosci_pnt: []}
@@ -2311,6 +2318,9 @@ class ObiektNaMapie(object):
         self.errOutWriter = errOutWriter(args)
         # indeksy miast
         self.IndeksyMiast = IndeksyMiast
+        self.tryb_mkgmap = False
+        if hasattr(args, 'tryb_mkgmap'):
+            self.tryb_mkgmap = True
 
     def komentarz_na_entrypoint_i_otwarte(self):
         if not self.Komentarz:
@@ -2374,8 +2384,9 @@ class ObiektNaMapie(object):
             self.Dane1.append('CityIdx=' + str(self.CityIdx))
         else:
             self.Dane1.append('CityName=' + nazwa_miasta)
-            for c_names in self.IndeksyMiast.sekcja_cityname:
-                self.Dane1.append(c_names)
+            if not self.tryb_mkgmap:
+                for c_names in self.IndeksyMiast.sekcja_cityname:
+                    self.Dane1.append(c_names)
 
 
 class Poi(ObiektNaMapie):
@@ -2872,7 +2883,7 @@ def zapiszkonfiguracje(args):
         configfile.write('KATALOGROBOCZY=' + KATALOGROBOCZY)
 
 
-def listujobszary(args):
+def listujobszary(args, wydruku_obszary=True):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
@@ -2880,11 +2891,12 @@ def listujobszary(args):
         listaobszarow = [a for a in os.listdir(Zmienne.KatalogzUMP)
                          if (a.startswith('UMP-') and os.path.isdir(os.path.join(Zmienne.KatalogzUMP, a)))]
         listaobszarow.sort()
-        print('\n'.join(listaobszarow), file=sys.stdout)
     except FileNotFoundError:
         print('Bledna konfiguracja, nie znalazlem zadnych obszarow.', file=sys.stderr)
         return []
     else:
+        if wydruku_obszary:
+            print('\n'.join(listaobszarow), file=sys.stdout)
         return listaobszarow
 
 
@@ -2895,7 +2907,7 @@ def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
         tester_poprawnosci_danych.testy_poprawnosci_danych_txt(dane_do_zapisu)
 
 
-def montujpliki(args):
+def montujpliki(args, naglowek_mapy=''):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if args.umphome:
@@ -2915,7 +2927,7 @@ def montujpliki(args):
 
     # gdy wybierzemy do montowania same radary, wtedy nalezy zamontowac cala polske - tylko drogi i radary.
     if args.obszary[0] == 'UMP-radary' and len(args.obszary) == 1:
-        for a in listujobszary(args):
+        for a in listujobszary(args, wydruku_obszary=False):
             if a.find('UMP-PL') >= 0:
                 args.obszary.append(a)
         args.tylkodrogi = 1
@@ -2949,7 +2961,7 @@ def montujpliki(args):
 
     plikMP = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy, delete=False)
     globalneIndeksy = IndeksyMiast()
-    zawartoscPlikuMp = plikMP1(Zmienne, args, tabKonw)
+    zawartoscPlikuMp = plikMP1(Zmienne, args, tabKonw, Montuj=1, naglowek_mapy=naglowek_mapy)
     # ListaObiektowDoMontowania=[]
     for pliki in plikidomont.Pliki:
         try:
@@ -3054,7 +3066,7 @@ def montujpliki(args):
             plikMP.write('\n'.join(globalneIndeksy.sekcja_cityidx))
         plikMP.write('\n[END-Cities]\n\n')
 
-    if not args.trybosmand:
+    if not args.trybosmand and not hasattr(args, 'tryb_mkgmap'):
         # zapisujemy dokladnosc
         stderr_stdout_writer.stdoutwrite('zapisuje pliki, domyslne miasta i dokladnosc plikow')
         plikMP.write('[CYFRY]\n')
@@ -3091,52 +3103,60 @@ def montuj_mkgmap(args):
         miasto_img_id = {a.split('=')[0].split('-')[-1]: a.split('=')[1].split('.')[0]
                          for a in plik_lista_map.readlines() if a.strip()}
 
-    naglowek = OrderedDict({'[IMG ID]': '', 'ID': '', 'FamilyID': '4800', 'Name': '', 'Datum': 'W84', 'TreSize': '3096',
+    naglowek = OrderedDict({'ID': '', 'FamilyID': '4800', 'Name': '', 'Datum': 'W84', 'TreSize': '3096',
                             'RgnLimit': '1024', 'Levels': '6', 'Level0': '24', 'Level1': '22', 'Level2': '20',
                             'Level3': '18', 'Level4': '16', 'Level5': '15', 'POIIndex': 'Y', 'MG': 'Y',
                             'Numbering': 'Y', 'POINumberFirst': 'N', 'POIZipFirst': 'Y', 'Routing': 'Y',
                             'DrawPriority': '23', 'Copyright': 'ump.waw.pl debest', 'Elevation': 'm',
-                            'DefaultRegionCountry': '', 'LBLcoding': '9', 'Codepage': '1250', 'LeftSideTraffic': 'N',
-                            '[END-IMG ID]': ''
+                            'DefaultRegionCountry': '', 'LBLcoding': '9', 'Codepage': '1250', 'LeftSideTraffic': 'N'
                             })
-
+    naglowek_mapy = '[IMG ID]\n'
     # lewostronni: Brytania * 3, Irlandia, Cypr, Malta
-    # if [ $ID = 44100001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
-    # if [ $ID = 44130001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
-    # if [ $ID = 44280001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
-    # if [ $ID = 35300001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
-    # if [ $ID = 35700001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
-    # if [ $ID = 35600001 ]; then echo LeftSideTraffic=Y >> $wynik; fi
     ruch_lewostronny = (str(a) for a in (44100001, 44130001, 44280001, 35300001, 35700001, 35600001))
 
+    args.verbose = False
+    args.umphome = ''
+    args.katrob = ''
+    args.savememory = False
+    args.cityidx = True
+    args.format_indeksow = 'cityname'
+    args.adrfile = True
+    args.notopo = False
+    args.noszlaki = False
+    args.nocity = False
+    args.nopnt = False
+    args.monthash = False
+    args.graniceczesciowe = True
+    args.extratypes = False
+    args.trybosmand = False
+    args.tryb_mkgmap = True
+    args.entry_otwarte_do_extras = False
     obszary = tuple(args.obszary)
+    dostepne_obszary = listujobszary(args, wydruku_obszary=False)
     for obszar in obszary:
-        args.verbose = False
-        args.umphome = ''
-        args.katrob = ''
-        args.savememory = False
-        args.obszary = [obszar]
-        args.cityidx = True
-        args.format_indeksow = 'cityname'
-        args.adrfile = True
-        args.notopo = False
-        args.noszlaki = False
-        args.nocity = False
-        args.nopnt = False
-        args.plikmp = 'wynik.mp'
-        args.monthash = False
-        args.extratypes = False
-        args.trybosmand = False
-        args.entry_otwarte_do_extras = False
+        if obszar not in dostepne_obszary:
+            continue
         miasto = obszar.split('-')[-1].strip()
+        args.obszary = [obszar]
+        args.plikmp = miasto + '_' + miasto_img_id[miasto] + '_mkgmap.img'
         naglowek['ID'] = miasto_img_id[miasto]
         naglowek['DefaultRegionCountry'] = miasto
         if naglowek['ID'] in ruch_lewostronny:
             naglowek['LeftSideTraffic'] = 'Y'
         data_kompilacji = date.today()
         naglowek['Name'] = 'UMP-' + miasto + '-' + data_kompilacji.strftime('%d') + data_kompilacji.strftime('%B')[0:3]
-
-        print(naglowek)
+        for elem_naglowka in naglowek:
+            naglowek_mapy += elem_naglowka + '=' + naglowek[elem_naglowka] + '\n'
+        naglowek_mapy += '[END-IMG ID]\n\n'
+        print('montuje mape')
+        montujpliki(args, naglowek_mapy=naglowek_mapy)
+        break
+        args.output_filename = args.plikmp
+        print('dodaje dane wojkiem')
+        wojkuj(args)
+        break
+        print('dodaje dane routingowe')
+        dodaj_dane_routingowe(args)
 
 
 ###############################################################################
@@ -3158,7 +3178,7 @@ def demontuj(args):
         Zmienne.KatalogRoboczy = os.getcwd()
     # print(Zmienne.KatalogRoboczy)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = plikMP1(Zmienne, args, tabKonw, Montuj=0, naglowek_mapy='')
 
     # obszarTypPlik_thread = threading.Thread(target=uruchom_obszary_dla_poi, args=(auto_poi_kolejka_wejsciowa,
     #                                                                               auto_poi_kolejka_wyjsciowa))
@@ -3632,18 +3652,17 @@ def rozdziel_na_klasy(args):
     stderr_stdout_writer.stdoutwrite('Dziele drogi na klasy')
     plik_mp_z_klasami = plik_mp_z_klasami.decode(Zmienne.Kodowanie)
     err = err.decode(Zmienne.Kodowanie)
-    with open(os.path.join(Zmienne.KatalogRoboczy, 'wynik-klasy.mp'), 'w', encoding=Zmienne.Kodowanie,
-              errors=Zmienne.WriteErrors) as f:
+    wynik_klasy_mp = os.path.join(Zmienne.KatalogRoboczy, 'wynik-klasy.mp')
+    with open(os.path.join(wynik_klasy_mp), 'w', encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:
         for a in plik_mp_z_klasami.split('\n'):
             if a.startswith('EndLevel'):
                 pass
             else:
-                if a.startswith('Routeparam'):
+                if a.startswith('Routeparam') or a.startswith('RouteParam'):
                     klasa = a.split('=')[-1].split(',')[1]
                     f.write('EndLevel=' + klasa + '\n')
                 f.write(a.strip() + '\n')
-    stderr_stdout_writer.stdoutwrite('Utworzony plik z klasami: ' +
-                                     os.path.join(Zmienne.KatalogRoboczy, 'wynik-klasy.mp'))
+    stderr_stdout_writer.stdoutwrite('Utworzony plik z klasami: ' + wynik_klasy_mp)
     # jesli wywolany z mdm bedzie mial w argumentach kolejke do aktywacji guzika zobacz
     if hasattr(args, 'zobaczbuttonqueue'):
         args.zobaczbuttonqueue.put('Koniec')
@@ -3675,27 +3694,31 @@ def patch(args):
 
 def dodaj_dane_routingowe(args):
     stderr_stdout_writer = errOutWriter(args)
-    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    print(args.plikmp)
+    if isinstance(args.output_filename, list):
+        plik_wyjsciowy = args.output_filename[0]
+    else:
+        plik_wyjsciowy = args.output_filename
+    Zmienne = UstawieniaPoczatkowe(args.plikmp)
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
     NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'snetgen.cfg')
-    stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym')
-    process = subprocess.Popen([Zmienne.NetGen, '-e0', '-j', '-k',
+    stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym: %s' % args.plikmp)
+    process = subprocess.Popen([Zmienne.NetGen, '-b', '-e0.00002', '-j', '-k',
                                 '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     plik_mp_z_klasami, err = process.communicate()
-    stderr_stdout_writer.stdoutwrite('Zapisuje plik wyjsciowy %s z danymi routingowymi' % args.output_filename[0])
+    stderr_stdout_writer.stdoutwrite('Zapisuje plik wyjsciowy %s z danymi routingowymi' % plik_wyjsciowy)
     plik_mp_do_zapisu = []
     for linia in plik_mp_z_klasami.decode(Zmienne.Kodowanie).split('\n'):
         plik_mp_do_zapisu.append(linia.strip().replace('Routeparam', 'RouteParam') + '\n')
-    with open(os.path.join(Zmienne.KatalogRoboczy, args.output_filename[0]), 'w', encoding=Zmienne.Kodowanie) \
-            as file_name:
+    with open(os.path.join(Zmienne.KatalogRoboczy, plik_wyjsciowy), 'w', encoding=Zmienne.Kodowanie) as file_name:
         file_name.writelines(plik_mp_do_zapisu)
 
 
 def wojkuj(args):
     stderr_stdout_writer = errOutWriter(args)
-    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
     else:
@@ -3704,10 +3727,15 @@ def wojkuj(args):
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     wynik_mp_wojek = os.path.join(Zmienne.KatalogRoboczy, 'wynik_.mp')
     mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
-    wojek_call = [wojek_exe, '-s', wojek_slownik_txt, '-k', mapa_woj_mp, '-f', wynik_mp, '-F', wynik_mp_wojek]
-    print(wojek_call)
+    wynik_mp_wojek = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
+                                                   delete=False)
+    wynik_mp_wojek.close()
+    wojek_call = [wojek_exe, '-s', wojek_slownik_txt, '-k', mapa_woj_mp, '-f', wynik_mp, '-F', wynik_mp_wojek.name]
     process = subprocess.Popen(wojek_call)
-
+    process.wait()
+    os.remove(wynik_mp)
+    shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    os.remove(wynik_mp_wojek.name)
 
 def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
@@ -3730,6 +3758,7 @@ def kompiluj_mape(args):
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
+    process.wait()
 
 def main(argumenty):
 
@@ -3858,13 +3887,17 @@ def main(argumenty):
     # parser dla komendy dodaj dane routingowe
     parser_dodaj_dane_routingowe = subparsers.add_parser('dodaj-dane-routingowe', help="dodaje dane routingowe przy "
                                                                                        " pomocy netgena")
+    parser_dodaj_dane_routingowe.add_argument('-i', '--input-file', dest='plikmp', default=['wynik.mp'], nargs=1,
+                                              help='Nazwa pliku do przetworzenia. Domyslnie wynik.mp')
     parser_dodaj_dane_routingowe.add_argument('-o', '--output-filename', help='Nazwa pliku mp z danymi routingowymi, '
-                                                                          'domy¶lnie wynik.mp',
+                                                                              'domy¶lnie wynik.mp',
                                               action='store', default=['wynik.mp'], nargs=1)
     parser_dodaj_dane_routingowe.set_defaults(func=dodaj_dane_routingowe)
 
     # parser dla komendy wojkuj
-    parser_wojkuj_mape= subparsers.add_parser('wojkuj', help="Dodane dane przy pomocy wojka")
+    parser_wojkuj_mape = subparsers.add_parser('wojkuj', help="Dodane dane przy pomocy wojka")
+    parser_wojkuj_mape.add_argument('-i', '--input-file', dest='plikmp', default=['wynik.mp'], nargs=1,
+                 help='Nazwa pliku do przetworzenia. Domyslnie wynik.mp')
     parser_wojkuj_mape.set_defaults(func=wojkuj)
 
     # parser dla komendy kompiluj mape
