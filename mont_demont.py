@@ -3138,7 +3138,7 @@ def montuj_mkgmap(args):
             continue
         miasto = obszar.split('-')[-1].strip()
         args.obszary = [obszar]
-        args.plikmp = miasto + '_' + miasto_img_id[miasto] + '_mkgmap.img'
+        args.plikmp = miasto + '_' + miasto_img_id[miasto] + '_mkgmap.mp'
         naglowek['ID'] = miasto_img_id[miasto]
         naglowek['DefaultRegionCountry'] = miasto
         if naglowek['ID'] in ruch_lewostronny:
@@ -3694,20 +3694,20 @@ def patch(args):
 
 def dodaj_dane_routingowe(args):
     stderr_stdout_writer = errOutWriter(args)
-    print(args.plikmp)
     if isinstance(args.output_filename, list):
         plik_wyjsciowy = args.output_filename[0]
     else:
         plik_wyjsciowy = args.output_filename
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
-    NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'snetgen.cfg')
-    stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym: %s' % args.plikmp)
-    process = subprocess.Popen([Zmienne.NetGen, '-b', '-e0.00002', '-j', '-k',
-                                '-T' + NetgenConfFile, os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'netgen.cfg')
+    stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym: %s' % Zmienne.InputFile)
+    netgen_call = [Zmienne.NetGen, '-b', '-e0.00002', '-j', '-k', '-T' + NetgenConfFile,
+                   os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)]
+    process = subprocess.Popen(netgen_call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     plik_mp_z_klasami, err = process.communicate()
+    stderr_stdout_writer.stderrorwrite(err.decode(Zmienne.Kodowanie))
     stderr_stdout_writer.stdoutwrite('Zapisuje plik wyjsciowy %s z danymi routingowymi' % plik_wyjsciowy)
     plik_mp_do_zapisu = []
     for linia in plik_mp_z_klasami.decode(Zmienne.Kodowanie).split('\n'):
