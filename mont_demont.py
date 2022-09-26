@@ -3150,12 +3150,11 @@ def montuj_mkgmap(args):
         naglowek_mapy += '[END-IMG ID]\n\n'
         print('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
-        break
         args.output_filename = args.plikmp
         print('dodaje dane wojkiem')
         wojkuj(args)
-        break
         print('dodaje dane routingowe')
+        args.input_file = args.plikmp
         dodaj_dane_routingowe(args)
 
 
@@ -3725,7 +3724,6 @@ def wojkuj(args):
         wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek.exe')
     wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek-slownik-osm.txt')
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    wynik_mp_wojek = os.path.join(Zmienne.KatalogRoboczy, 'wynik_.mp')
     mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
     wynik_mp_wojek = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
                                                    delete=False)
@@ -3740,6 +3738,11 @@ def wojkuj(args):
 def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    pliki_do_kompilacji = list()
+    for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
+        pliki_do_kompilacji.append(plik_do_k)
+    if not pliki_do_kompilacji:
+        stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
     if args.mkgmap_path is not None:
         mkg_map = args.mkgmap_path
     else:
@@ -3752,7 +3755,7 @@ def kompiluj_mape(args):
     if args.index:
         java_call_args += ['--index', '--split-name-index']
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args += ['--output-dir=' + Zmienne.KatalogRoboczy, wynik_mp]
+    java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
     # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
     # dodaj_dane_routingowe(args)
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
