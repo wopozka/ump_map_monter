@@ -2219,12 +2219,13 @@ class plikMP1(object):
 
 
 class PlikiDoMontowania(object):
-    def __init__(self, katalog_ze_zrodlami, args):
+    def __init__(self, zmienne, args):
         if not hasattr(args, 'montuj_wedlug_klas'):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
         self.errOutWriter = errOutWriter(args)
-        self.KatalogZeZrodlami = katalog_ze_zrodlami
+        self.KatalogZeZrodlami = zmienne.KatalogzUMP
+        self.kodowanie = zmienne.Kodowanie
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
@@ -2277,26 +2278,31 @@ class PlikiDoMontowania(object):
                 self.Pliki = [f for f in self.Pliki if f.find('szlaki') < 0]
         return
 
-    def ograniczGranice(self, kodowanie):
-        with open(os.path.join(self.KatalogZeZrodlami, 'narzedzia' + os.sep + 'granice.txt'),
-                  encoding=kodowanie) as granice:
-            zawartoscgranice = granice.read().split('[END]\n')
-        granicewspolne = []
+    def ograniczGranice(self, plik_do_ograniczenia):
+        with open(os.path.join(os.path.join(self.KatalogZeZrodlami, 'narzedzia'), plik_do_ograniczenia),
+                  encoding=self.kodowanie) as plik_do_ogr:
+            zaw_pliku_do_ogr = plik_do_ogr.read().split('[END]\n')
+        tylko_wybrany_obszar = []
         for a in self.Obszary:
-            for b in zawartoscgranice[:]:
+            for b in zaw_pliku_do_ogr[:]:
                 if b.find(a.split('-')[-1]) > 0:
-                    granicewspolne.append(b.strip() + '\n[END]\n\n')
-                    zawartoscgranice.remove(b)
+                    tylko_wybrany_obszar.append(b.strip() + '\n[END]\n\n')
+                    zaw_pliku_do_ogr.remove(b)
 
         # poniewaz pierwszy element moze zawierac \n na poczatku, to go usuwamy
         # dodatkowo poniewaz dla niektorych obszarow moze nie byc granic, wtedy musimy obsluzyc taka sytuacje
         # dlatego obsluga wyjatku dla takiego przypadku
         try:
-            granicewspolne[0] = granicewspolne[0].lstrip()
+            tylko_wybrany_obszar[0] = tylko_wybrany_obszar[0].lstrip()
         except IndexError:
             self.errOutWriter.stderrorwrite('Nie znalazlem zadnych granic dla wybranego obszaru.')
-        return granicewspolne
+        return tylko_wybrany_obszar
 
+    def zwroc_granice_czesciowe(self):
+        return self.ograniczGranice('granice.txt')
+
+    def zwroc_obszary_txt(self):
+        return self.ograniczGranice('obszary.txt')
 
 #    Klasa ogólna dla ka¿dego obiektu na mapie, ka¿dy obiekt ma podobne cechy, szczególne bêda ju¿ w klasach pochodnych
 class ObiektNaMapie(object):
@@ -2935,7 +2941,7 @@ def montujpliki(args, naglowek_mapy=''):
         args.tylkodrogi = 0
 
     try:
-        plikidomont = PlikiDoMontowania(Zmienne.KatalogzUMP, args)
+        plikidomont = PlikiDoMontowania(Zmienne, args)
     except (IOError, FileNotFoundError):
         return 0
 
@@ -2946,7 +2952,7 @@ def montujpliki(args, naglowek_mapy=''):
     # uklon w strone arta, montowanie tylko granic obszarow
     if hasattr(args, 'graniceczesciowe') and not args.tylkodrogi and not args.trybosmand:
         if args.graniceczesciowe:
-            agranice = plikidomont.ograniczGranice(Zmienne.Kodowanie)
+            agranice = plikidomont.zwroc_granice_czesciowe()
             with open(os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w', encoding=Zmienne.Kodowanie,
                       errors=Zmienne.WriteErrors) as f:
                 for a in agranice:
@@ -3084,6 +3090,10 @@ def montujpliki(args, naglowek_mapy=''):
     else:
         plikMP.write('\n'.join(zawartoscPlikuMp.zawartosc))
 
+    # jesli montujemy obszar aby skompilowac go mkgmapem, potrzebujemy te¿ polygona obszarow pod spodem
+    if naglowek_mapy:
+        plikMP.write('\n')
+        plikMP.write('\n'.join(plikidomont.zwroc_obszary_txt()))
     plikMP.close()
     shutil.copy(plikMP.name, os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
     os.remove(plikMP.name)
@@ -3150,12 +3160,15 @@ def montuj_mkgmap(args):
         naglowek_mapy += '[END-IMG ID]\n\n'
         print('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
-        args.output_filename = args.plikmp
-        print('dodaje dane wojkiem')
-        wojkuj(args)
-        print('dodaje dane routingowe')
-        args.input_file = args.plikmp
-        dodaj_dane_routingowe(args)
+        if args.uruchom_wojka:
+            args.output_filename = args.plikmp
+            print('dodaje dane wojkiem')
+            wojkuj(args)
+        if args.dodaj_routing:
+            args.output_filename = args.plikmp
+            print('dodaje dane routingowe')
+            args.input_file = args.plikmp
+            dodaj_dane_routingowe(args)
 
 
 ###############################################################################
@@ -3805,6 +3818,10 @@ def main(argumenty):
     # parser dla komendy montuj_mkgmap
     parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
     parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
+    parser_montuj_mkgmap.add_argument('-r', '--dodaj-routing', help="Dodaj dane routingowe do zamontowanej mapy",
+                                      action='store_true', default=False)
+    parser_montuj_mkgmap.add_argument('-w', '--uruchom-wojka', help="Dodaj dane przy pomocy wojka do zamontowanej mapy",
+                                      action = 'store_true', default = False)
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
     # parser dla komendy demontuj/demont
