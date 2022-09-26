@@ -3106,6 +3106,9 @@ def montujpliki(args, naglowek_mapy=''):
 # montaz dla mkgmap
 ###############################################################################
 def montuj_mkgmap(args):
+    if not args.obszary:
+        print('Wybierz przynajmniej jeden obszar!')
+        return
     # wczytaj liste map
     zmienne = UstawieniaPoczatkowe('wynik.mp')
     n_pliku = os.path.join(os.path.join(os.path.join(zmienne.KatalogzUMP, 'narzedzia'), 'widzimisie'), 'lista-map.txt')
@@ -3760,7 +3763,7 @@ def kompiluj_mape(args):
         mkg_map = args.mkgmap_path
     else:
         mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    java_call_args = ['java', '-jar', mkg_map, '--code-page=1250', '--lower-case', '--index']
+    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--code-page=1250', '--lower-case']
     if args.routing:
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
@@ -3821,7 +3824,7 @@ def main(argumenty):
     parser_montuj_mkgmap.add_argument('-r', '--dodaj-routing', help="Dodaj dane routingowe do zamontowanej mapy",
                                       action='store_true', default=False)
     parser_montuj_mkgmap.add_argument('-w', '--uruchom-wojka', help="Dodaj dane przy pomocy wojka do zamontowanej mapy",
-                                      action = 'store_true', default = False)
+                                      action='store_true', default=False)
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
     # parser dla komendy demontuj/demont
@@ -3929,6 +3932,8 @@ def main(argumenty):
                                       help="Generuj mape z routingiem")
     parser_kompiluj_mape.add_argument('-i', '--index', action='store_true', default=False,
                                       help="Generuj index do wyszukiwania adresow")
+    parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
+                                      help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
     args = parser.parse_args()
