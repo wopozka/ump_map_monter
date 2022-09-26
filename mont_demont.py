@@ -3717,7 +3717,7 @@ def dodaj_dane_routingowe(args):
     stderr_stdout_writer.stdoutwrite('Dodaje do pliku dane routingowe przy pomocy netgena')
     NetgenConfFile = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'netgen.cfg')
     stderr_stdout_writer.stdoutwrite('Uruchamiam netgena na pliku wej¶ciowym: %s' % Zmienne.InputFile)
-    netgen_call = [Zmienne.NetGen, '-b', '-e0.00002', '-j', '-k', '-T' + NetgenConfFile,
+    netgen_call = [Zmienne.NetGen, '-b', '-R', '-e0.00002', '-j', '-k', '-T' + NetgenConfFile,
                    os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)]
     process = subprocess.Popen(netgen_call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
