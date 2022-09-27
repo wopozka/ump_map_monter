@@ -3123,7 +3123,6 @@ def montuj_mkgmap(args):
                             'DrawPriority': '23', 'Copyright': 'ump.waw.pl debest', 'Elevation': 'm',
                             'DefaultRegionCountry': '', 'LBLcoding': '9', 'Codepage': '1250', 'LeftSideTraffic': 'N'
                             })
-    naglowek_mapy = '[IMG ID]\n'
     # lewostronni: Brytania * 3, Irlandia, Cypr, Malta
     ruch_lewostronny = (str(a) for a in (44100001, 44130001, 44280001, 35300001, 35700001, 35600001))
 
@@ -3147,6 +3146,7 @@ def montuj_mkgmap(args):
     obszary = tuple(args.obszary)
     dostepne_obszary = listujobszary(args, wydruku_obszary=False)
     for obszar in obszary:
+        naglowek_mapy = '[IMG ID]\n'
         if obszar not in dostepne_obszary:
             continue
         miasto = obszar.split('-')[-1].strip()
