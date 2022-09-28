@@ -123,7 +123,7 @@ class TestyPoprawnosciDanych(object):
                                               'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
                                               'ForceClass': self.dozwolona_wartosc_dla_ForceClass
                                               }
-        self.dozwolone_wartosci_dla_sign = {'BRAK' ,'NAKAZ_BRAK', 'brak', # brak zakazu
+        self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak', # brak zakazu
                                             'B-1', 'B1', 'ZAKAZ' , 'RESTRYKCJA', # inna restrykcja
                                             'B-2', 'B2', 'ZAKAZ_PROSTO', 'Z_PROSTO', # zakaz na wprost
                                             'B-21', 'B21', 'ZAKAZ_LEWO', 'Z_LEWO', # zakaz w lewo
@@ -2325,7 +2325,7 @@ class ObiektNaMapie(object):
         # indeksy miast
         self.IndeksyMiast = IndeksyMiast
         self.tryb_mkgmap = False
-        if hasattr(args, 'tryb_mkgmap'):
+        if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap:
             self.tryb_mkgmap = True
 
     def komentarz_na_entrypoint_i_otwarte(self):
@@ -3091,7 +3091,7 @@ def montujpliki(args, naglowek_mapy=''):
         plikMP.write('\n'.join(zawartoscPlikuMp.zawartosc))
 
     # jesli montujemy obszar aby skompilowac go mkgmapem, potrzebujemy te¿ polygona obszarow pod spodem
-    if naglowek_mapy:
+    if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap:
         plikMP.write('\n')
         plikMP.write('\n'.join(plikidomont.zwroc_obszary_txt()))
     plikMP.close()
@@ -3163,6 +3163,12 @@ def montuj_mkgmap(args):
         naglowek_mapy += '[END-IMG ID]\n\n'
         print('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
+        # zamieniam KodPoczt na Zip
+        print('Zamieniam KodPoczt na ZipCode')
+        with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
+            plik_po_konwersji = plik_mp_do_czyt.read().replace('KodPoczt=', 'ZipCode=')
+        with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
+            plik_mp_do_zap.write(plik_po_konwersji)
         if args.uruchom_wojka:
             args.output_filename = args.plikmp
             print('dodaje dane wojkiem')
@@ -3738,13 +3744,14 @@ def wojkuj(args):
         wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
     else:
         wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek.exe')
-    wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek-slownik-osm.txt')
+    wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek-slownik-mkgmap.txt')
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
     wynik_mp_wojek = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
                                                    delete=False)
     wynik_mp_wojek.close()
     wojek_call = [wojek_exe, '-s', wojek_slownik_txt, '-k', mapa_woj_mp, '-f', wynik_mp, '-F', wynik_mp_wojek.name]
+    print(' '.join(wojek_call))
     process = subprocess.Popen(wojek_call)
     process.wait()
     os.remove(wynik_mp)
@@ -3768,8 +3775,12 @@ def kompiluj_mape(args):
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
         java_call_args += ['--gmapsupp']
+    else:
+        java_call_args += ['--gmapi']
     if args.index:
         java_call_args += ['--index', '--split-name-index']
+    nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
+    java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
     # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
