@@ -3164,11 +3164,16 @@ def montuj_mkgmap(args):
         print('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
         # zamieniam KodPoczt na Zip
-        print('Zamieniam KodPoczt na ZipCode')
+        print('Zamieniam KodPoczt na ZipCode, zamienam - na spacje')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
-            plik_po_konwersji = plik_mp_do_czyt.read().replace('KodPoczt=', 'ZipCode=')
+            plik_do_konwersji = plik_mp_do_czyt.readlines()
+        for num, linia in enumerate(plik_do_konwersji):
+            if linia.startswith('KodPoczt='):
+                plik_do_konwersji[num] = linia.replace('KodPoczt=', 'ZipCode=', 1)
+            elif linia.startswith('Label='):
+                plik_do_konwersji[num] = linia.replace('-', ' ')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
-            plik_mp_do_zap.write(plik_po_konwersji)
+            plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.uruchom_wojka:
             args.output_filename = args.plikmp
             print('dodaje dane wojkiem')
@@ -3781,6 +3786,8 @@ def kompiluj_mape(args):
         java_call_args += ['--index', '--split-name-index']
     nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
     java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
+    # java_call_args += ['--copyright-message=' + '\nPozdrowienia od PW\nMapa na licencji CC BY-SA 3.0CC BY-SA 3.0\n'
+    #                                            'Uzywajcie UMP. Naprawde warto (http://ump.waw.pl)']
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
     # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
