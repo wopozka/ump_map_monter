@@ -3789,7 +3789,8 @@ def kompiluj_mape(args):
     except ValueError:
         pass
     else:
-        java_call_args += ['--max-jobs=' + args.max_jobs[0]]
+        if int(args.max_jobs[0]):
+            java_call_args += ['--max-jobs=' + args.max_jobs[0]]
     nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
     java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
     # java_call_args += ['--copyright-message=' + '\nPozdrowienia od PW\nMapa na licencji CC BY-SA 3.0CC BY-SA 3.0\n'
