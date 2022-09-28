@@ -3784,6 +3784,12 @@ def kompiluj_mape(args):
         java_call_args += ['--gmapi']
     if args.index:
         java_call_args += ['--index', '--split-name-index']
+    try:
+        int(args.max_jobs[0])
+    except ValueError:
+        pass
+    else:
+        java_call_args += ['--max-jobs=' + args.max_jobs[0]]
     nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
     java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
     # java_call_args += ['--copyright-message=' + '\nPozdrowienia od PW\nMapa na licencji CC BY-SA 3.0CC BY-SA 3.0\n'
@@ -3952,6 +3958,8 @@ def main(argumenty):
                                       help="Generuj index do wyszukiwania adresow")
     parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
+    parser_kompiluj_mape.add_argument('-mj', '--max-jobs', nargs=1, default=['0'],
+                                      help='Maksymalna ilosc watkow do kompilacji (domyslnie auto)')
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
     args = parser.parse_args()
