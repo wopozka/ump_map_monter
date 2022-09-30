@@ -3794,6 +3794,7 @@ def kompiluj_mape(args):
     nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
     java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
     plik_licencji = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
+    java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
     java_call_args += ['--license-file=' + plik_licencji]
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
