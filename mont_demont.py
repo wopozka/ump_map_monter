@@ -3768,6 +3768,8 @@ def kompiluj_mape(args):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
     for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
+        pliki_do_kompilacji.append('--description=' + os.path.basename(plik_do_k).split('_')[0] + '_'
+                                   + date.today().strftime('%d%b%y'))
         pliki_do_kompilacji.append(plik_do_k)
     if not pliki_do_kompilacji:
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
@@ -3796,10 +3798,9 @@ def kompiluj_mape(args):
     plik_licencji = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
     java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
     java_call_args += ['--license-file=' + plik_licencji]
+    java_call_args += ['--area-name=' + 'UMP to']
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
-    # stderr_stdout_writer.stdoutwrite('Dodaje dane routingowe do pliku')
-    # dodaj_dane_routingowe(args)
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
