@@ -185,7 +185,7 @@ class Mapa(object):
                     # nody_tmp moze byc listą list z racji tego ze dzielimy zapetlone linie, dlatego
                     for punkty_drogi in nody_tmp:
                         self.RoadId += 1
-                        if DirIndicator:
+                        if DirIndicator and my_type not in typy_zakazow:
                             self.SkrajneNodyDrogJednokierunkowych.append({'roadid': self.RoadId,
                                                                           'poczatek': punkty_drogi[0],
                                                                           'koniec': punkty_drogi[-1]
