@@ -958,50 +958,6 @@ class Zakaz(object):
                                                          from_via_to['ToRoadId']
         self.sprawdz_zakaz1()
 
-    def ustawFromViaTo(self, WszystkieNody, Drogi):
-        # WszystkieNody to slownik: klucz to para wsp, wartosc to obiekt typu Node
-        # Drogi to slownik roadid jako klucz a wartosc to wszystkie nody danej drogi
-
-        # przetwarzamy From
-        if self.Nody[0] in WszystkieNody and self.Nody[0] and WszystkieNody:
-            for abcd in WszystkieNody[self.Nody[0]].RoadIds:
-                self.FromRoadId.append(abcd)
-            for abcd in WszystkieNody[self.Nody[1]].RoadIds:
-                self.FromRoadId.append(abcd)
-            self.FromRoadId = [a for a in self.FromRoadId if self.FromRoadId.count(a) > 1]
-            self.FromRoadId = list(set(self.FromRoadId))
-            # gdy nie ma chociaz 1 drogi laczacej dwa wezly zakazu wtedy self.FromRoadId bedzie puste
-            if self.FromRoadId:
-                # sprawdzamy czy nody drogi From nie są rozdzielone wezłem routingowym
-                self.sprawdz_czy_pomiedzy_sa_wezly_routingowe(Drogi, WszystkieNody, self.FromRoadId[0], self.Nody[0:2])
-
-        # przetwarzamy Via o ile istnieje
-        if len(self.Nody) == 4:
-            if self.Nody[1] in WszystkieNody and self.Nody[2] and WszystkieNody:
-                for abcd in WszystkieNody[self.Nody[1]].RoadIds:
-                    self.ViaRoadId.append(abcd)
-                for abcd in WszystkieNody[self.Nody[2]].RoadIds:
-                    self.ViaRoadId.append(abcd)
-                self.ViaRoadId = [a for a in self.ViaRoadId if self.ViaRoadId.count(a) > 1]
-                self.ViaRoadId = list(set(self.ViaRoadId))
-                # gdy nie ma chociaz 1 drogi laczacej dwa wezly zakazu wtedy self.FromRoadId bedzie puste
-                if self.ViaRoadId:
-                    self.sprawdz_czy_pomiedzy_sa_wezly_routingowe(Drogi, WszystkieNody, self.ViaRoadId[0], self.Nody[1:3])
-
-        # przetwarzamy To
-        if self.Nody[-2] in WszystkieNody and self.Nody[-1] and WszystkieNody:
-            for abcd in WszystkieNody[self.Nody[-2]].RoadIds:
-                self.ToRoadId.append(abcd)
-            for abcd in WszystkieNody[self.Nody[-1]].RoadIds:
-                self.ToRoadId.append(abcd)
-            self.ToRoadId = [a for a in self.ToRoadId if self.ToRoadId.count(a) > 1]
-            self.ToRoadId = list(set(self.ToRoadId))
-            if self.ToRoadId:
-                self.sprawdz_czy_pomiedzy_sa_wezly_routingowe(Drogi, WszystkieNody, self.ToRoadId[0], self.Nody[-2:])
-            # gdy nie ma pojedynczej drogi laczacej dwa wezly zakazu generowany jest wyjatek albo KeyError albo
-            # IndexError przechwycamy go i obslugujemy taki blad pozniej
-
-        self.sprawdz_zakaz()
 
     def sprawdz_zakaz1(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
@@ -1026,54 +982,6 @@ class Zakaz(object):
                             self.Nodes[numer + 1].numerParyWspDlaDanejDrogi[from_via_to_item[0]][0]:
                         self.stderr_stdout_writer.stderrorwrite(
                             'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[numer], self.Nody[numer + 1]))
-
-    def sprawdz_zakaz(self):
-        # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
-        if not 3 <= len(self.Nody) <= 4:
-            self.stderr_stdout_writer.stderrorwrite('Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s'
-                                                    % (len(self.Nody), self.Nody[0], self.Nody[1]))
-                
-        # sekcja analizujaca from
-        a = len(self.FromRoadId)
-        if a == 0:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu!\nBrak pojedynczej drogi łączącej węzły: %s %s ' % (self.Nody[0], self.Nody[1]))
-        elif a > 1:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu! %s drogi łączą węzły: %s %s ' % (a, self.Nody[0], self.Nody[1]))
-        else:
-            if self.Nodes[0].numerParyWspDlaDanejDrogi[self.FromRoadId[0]][1]:
-                if self.Nodes[0].numerParyWspDlaDanejDrogi[self.FromRoadId[0]][0] > self.Nodes[1].numerParyWspDlaDanejDrogi[self.FromRoadId[0]][0]:
-                    self.stderr_stdout_writer.stderrorwrite(
-                        'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[0], self.Nody[1]))
-
-        # analiza via, tylko w przypadku gdy występuje 4 nodowy zakaz
-        if len(self.Nody) == 4:
-            a = len(self.ViaRoadId)
-            if a == 0:
-                self.stderr_stdout_writer.stderrorwrite(
-                    'Błąd zakazu!\nBrak pojedynczej drogi łączącej węzły: %s %s ' % (self.Nody[1], self.Nody[2]))
-            elif a > 1:
-                self.stderr_stdout_writer.stderrorwrite(
-                    'Błąd zakazu! %s drogi łączą węzły: %s %s' % (a, self.Nody[1], self.Nody[2]))
-            else:
-                if self.Nodes[1].numerParyWspDlaDanejDrogi[self.ViaRoadId[0]][1]:
-                    if self.Nodes[1].numerParyWspDlaDanejDrogi[self.ViaRoadId[0]][0] > self.Nodes[2].numerParyWspDlaDanejDrogi[self.ViaRoadId[0]][0]:
-                        self.stderr_stdout_writer.stderrorwrite(
-                            'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[1], self.Nody[2]))
-        # sekcja analizujaca to
-        a = len(self.ToRoadId)
-        if a == 0:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu!\nBrak pojedynczej drogi łączącej węzły: %s %s ' % (self.Nody[-2], self.Nody[-1]))
-        elif a > 1:
-            self.stderr_stdout_writer.stderrorwrite(
-                'Błąd zakazu! %s drogi łączą węzły: %s %s' % (a, self.Nody[-2], self.Nody[-1]))
-        else:
-            if self.Nodes[-2].numerParyWspDlaDanejDrogi[self.ToRoadId[0]][1]:
-                if self.Nodes[-2].numerParyWspDlaDanejDrogi[self.ToRoadId[0]][0] > self.Nodes[-1].numerParyWspDlaDanejDrogi[self.ToRoadId[0]][0]:
-                    self.stderr_stdout_writer.stderrorwrite(
-                        'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[-2], self.Nody[-1]))
 
 
 def main(argumenty, stderr_stdout_writer, mode):
