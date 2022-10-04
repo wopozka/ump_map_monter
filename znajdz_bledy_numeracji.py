@@ -104,7 +104,9 @@ class Mapa(object):
         typyRoutingowe = ('0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
                           '0xc', '0x16', '0x19', '0xd', '0xe', '0xf', '0x2f', '0x1a', '0x117')
         typLiniiGranicznej = ('0x4b',)
-        typy_zakazow = ('0x16', '0x2f')
+        typy_zakazow = ('0x19', '0x2f')
+        typy_nieroutingowe_dla_jednokierunkowych = ('0x16', '0xd')
+        self.roadid_nieroutingowe_dla_jednokierunkowych = set()
         if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             encoding = 'latin2'
         else:
@@ -175,18 +177,29 @@ class Mapa(object):
                     # jeśli droga jednokierunkowa dodaj skrajne nody do listy nodow jednokierunkowych
                     # zrob to tylko w przypadku gdy droga nie jest zapętlona, bo w takim przypadku na pewno
                     # nie będzie ślepa
-                    if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in typy_zakazow:
-                        self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
-                        self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
+                    # if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in typy_zakazow:
+                    #     self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
+                    #     self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
                     # nod pierwszy i ostatni mają być routingowe, więc dodaję je osobno
                     # zapisujemy więc je w osobnym setcie
                     # nody_tmp moze byc listą list z racji tego ze dzielimy zapetlone linie, dlatego
                     for punkty_drogi in nody_tmp:
                         self.RoadId += 1
+                        if DirIndicator:
+                            self.SkrajneNodyDrogJednokierunkowych.append({'roadid': self.RoadId,
+                                                                          'poczatek': punkty_drogi[0],
+                                                                          'koniec': punkty_drogi[-1]
+                                                                          }
+                                                                         )
                         kolejnyNrNoda = 0
                         nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
                         for para_wspolrzednych in punkty_drogi:
                             if my_type not in typy_zakazow:
+                                # jednokierunkowe nie powinny sie zaczynac ani konczyc na sciezkach i drogach
+                                # rowerowych, robimy wiec liste roadid dla sciezek i drog rowerowych aby sprawdzic
+                                # pozniej czy takie skrzyzowanie wystepuje
+                                if my_type in typy_nieroutingowe_dla_jednokierunkowych:
+                                    self.roadid_nieroutingowe_dla_jednokierunkowych.add(self.RoadId)
                                 if para_wspolrzednych in self.WszystkieNody:
                                     self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
                                     self.WszystkieNody[para_wspolrzednych].RoadIds.append(self.RoadId)
@@ -250,7 +263,7 @@ class Mapa(object):
                             punkty_drogi = current + 1
                             while punkty_drogi < my_next:
                                 # if tmpccc not in self.WezlyDoOdrzucenia:
-                                # print(tmpccc)
+                                # print(punkty_drogi, len(self.NodyDrogi), my_type)
                                 self.NodyDoSprawdzenia.append(self.NodyDrogi[punkty_drogi])
                                 # print(self.NodyDoSprawdzenia)
                                 punkty_drogi += 1
@@ -289,7 +302,7 @@ class Mapa(object):
     @staticmethod
     def zwroc_rekordy_pliku_mp(zawartosc_pliku):
         typy_routingowe = {'0x1', '0x2', '0x3', '0x4', '0x5', '0x6', '0x7', '0x8', '0x9', '0xa', '0xb',
-                           '0xc', '0xd', '0xe', '0xf', '0x1a', '0x117'}
+                           '0xc', '0x16', '0xd', '0xe', '0xf', '0x1a', '0x117'}
         typ_linii_granicznej = {'0x4b'}
         typy_zakazow_drogowskazow = {'0x19', '0x2f'}
         drogi, zakazy, granice = [], [], []
@@ -356,9 +369,18 @@ class Mapa(object):
                 self.Zakazy[zakaz_id].ustawFromViaTo1(self.WszystkieNody, self.Drogi)
 
     def sprawdz_jednokierunkowe_slepe(self):
-        for para_wspolrzednych in self.SkrajneNodyDrogJednokierunkowych:
-            if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2 and para_wspolrzednych not in self.NodyGraniczne:
-                self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
+        for droga in self.SkrajneNodyDrogJednokierunkowych:
+            for para_wspolrzednych in (droga['poczatek'], droga['koniec']):
+                if para_wspolrzednych in self.NodyGraniczne:
+                    continue
+                if droga['roadid'] in self.roadid_nieroutingowe_dla_jednokierunkowych:
+                    if len(self.WszystkieNody[para_wspolrzednych].RoadIds) < 2:
+                        self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
+                else:
+                    if len([_id_ for _id_ in self.WszystkieNody[para_wspolrzednych].RoadIds
+                            if _id_ not in self.roadid_nieroutingowe_dla_jednokierunkowych]) < 2:
+                        self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
+
 
     def redukuj_ilosc_zbiorow_routingowych(self, nodyRoutingoweDrog):
         iloscdrog = len(nodyRoutingoweDrog)
