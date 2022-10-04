@@ -174,17 +174,10 @@ class Mapa(object):
                     else:
                         nody_tmp = [Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')]
 
-                    # jeśli droga jednokierunkowa dodaj skrajne nody do listy nodow jednokierunkowych
-                    # zrob to tylko w przypadku gdy droga nie jest zapętlona, bo w takim przypadku na pewno
-                    # nie będzie ślepa
-                    # if DirIndicator and nody_tmp[0][0] != nody_tmp[0][-1] and my_type not in typy_zakazow:
-                    #     self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][0])
-                    #     self.SkrajneNodyDrogJednokierunkowych.append(nody_tmp[0][-1])
-                    # nod pierwszy i ostatni mają być routingowe, więc dodaję je osobno
-                    # zapisujemy więc je w osobnym setcie
-                    # nody_tmp moze byc listą list z racji tego ze dzielimy zapetlone linie, dlatego
                     for punkty_drogi in nody_tmp:
                         self.RoadId += 1
+                        # jeśli droga jednokierunkowa dodaj ja do listy drog do sprawdzenia. roadid bedzie nam
+                        # potrzebne, dlatego dodajemy slownik
                         if DirIndicator and my_type not in typy_zakazow:
                             self.SkrajneNodyDrogJednokierunkowych.append({'roadid': self.RoadId,
                                                                           'poczatek': punkty_drogi[0],
