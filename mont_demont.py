@@ -3767,9 +3767,29 @@ def kompiluj_mape(args):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
+    # dwuliterowe kody pastw za https://pl.wikipedia.org/wiki/ISO_3166-1https://pl.wikipedia.org/wiki/ISO_3166-1
+    # w formacie numer kierunkowy: skrot, kolejnosc wedlug pliku lista.map
+    dwuliterowy_skrot_panstw = {'355': 'AL', '213': 'DZ', '376': 'AD', '43': 'AT', '32': 'BE', '387': 'BA', '359': 'BG',
+                                '385': 'HR', '357': 'CY', '382': 'ME', '420': 'CZ', '45': 'DK', '49': 'DE', '372': 'EE',
+                                '20': 'EG', '34': 'ES', '358': 'FI', '33': 'FR', '44': 'GB', '30': 'GR', '353': 'IE',
+                                '354': 'IS', '39': 'IT', '53': 'CU', '423': 'LI', '370': 'LT', '371': 'LV', '352': 'LU',
+                                '389': 'MK', '356': 'MT', '212': 'MA', '373': 'MD', '31': 'NL', '47': 'NO', '48': 'PL',
+                                '351': 'PT', '40': 'RO', '7': 'RU', '46': 'SE', '381': 'RS', '421': 'SK', '386': 'SI',
+                                '41': 'CH', '216': 'TN', '90': 'TR', '380': 'UA', '36': 'HU', '298': 'FO', '238': 'CV'
+                                # karaiby, kosowo, nepal, pomijam
+                                }
     for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
-        pliki_do_kompilacji.append('--description=' + os.path.basename(plik_do_k).split('_')[0] + '_'
-                                   + date.today().strftime('%d%b%y'))
+        opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
+        pliki_do_kompilacji.append('--description=' + opis + '_' + date.today().strftime('%d%b%y'))
+        skrot_kraju = ''
+        for ii in (2, 1):
+            if kod_kraju[0:ii] in dwuliterowy_skrot_panstw:
+                skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
+                break
+        if not skrot_kraju:
+            print('Nie moge ustalic skrotu kraju dla: %s' %plik_do_k)
+        else:
+            pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
     if not pliki_do_kompilacji:
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
