@@ -3164,14 +3164,14 @@ def montuj_mkgmap(args):
         print('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
         # zamieniam KodPoczt na Zip
-        print('Zamieniam KodPoczt na ZipCode, zamienam - na spacje')
+        print('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
             plik_do_konwersji = plik_mp_do_czyt.readlines()
         for num, linia in enumerate(plik_do_konwersji):
             if linia.startswith('KodPoczt='):
                 plik_do_konwersji[num] = linia.replace('KodPoczt=', 'ZipCode=', 1)
             elif linia.startswith('Label='):
-                plik_do_konwersji[num] = linia.replace('-', ' ')
+                plik_do_konwersji[num] = linia.replace('{', '(').replace('}', ')')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
             plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.uruchom_wojka:
@@ -3778,6 +3778,7 @@ def kompiluj_mape(args):
                                 '41': 'CH', '216': 'TN', '90': 'TR', '380': 'UA', '36': 'HU', '298': 'FO', '238': 'CV'
                                 # karaiby, kosowo, nepal, pomijam
                                 }
+    mapset_name = []
     for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
         opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
         pliki_do_kompilacji.append('--description=' + opis + '_' + date.today().strftime('%d%b%y'))
@@ -3802,6 +3803,7 @@ def kompiluj_mape(args):
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
         java_call_args += ['--gmapsupp']
+        mapset_name = ['--description=UMP pcPL']
     else:
         java_call_args += ['--gmapi']
     if args.index:
@@ -3819,8 +3821,8 @@ def kompiluj_mape(args):
     java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
     java_call_args += ['--license-file=' + plik_licencji]
     java_call_args += ['--area-name=' + 'UMP to']
-    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji
+    # wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji + mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
