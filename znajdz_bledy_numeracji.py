@@ -449,7 +449,7 @@ class Mapa(object):
         oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
 
         print()
-        print('czas wykonania %s' % timeit.default_timer() - timer_start)
+        print(f'czas wykonania {(timeit.default_timer() - timer_start):.1f}')
         if len(oddzielnegrafy) > 1:
             for a in range(1, len(oddzielnegrafy)):
                 print(str(oddzielnegrafy[a]))
@@ -478,17 +478,9 @@ class Mapa(object):
 
         # obrabiamy drogi jednokierunkowe, jeśli kończy się i zaczyna w tym samym segmencie to można dodać bez patrzenia
         # do danego segmentu
-        self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu()
-        # for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-        #     for tmpbbb in range(0, len(nodyRoutingoweDrog)):
-        #         if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
-        #                 (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
-        #             nodyRoutingoweDrog[tmpbbb] = \
-        #                 nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
-        #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
-        #             #print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
-        #             nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
-        #             break
+        nodyRoutingoweDrogJednokierunkowych, nodyRoutingoweDrog = \
+            self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(nodyRoutingoweDrogJednokierunkowych,
+                                                                     nodyRoutingoweDrog)
 
         iloscdrog = len(nodyRoutingoweDrog)
         iloscdrogdlaprogress = iloscdrog
@@ -812,7 +804,9 @@ class Mapa(object):
         file.close()
         print('Utworzono plik %s.' % self.nazwaplikudlaoutput)
 
-    def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(self):
+    @staticmethod
+    def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(nodyRoutingoweDrogJednokierunkowych,
+                                                            nodyRoutingoweDrog):
         # jeśli jednokierunkowa zaczya się i kończy w tym samym zbiorze, to znaczy, że z każdego dowolnego
         # punktu tej jednokierunkowej można dojechać do tego zbioru. Można więc spokojnie połączyć te dwa zbiory
 
@@ -826,6 +820,7 @@ class Mapa(object):
                     # print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
                     nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
                     break
+        return nodyRoutingoweDrogJednokierunkowych, nodyRoutingoweDrog
 
     def sprawdzzapetlenie(self, nodydrogi):
         """ funkcja sprawdza czy droga nie jest ze sobą zapętlona, jeśli jest, to wtedy dzieli ją na pół aż rozpętli"""
