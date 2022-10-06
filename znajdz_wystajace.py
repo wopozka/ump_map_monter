@@ -185,7 +185,7 @@ class wspolrzedne:
                 elif linia == '':
                     koniecpliku = 1
 
-        else nazwapliku.endswith('.txt'):
+        else:
             while not koniecpliku:
                 linia = a.readline()
                 if linia.startswith('Data'):
