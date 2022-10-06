@@ -163,6 +163,7 @@ class wspolrzedne:
             self.Kodowanie = 'latin2'
         else:
             self.Kodowanie = 'cp1250'
+        self.lista_plikow = []
 
     # funkcja wczytuje wspolrzedne z danego pliku. W zaleznosci czy pnt, adr czy txt
     def wczytajobiekt(self, nazwapliku):
@@ -179,11 +180,12 @@ class wspolrzedne:
                     self.listawspolrzednychstring.append(szerokosc + ',' + dlugosc)
                     self.listawspolrzednych.append(float(szerokosc))
                     self.listawspolrzednych.append(float(dlugosc))
+                    self.lista_plikow.append(nazwapliku)
                     # print(szerokosc,':',dlugosc)
                 elif linia == '':
                     koniecpliku = 1
 
-        else:
+        else nazwapliku.endswith('.txt'):
             while not koniecpliku:
                 linia = a.readline()
                 if linia.startswith('Data'):
@@ -192,6 +194,7 @@ class wspolrzedne:
                     for aaa_tmp in linia.split('),('):
                         aaa_tmp = aaa_tmp.lstrip('(').rstrip(')')
                         self.listawspolrzednychstring.append(aaa_tmp)
+                        self.lista_plikow.append(nazwapliku)
                         # print(aaa_tmp)
                         dlugosc, szerokosc = aaa_tmp.split(',')
                         self.listawspolrzednych.append(float(dlugosc))
@@ -246,8 +249,9 @@ def main(argumenty):
     for arg in [f for f in os.listdir(katalog_do_przeszukania)]:
         # jeœli dany plik nie jest katalogiem
         if not os.path.isdir(os.path.join(katalog_do_przeszukania, arg)):
-            # poniewaz nie chce wczytywac plikow adr, to je tutaj wywalam. 
-            if not arg.endswith('.adr'):
+            # poniewaz nie chce wczytywac plikow adr, to je ignoruje wczytujac tylko pliki txt i pnt.
+            # dzieki temu sa rowniez ignorowane pliki konfliktow cvs konczace sie numerem rewizji
+            if arg.endswith('.txt') or args.endswith('.pnt'):
                 # wczytaj wszystkie wspolrzedne z danego pliku. Obsluguje zarowno txt, pnt jak i adr
                 bbb.wczytajobiekt(os.path.join(katalog_do_przeszukania, arg))
 
@@ -274,6 +278,7 @@ def main(argumenty):
             # najpierw sprawdz czy dany punkt nie ma swojego odpowiednika we wspolrzednych obszaru, niby tylko kilkanascie punktow
             # ale po co je sprawdzac jesli nie trzeba. Sprawdzamy czy dany string x,y jest we wspolrzednych obszaru -> x,y
             if not (bbb.listawspolrzednychstring[a] in aaa.wspolrzedne):
+                print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a])
                 lista_wystajacych.append(str(bbb.listawspolrzednych[2 * a]) + ',' + str(bbb.listawspolrzednych[2 * a + 1]))
 
     update_progress(100 / 100)
