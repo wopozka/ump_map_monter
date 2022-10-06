@@ -251,7 +251,7 @@ def main(argumenty):
         if not os.path.isdir(os.path.join(katalog_do_przeszukania, arg)):
             # poniewaz nie chce wczytywac plikow adr, to je ignoruje wczytujac tylko pliki txt i pnt.
             # dzieki temu sa rowniez ignorowane pliki konfliktow cvs konczace sie numerem rewizji
-            if arg.endswith('.txt') or args.endswith('.pnt'):
+            if arg.endswith('.txt') or arg.endswith('.pnt'):
                 # wczytaj wszystkie wspolrzedne z danego pliku. Obsluguje zarowno txt, pnt jak i adr
                 bbb.wczytajobiekt(os.path.join(katalog_do_przeszukania, arg))
 
