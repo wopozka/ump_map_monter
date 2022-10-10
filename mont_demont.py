@@ -3172,6 +3172,8 @@ def montuj_mkgmap(args):
                 plik_do_konwersji[num] = linia.replace('KodPoczt=', 'ZipCode=', 1)
             elif linia.startswith('Label='):
                 plik_do_konwersji[num] = linia.replace('{', '(').replace('}', ')')
+            elif linia.startswith('CityName'):
+                plik_do_konwersji[num] = linia.replace('@', ';')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
             plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.uruchom_wojka:
