@@ -2217,6 +2217,29 @@ class plikMP1(object):
                 del(dane_do_zapisu[numeracja])
         return dane_do_zapisu
 
+    @staticmethod
+    def ustaw_force_speed(dane_do_zapisu):
+        predkosci = {'0x1': 6, '0x2': 5, '0x3': 4, '0x5': 3, '0x6': 2, '0x7': 1, '0x8': 2, '0x9': 4, '0xa': 0,
+                     '0xb': 2, '0xc': 1}
+        kara_za_nazwe = 0
+        if dane_do_zapisu['Type'] in {'0x3', '0x4', '0x5', '0x6', '0x7'} and 'Label' in dane_do_zapisu:
+            if dane_do_zapisu['Label'].startswith('~'):
+                if len(dane_do_zapisu['Label'].strip().split(' ')) > 1:
+                    kara_za_nazwe = 1
+            else:
+                kara_za_nazwe = 1
+        faster_slower = 0
+        if 'ForceSpeed' in dane_do_zapisu:
+            faster_slower = 1 if dane_do_zapisu['ForceSpeed'] == 'faster' else -1
+        faster_slower = {'faster': 1, 'slower': -1}
+        force_speed = predkosci[dane_do_zapisu['Type']] + kara_za_nazwe + faster_slower
+        if force_speed > 6:
+            force_speed = 6
+        elif force_speed < 0:
+            force_speed = 0
+        dane_do_zapisu['ForceSpeed'] = str(force_speeds)
+
+
 
 class PlikiDoMontowania(object):
     def __init__(self, zmienne, args):
