@@ -440,7 +440,7 @@ class Mapa(object):
         oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
 
         print()
-        print(f'czas wykonania {(timeit.default_timer() - timer_start):.1f}')
+        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
         if len(oddzielnegrafy) > 1:
             for a in range(1, len(oddzielnegrafy)):
                 print(str(oddzielnegrafy[a]))
