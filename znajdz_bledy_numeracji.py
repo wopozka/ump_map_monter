@@ -3,7 +3,7 @@
 
 import sys
 import timeit
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from multiprocessing import Pool
 import os.path
 from multiprocessing import cpu_count
@@ -184,9 +184,9 @@ class Mapa(object):
                                                                           'koniec': punkty_drogi[-1]
                                                                           }
                                                                          )
-                        kolejnyNrNoda = 0
+                        # kolejnyNrNoda = 0
                         nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
-                        for para_wspolrzednych in punkty_drogi:
+                        for kolejnyNrNoda, para_wspolrzednych in enumerate(punkty_drogi):
                             if my_type not in typy_zakazow:
                                 # jednokierunkowe nie powinny sie zaczynac ani konczyc na sciezkach i drogach
                                 # rowerowych, robimy wiec liste roadid dla sciezek i drog rowerowych aby sprawdzic
@@ -194,10 +194,8 @@ class Mapa(object):
                                 if my_type in typy_nieroutingowe_dla_jednokierunkowych:
                                     self.roadid_nieroutingowe_dla_jednokierunkowych.add(self.RoadId)
                                 if para_wspolrzednych in self.WszystkieNody:
-                                    self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
-                                    self.WszystkieNody[para_wspolrzednych].RoadIds.append(self.RoadId)
-                                    self.WszystkieNody[para_wspolrzednych].numerParyWspDlaDanejDrogi[self.RoadId] \
-                                        = (kolejnyNrNoda, DirIndicator)
+                                    self.WszystkieNody[para_wspolrzednych].uaktualnij_node(self.RoadId, kolejnyNrNoda,
+                                                                                           DirIndicator)
                                     self.NodyDrogi.append(para_wspolrzednych)
                                 else:
                                     self.WszystkieNody[para_wspolrzednych] = Node(para_wspolrzednych, self.RoadId,
@@ -209,7 +207,7 @@ class Mapa(object):
 
                             else:
                                 self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
-                            kolejnyNrNoda += 1
+                            # kolejnyNrNoda += 1
                         if my_type not in typy_zakazow:
                             self.Drogi[self.RoadId] = self.NodyDrogi[:]
                             if DirIndicator:
@@ -894,9 +892,14 @@ class Node(object):
         self.RoadIds = [RoadId]
         # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla
         # kierunkowosc (0 brak, 1 jednokierunkowa). jesli bedzie kilka drog to bedzie tez kilka numerow id
-        self.numerParyWspDlaDanejDrogi = {RoadId: nrwsp}
+        self.numerParyWspDlaDanejDrogi = {RoadId: (nrwsp[0], nrwsp[1])}
         # print(self.numerParyWspDlaDanejDrogi[RoadId])
 
+    def uaktualnij_node(self, RoadId, kolejny_nr_noda, dir_indicator):
+        self.wezelRoutingowy += 1
+        self.RoadIds.append(RoadId)
+        self.numerParyWspDlaDanejDrogi[RoadId] = (kolejny_nr_noda, dir_indicator)
+        return
 
 class Zakaz(object):
     def __init__(self, stderr_stdout_writer):
