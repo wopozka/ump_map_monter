@@ -882,13 +882,20 @@ class Node(object):
         # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla
         # kierunkowosc (0 brak, 1 jednokierunkowa). jesli bedzie kilka drog to bedzie tez kilka numerow id
         # self.numerParyWspDlaDanejDrogi = {RoadId: (kolejny_nr_noda, dirindicator)}
-        self.numerParyWspDlaDanejDrogi = dict()
+        self.no_wsplrzednej_kierunkowosc_w_data0 = dict()
 
     def dodaj_node(self, RoadId, kolejny_nr_noda, dir_indicator):
         self.wezelRoutingowy += 1
         self.RoadIds.append(RoadId)
-        self.numerParyWspDlaDanejDrogi[RoadId] = (kolejny_nr_noda, dir_indicator)
+        self.no_wsplrzednej_kierunkowosc_w_data0[RoadId] = (kolejny_nr_noda, dir_indicator)
         return
+
+    def czy_jednokierunkowa(self, road_id):
+        return self.no_wsplrzednej_kierunkowosc_w_data0[road_id][1]
+
+    def num_wsp_w_data(self, road_id):
+        return self.no_wsplrzednej_kierunkowosc_w_data0[road_id][0]
+
 
 class Zakaz(object):
     def __init__(self, stderr_stdout_writer):
@@ -945,7 +952,6 @@ class Zakaz(object):
                                                          from_via_to['ToRoadId']
         self.sprawdz_zakaz1()
 
-
     def sprawdz_zakaz1(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
         if not 3 <= len(self.Nody) <= 4:
@@ -964,9 +970,9 @@ class Zakaz(object):
                 self.stderr_stdout_writer.stderrorwrite(
                     'Błąd zakazu! %s drogi łączą węzły: %s %s ' % (a, self.Nody[numer], self.Nody[numer + 1]))
             else:
-                if self.Nodes[numer].numerParyWspDlaDanejDrogi[from_via_to_item[0]][1]:
-                    if self.Nodes[numer].numerParyWspDlaDanejDrogi[from_via_to_item[0]][0] > \
-                            self.Nodes[numer + 1].numerParyWspDlaDanejDrogi[from_via_to_item[0]][0]:
+                if self.Nodes[numer].czy_jednokierunkowa(from_via_to_item[0]):
+                    if self.Nodes[numer].num_wsp_w_data(from_via_to_item[0]) > \
+                            self.Nodes[numer + 1].num_wsp_w_data(from_via_to_item[0]):
                         self.stderr_stdout_writer.stderrorwrite(
                             'Błąd zakazu! Zakaz dodany pod prąd: %s %s ' % (self.Nody[numer], self.Nody[numer + 1]))
 
