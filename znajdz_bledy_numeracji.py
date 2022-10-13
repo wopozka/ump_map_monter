@@ -111,7 +111,7 @@ class Mapa(object):
             encoding = 'latin2'
         else:
             encoding = 'cp1250'
-        self.WszystkieNody = {}
+        self.WszystkieNody = defaultdict(lambda: Node())
         self.nazwaplikudlaoutput = os.path.splitext(nazwapliku)[0] + 'ciaglosc_routingu.txt'
         self.NodyDoSprawdzenia = []
         self.NodyDrogi = []
@@ -174,6 +174,8 @@ class Mapa(object):
                     else:
                         nody_tmp = [Data0.strip().split('=')[-1].lstrip('(').rstrip(')').split('),(')]
 
+                    # poniewaz droga moze byc zapetlona, wtedy po rozpetleniu mamy dwa Data0 dla danej drogi
+                    # z tego powodu iterujemy po liscie nodytmp
                     for punkty_drogi in nody_tmp:
                         self.RoadId += 1
                         # jeśli droga jednokierunkowa dodaj ja do listy drog do sprawdzenia. roadid bedzie nam
@@ -187,27 +189,18 @@ class Mapa(object):
                         # kolejnyNrNoda = 0
                         nodyskrajne = (punkty_drogi[0], punkty_drogi[-1])
                         for kolejnyNrNoda, para_wspolrzednych in enumerate(punkty_drogi):
-                            if my_type not in typy_zakazow:
-                                # jednokierunkowe nie powinny sie zaczynac ani konczyc na sciezkach i drogach
-                                # rowerowych, robimy wiec liste roadid dla sciezek i drog rowerowych aby sprawdzic
-                                # pozniej czy takie skrzyzowanie wystepuje
-                                if my_type in typy_nieroutingowe_dla_jednokierunkowych:
-                                    self.roadid_nieroutingowe_dla_jednokierunkowych.add(self.RoadId)
-                                if para_wspolrzednych in self.WszystkieNody:
-                                    self.WszystkieNody[para_wspolrzednych].uaktualnij_node(self.RoadId, kolejnyNrNoda,
-                                                                                           DirIndicator)
-                                    self.NodyDrogi.append(para_wspolrzednych)
-                                else:
-                                    self.WszystkieNody[para_wspolrzednych] = Node(para_wspolrzednych, self.RoadId,
-                                                                                  (kolejnyNrNoda, DirIndicator), 1)
-                                    self.NodyDrogi.append(para_wspolrzednych)
-                                # nody skrajne powinny być z definicji routingowe
-                                if para_wspolrzednych in nodyskrajne:
-                                    self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
-
-                            else:
+                            if my_type in typy_zakazow:
                                 self.Zakazy[self.RoadId].Nody.append(para_wspolrzednych)
-                            # kolejnyNrNoda += 1
+                                continue
+                            # jednokierunkowe nie powinny sie zaczynac ani konczyc na sciezkach i drogach
+                            # rowerowych, robimy wiec liste roadid dla sciezek i drog rowerowych aby sprawdzic
+                            # pozniej czy takie skrzyzowanie wystepuje
+                            if my_type in typy_nieroutingowe_dla_jednokierunkowych:
+                                self.roadid_nieroutingowe_dla_jednokierunkowych.add(self.RoadId)
+                            self.WszystkieNody[para_wspolrzednych].dodaj_node(self.RoadId, kolejnyNrNoda, DirIndicator)
+                            self.NodyDrogi.append(para_wspolrzednych)
+                            if para_wspolrzednych in nodyskrajne:
+                                self.WszystkieNody[para_wspolrzednych].wezelRoutingowy += 1
                         if my_type not in typy_zakazow:
                             self.Drogi[self.RoadId] = self.NodyDrogi[:]
                             if DirIndicator:
@@ -880,22 +873,18 @@ class Mapa(object):
 
 # nazwa klasy mylaca ale niech bedzie
 class Node(object):
-    def __init__(self, paraWsp, RoadId, nrwsp, skrajna=0):
-
-        # mowi samo za siebie
-        self.wspolrzedne = paraWsp
-        # czy dana współrzędna jest skrajna
-        self.wspolrzednaSkrajna = skrajna
-        # gdy = 0 wtedy dany węzeł nie jest węzłem routingowym
-        self.wezelRoutingowy = 0
+    def __init__(self):
+        # poniewaz node jest tworzone w defaultdict, a dodaj_node podbija o jeden, trzeba ustawic wartosc -1
+        # aby nody nierutingowe mialy wartosc 0.
+        self.wezelRoutingowy = -1
         # id drogi. Jesli takie samo oznacza to ze wezly naleza do jednej linii
-        self.RoadIds = [RoadId]
+        self.RoadIds = list()
         # kolejny nr wezla dla danej drogi - slownik gdzie kluczem jest roadid, a wartoscia to tupla nr wezla
         # kierunkowosc (0 brak, 1 jednokierunkowa). jesli bedzie kilka drog to bedzie tez kilka numerow id
-        self.numerParyWspDlaDanejDrogi = {RoadId: (nrwsp[0], nrwsp[1])}
-        # print(self.numerParyWspDlaDanejDrogi[RoadId])
+        # self.numerParyWspDlaDanejDrogi = {RoadId: (kolejny_nr_noda, dirindicator)}
+        self.numerParyWspDlaDanejDrogi = dict()
 
-    def uaktualnij_node(self, RoadId, kolejny_nr_noda, dir_indicator):
+    def dodaj_node(self, RoadId, kolejny_nr_noda, dir_indicator):
         self.wezelRoutingowy += 1
         self.RoadIds.append(RoadId)
         self.numerParyWspDlaDanejDrogi[RoadId] = (kolejny_nr_noda, dir_indicator)
