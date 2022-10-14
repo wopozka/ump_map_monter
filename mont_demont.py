@@ -3843,14 +3843,14 @@ def ustaw_force_speed(args):
     wynik_mp_podnies_poziom = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
                                                  delete=False)
     wynik_mp_podnies_poziom.close()
-    podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '<' ,wynik_mp, '>',
+    podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '--inpfile' ,wynik_mp, '--outfile',
                            wynik_mp_podnies_poziom.name]
     print(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
     process.wait()
     os.remove(wynik_mp)
-    shutil.copy(wynik_mp_wojek.name, wynik_mp)
-    os.remove(wynik_mp_wojek.name)
+    shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
+    os.remove(wynik_mp_podnies_poziom.name)
     # predkosci = {'0x1': 6, '0x2': 5, '0x3': 4, '0x5': 3, '0x6': 2, '0x7': 1, '0x8': 2, '0x9': 4, '0xa': 0,
     #              '0xb': 2, '0xc': 1}
     # kara_za_nazwe = 0
