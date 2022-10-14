@@ -3176,6 +3176,10 @@ def montuj_mkgmap(args):
                 plik_do_konwersji[num] = linia.replace('@', ';')
         with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
             plik_mp_do_zap.writelines(plik_do_konwersji)
+        if args.podnies_poziom:
+            args.output_filename = args.plikmp
+            print('Dostosowuje predkosci przy pomocy podnies-poziom.pl')
+            ustaw_force_speed(args)
         if args.uruchom_wojka:
             args.output_filename = args.plikmp
             print('dodaje dane wojkiem')
@@ -3831,28 +3835,43 @@ def kompiluj_mape(args):
     process.wait()
 
 
-def ustaw_force_speed(dane_do_zapisu):
-    predkosci = {'0x1': 6, '0x2': 5, '0x3': 4, '0x5': 3, '0x6': 2, '0x7': 1, '0x8': 2, '0x9': 4, '0xa': 0,
-                 '0xb': 2, '0xc': 1}
-    kara_za_nazwe = 0
-    if dane_do_zapisu['Type'] in {'0x3', '0x4', '0x5', '0x6', '0x7'} and 'Label' in dane_do_zapisu:
-        if dane_do_zapisu['Label'].startswith('~'):
-            tmp_label = dane_do_zapisu
-            tmp_label = dane_do_zapisu['Label'].strip().split(' ', 1)[1]
-            if len(tmp_label) > 1 and not tmp_label[1].startswith('{'):
-                kara_za_nazwe = 1
-        elif not dane_do_zapisu['Label'].startswith('{'):
-            kara_za_nazwe = 1
-    faster_slower = 0
-    if 'ForceSpeed' in dane_do_zapisu:
-        faster_slower = 1 if dane_do_zapisu['ForceSpeed'] == 'faster' else -1
-    faster_slower = {'faster': 1, 'slower': -1}
-    force_speed = predkosci[dane_do_zapisu['Type']] + kara_za_nazwe + faster_slower
-    if force_speed > 6:
-        force_speed = 6
-    elif force_speed < 0:
-        force_speed = 0
-    dane_do_zapisu['ForceSpeed'] = str(force_speeds)
+def ustaw_force_speed(args):
+    stderr_stdout_writer = errOutWriter(args)
+    Zmienne = UstawieniaPoczatkowe(args.plikmp)
+    podnies_poziom = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'podnies-poziom.pl')
+    wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
+    wynik_mp_podnies_poziom = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
+                                                 delete=False)
+    wynik_mp_podnies_poziom.close()
+    podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '<' ,wynik_mp, '>',
+                           wynik_mp_podnies_poziom.name]
+    print(' '.join(podnies_poziom_call))
+    process = subprocess.Popen(podnies_poziom_call)
+    process.wait()
+    os.remove(wynik_mp)
+    shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    os.remove(wynik_mp_wojek.name)
+    # predkosci = {'0x1': 6, '0x2': 5, '0x3': 4, '0x5': 3, '0x6': 2, '0x7': 1, '0x8': 2, '0x9': 4, '0xa': 0,
+    #              '0xb': 2, '0xc': 1}
+    # kara_za_nazwe = 0
+    # if dane_do_zapisu['Type'] in {'0x3', '0x4', '0x5', '0x6', '0x7'} and 'Label' in dane_do_zapisu:
+    #     if dane_do_zapisu['Label'].startswith('~'):
+    #         tmp_label = dane_do_zapisu
+    #         tmp_label = dane_do_zapisu['Label'].strip().split(' ', 1)[1]
+    #         if len(tmp_label) > 1 and not tmp_label[1].startswith('{'):
+    #             kara_za_nazwe = 1
+    #     elif not dane_do_zapisu['Label'].startswith('{'):
+    #         kara_za_nazwe = 1
+    # faster_slower = 0
+    # if 'ForceSpeed' in dane_do_zapisu:
+    #     faster_slower = 1 if dane_do_zapisu['ForceSpeed'] == 'faster' else -1
+    # faster_slower = {'faster': 1, 'slower': -1}
+    # force_speed = predkosci[dane_do_zapisu['Type']] + kara_za_nazwe + faster_slower
+    # if force_speed > 6:
+    #     force_speed = 6
+    # elif force_speed < 0:
+    #     force_speed = 0
+    # dane_do_zapisu['ForceSpeed'] = str(force_speeds)
 
 def main(argumenty):
 
@@ -3899,6 +3918,8 @@ def main(argumenty):
     parser_montuj_mkgmap.add_argument('-r', '--dodaj-routing', help="Dodaj dane routingowe do zamontowanej mapy",
                                       action='store_true', default=False)
     parser_montuj_mkgmap.add_argument('-w', '--uruchom-wojka', help="Dodaj dane przy pomocy wojka do zamontowanej mapy",
+                                      action='store_true', default=False)
+    parser_montuj_mkgmap.add_argument('-p', '--podnies-poziom', help='Uruchom skrypt podnies-poziom.pl na pliku mp',
                                       action='store_true', default=False)
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
