@@ -3918,7 +3918,7 @@ def main(argumenty):
     # parser dla komendy montuj_mkgmap
     parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
     parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
-    parser_montuj_mkgmap.add_argument('-a', '--dodaj-adresy', actoon='store_true', help="Dodaj punkty adresowe",
+    parser_montuj_mkgmap.add_argument('-a', '--dodaj-adresy', action='store_true', help="Dodaj punkty adresowe",
                                       default=False)
     parser_montuj_mkgmap.add_argument('-r', '--dodaj-routing', help="Dodaj dane routingowe do zamontowanej mapy",
                                       action='store_true', default=False)
