@@ -3132,7 +3132,10 @@ def montuj_mkgmap(args):
     args.savememory = False
     args.cityidx = True
     args.format_indeksow = 'cityname'
-    args.adrfile = True
+    if args.dodaj_adresy:
+        args.adrfile = True
+    else:
+        args.adrfile = False
     args.notopo = False
     args.noszlaki = False
     args.nocity = False
@@ -3915,6 +3918,8 @@ def main(argumenty):
     # parser dla komendy montuj_mkgmap
     parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
     parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
+    parser_montuj_mkgmap.add_argument('-a', '--dodaj-adresy', actoon='store_true', help="Dodaj punkty adresowe",
+                                      default=False)
     parser_montuj_mkgmap.add_argument('-r', '--dodaj-routing', help="Dodaj dane routingowe do zamontowanej mapy",
                                       action='store_true', default=False)
     parser_montuj_mkgmap.add_argument('-w', '--uruchom-wojka', help="Dodaj dane przy pomocy wojka do zamontowanej mapy",
