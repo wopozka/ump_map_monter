@@ -23,6 +23,7 @@ import znajdz_bledy_numeracji
 from collections import OrderedDict
 from collections import defaultdict
 from datetime import date
+from datetime import datetime
 
 
 class errOutWriter(object):
@@ -330,8 +331,8 @@ class TestyPoprawnosciDanych(object):
                 else:
                     if Label1[1].startswith('{') and Label1[1].endswith('}'):
                         return ''
-                    wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu if b.startswith('Data')][0]].split('),(')[
-                        -1].rstrip(')')
+                    wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu
+                                                  if b.startswith('Data')][0]].split('),(')[-1].rstrip(')')
                     self.error_out_writer.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(dane_do_zapisu['Label'],
                                                                                              wspolrzedne)))
                     return 'miasto potrzebne'
@@ -344,6 +345,46 @@ class TestyPoprawnosciDanych(object):
                 return 'miasto potrzebne'
         else:
             return ''
+
+    def sprawdz_krotkie_remonty(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] != '[POLYLINE]':
+            return ''
+        if 'Komentarz' not in dane_do_zapisu:
+            return ''
+        for komentarz in dane_do_zapisu['Komentarz']:
+            komentarz = komentarz.strip()
+            # print(komentarz)
+            if komentarz.startswith(';Termin:') or komentarz.startswith(';termin:'):
+                if komentarz.count(':') < 2:
+                    self.error_out_writer.stderrorwrite('Nieppprawny format krotkiego terminu: %s %s.'
+                                                        % (komentarz,
+                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                    self.error_out_writer.stderrorwrite('Poprawny format: Termin:data:komentarz')
+                    return 'blad_krotkich_remontow'
+                _, data_string, opis = komentarz.split(':', 2)
+                if len(data_string) != 8:
+                    self.error_out_writer.stderrorwrite('Niepoprawny format daty dla krotkiego terminu: %s %s.'
+                                                        % (data_string,
+                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                    self.error_out_writer.stderrorwrite('Poprawny format daty: YYYYMMDD.')
+                    return 'blad_krotkich_remontow'
+                try:
+                    date_time_obj = datetime.strptime(data_string, '%Y%m%d')
+                except ValueError:
+                    self.error_out_writer.stderrorwrite('Niepoprawna data dla krotkiego remontu: %s %s'
+                                                        % (data_string,
+                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                    return 'blad_krotkich_remontow'
+                if (date_time_obj - datetime.today()).days < 0:
+                    self.error_out_writer.stderrorwrite('Krotki remont zakonczony: %s %s' % (data_string,
+                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                    return 'blad_krotkich_remontow'
+                elif (date_time_obj - datetime.today()).days > 14:
+                    self.error_out_writer.stderrorwrite('Krotki remont zbyt dlugi (maks. 14 dni): %s %s' % (data_string,
+                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                    return 'blad_krotkich_remontow'
+        return ''
+
 
     @staticmethod
     def clockwisecheck(wspolrzedne):
@@ -424,6 +465,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
