@@ -362,7 +362,8 @@ class TestyPoprawnosciDanych(object):
                     self.error_out_writer.stderrorwrite('Poprawny format: Termin:data:komentarz')
                     return 'blad_krotkich_remontow'
                 _, data_string, opis = komentarz.split(':', 2)
-                if len(data_string.strip()) != 8:
+                data_string = data_string.strip()
+                if len(data_string) != 8:
                     self.error_out_writer.stderrorwrite('Niepoprawny format daty dla krotkiego terminu: %s %s.'
                                                         % (data_string,
                                                            self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
