@@ -353,8 +353,8 @@ class TestyPoprawnosciDanych(object):
             return ''
         for komentarz in dane_do_zapisu['Komentarz']:
             komentarz = komentarz.strip()
-            # print(komentarz)
-            if komentarz.startswith(';Termin:') or komentarz.startswith(';termin:'):
+            if komentarz.startswith(';Termin:') or komentarz.startswith(';termin:') or \
+                    komentarz.startswith(';;Termin:') or komentarz.startswith(';;termin:'):
                 if komentarz.count(':') < 2:
                     self.error_out_writer.stderrorwrite('Nieppprawny format krotkiego terminu: %s %s.'
                                                         % (komentarz,
@@ -378,10 +378,6 @@ class TestyPoprawnosciDanych(object):
                     return 'blad_krotkich_remontow'
                 if (date_time_obj - datetime.today()).days < 0:
                     self.error_out_writer.stderrorwrite('Krotki remont zakonczony: %s %s' % (data_string,
-                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
-                    return 'blad_krotkich_remontow'
-                elif (date_time_obj - datetime.today()).days > 14:
-                    self.error_out_writer.stderrorwrite('Krotki remont zbyt dlugi (maks. 14 dni): %s %s' % (data_string,
                                                            self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
                     return 'blad_krotkich_remontow'
         return ''
