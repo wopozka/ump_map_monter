@@ -336,6 +336,8 @@ class Mapa(object):
     def ustaw_wezly_zakazow_jako_routingowe(self):
         for zakaz_id in self.Zakazy:
             for tmpbbb in self.Zakazy[zakaz_id].Nody:
+                if self.Zakazy[zakaz_id] is None:
+                    continue
                 if tmpbbb in self.WszystkieNody:
                     self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
                     self.Zakazy[zakaz_id].Nodes.append(self.WszystkieNody[tmpbbb])
