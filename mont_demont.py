@@ -73,7 +73,11 @@ class TestyPoprawnosciDanych(object):
             # '0x1a',  # ferry
             # '0x1b'  # water or rail ferry
         ]
-        self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15']
+        typy_szlaki_piesze = ['0x010e00', '0x010e01', '0x010e02', '0x010e03', '0x010e04', '0x010e07']
+        typy_szlaki_rowerowe = ['0x010e08', '0x010e09', '0x010e0a', '0x010e0b', '0x010e0c', '0x010e0d']
+        typy_szlaki_inne = ['0x010e0f']
+        self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15'] + \
+                                typy_szlaki_piesze + typy_szlaki_rowerowe + typy_szlaki_inne
         self.literyWojewodztw = [
             'B',  # województwo podlaskie
             'C',  # województwo kujawsko-pomorskie
@@ -2514,10 +2518,9 @@ class Poi(ObiektNaMapie):
         if not UlNrTelUrl:
             return '', '', '', ''
         return_val = ['', '', '', '']
-        for licznik, aaa in enumerate(UlNrTelUrl.split(';', 4)):
+        for licznik, aaa in enumerate(UlNrTelUrl.split(';', 3)):
             return_val[licznik] = aaa
         return return_val
-        len_aaa = len(aaa)
 
 class Adr(Poi):
     def __init__(self, Plik, IndeksyMiast, alias2Type, args):
