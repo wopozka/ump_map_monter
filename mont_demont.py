@@ -2458,7 +2458,7 @@ class ObiektNaMapie(object):
 
 
 class Poi(ObiektNaMapie):
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
+    def __init__(self, Plik, IndeksyMiast, alias2Type, args, typ_obj='pnt'):
         ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
         self.dlugoscRekordowMax = 8
         self.dlugoscRekordowMin = 7
@@ -2466,6 +2466,7 @@ class Poi(ObiektNaMapie):
             self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
         else:
             self.entry_otwarte_do_extras = False
+        self.typ_obj = typ_obj
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.pnt2Dane(LiniaZPliku, orgLinia)
@@ -2483,14 +2484,24 @@ class Poi(ObiektNaMapie):
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
         # Tworzymy Type=
-        try:
-            self.Dane1.append('Type=' + self.alias2Type[LiniaZPliku[6]])
-        except KeyError:
-            if LiniaZPliku[6].startswith('0x'):
-                self.Dane1.append('Type=' + LiniaZPliku[6])
+        if self.typ_obj == 'pnt':
+            try:
+                self.Dane1.append('Type=' + self.alias2Type[LiniaZPliku[6]])
+            except KeyError:
+                if LiniaZPliku[6].startswith('0x'):
+                    self.Dane1.append('Type=' + LiniaZPliku[6])
+                else:
+                    self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
+                    self.stderrorwrite(repr(orgLinia))
+                    self.Dane1.append('Type=0x0')
+        else:
+            if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
+                self.Dane1.append('Type=0x2800')
             else:
-                self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
-                self.stderrorwrite(repr(orgLinia))
+                self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
+                self.stderrorwrite(','.join(LiniaZPliku))
+                # print('Niepoprawny typ dla punktu adresowego',file=sys.stderr)
+                # print(','.join(LiniaZPliku),file=sys.stderr)
                 self.Dane1.append('Type=0x0')
         # Tworzymy Label=
         if LiniaZPliku[3]:
@@ -2540,63 +2551,6 @@ class Poi(ObiektNaMapie):
         for licznik, aaa in enumerate(UlNrTelUrl.split(';', 3)):
             return_val[licznik] = aaa
         return return_val
-
-class Adr(Poi):
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
-        Poi.__init__(self, Plik, IndeksyMiast, alias2Type, args)
-        self.dlugoscRekordowMax = 8
-        self.dlugoscRekordowMin = 7
-
-    def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
-        self.adr2Dane(LiniaZPliku)
-
-    def adr2Dane(self, LiniaZPliku):
-        """Funkcja konwertujaca linijke z pliku adr na wewnetrzn¹ reprezentacje danego adr"""
-        self.dodaj_komentarz_do_dane()
-        # self.dokladnoscWsp=len(LiniaZPliku[0].split('.')[1])
-        self.PoiPolyPoly = '[POI]'
-        self.Dane1.append(self.PoiPolyPoly)
-        # Tworzymy Type=
-        if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
-            self.Dane1.append('Type=0x2800')
-        else:
-            self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
-            self.stderrorwrite(','.join(LiniaZPliku))
-            # print('Niepoprawny typ dla punktu adresowego',file=sys.stderr)
-            # print(','.join(LiniaZPliku),file=sys.stderr)
-            self.Dane1.append('Type=0x0')
-
-        # Tworzymy Label=
-        self.Dane1.append('Label=' + LiniaZPliku[3].strip().replace('°', ','))
-        # Tworzymy EndLevel, zakomentowane bo wszystkie adr powinny byc na 0
-        # self.Dane1.append('EndLevel='+LiniaZPliku[2].lstrip())
-        # tworzymy HouseNumber=20 StreetDesc=G³ówna Phone=+48468312519
-        StreetDesc, HouseNumber, Phone, Misc = self.rozdzielUlNrTelUrl(LiniaZPliku[4])
-        if HouseNumber:
-            self.Dane1.append('HouseNumber=' + HouseNumber)
-        if StreetDesc:
-            self.Dane1.append('StreetDesc=' + StreetDesc.replace('°', ','))
-        if Phone:
-            self.Dane1.append('Phone=' + Phone)
-        # Tworzymy Data0=(x,x)
-        self.Dane1.append('Data0=(' + LiniaZPliku[0].strip() + ',' + LiniaZPliku[1].strip() + ')')
-        # Tworzymy Miasto
-        Miasto = LiniaZPliku[5].lstrip()
-        if Miasto:
-            self.Dane1.append('Miasto=' + Miasto)
-            self.ustaw_wartosc_zmiennej_cityidx(Miasto)
-            if self.czyDodacCityIdx:
-                self.dodaj_indeksy_miast_do_obiektu(Miasto)
-        # Tworzymy plik
-        self.Dane1.append('Plik=' + self.Plik)
-        # tworzymy kod poczt i type
-        if len(LiniaZPliku) == 8:
-            self.Dane1.append('KodPoczt=' + LiniaZPliku[7])
-        self.Dane1.append('Typ=' + LiniaZPliku[6])
-        if self.entry_otwarte_do_extras:
-            self.komentarz_na_entrypoint_i_otwarte()
-        self.Dane1.append('[END]\n')
-        return
 
 
 class City(ObiektNaMapie):
@@ -3073,7 +3027,7 @@ def montujpliki(args, naglowek_mapy=''):
             #########################################################################################################
             # montowanie plików pnt
             elif pliki.find('.pnt') > 0 and pliki.find('cities') < 0:
-                punktzPnt = Poi(pliki, globalneIndeksy, tabKonw, args)
+                punktzPnt = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj='pnt')
                 punktzPnt.stdoutwrite('....[POI] %s' % pliki)
                 przetwarzanyPlik = plikPNT(pliki, args, punktzPnt)
                 # komentarz=''
@@ -3105,7 +3059,7 @@ def montujpliki(args, naglowek_mapy=''):
             ############################################################################################################
             # montowanie plikow adr
             elif pliki.find('adr') > 0:
-                punktzAdr = Adr(pliki, globalneIndeksy, tabKonw, args)
+                punktzAdr = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj='adr')
                 punktzAdr.stdoutwrite('....[ADR] %s' % pliki)
                 przetwarzanyPlik = plikPNT(pliki, args, punktzAdr)
                 # komentarz=''
