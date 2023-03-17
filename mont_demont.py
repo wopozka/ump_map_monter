@@ -73,7 +73,11 @@ class TestyPoprawnosciDanych(object):
             # '0x1a',  # ferry
             # '0x1b'  # water or rail ferry
         ]
-        self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15']
+        typy_szlaki_piesze = ['0x010e00', '0x010e01', '0x010e02', '0x010e03', '0x010e04', '0x010e07']
+        typy_szlaki_rowerowe = ['0x010e08', '0x010e09', '0x010e0a', '0x010e0b', '0x010e0c', '0x010e0d']
+        typy_szlaki_inne = ['0x010e0f']
+        self.typy_data_0_only = self.typy_label_z_miastem + ['0x14', '0x10e10', '0x10e14', '0x10e15'] + \
+                                typy_szlaki_piesze + typy_szlaki_rowerowe + typy_szlaki_inne
         self.literyWojewodztw = [
             'B',  # województwo podlaskie
             'C',  # województwo kujawsko-pomorskie
@@ -758,19 +762,37 @@ class tabelaKonwersjiTypow(object):
             '0x1710': ["zakaz"],
             '0x1711': ["sprawdz"],
             '0x1712': ["remont"],
+            '0x1805': ["signstat"],
             '0x1806': ["stawa_r"],
+            '0x1807': ["stawa_by", "stawa_pn"],
             '0x1808': ["prawa_b"],
             '0x1809': ["lewa_b"],
+            '0x180a': ["stawa_brb", "stawa_nieb"],
             '0x180b': ["boja"],
             '0x180d': ["w_prawo"],
             '0x180c': ["kard_n"],
+            '0x1905': ["tablica"],
             '0x1906': ["stawa_g"],
+            '0x1907': ["stawa_yb", "stawa_pd"],
+            '0x1908': ["stawa_rgr"],
+            '0x1909': ["stawa_grg"],
+            '0x190a': ["stawa_rwr"],
+            '0x190b': ["dalba"],
             '0x190c': ["kard_s"],
             '0x190d': ["w_lewo"],
             '0x1a06': ["stawa_y"],
+            '0x1a07': ["stawa_byb", "stawa_ws"],
+            '0x1a08': ["stawa_rw"],
+            '0x1a09': ["stawa_gw"],
+            '0x1a0a': ["stawa_bw"],
             '0x1a0c': ["kard_e"],
             '0x1a0d': ["w_lewo_b"],
             '0x1b06': ["stawa_w"],
+            '0x1b07': ["stawa_yby", "stawa_za"],
+            '0x1b08': ["stawa_wr"],
+            '0x1b09': ["stawa_wg"],
+            '0x1b0a': ["stawa_wb"],
+            '0x1b0b': ["stawa_b"],
             '0x1b0c': ["kard_w"],
             '0x1b0d': ["w_prawo_b"],
             '0x1c01': ["wrak_wid"],
@@ -865,7 +887,7 @@ class tabelaKonwersjiTypow(object):
             '0x2f0e': ["myjnia", "carwash"],
             '0x2f0f': ["garmin"],
             '0x2f10': ["uslugi", "tatoo", "optyk", "fryzjer", "lombard"],
-            '0x2f11': ["fabryka", "business", "firma"],
+            '0x2f11': ["fabryka"],
             '0x2f12': ["wifi", "hotspot"],
             '0x2f13': ["serwis", "repair", "naprawa"],
             '0x2f14': ["pralnia", "social"],
@@ -873,6 +895,7 @@ class tabelaKonwersjiTypow(object):
             '0x2f16': ["truck_stop"],
             '0x2f17': ["turystyka"],  # ","biuro","turystyczne,","transit_services
             '0x2f18': ["biletomat"],
+            '0x2f1b': ["business", "firma"],
             '0x3000': ["emergency"],
             '0x3001': ["policja"],
             '0x3002': ["dentysta", "pogotowie", "przychodnia", "szpital", "szpitale", "uzdrowisko",
@@ -2435,7 +2458,7 @@ class ObiektNaMapie(object):
 
 
 class Poi(ObiektNaMapie):
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args, typ_obiektu='pnt'):
+    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
         ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
         self.dlugoscRekordowMax = 8
         self.dlugoscRekordowMin = 7
@@ -2443,7 +2466,6 @@ class Poi(ObiektNaMapie):
             self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
         else:
             self.entry_otwarte_do_extras = False
-        self.typ_obiektu = 'pnt'
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.pnt2Dane(LiniaZPliku, orgLinia)
@@ -2461,24 +2483,14 @@ class Poi(ObiektNaMapie):
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
         # Tworzymy Type=
-        if self.typ_obiektu == 'pnt':
-            try:
-                self.Dane1.append('Type=' + self.alias2Type[LiniaZPliku[6]])
-            except KeyError:
-                if LiniaZPliku[6].startswith('0x'):
-                    self.Dane1.append('Type=' + LiniaZPliku[6])
-                else:
-                    self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
-                    self.stderrorwrite(repr(orgLinia))
-                    self.Dane1.append('Type=0x0')
-        else:
-            if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
-                self.Dane1.append('Type=0x2800')
+        try:
+            self.Dane1.append('Type=' + self.alias2Type[LiniaZPliku[6]])
+        except KeyError:
+            if LiniaZPliku[6].startswith('0x'):
+                self.Dane1.append('Type=' + LiniaZPliku[6])
             else:
-                self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
-                self.stderrorwrite(','.join(LiniaZPliku))
-                # print('Niepoprawny typ dla punktu adresowego',file=sys.stderr)
-                # print(','.join(LiniaZPliku),file=sys.stderr)
+                self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
+                self.stderrorwrite(repr(orgLinia))
                 self.Dane1.append('Type=0x0')
         # Tworzymy Label=
         if LiniaZPliku[3]:
@@ -2525,9 +2537,67 @@ class Poi(ObiektNaMapie):
         if not UlNrTelUrl:
             return '', '', '', ''
         return_val = ['', '', '', '']
-        for licznik, aaa in enumerate(UlNrTelUrl.split(';', 4)):
+        for licznik, aaa in enumerate(UlNrTelUrl.split(';', 3)):
             return_val[licznik] = aaa
         return return_val
+
+class Adr(Poi):
+    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
+        Poi.__init__(self, Plik, IndeksyMiast, alias2Type, args)
+        self.dlugoscRekordowMax = 8
+        self.dlugoscRekordowMin = 7
+
+    def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
+        self.adr2Dane(LiniaZPliku)
+
+    def adr2Dane(self, LiniaZPliku):
+        """Funkcja konwertujaca linijke z pliku adr na wewnetrzn¹ reprezentacje danego adr"""
+        self.dodaj_komentarz_do_dane()
+        # self.dokladnoscWsp=len(LiniaZPliku[0].split('.')[1])
+        self.PoiPolyPoly = '[POI]'
+        self.Dane1.append(self.PoiPolyPoly)
+        # Tworzymy Type=
+        if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
+            self.Dane1.append('Type=0x2800')
+        else:
+            self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
+            self.stderrorwrite(','.join(LiniaZPliku))
+            # print('Niepoprawny typ dla punktu adresowego',file=sys.stderr)
+            # print(','.join(LiniaZPliku),file=sys.stderr)
+            self.Dane1.append('Type=0x0')
+
+        # Tworzymy Label=
+        self.Dane1.append('Label=' + LiniaZPliku[3].strip().replace('°', ','))
+        # Tworzymy EndLevel, zakomentowane bo wszystkie adr powinny byc na 0
+        # self.Dane1.append('EndLevel='+LiniaZPliku[2].lstrip())
+        # tworzymy HouseNumber=20 StreetDesc=G³ówna Phone=+48468312519
+        StreetDesc, HouseNumber, Phone, Misc = self.rozdzielUlNrTelUrl(LiniaZPliku[4])
+        if HouseNumber:
+            self.Dane1.append('HouseNumber=' + HouseNumber)
+        if StreetDesc:
+            self.Dane1.append('StreetDesc=' + StreetDesc.replace('°', ','))
+        if Phone:
+            self.Dane1.append('Phone=' + Phone)
+        # Tworzymy Data0=(x,x)
+        self.Dane1.append('Data0=(' + LiniaZPliku[0].strip() + ',' + LiniaZPliku[1].strip() + ')')
+        # Tworzymy Miasto
+        Miasto = LiniaZPliku[5].lstrip()
+        if Miasto:
+            self.Dane1.append('Miasto=' + Miasto)
+            self.ustaw_wartosc_zmiennej_cityidx(Miasto)
+            if self.czyDodacCityIdx:
+                self.dodaj_indeksy_miast_do_obiektu(Miasto)
+        # Tworzymy plik
+        self.Dane1.append('Plik=' + self.Plik)
+        # tworzymy kod poczt i type
+        if len(LiniaZPliku) == 8:
+            self.Dane1.append('KodPoczt=' + LiniaZPliku[7])
+        self.Dane1.append('Typ=' + LiniaZPliku[6])
+        if self.entry_otwarte_do_extras:
+            self.komentarz_na_entrypoint_i_otwarte()
+        self.Dane1.append('[END]\n')
+        return
+
 
 class City(ObiektNaMapie):
     rozmiar2Type = ['0xe00', '0xd00', '0xc00', '0xb00', '0xa00', '0x900', '0x800', '0x700', '0x600', '0x500', '0x400']
@@ -3003,7 +3073,7 @@ def montujpliki(args, naglowek_mapy=''):
             #########################################################################################################
             # montowanie plików pnt
             elif pliki.find('.pnt') > 0 and pliki.find('cities') < 0:
-                punktzPnt = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obiektu='pnt')
+                punktzPnt = Poi(pliki, globalneIndeksy, tabKonw, args)
                 punktzPnt.stdoutwrite('....[POI] %s' % pliki)
                 przetwarzanyPlik = plikPNT(pliki, args, punktzPnt)
                 # komentarz=''
@@ -3035,8 +3105,7 @@ def montujpliki(args, naglowek_mapy=''):
             ############################################################################################################
             # montowanie plikow adr
             elif pliki.find('adr') > 0:
-                # punktzAdr = Adr(pliki, globalneIndeksy, tabKonw, args)
-                punktzAdr = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obiektu='adr')
+                punktzAdr = Adr(pliki, globalneIndeksy, tabKonw, args)
                 punktzAdr.stdoutwrite('....[ADR] %s' % pliki)
                 przetwarzanyPlik = plikPNT(pliki, args, punktzAdr)
                 # komentarz=''
