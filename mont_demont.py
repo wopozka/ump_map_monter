@@ -2462,10 +2462,12 @@ class Poi(ObiektNaMapie):
         ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
         self.dlugoscRekordowMax = 8
         self.dlugoscRekordowMin = 7
+        self.entry_otwarte_do_extras = False
         if hasattr(args, 'entry_otwarte_do_extras'):
             self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
-        else:
-            self.entry_otwarte_do_extras = False
+        self.sprytne_entrypoints = False
+        if hasattr(args, 'sprytne_entrypoints'):
+            self.sprytne_entrypoints = args.sprytne_entrypoints
         self.typ_obj = typ_obj
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
@@ -2475,6 +2477,27 @@ class Poi(ObiektNaMapie):
         if self.Komentarz:
             for komentarz in self.Komentarz:
                 self.Dane1.append(komentarz.rstrip())
+
+    def dodaj_sprytne_entrypoints(self):
+        entrypoint = ''
+        entrypointpos = -1
+        origdata = ''
+        origdatapos = -1
+        for no, linia in enumerate(self.Dane1):
+            if linia.startswith('EntryPoint'):
+                entrypoint = linia.split('=', 1)[-1]
+                entrypointpos = no
+            if linia.startswith('Data'):
+                origdata = linia.split('=', 1)[-1]
+                origdatapos = no
+            if entrypoint and origdata:
+                break
+        # print(entrypoint, origdata)
+        self.Dane1[origdatapos] = 'OrigData0=' + origdata
+        if entrypointpos > -1:
+            self.Dane1[entrypointpos] = 'Data0=' + entrypoint
+        else:
+            self.Dane1.append('Data0=' + origdata)
 
     def pnt2Dane(self, LiniaZPliku, orgLinia):
         """Funkcja konwertujaca linijke z pliku pnt na wewnetrzn¹ reprezentacje danego poi"""
@@ -2500,8 +2523,6 @@ class Poi(ObiektNaMapie):
             else:
                 self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
                 self.stderrorwrite(','.join(LiniaZPliku))
-                # print('Niepoprawny typ dla punktu adresowego',file=sys.stderr)
-                # print(','.join(LiniaZPliku),file=sys.stderr)
                 self.Dane1.append('Type=0x0')
         # Tworzymy Label=
         if LiniaZPliku[3]:
@@ -2537,6 +2558,8 @@ class Poi(ObiektNaMapie):
         self.Dane1.append('Typ=' + LiniaZPliku[6])
         if self.entry_otwarte_do_extras:
             self.komentarz_na_entrypoint_i_otwarte()
+        if self.sprytne_entrypoints:
+            self.dodaj_sprytne_entrypoints()
         self.Dane1.append('[END]\n')
         return
 
@@ -2954,7 +2977,6 @@ def montujpliki(args, naglowek_mapy=''):
         args.tylkodrogi = 1
     else:
         args.tylkodrogi = 0
-
     try:
         plikidomont = PlikiDoMontowania(Zmienne, args)
     except (IOError, FileNotFoundError):
@@ -2973,6 +2995,10 @@ def montujpliki(args, naglowek_mapy=''):
                 for a in agranice:
                     f.write(a)
             plikidomont.Pliki[0] = os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+
+    # sprytne entrypoints
+    if hasattr(args, 'sprytne_entrypoints') and args.sprytne_entrypoints:
+        args.entry_otwarte_do_extras = True
 
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     try:
@@ -3928,6 +3954,8 @@ def main(argumenty):
     parser_montuj.add_argument('-eoe', '--entry-otwarte-do-extras', action='store_true', default=False,
                                help='Przenosi otarte i entrypoints z komentarza do extras. Uwaga, u¿ywaæ '
                                     'ostro¿nie')
+    parser_montuj.add_argument('-sep', '--sprytne-entrypoints', action='store_true', default=False,
+                               help='Ustaw EntryPoints jako Data0, dziêki czemu ³atwiej siê dodaje EP dla punktó?')
     parser_montuj.set_defaults(func=montujpliki)
 
     # parser dla komendy montuj_mkgmap
