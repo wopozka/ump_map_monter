@@ -109,7 +109,7 @@ class TestyPoprawnosciDanych(object):
                                  'Typ', 'Type',
                                  'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
                                  'LA', 'lokalLabel',
-                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OvernightParking',
+                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OrigData0', 'OvernightParking',
                                  'Phone', 'Plik', 'POIPOLY',
                                  'Rodzaj', 'RouteParam',
                                  'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
@@ -1693,6 +1693,7 @@ class plikMP1(object):
                 dane_do_zapisu = self.koreguj_wpisy_dla_miast(dane_do_zapisu)
             dane_do_zapisu = self.modyfikuj_plik_dla_poi(dane_do_zapisu)
             dane_do_zapisu = self.zaokraglij_klucze_ze_wspolrzednymi(dane_do_zapisu)
+            dane_do_zapisu = self.przywroc_data0_i_entrypointy_z_origdata0(dane_do_zapisu)
             dane_do_zapisu = self.przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu)
             dane_do_zapisu = self.stworz_misc_info(dane_do_zapisu)
             if hasattr(self.args, 'standaryzuj_komentarz') and self.args.standaryzuj_komentarz:
@@ -2026,7 +2027,8 @@ class plikMP1(object):
 
     def zaokraglij_klucze_ze_wspolrzednymi(self, dane_do_zapisu):
         dokladnosc = self.plikDokladnosc[dane_do_zapisu['Plik']]
-        for klucz in (a for a in dane_do_zapisu if a.startswith('Data') or a.startswith('EntryPoint')):
+        for klucz in (a for a in dane_do_zapisu if a.startswith('Data') or a.startswith('EntryPoint') or
+                                                   a.startswith('OrigData0')):
             dane_do_zapisu[klucz] = self.zaokraglij(dane_do_zapisu[klucz], dokladnosc)
         return dane_do_zapisu
 
@@ -2277,6 +2279,16 @@ class plikMP1(object):
         if numeracja_do_usuniecia and len(numeracja_do_usuniecia) == len(wszystkie_numeracje):
             for numeracja in wszystkie_numeracje:
                 del(dane_do_zapisu[numeracja])
+        return dane_do_zapisu
+
+    @staticmethod
+    def przywroc_data0_i_entrypointy_z_origdata0(dane_do_zapisu):
+        Data0 = list(a for a in dane_do_zapisu if a.startswith('Data0'))[0]
+        if 'OrigData0' in dane_do_zapisu and Data0:
+            if dane_do_zapisu['OrigData0'] != dane_do_zapisu[Data0]:
+                dane_do_zapisu['EntryPoint'] = dane_do_zapisu[Data0]
+                dane_do_zapisu[Data0] = dane_do_zapisu['OrigData0']
+            del dane_do_zapisu['OrigData0']
         return dane_do_zapisu
 
 

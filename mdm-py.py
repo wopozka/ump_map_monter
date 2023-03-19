@@ -778,7 +778,7 @@ class mdmConfig(object):
         self.montDemontOptions = {}
         self.mont_opcje = {'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False,
                            'monthash': False, 'graniceczesciowe': False,
-                           'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx' }
+                           'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx', 'sprytne_entrypoints': False}
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
                              'standaryzuj_komentarz': False, 'usun_puste_numery': False}
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
@@ -1977,6 +1977,8 @@ class mdm_gui_py(tkinter.Tk):
         menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
                                           variable=self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'])
+        menu_montuj_opcje.add_checkbutton(label=u'Sprytne EntryPoints',
+                                          variable=self.mdmMontDemontOptions.montDemontOptions['sprytne_entrypoints'])
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
                                           variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
