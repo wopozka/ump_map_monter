@@ -2402,6 +2402,11 @@ class ObiektNaMapie(object):
         if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap:
             self.tryb_mkgmap = True
 
+    def dodaj_komentarz_do_dane(self):
+        if self.Komentarz:
+            for komentarz in self.Komentarz:
+                self.Dane1.append(komentarz.rstrip())
+
     def komentarz_na_entrypoint_i_otwarte(self):
         if not self.Komentarz:
             return 1
@@ -2484,11 +2489,6 @@ class Poi(ObiektNaMapie):
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.pnt2Dane(LiniaZPliku, orgLinia)
-
-    def dodaj_komentarz_do_dane(self):
-        if self.Komentarz:
-            for komentarz in self.Komentarz:
-                self.Dane1.append(komentarz.rstrip())
 
     @staticmethod
     def czy_poi_moze_z_entrypoint(poi_type):
@@ -2615,11 +2615,6 @@ class City(ObiektNaMapie):
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.city2Dane(LiniaZPliku)
-
-    def dodaj_komentarz_do_dane(self):
-        if self.Komentarz:
-            for komentarz in self.Komentarz:
-                self.Dane1.append(komentarz.rstrip())
 
     def city2Dane(self, LiniaZPliku):
         self.dodaj_komentarz_do_dane()
@@ -2977,6 +2972,18 @@ def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
         tester_poprawnosci_danych.testy_poprawnosci_danych_txt(dane_do_zapisu)
 
 
+def zwroc_typ_komentarz(nazwa_pliku):
+    if nazwa_pliku.find('cities') > 0:
+        return 'cities', '....[CITY] %s'
+    if nazwa_pliku.find('.pnt') > 0:
+        return 'pnt', '....[POI] %s'
+    if nazwa_pliku.find('.adr') > 0:
+        return 'adr', '....[ADR] %s'
+    if nazwa_pliku.find('txt') > 0:
+        return 'txt', '....[TXT] %s'
+    return '', ''
+
+
 def montujpliki(args, naglowek_mapy=''):
     stderr_stdout_writer = errOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
@@ -3060,44 +3067,31 @@ def montujpliki(args, naglowek_mapy=''):
             # print('Udalo sie otworzyc pliku %s'%(pliki))
 
             ############################################################################################################
+            typ_pliku, informacja = zwroc_typ_komentarz(pliki)
             # montowanie plikow cities
-            if pliki.find('cities') > 0:
-                punktzCity = City(pliki, globalneIndeksy, tabKonw, args)
-                punktzCity.stdoutwrite(('....[CITY] %s' % pliki))
-                przetwarzanyPlik = plikPNT(pliki, args, punktzCity)
+            if typ_pliku in ('pnt', 'adr', 'cities'):
+                if typ_pliku == 'cities':
+                    punktzpnt = City(pliki, globalneIndeksy, tabKonw, args)
+                else:
+                    punktzpnt = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj=typ_pliku)
+                punktzpnt.stdoutwrite((informacja % pliki))
+                przetwarzanyPlik = plikPNT(pliki, args, punktzpnt)
                 # komentarz=''
-                zawartoscPlikuCITY = plikPNTTXT.readlines()
-                if not zawartoscPlikuCITY:
-                    punktzCity.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki)
+                zawartosc_pliku_pnt = plikPNTTXT.readlines()
+                if not zawartosc_pliku_pnt:
+                    punktzpnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki)
                     zawartoscPlikuMp.ustawDokladnosc(pliki, '-1')
                 else:
-                    zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartoscPlikuCITY))
+                    zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_pnt))
                     zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
                 del przetwarzanyPlik
-                del punktzCity
-
-            #########################################################################################################
-            # montowanie plików pnt
-            elif pliki.find('.pnt') > 0 and pliki.find('cities') < 0:
-                punktzPnt = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj='pnt')
-                punktzPnt.stdoutwrite('....[POI] %s' % pliki)
-                przetwarzanyPlik = plikPNT(pliki, args, punktzPnt)
-                # komentarz=''
-                zawartoscPlikuPNT = plikPNTTXT.readlines()
-                if not zawartoscPlikuPNT:
-                    punktzPnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki)
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, '-1')
-                else:
-                    zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartoscPlikuPNT))
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
-                del przetwarzanyPlik
-                del punktzPnt
+                del punktzpnt
 
             ###########################################################################################################
             # montowanie plikow txt
-            elif pliki.find('txt') > 0:
+            elif typ_pliku == 'txt':
                 punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args)
-                punktzTXT.stdoutwrite('....[TXT] %s' % pliki)
+                punktzTXT.stdoutwrite(informacja % pliki)
                 przetwarzanyPlik = plikTXT(pliki, args, punktzTXT)
                 tmpaaabbb = przetwarzanyPlik.procesuj(plikPNTTXT.read())
                 zawartoscPlikuMp.dodaj(tmpaaabbb)
@@ -3108,22 +3102,9 @@ def montujpliki(args, naglowek_mapy=''):
                 del przetwarzanyPlik
                 del punktzTXT
 
-            ############################################################################################################
-            # montowanie plikow adr
-            elif pliki.find('adr') > 0:
-                punktzAdr = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj='adr')
-                punktzAdr.stdoutwrite('....[ADR] %s' % pliki)
-                przetwarzanyPlik = plikPNT(pliki, args, punktzAdr)
-                # komentarz=''
-                zawartoscPlikuADR = plikPNTTXT.readlines()
-                if not zawartoscPlikuADR:
-                    punktzAdr.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki)
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, '-1')
-                else:
-                    zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartoscPlikuADR))
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
-                del przetwarzanyPlik
-                del punktzAdr
+            else:
+                print('nieznany typ pliku %s' % pliki)
+                continue
             plikPNTTXT.close()
 
     # zapisujemy naglowek
