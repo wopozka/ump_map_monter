@@ -2757,7 +2757,7 @@ class plikTXT(object):
 
     def ustalDokladnosc(self, LiniaZPliku):
         """
-        Funkcja ustala dokladnosc pliku pnt
+        Funkcja ustala dokladnosc pliku txt
         :param LiniaZPliku: string w postaci linii pliku
         :return: 0 jesli dokladnosc udalo sie ustalic, 1 jesli dokladnosci nie udalo sie ustalic
         """
@@ -3093,8 +3093,8 @@ def montujpliki(args, naglowek_mapy=''):
                 punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args)
                 punktzTXT.stdoutwrite(informacja % pliki)
                 przetwarzanyPlik = plikTXT(pliki, args, punktzTXT)
-                tmpaaabbb = przetwarzanyPlik.procesuj(plikPNTTXT.read())
-                zawartoscPlikuMp.dodaj(tmpaaabbb)
+                zawartosc_pliku_txt = plikPNTTXT.read()
+                zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
                 zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
                 _nazwapliku, _miasto = przetwarzanyPlik.zwrocDomyslneMiasto()
                 if _miasto:
