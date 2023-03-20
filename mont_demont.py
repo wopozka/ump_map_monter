@@ -2490,7 +2490,17 @@ class Poi(ObiektNaMapie):
             for komentarz in self.Komentarz:
                 self.Dane1.append(komentarz.rstrip())
 
-    def dodaj_sprytne_entrypoints(self):
+    @staticmethod
+    def czy_poi_moze_z_entrypoint(poi_type):
+        try:
+            type_val = int(poi_type, 16)
+        except ValueError:
+            return False
+        return True if type_val > int('0x2700', 16) else False
+
+    def dodaj_sprytne_entrypoints(self, poi_type):
+        if not self.czy_poi_moze_z_entrypoint(poi_type):
+            return
         entrypoint = ''
         entrypointpos = -1
         origdata = ''
@@ -2518,13 +2528,16 @@ class Poi(ObiektNaMapie):
         # 0 Dlugosc, 1 Szerokosc, 2 EndLevel, 3 Label, 4 UlNrTelUrl, 5 Miasto, 6 Type, 7 KodPoczt
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
+        poi_type = '0x0'
         # Tworzymy Type=
         if self.typ_obj == 'pnt':
             try:
-                self.Dane1.append('Type=' + self.alias2Type[LiniaZPliku[6]])
+                poi_type = self.alias2Type[LiniaZPliku[6]]
+                self.Dane1.append('Type=' + poi_type)
             except KeyError:
                 if LiniaZPliku[6].startswith('0x'):
                     self.Dane1.append('Type=' + LiniaZPliku[6])
+                    poi_type = LiniaZPliku[6]
                 else:
                     self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
                     self.stderrorwrite(repr(orgLinia))
@@ -2532,6 +2545,7 @@ class Poi(ObiektNaMapie):
         else:
             if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
                 self.Dane1.append('Type=0x2800')
+                poi_type = '0x2800'
             else:
                 self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
                 self.stderrorwrite(','.join(LiniaZPliku))
@@ -2571,7 +2585,7 @@ class Poi(ObiektNaMapie):
         if self.entry_otwarte_do_extras:
             self.komentarz_na_entrypoint_i_otwarte()
         if self.sprytne_entrypoints:
-            self.dodaj_sprytne_entrypoints()
+            self.dodaj_sprytne_entrypoints(poi_type)
         self.Dane1.append('[END]\n')
         return
 
