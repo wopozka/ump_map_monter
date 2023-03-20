@@ -1458,7 +1458,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         for a in obszary:
             if os.path.dirname(a).endswith('src') and (a not in self.commitedfiles):
                 self.uncommitedfiles.append(a)
-
+        self.uncommitedfiles = list(set(self.uncommitedfiles))
         if self.uncommitedfiles:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
