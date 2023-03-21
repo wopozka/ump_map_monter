@@ -3039,7 +3039,6 @@ def montujpliki(args, naglowek_mapy=''):
     except FileNotFoundError:
         pass
 
-    plikMP = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy, delete=False)
     globalneIndeksy = IndeksyMiast()
     zawartoscPlikuMp = plikMP1(Zmienne, args, tabKonw, Montuj=1, naglowek_mapy=naglowek_mapy)
     # ListaObiektowDoMontowania=[]
@@ -3109,6 +3108,7 @@ def montujpliki(args, naglowek_mapy=''):
 
     # zapisujemy naglowek
     stderr_stdout_writer.stdoutwrite('zapisuje naglowek')
+    plikMP = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy, delete=False)
     plikMP.write(zawartoscPlikuMp.naglowek)
 
     # zapisujemy indeksy miast
