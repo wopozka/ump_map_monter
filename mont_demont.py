@@ -2275,7 +2275,6 @@ class plikMP1(object):
         dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
         return dane_do_zapisu
 
-
     @staticmethod
     def usun_pusta_numeracje(dane_do_zapisu):
         wszystkie_numeracje = [a for a in dane_do_zapisu if a.startswith('Numbers')]
