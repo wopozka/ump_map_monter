@@ -270,8 +270,12 @@ class TestyPoprawnosciDanych(object):
             if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
                 return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
-            data = [a for a in dane_do_zapisu if a.startswith('Data')]
-            self.error_out_writer.stderrorwrite('Numeracja drogi bez Label %s' % dane_do_zapisu[data[0]])
+            data = dane_do_zapisu[[a for a in dane_do_zapisu if a.startswith('Data')][0]][1:-1].split('),(')
+            # teraz trzeba policzyc przy ktorych wezlach mamy problem
+            # print([dane_do_zapisu[a].split('=', 1)[-1].split(',', 1)[0] for a in dane_do_zapisu if a.startswith('Numbers')])
+            no_wezlow = [int(dane_do_zapisu[a].split('=', 1)[-1].split(',', 1)[0]) for a in dane_do_zapisu
+                         if a.startswith('Numbers')]
+            self.error_out_writer.stderrorwrite('Numeracja drogi bez Label: %s' % ', '.join(data[a] for a in no_wezlow))
             return 'brak_label_przy_numeracji'
         return ''
 
