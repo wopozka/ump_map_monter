@@ -2713,7 +2713,7 @@ class plikTXT(object):
         self.domyslneMiasto = ''
         self.sciezkaNazwaPliku = NazwaPliku
         self.Dokladnosc = ''
-        self.NazwaPliku = NazwaPliku.split(os.sep)[-1]
+        self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
         self.errOutWriter = errOutWriter(args)
         self.Dane1 = []
@@ -2747,7 +2747,7 @@ class plikTXT(object):
             self.domyslneMiasto = self.domyslneMiasto.split('=', 1)[1]
             if ';' in self.domyslneMiasto:
                 self.errOutWriter.stderrorwrite('Uwaga! Srednik w nazwie miasta. Mapa moze sie nie zdemontowac!')
-                self.errOutWriter.stderrorwrite('Miasto=%s, plik=%s.' %(self.domyslneMiasto, self.NazwaPliku))
+                self.errOutWriter.stderrorwrite('Miasto=%s, plik=%s.' % (self.domyslneMiasto, self.NazwaPliku))
             # domyslneMiasta2[self.sciezkaNazwa] = self.domyslneMiasto
         # zawartoscPlikuPodzielone.replace('\n\n','\n').strip()
         # na koncu pliku jest z reguly jeszcze pusta linia, usuwamy ja
@@ -2795,7 +2795,7 @@ class plikPNT(object):
     def __init__(self, NazwaPliku, args, punktzPntAdrCiti):
         self.sciezkaNazwaPliku = NazwaPliku
         self.Dokladnosc = ''
-        self.NazwaPliku = NazwaPliku.split(os.sep)[-1]
+        self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
         self.punktzPntAdrCiti = punktzPntAdrCiti
         self.errOutWriter = errOutWriter(args)
