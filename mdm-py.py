@@ -1125,7 +1125,7 @@ class cvsDialog(tkinter.Toplevel):
 
         tkinter.Toplevel.__init__(self, parent)
         self.transient(parent)
-        self.pliki = pliki[:]
+        self.pliki = pliki
         self.iftocommit = 'nie'
         self.last_cvs_log = []
         self.mdm_cvs_last_log_file = os.path.join(os.path.expanduser('~'), '.mdm_cvs_last_log')
@@ -1259,8 +1259,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.transient(parent)
         self.stopthreadqueue = queue.Queue()
         self.progreststartstopqueue = queue.Queue()
-        self.uncommitedfiles = []
-        self.commitedfiles = []
+        self.uncommitedfiles = set()
+        self.commitedfiles = set()
 
         if title:
             self.title(title)
@@ -1435,7 +1435,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     self.outputwindow.inputqueue.put(u'>Wskazówka. Ktoś inny zatwierdził w repozytorium nowszą wersję pliku lub plików, dla których\n')
                     self.outputwindow.inputqueue.put(u'>próbujesz wykonac operację commit. Musisz wykonać polecenie update,\n')
                     self.outputwindow.inputqueue.put(u'>a następnie commit.\n\n')
-                    self.uncommitedfiles.append(a)
+                    self.uncommitedfiles.add(a)
                 else:
                     for line in stderr:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
@@ -1445,7 +1445,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
                         if line.decode(Zmienne.Kodowanie).find('<--  ' + os.path.basename(a)) >= 0:
-                            self.commitedfiles.append(a)
+                            self.commitedfiles.add(a)
                     if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
                         self.outputwindow.inputqueue.put('Gotowe\n')
@@ -1453,12 +1453,11 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     else:
                         pass
                 else:
-                    self.commitedfiles.append(a)
+                    self.commitedfiles.add(a)
 
         for a in obszary:
             if os.path.dirname(a).endswith('src') and (a not in self.commitedfiles):
-                self.uncommitedfiles.append(a)
-        self.uncommitedfiles = list(set(self.uncommitedfiles))
+                self.uncommitedfiles.add(a)
         if self.uncommitedfiles:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
@@ -1926,7 +1925,7 @@ class mdm_gui_py(tkinter.Tk):
         self.mdmMontDemontOptions = mdmConfig()
 
         # pliki zmienione, do wysłania na cvs
-        self.plikiDoCVS = []
+        self.plikiDoCVS = set()
         self.uncommitedfilesqueue = queue.Queue()
         self.grid()
 
@@ -2532,8 +2531,7 @@ class mdm_gui_py(tkinter.Tk):
                                 shutil.copy(kopiuj_co, kopiuj_na_co)
                                 self.stdoutqueue.put('%s-->%s\n' % (a.replace(os.sep, '-'), kopiuj_na_co))
                                 print('%s-->%s' % (a.replace(os.sep, '-'), kopiuj_na_co))
-                                if a not in self.plikiDoCVS:
-                                    self.plikiDoCVS.append(a)
+                                self.plikiDoCVS.add(a)
                             else:
                                 plikzip.write(os.path.join(self.Zmienne.KatalogRoboczy, a.replace(os.sep, '-'))
                                               + '.diff', a.replace(os.sep, '-') + '.diff')
@@ -2675,7 +2673,7 @@ class mdm_gui_py(tkinter.Tk):
                         tkinter.messagebox.showwarning(message=cvs_status)
                     else:
                         doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
-                        self.plikiDoCVS = doCVS.uncommitedfiles[:]
+                        self.plikiDoCVS = doCVS.uncommitedfiles
         else:
             tkinter.messagebox.showwarning('Brak plików do wysłania', message='Nie mam żadnych plików do wysłania.')
 
