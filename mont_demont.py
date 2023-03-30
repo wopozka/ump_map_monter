@@ -126,7 +126,8 @@ class TestyPoprawnosciDanych(object):
                                               'SignPos': self.dozwolona_wartosc_dla_SignPos,
                                               'SignAngle': self.dozwolona_wartosc_dla_SignAngle,
                                               'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
-                                              'ForceClass': self.dozwolona_wartosc_dla_ForceClass
+                                              'ForceClass': self.dozwolona_wartosc_dla_ForceClass,
+                                              'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight
                                               }
         self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak', # brak zakazu
                                             'B-1', 'B1', 'ZAKAZ' , 'RESTRYKCJA', # inna restrykcja
@@ -156,6 +157,7 @@ class TestyPoprawnosciDanych(object):
                                     '0xe',  # tunnel
                                     '0x1a',  # ferry
                                     }
+        self.wspolrzedne_obiektu = ''
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
         if 'ForceClass' not in dane_do_zapisu or dane_do_zapisu['POIPOLY'] != '[POLYLINE]' \
@@ -254,14 +256,27 @@ class TestyPoprawnosciDanych(object):
     def dozwolona_wartosc_dla_Sign(self, wartosc):
         return wartosc in self.dozwolone_wartosci_dla_sign, 'sprawdz na wiki: http://ump.fuw.edu.pl/wiki/Restrykcje'
 
+    def dozwolona_wartosc_dla_MaxWeight(self, wartosc):
+        try:
+            maks_masa = float(wartosc)
+        except ValueError:
+            return False, 'dozwolone tylko liczby w zakresie 0-100'
+        return 0 < maks_masa < 100, 'dozwolone tylko liczby w zakresie 0-100'
+
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
+        if self.wspolrzedne_obiektu:
+            return self.wspolrzedne_obiektu
         for tmpkey in dane_do_zapisu:
             if tmpkey.startswith('Data'):
                 if '),(' in dane_do_zapisu[tmpkey]:
-                    return dane_do_zapisu[tmpkey].split('),(', 1)[0] + ')'
+                    self.wspolrzedne_obiektu =  dane_do_zapisu[tmpkey].split('),(', 1)[0] + ')'
                 else:
-                    return dane_do_zapisu[tmpkey]
+                    self.wspolrzedne_obiektu = dane_do_zapisu[tmpkey]
+                return self.wspolrzedne_obiektu
         return '()'
+
+    def resetuj_wspolrzedne(self):
+        self.wspolrzedne_obiektu = ''
 
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
@@ -458,6 +473,7 @@ class TestyPoprawnosciDanych(object):
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        self.resetuj_wspolrzedne()
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
         wyniki_testow = list()
@@ -471,6 +487,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
+        self.resetuj_wspolrzedne()
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
         return ''
