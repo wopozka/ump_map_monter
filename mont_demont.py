@@ -320,26 +320,21 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_label_dla_poi(self, dane_do_zapisu):
         if 0x2900 <= int(dane_do_zapisu['Type'], 16) <= 0x3008:
             if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
-                szerokosc, dlugosc = \
-                    [dane_do_zapisu[data] for data in dane_do_zapisu if data.startswith('Data')][0][1:-1].split(',')
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                 self.error_out_writer.stderrorwrite(
-                    '\nBrak Label dla punktu o wspolrzednych %s,%s.\nWyszukiwanie nie bêdzie dzia³aæ.'
-                    % (szerokosc, dlugosc))
+                    '\nBrak Label dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
                 return 'brak_label'
             elif 'Miasto' not in dane_do_zapisu or ('Miasto' in dane_do_zapisu and not dane_do_zapisu['Miasto']):
-                szerokosc, dlugosc = \
-                    [dane_do_zapisu[data] for data in dane_do_zapisu if data.startswith('Data')][0][1:-1].split(',')
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                 self.error_out_writer.stderrorwrite(
-                    '\nBrak Miasto dla punktu o wspolrzednych %s,%s.\nWyszukiwanie nie bêdzie dzia³aæ.'
-                    % (szerokosc, dlugosc))
+                    '\nBrak Miasto dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
                 return 'brak_miasto'
             return ''
         elif dane_do_zapisu['Type'] in City.rozmiar2Type:
             if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
-                szerokosc, dlugosc = \
-                    [dane_do_zapisu[data] for data in dane_do_zapisu if data.startswith('Data')][0][1:-1].split(',')
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                 self.error_out_writer.stderrorwrite(
-                    '\nBrak nazwy Miasta dla punktu o wspolrzednych %s,%s.' % (szerokosc, dlugosc))
+                    '\nBrak nazwy Miasta dla punktu o wspolrzednych %s.' % coords)
                 return 'brak_nazwy_miasta'
 
     def sprawdz_label_dla_poly(self, dane_do_zapisu):
@@ -354,17 +349,15 @@ class TestyPoprawnosciDanych(object):
                 else:
                     if Label1[1].startswith('{') and Label1[1].endswith('}'):
                         return ''
-                    wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu
-                                                  if b.startswith('Data')][0]].split('),(')[-1].rstrip(')')
+                    coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                     self.error_out_writer.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(dane_do_zapisu['Label'],
-                                                                                             wspolrzedne)))
+                                                                                             coords)))
                     return 'miasto potrzebne'
             # w przypadku gdyby nazwa zaczynala sie mala litera
             else:
-                wspolrzedne = dane_do_zapisu[[b for b in dane_do_zapisu if b.startswith('Data')][0]].split('),(')[
-                    -1].rstrip(')')
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                 self.error_out_writer.stderrorwrite(('Brak Miasto= dla {!s} {!s}'.format(dane_do_zapisu['Label'],
-                                                                                         wspolrzedne)))
+                                                                                         coords)))
                 return 'miasto potrzebne'
         else:
             return ''
@@ -401,7 +394,7 @@ class TestyPoprawnosciDanych(object):
                     return 'blad_krotkich_remontow'
                 if (date_time_obj - datetime.today()).days < 0:
                     self.error_out_writer.stderrorwrite('Krotki remont zakonczony: %s %s' % (data_string,
-                                                           self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
+                                                        self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)))
                     return 'blad_krotkich_remontow'
         return ''
 
@@ -409,8 +402,9 @@ class TestyPoprawnosciDanych(object):
     @staticmethod
     def clockwisecheck(wspolrzedne):
         """
-        funkcja sprawdza wielokat jest w prawo czy w lewo. Jesli kreci sie w lewo zwraca -1,
-        jesli kreci sie w prawo zwraca 1
+        Sprawdzanie w ktora strone kreci sie wielokat
+        :param wspolrzedne: wspolrzedne wielokata (ronda) w postaci stringa (XX.XXXXX,YY.YYYYY),(XX.XXXXX,YY.YYYYY)
+        :return: -1: wielokat (rondo) kreci sie w lewo, 1: wielokat (rondo) kreci sie w prawo, 0: nie wiadomo
         """
         Pole = 0
         wspolrzedne = wspolrzedne.lstrip('(')
@@ -441,10 +435,9 @@ class TestyPoprawnosciDanych(object):
 
     def sprawdzKierunekRonda(self, dane_do_zapisu):
         Data = dane_do_zapisu[[b for b in dane_do_zapisu if b.startswith('Data')][0]]
-        wspolrzedneOstPara = Data.split('),(')[-1].rstrip(')')
+        coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
         if 'DirIndicator' not in dane_do_zapisu:
-            print(dane_do_zapisu)
-            self.error_out_writer .stderrorwrite(('Brak ustawionej kierunkowosci dla ronda {!s}'.format(wspolrzedneOstPara)))
+            self.error_out_writer.stderrorwrite(('Brak ustawionej kierunkowosci dla ronda {!s}'.format(coords)))
             return 'brak_DirIndicator'
         if dane_do_zapisu['Plik'].startswith('_nowosci'):
             self.error_out_writer.stderrorwrite('Nie moge sprawdzic kierunkowosci bo rondo w _nowosci.txt')
@@ -462,10 +455,10 @@ class TestyPoprawnosciDanych(object):
             return ''
         elif a == 0:
             self.error_out_writer .stderrorwrite(
-                'Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(wspolrzedneOstPara))
+                'Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(coords))
             return 'NIE_WIEM'
         else:
-            self.error_out_writer.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(wspolrzedneOstPara))
+            self.error_out_writer.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(coords))
             return 'ODWROTNE'
 
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
@@ -1753,7 +1746,6 @@ class plikMP1(object):
             tmpData = [b for b in daneDoZapisu if b.startswith('Data')]
             # print('Wielokrotne DataX= dla miasta o wspolrzednych %s'%tmpData[0],file=sys.stderr)
             if 'Label' not in daneDoZapisu:
-                self.stderrorwrite('Brakuje nazwy miasta dla wspolrzednych %s' % daneDoZapisu[tmpData[0]])
                 daneDoZapisu['Label'] = ''
             else:
                 daneDoZapisu['Label'] = daneDoZapisu['Label'].replace(',', '°')
@@ -1781,7 +1773,7 @@ class plikMP1(object):
             except ValueError:
                 # jezeli ktos sie pomylil i zamiast Typ wpisal Type=alias to program sie tutaj wylozy, obslugujemy to.
                 self.stderrorwrite('Nieznany Type:%s. Prawdopodobnie literowka Type zamiast Typ.'
-                                  % daneDoZapisu['Type'])
+                                   % daneDoZapisu['Type'])
 
             tmpData = [b for b in daneDoZapisu if b.startswith('Data')]
             if 'Miasto' not in daneDoZapisu:
