@@ -1459,7 +1459,7 @@ class plikMP1(object):
         self.errOutWriter = errOutWriter(args)
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = autoPlikDlaPoi()
-        self.dozwolone_obszary_dla_plikow = set()
+        self.dozwolone_obszary_dla_plikow = None
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
         self.plikHash = {}
@@ -1526,21 +1526,23 @@ class plikMP1(object):
         # tworzymy zbior obszarow dla plikow ktore sa zamontowane + plik z granicami. Ma to zabezpieczac
         # w przypadku gdybysmy przez pomylke wpisali do Plik= obszar spoza ktorego byly montowane pliki. Powodowalo
         # to usuwanie wszystkich danych z danego pliku.
-        tmp_pliki = []
-        for nazwa_pliku in self.plikizMp:
+        dozw_obsz_dla_UMP = set()
+        dozw_obsz_dla_granic = set()
+        for nazwa_pliku in (a for a in self.plikizMp if a not in (self.plik_nowosci_txt, self.plik_nowosci_pnt)):
             if nazwa_pliku.startswith('UMP-'):
-                tmp_pliki.append(os.path.split(os.path.split(nazwa_pliku)[0]))
+                dozw_obsz_dla_UMP.add(os.path.split(os.path.split(nazwa_pliku)[0])[0])
             else:
-                tmp_pliki.append(nazwa_pliku)
-        self.dozwolone_obszary_dla_plikow = set(tmp_pliki)
+                dozw_obsz_dla_granic.add(nazwa_pliku)
+        self.dozwolone_obszary_dla_plikow = tuple(sorted(dozw_obsz_dla_UMP) + sorted(dozw_obsz_dla_granic))
+        print(self.dozwolone_obszary_dla_plikow)
 
     def czy_nazwa_obszar_dla_pliku_jest_dozwolony(self, nazwa_pliku):
         if nazwa_pliku.startswith('UMP'):
-            return os.path.split(os.path.split(nazwa_pliku)[0]) in self.dozwolone_obszary_dla_plikow
+            return any(nazwa_pliku.startswith(a) for a in self.dozwolone_obszary_dla_plikow)
         return nazwa_pliku in self.dozwolone_obszary_dla_plikow
 
     def zwaliduj_sciezki_do_plikow(self):
-        if not self.dozwolone_obszary_dla_plikow:
+        if  self.dozwolone_obszary_dla_plikow is None:
             self.zbuduj_dozwolone_obszary_dla_plikow()
         for plik in self.plikizMp:
             if not self.sprawdz_poprawnosc_sciezki(plik):
