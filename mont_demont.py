@@ -530,7 +530,16 @@ class PaczerGranicCzesciowych(object):
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
     @staticmethod
-    def podziel_diff_grani_czesciowych_na_rekordy(granice_czesciowe_diff):
+    def zamien_komentarz_na_malpki(granice_czesciowe_diff):
+        for num, linijka in enumerate(granice_czesciowe_diff):
+            if linijka.startswith('; granica routingu'):
+                if num < dl_diff:
+                    if granice_czesciowe_diff[num + 1] != '@@':
+                        granice_czesciowe_diff[num] = '@@'
+        return granice_czesciowe_diff
+
+    @staticmethod
+    def podziel_diff_granic_czesciowych_na_rekordy(granice_czesciowe_diff):
         """
         Funkcja dzieli diff granic czesciowych na pojedyncze rekordy
         :param granicze_czesciowe_diff: plik diff granic czesciowych
@@ -538,6 +547,9 @@ class PaczerGranicCzesciowych(object):
         """
         granice_czesciowe_rekordy = []
         rekord_granic_czesciowych = []
+        # bo numerowanie list zaczyna sie od zera, dlatego zakladamy ze dl_diff jest o 1 mnijesza, latwiej bedzie
+        # pozniej porownywac
+        granice_czesciowe_diff = PaczerGranicCzesciowych.zamien_komentarz_na_malpki(granice_czesciowe_diff)
         for a in granice_czesciowe_diff:
             if a.startswith('+++') or a.startswith('---'):
                 pass
@@ -550,7 +562,8 @@ class PaczerGranicCzesciowych(object):
                 rekord_granic_czesciowych = [a]
             else:
                 rekord_granic_czesciowych.append(a)
-        return granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
+        granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
+        return granice_czesciowe_rekordy
 
     def konwertujLatke(self, granice_czesciowe_diff):
         """
@@ -558,25 +571,7 @@ class PaczerGranicCzesciowych(object):
         :param granice_czesciowe_diff:
         :return: list() nowy diff w przypadku sukcesu, pusta liste w przypadku porazki
         """
-        granice_czesciowe_rekordy = []
-        rekord_granic_czesciowych = []
-        for a in granice_czesciowe_diff[:]:
-            if a.startswith('+++') or a.startswith('---'):
-                pass
-            # jesli mamy @@ oznacza to ze zaczyna sie nowy oddzielny rekord
-            elif a.startswith('@@'):
-                # jesli sa juz jakies dane w rekordzie granic czesciowych dolacz go to granicy_czesciowe i
-                # zacznij od nowa, przypisujac mu wartosc z @@
-                if len(rekord_granic_czesciowych) > 0:
-                    granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
-                rekord_granic_czesciowych = [a]
-            else:
-                rekord_granic_czesciowych.append(a)
-        granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
-
-
-        # tworzymy dwie osobne listy, zamien_co zawiera informacje co zamienic, zamien na co informacje na co zamienic
-        for a in granice_czesciowe_rekordy[:]:
+        for a in self.podziel_diff_granic_czesciowych_na_rekordy(granice_czesciowe_diff):
             zamien_co = []
             zamien_co_kontekst = []
             zamien_na_co = []
