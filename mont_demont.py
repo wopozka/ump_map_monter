@@ -529,6 +529,29 @@ class PaczerGranicCzesciowych(object):
         with open(plik_z_granicami_txt, 'rb') as f:
             self.granice_txt_hash = hashlib.md5(f.read()).hexdigest()
 
+    @staticmethod
+    def podziel_diff_grani_czesciowych_na_rekordy(granice_czesciowe_diff):
+        """
+        Funkcja dzieli diff granic czesciowych na pojedyncze rekordy
+        :param granicze_czesciowe_diff: plik diff granic czesciowych
+        :return: lista list zawierajaca rekordy granic czesciowych
+        """
+        granice_czesciowe_rekordy = []
+        rekord_granic_czesciowych = []
+        for a in granice_czesciowe_diff:
+            if a.startswith('+++') or a.startswith('---'):
+                pass
+            # jesli mamy @@ oznacza to ze zaczyna sie nowy oddzielny rekord
+            elif a.startswith('@@'):
+                # jesli sa juz jakies dane w rekordzie granic czesciowych dolacz go to granicy_czesciowe i
+                # zacznij od nowa, przypisujac mu wartosc z @@
+                if rekord_granic_czesciowych:
+                    granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
+                rekord_granic_czesciowych = [a]
+            else:
+                rekord_granic_czesciowych.append(a)
+        return granice_czesciowe_rekordy.append(rekord_granic_czesciowych)
+
     def konwertujLatke(self, granice_czesciowe_diff):
         """
         konwersja latki ktora jest stworzona dla granicy czesciowej na latki stworzona dla pliku granice z narzedzi.

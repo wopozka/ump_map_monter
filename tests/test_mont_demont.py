@@ -561,6 +561,7 @@ TEST_PACZOWANIE_GRANIC_CZESCIOWYCH = (
     ('granice_6.diff', 'granice_6_OK.diff',),
     ('granice_7.diff', 'granice_7_OK.diff',),
     ('granice_8.diff', 'granice_8_OK.diff',),
+    ('granice_9.diff', 'granice_9_OK.diff',),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH)
