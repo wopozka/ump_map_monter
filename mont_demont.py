@@ -193,7 +193,7 @@ class TestyPoprawnosciDanych(object):
             kom_bledu = kom_bledu.rstrip(', ')
         if kom_bledu:
             coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-            wspolrzedne = ' %s' %coords
+            wspolrzedne = ' %s' % coords
             self.error_out_writer.stderrorwrite(kom_bledu + wspolrzedne)
             return 'error'
         return ''

@@ -245,7 +245,7 @@ def test_plik_pnt_procesuj(target, answer):
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     globalneIndeksy = mont_demont.IndeksyMiast()
-    punkt_z_adr = mont_demont.Adr('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args)
+    punkt_z_adr = mont_demont.Poi('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args)
     przetwarzanyPlik = mont_demont.plikPNT('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', args, punkt_z_adr)
     zawartoscPlikuADR = target
     assert przetwarzanyPlik.procesuj(zawartoscPlikuADR) == answer
