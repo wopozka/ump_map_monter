@@ -385,44 +385,7 @@ def test_zwroc_plik_dla_typu(target, answer):
         auto_plik.dodaj_plik_dla_poi(dane_do_zapisu)
     assert auto_plik.zwroc_plik_dla_typu(target[0], target[1]) == answer
 
-TEST_POPRAWNOSC_DANYCH = (
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'brak_DirIndicator',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-GB-Leszno/src/LESZNO.ulice.txt'}, 'ODWROTNE',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'NIE_WIEM',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
-    ({'POIPOLY': '[POLYGON]', 'Type': '0x14', 'EndLevel': '2',
-      'Data0': '(51.38958,19.39735),(51.38938,19.39714),(51.38924,19.39739),(51.38725,19.39673),(51.38714,19.39623),(51.38715,19.39556),(51.38725,19.39513),(51.38730,19.39456),(51.38735,19.39364),(51.38893,19.39361),(51.38906,19.39422),(51.38799,19.39428),(51.38799,19.39512),(51.38938,19.39531),(51.38991,19.39733)',
-      'Data1': '(51.38851,19.39563),(51.38838,19.39544),(51.38810,19.39537),(51.38797,19.39557),(51.38810,19.39585),(51.38836,19.39585)',
-      'Data2': '(51.38768,19.39593),(51.38768,19.39580),(51.38756,19.39583),(51.38743,19.39570),(51.38726,19.39573),(51.38717,19.39603),(51.38719,19.39632),(51.38725,19.39656),(51.38751,19.39660),(51.38757,19.39622),(51.38760,19.39598)',
-      'Plik': 'UMP-PL-Lodz/src/BELCHATOW.zielone.txt'}, '',),
-    ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
-    'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
-    'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1'),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '{rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX {rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+TEST_POPRAWNOSC_DANYCH_LABEL_POI = (
     ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'Bank Spoldzielczy', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
     'Data0': '(51.82457,17.57944)', 'Miasto': 'Wyki',
     'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, ''),
@@ -448,15 +411,74 @@ TEST_POPRAWNOSC_DANYCH = (
     ({'POIPOLY': '[POI]', 'Type': '0xe00', 'City': 'Y', 'Data0': '(51.60143,17.51641)',
       'Miasto': 'Golkowo', 'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Rozmiar': '0'}, 'brak_nazwy_miasta'),
 )
-@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH)
-def test_testy_poprawnosci_danych(target, answer):
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_LABEL_POI)
+def test_testy_poprawnosci_danych_label_poi(target, answer):
     args = Args()
     tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
-    # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    # stderr_stdout_writer = mont_demont.errOutWriter(args)
-    # tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    # plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    assert tester_poprawnosci_danych.testy_poprawnosci_danych_txt(target) == answer
+    assert tester_poprawnosci_danych.sprawdz_label_dla_poi(target) == answer
+
+TEST_POPRAWNOSCI_DANYCH_MIASTO_LABEL_POLY = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '{rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX {rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSCI_DANYCH_MIASTO_LABEL_POLY)
+def test_testy_poprawnosci_danych_label_miasto(target, answer):
+    args = Args()
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
+    assert tester_poprawnosci_danych.sprawdz_label_dla_poly(target) == answer
+
+TEST_POPRAWNOSC_DANYCH_DATA_0_ONLY = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1_POLY',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1_POLY',),
+    ({'POIPOLY': '[POLYGON]', 'Type': '0x14', 'EndLevel': '2',
+      'Data0': '(51.38958,19.39735),(51.38938,19.39714),(51.38924,19.39739),(51.38725,19.39673),(51.38714,19.39623),(51.38715,19.39556),(51.38725,19.39513),(51.38730,19.39456),(51.38735,19.39364),(51.38893,19.39361),(51.38906,19.39422),(51.38799,19.39428),(51.38799,19.39512),(51.38938,19.39531),(51.38991,19.39733)',
+      'Data1': '(51.38851,19.39563),(51.38838,19.39544),(51.38810,19.39537),(51.38797,19.39557),(51.38810,19.39585),(51.38836,19.39585)',
+      'Data2': '(51.38768,19.39593),(51.38768,19.39580),(51.38756,19.39583),(51.38743,19.39570),(51.38726,19.39573),(51.38717,19.39603),(51.38719,19.39632),(51.38725,19.39656),(51.38751,19.39660),(51.38757,19.39622),(51.38760,19.39598)',
+      'Plik': 'UMP-PL-Lodz/src/BELCHATOW.zielone.txt'}, '',),
+    ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1_POI'),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_DATA_0_ONLY)
+def test_testy_poprawnosci_danych_tylko_data0_dla_drog(target, answer):
+    args = Args()
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
+    assert tester_poprawnosci_danych.sprawdzData0Only(target) == answer
+
+# testujemy poprawne rondo
+TEST_POPRAWNOSC_DANYCH_RONDO = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'brak_DirIndicator',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-GB-Leszno/src/LESZNO.ulice.txt'}, 'ODWROTNE',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'NIE_WIEM',),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_RONDO)
+def test_testy_poprawnosci_danych_kierukowosc_ronda(target, answer):
+    args = Args()
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
+    assert tester_poprawnosci_danych.testuj_kierunkowosc_ronda(target) == answer
+
 
 TEST_DATA_0_ONLY = (
 ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
@@ -573,6 +595,17 @@ def testuj_konwertuj_latke(target, answer):
     with open(answer, 'r') as granice_test_answer_file:
         granice_test_answer = granice_test_answer_file.readlines()
     assert paczer_granic.konwertujLatke(granice_test_target) == granice_test_answer
+
+TEST_PACZOWANIE_GRANIC_CZESCIOWYCH_PODZIAL_NA_REKORDY = (
+    ('granice_9.diff', 'granice_9_malpki.diff',),
+)
+@pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH_PODZIAL_NA_REKORDY)
+def testuj_konwertuj_latke(target, answer):
+    with open(target, 'r') as granice_test_file:
+        granice_test_target = granice_test_file.readlines()
+    with open(answer, 'r') as granice_test_answer_file:
+        granice_test_answer = granice_test_answer_file.readlines()
+    assert mont_demont.PaczerGranicCzesciowych.zamien_komentarz_na_malpki(granice_test_target) == granice_test_answer
 
 TEST_USUN_PUSTA_NUMERACJE = (
     (OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}), OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}),),

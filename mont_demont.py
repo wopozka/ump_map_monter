@@ -287,7 +287,6 @@ class TestyPoprawnosciDanych(object):
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
             data = dane_do_zapisu[[a for a in dane_do_zapisu if a.startswith('Data')][0]][1:-1].split('),(')
             # teraz trzeba policzyc przy ktorych wezlach mamy problem
-            # print([dane_do_zapisu[a].split('=', 1)[-1].split(',', 1)[0] for a in dane_do_zapisu if a.startswith('Numbers')])
             no_wezlow = [int(dane_do_zapisu[a].split('=', 1)[-1].split(',', 1)[0]) for a in dane_do_zapisu
                          if a.startswith('Numbers')]
             self.error_out_writer.stderrorwrite('Numeracja drogi bez Label: %s' % ', '.join(data[a] for a in no_wezlow))
@@ -310,10 +309,10 @@ class TestyPoprawnosciDanych(object):
             return ''
         if dane_do_zapisu['POIPOLY'] == '[POI]':
             self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla POI %s' % dane_do_zapisu[data[0]])
-            return 'Data1'
+            return 'Data1_POI'
         elif dane_do_zapisu['Type'] in self.typy_data_0_only:
             self.error_out_writer.stderrorwrite('Data 1 albo wyzej dla drogi/kolei %s' % dane_do_zapisu[data[0]])
-            return 'Data1'
+            return 'Data1_POLY'
         else:
             return ''
 
@@ -336,8 +335,13 @@ class TestyPoprawnosciDanych(object):
                 self.error_out_writer.stderrorwrite(
                     '\nBrak nazwy Miasta dla punktu o wspolrzednych %s.' % coords)
                 return 'brak_nazwy_miasta'
+            return ''
 
     def sprawdz_label_dla_poly(self, dane_do_zapisu):
+        if 'Label' not in dane_do_zapisu:
+            return ''
+        if 'Miasto' in dane_do_zapisu:
+            return ''
         if dane_do_zapisu['Type'] in self.typy_label_z_miastem and dane_do_zapisu['POIPOLY'] == '[POLYLINE]':
             # gdy label w nawiasach klamrowych
             if dane_do_zapisu['Label'].startswith('{'):
@@ -473,7 +477,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_join_zamiast_merge(dane_do_zapisu))
-        wyniki_testow.append(self.testuj_label(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_label_dla_poly(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
@@ -486,20 +490,12 @@ class TestyPoprawnosciDanych(object):
         return ''
 
     def testuj_kierunkowosc_ronda(self, dane_do_zapisu):
+        # poniewaz testy leca dla wszystkich polyline, nieronda trzeba od razu odrzucic
         if dane_do_zapisu['Type'] == '0xc' and dane_do_zapisu['POIPOLY'] == '[POLYLINE]':
             return self.sprawdzKierunekRonda(dane_do_zapisu)
         else:
             return ''
 
-    def testuj_label(self, dane_do_zapisu):
-        if dane_do_zapisu['POIPOLY'] == '[POI]':
-            return self.sprawdz_label_dla_poi(dane_do_zapisu)
-        else:
-            if 'Label' not in dane_do_zapisu:
-                return ''
-            if 'Miasto' not in dane_do_zapisu:
-                return self.sprawdz_label_dla_poly(dane_do_zapisu)
-        return ''
 
 class PaczerGranicCzesciowych(object):
     def __init__(self, Zmienne, plik_z_granicami_do_testow=None):
@@ -531,11 +527,12 @@ class PaczerGranicCzesciowych(object):
 
     @staticmethod
     def zamien_komentarz_na_malpki(granice_czesciowe_diff):
+        dl_diff = len(granice_czesciowe_diff) - 1
         for num, linijka in enumerate(granice_czesciowe_diff):
-            if linijka.startswith('; granica routingu'):
+            if linijka.startswith(' ; granica routingu'):
                 if num < dl_diff:
-                    if granice_czesciowe_diff[num + 1] != '@@':
-                        granice_czesciowe_diff[num] = '@@'
+                    if not granice_czesciowe_diff[num + 1].startswith('@@'):
+                        granice_czesciowe_diff[num] = '@@\n'
         return granice_czesciowe_diff
 
     @staticmethod
@@ -571,31 +568,31 @@ class PaczerGranicCzesciowych(object):
         :param granice_czesciowe_diff:
         :return: list() nowy diff w przypadku sukcesu, pusta liste w przypadku porazki
         """
-        for a in self.podziel_diff_granic_czesciowych_na_rekordy(granice_czesciowe_diff):
+        for pojedyncza_granica in self.podziel_diff_granic_czesciowych_na_rekordy(granice_czesciowe_diff):
             zamien_co = []
             zamien_co_kontekst = []
             zamien_na_co = []
             zamien_na_co_kontekst = []
-            for b in a[:]:
+            for linijka_granicy in pojedyncza_granica:
                 # @ jest czescia latki, wiec to nalezy zignorowac
-                if b.startswith('@'):
+                if linijka_granicy.startswith('@'):
                     pass
                 # od srednika zaczyna sie komentarz, komentarz ktory sie lapie to niestety nie ten z poczatku ale ten
                 # z konca rekordu. Trzeba to zignorowac, ale z drugiej strony trzeba miec pewnosc ze wystepuje on na
                 # koncu rekordu. Dlatego mamy a[-1] == b, w srodku rekordu moze byc i nie stanowi to zadnego problemu
-                elif b.startswith(' ;') and a[-1] == b:
+                elif linijka_granicy.startswith(' ;') and pojedyncza_granica[-1] == linijka_granicy:
                     pass
-                elif b.startswith(' '):
-                    linia_tmp = b.replace(' ', '', 1)
+                elif linijka_granicy.startswith(' '):
+                    linia_tmp = linijka_granicy.replace(' ', '', 1)
                     zamien_co.append(linia_tmp)
                     zamien_co_kontekst.append('kontekst')
                     zamien_na_co.append(linia_tmp)
                     zamien_na_co_kontekst.append('kontekst')
-                elif b.startswith('-'):
-                    zamien_co.append(b.replace('-', '', 1))
+                elif linijka_granicy.startswith('-'):
+                    zamien_co.append(linijka_granicy.replace('-', '', 1))
                     zamien_co_kontekst.append('-')
-                elif b.startswith('+'):
-                    zamien_na_co.append(b.replace('+', '', 1))
+                elif linijka_granicy.startswith('+'):
+                    zamien_na_co.append(linijka_granicy.replace('+', '', 1))
                     zamien_na_co_kontekst.append('+')
             zamien_co = zamien_co
             zamien_na_co = zamien_na_co
