@@ -3002,14 +3002,15 @@ def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
 def zwroc_typ_komentarz(nazwa_pliku):
     # kolejnosc ifow odzwierciedla ilosc plikow danego typu w projekcie. Daje to bardzo malutkie przyspieszenie
     # przy czym cities trzeba szukac najpierw, bo tez sie konczy na pnt
-    if nazwa_pliku.find('cities') > 0:
-        return 'cities', '....[CITY] %s'
-    if nazwa_pliku.find('.txt') > 0:
+    if nazwa_pliku.endswith('.txt'):
         return 'txt', '....[TXT] %s'
-    if nazwa_pliku.find('.adr') > 0:
+    if nazwa_pliku.endswith('.adr'):
         return 'adr', '....[ADR] %s'
-    if nazwa_pliku.find('.pnt') > 0:
-        return 'pnt', '....[PNT] %s'
+    if nazwa_pliku.endswith('.pnt'):
+        if 'cities' in nazwa_pliku:
+            return 'cities', '....[CITY] %s'
+        else:
+            return 'pnt', '....[PNT] %s'
     return '', ''
 
 

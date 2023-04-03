@@ -615,3 +615,14 @@ TEST_USUN_PUSTA_NUMERACJE = (
 @pytest.mark.parametrize('target, answer', TEST_USUN_PUSTA_NUMERACJE)
 def testuj_usun_pusta_numeracje(target, answer):
     assert mont_demont.plikMP1.usun_pusta_numeracje(target) == answer
+
+TEST_ZWROC_TYP_KOMENTARZ = (
+    ('UMP-PL-Lodz/src/LODZ.ulice.txt', ('txt', '....[TXT] %s')),
+    ('UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', ('pnt', '....[PNT] %s')),
+    ('UMP-PL-Lodz/src/cities-Lodz.pnt', ('cities', '....[CITY] %s')),
+    ('UMP-PL-Lodz/src/m-106301-Skierniewice.adr', ('adr', '....[ADR] %s')),
+)
+@pytest.mark.parametrize('target, answer', TEST_ZWROC_TYP_KOMENTARZ)
+def testuj_zwroc_typ_komentarz(target, answer):
+    assert mont_demont.zwroc_typ_komentarz(target) == answer
+
