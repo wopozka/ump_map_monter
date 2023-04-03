@@ -527,10 +527,10 @@ class PaczerGranicCzesciowych(object):
 
     @staticmethod
     def zamien_komentarz_na_malpki(granice_czesciowe_diff):
-        dl_diff = len(granice_czesciowe_diff) - 1
+        index_ostatniego_elem_listy = len(granice_czesciowe_diff) - 1
         for num, linijka in enumerate(granice_czesciowe_diff):
             if linijka.startswith(' ; granica routingu'):
-                if num < dl_diff:
+                if num < index_ostatniego_elem_listy:
                     if not granice_czesciowe_diff[num + 1].startswith('@@'):
                         granice_czesciowe_diff[num] = '@@\n'
         return granice_czesciowe_diff
