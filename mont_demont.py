@@ -635,7 +635,7 @@ class PaczerGranicCzesciowych(object):
         else:
             DataX = ''
             DataX_index = -1
-            for b in zamien_co[:]:
+            for b in zamien_co:
                 if b.find('Data') >= 0:
                     DataX = b
                     DataX_index = zamien_co.index(DataX)
@@ -644,8 +644,6 @@ class PaczerGranicCzesciowych(object):
                 return []
             przesuniecie = self.granice_txt.index(DataX) - DataX_index
             for b in range(len(zamien_co)):
-                aaa = zamien_co[b]
-                bbb = self.granice_txt[przesuniecie + b]
                 if zamien_co[b] == self.granice_txt[przesuniecie + b]:
                     pass
                 else:
@@ -3002,14 +3000,15 @@ def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
 
 
 def zwroc_typ_komentarz(nazwa_pliku):
-    if nazwa_pliku.find('cities') > 0:
-        return 'cities', '....[CITY] %s'
-    if nazwa_pliku.find('.pnt') > 0:
-        return 'pnt', '....[POI] %s'
+    # kolejnosc ifow odzwierciedla ilosc plikow danego typu w projekcie. Daje to bardzo malutkie przyspieszenie
+    if nazwa_pliku.find('.txt') > 0:
+        return 'txt', '....[POI] %s'
     if nazwa_pliku.find('.adr') > 0:
         return 'adr', '....[ADR] %s'
-    if nazwa_pliku.find('txt') > 0:
-        return 'txt', '....[TXT] %s'
+    if nazwa_pliku.find('.pnt') > 0:
+        return 'pnt', '....[TXT] %s'
+    if nazwa_pliku.find('cities') > 0:
+        return 'cities', '....[CITY] %s'
     return '', ''
 
 
