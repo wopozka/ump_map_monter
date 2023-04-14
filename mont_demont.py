@@ -1255,6 +1255,12 @@ class autoPlikDlaPoi(object):
         return self.wykluczone_dozwolone_pliki[plik]
 
     def dodaj_plik_dla_poi(self, dane_do_zapisu):
+        """
+        podczas demontazu tworzymy ranking plikow dla danego Typu, tak aby pozniej wykorzystaæ najbardziej popularny
+        plik dla danego typu, zamiast pierwszy jako zostal znaleziony jak bylo we wczesnijeszej wersji
+        :param dane_do_zapisu:
+        :return:
+        """
         if 'Plik' not in dane_do_zapisu or 'Type' not in dane_do_zapisu or \
                 self.czy_plik_jest_wykluczony(dane_do_zapisu['Plik']):
             return
