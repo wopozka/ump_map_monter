@@ -1117,8 +1117,7 @@ class tabelaKonwersjiTypow(object):
 
     def read_pnt2poi_txt(self):
         sekcja = ''
-        nr_linii = 0
-        plik_pnt2poi = 'narzedzia' + os.sep + 'pnt2poi.txt'
+        plik_pnt2poi = os.path.join('narzedzia', 'pnt2poi.txt')
         try:
             with open(os.path.join(self.Zmienne.KatalogzUMP, plik_pnt2poi), encoding=self.Zmienne.Kodowanie,
                       errors=self.Zmienne.ReadErrors) as f:
@@ -1129,8 +1128,7 @@ class tabelaKonwersjiTypow(object):
             self.stderr_stdout_writer.stderrorwrite('Brak pliku ' + plik_pnt2poi + ', wczytuje definicje domyslne')
             return 1
         else:
-            for a in zawartosc_pliku_pnt2poi:
-                nr_linii += 1
+            for nr_linii, a in enumerate(zawartosc_pliku_pnt2poi):
                 a = a.strip()
                 # po strip powstaja nieraz puste linie wiec takich nie ma co przeszukiwac stad ten if
                 if a:
@@ -1138,19 +1136,19 @@ class tabelaKonwersjiTypow(object):
                         if sekcja:
                             self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
                                                                     plik_pnt2poi)
-                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
+                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii))
                         sekcja = '[DEF-POI]'
                     elif a.startswith('[DEF-LINE]'):
                         if sekcja:
                             self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
                                                                     plik_pnt2poi)
-                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
+                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii))
                         sekcja = '[DEF-LINE]'
                     elif a.startswith('[DEF-REVPOI]'):
                         if sekcja:
                             self.stderr_stdout_writer.stderrorwrite('Niepoprawne zakonczenie sekcji w pliku ' +
                                                                     plik_pnt2poi)
-                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii - 1))
+                            self.stderr_stdout_writer.stderrorwrite('brak [END] w linii %s' % str(nr_linii))
                         sekcja = '[DEF-REVPOI]'
                     elif a.startswith('[END'):
                         sekcja = ''
