@@ -3628,13 +3628,10 @@ def sprawdz(args):
                     stderr_stdout_writer.stderrorwrite(error)
             with open(os.path.join(Zmienne.KatalogRoboczy, typBledu.replace(' ', '-') + '.wpt'), 'w',
                       encoding=Zmienne.Kodowanie, errors=Zmienne.WriteErrors) as f:
-                f.write('OziExplorer Waypoint File Version 1.1\n')
-                f.write('WGS 84\n')
-                f.write('Reserved 2\n')
-                f.write('Reserved 3\n')
-                f.writelines([abc+'\n' for abc in bledy[typBledu]])
-            stderr_stdout_writer.stdoutwrite(typBledu + '-->' + Zmienne.KatalogRoboczy + typBledu.replace(' ', '-') +
-                                             '.wpt\n')
+                f.writelines(('OziExplorer Waypoint File Version 1.1\n', 'WGS 84\n', 'Reserved 2\n', 'Reserved 3\n'))
+                f.writelines([abc + '\n' for abc in bledy[typBledu]])
+            stderr_stdout_writer.stdoutwrite(typBledu + '-->' + os.path.join(Zmienne.KatalogRoboczy,
+                                                                             typBledu.replace(' ', '-') + '.wpt\n'))
 
     stderr_stdout_writer.stdoutwrite('Sprawdzanie Netgenem zakonczone!')
     if hasattr(args, 'sprawdzbuttonqueue'):
