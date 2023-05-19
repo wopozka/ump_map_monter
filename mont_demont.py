@@ -52,6 +52,31 @@ class errOutWriter(object):
 
 
 class TestyPoprawnosciDanych(object):
+    DOZWOLONE_KLUCZE = {'adrLabel',
+                        'City', 'CityIdx', 'Czas',
+                        'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
+                        'EndLevel',
+                        'Floors', 'ForceClass', 'ForceSpeed', 'FullLabel',
+                        'HouseNumber', 'Height_f', 'Height_m', 'Highway',
+                        'KodPoczt', 'Komentarz',
+                        'Label', 'Label2', 'Label3', 'Lanes',
+                        'MaxWeight', 'MiscInfo',
+                        'Typ', 'Type',
+                        'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
+                        'LA', 'lokalLabel',
+                        'Oplata', 'Oplata:moto', 'Oplata:rower', 'OvernightParking',
+                        'Phone', 'Plik', 'POIPOLY',
+                        'Rodzaj', 'RouteParam',
+                        'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
+                        'TLanes', 'Transit',
+                        'RestrParam', 'Rozmiar',
+                        'WebPage',
+                        'Zip'
+                        }
+    DOZWOLONE_KLUCZE_PRZESTARZALE = {'Rampa'}
+    # ponizsze klucze pojawiaja sie wielokrotnie w rekordzie, dlatego monter dodaje numery na koncu, aby je
+    # rozroznic. Z tego powodu sa traktowane inaczej
+    DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
     def __init__(self, args):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
         self.error_out_writer = errOutWriter(args)
@@ -97,30 +122,9 @@ class TestyPoprawnosciDanych(object):
             'Z',  # województwo zachodniopomorskie
         ]
         self.ruchLewostronny = ['UMP-GB']
-        self.dozwolone_klucze = {'adrLabel',
-                                 'City', 'CityIdx', 'Czas',
-                                 'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
-                                 'EndLevel',
-                                 'Floors', 'ForceClass', 'ForceSpeed', 'FullLabel',
-                                 'HouseNumber', 'Height_f', 'Height_m', 'Highway',
-                                 'KodPoczt', 'Komentarz',
-                                 'Label', 'Label2', 'Label3', 'Lanes',
-                                 'MaxWeight', 'MiscInfo',
-                                 'Typ', 'Type',
-                                 'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
-                                 'LA', 'lokalLabel',
-                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OvernightParking',
-                                 'Phone', 'Plik', 'POIPOLY',
-                                 'Rodzaj', 'RouteParam',
-                                 'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
-                                 'TLanes', 'Transit',
-                                 'RestrParam', 'Rozmiar',
-                                 'WebPage',
-                                 'Zip'
-                                 }
-        self.dozwolone_klucze_przestarzale = {'Rampa'}
-
-        self.dozwolone_klucze_z_numerem = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
+        self.dozwolone_klucze = TestyPoprawnosciDanych.DOZWOLONE_KLUCZE
+        self.dozwolone_klucze_przestarzale = TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE
+        self.dozwolone_klucze_z_numerem = TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_Z_NUMEREM
         self.dozwolone_wart_kluczy_funkcje = {'EndLevel': self.dozwolona_wartosc_dla_EndLevel,
                                               'Sign': self.dozwolona_wartosc_dla_Sign,
                                               'SignPos': self.dozwolona_wartosc_dla_SignPos,

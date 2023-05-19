@@ -38,7 +38,7 @@ import subprocess
 import time
 import urllib.request
 import urllib.error
-import collections
+from collections import defaultdict
 
 
 def sprawdz_czy_cvs_obecny():
@@ -67,6 +67,33 @@ def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia, zmienne):
                     break
     return tuple(pliki_z_bledami)
 
+
+def cvs_sprawdz_czy_tylko_dozwolone_klucze(pliki_do_sprawdzenia, zmienne):
+    """
+    funkcja sprawdza czy w plikach zaznaczonych do commitu sa tylko dozwolone klucze, jesli sa niedozwolone
+     to zwraca ich nazwy w postaci tupli, jesli nie ma zwraca pusta tuple
+    """
+    pliki_z_bledami = defaultdict(lambda: set())
+    for n_pliku in pliki_do_sprawdzenia:
+        nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
+        with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
+            for zawartosc in plik_w_cvs.readlines():
+                if zawartosc.startswith(';') or '=' not in zawartosc:
+                    continue
+                else:
+                    klucz, wartosc = zawartosc.split('=', 1)
+                    if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
+                            klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE:
+                        continue
+                    else:
+                        klucz_z_numerem_znaleziony = False
+                        for k_z_numerem in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_Z_NUMEREM:
+                            if klucz.startswith(k_z_numerem):
+                                klucz_z_numerem_znaleziony = True
+                                break
+                        if not klucz_z_numerem_znaleziony:
+                            pliki_z_bledami[nazwa_pliku].add(klucz)
+    return pliki_z_bledami
 
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
 
@@ -2661,6 +2688,14 @@ class mdm_gui_py(tkinter.Tk):
     def OnButtonClickCvsCommit(self):
         if self.plikiDoCVS:
             pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS, self.Zmienne)
+            pliki_z_niepoprawnymi_kluczami = cvs_sprawdz_czy_tylko_dozwolone_klucze(self.plikiDoCVS, self.Zmienne)
+            if pliki_z_niepoprawnymi_kluczami:
+                l_plik = '\n'.join([n_pliku + ': ' + ', '.join(pliki_z_niepoprawnymi_kluczami[n_pliku]) for
+                                          n_pliku in pliki_z_niepoprawnymi_kluczami])
+                informacja = u'Uwaga. W następujacych plikach w cvs są niepoprawne klucze. ' \
+                             u'Czy na pewno kontynuować?\n\n' + l_plik
+                if not tkinter.messagebox.askyesno('Niepoprawne klucze w plikach!', message=informacja):
+                    return
             if pliki_z_konfliktami:
                 informacja = u'Uwaga. W następujacych plikach w cvs są konflikty. Usuń je przed kontynuacją.\n' + \
                              '\n'.join(pliki_z_konfliktami)
