@@ -109,7 +109,7 @@ class TestyPoprawnosciDanych(object):
                                  'Typ', 'Type',
                                  'MaxHeight', 'MaxWidth', 'Miasto', 'Moto',
                                  'LA', 'lokalLabel',
-                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OrigType', 'OrigData0', 'OvernightParking',
+                                 'Oplata', 'Oplata:moto', 'Oplata:rower', 'OvernightParking',
                                  'Phone', 'Plik', 'POIPOLY',
                                  'Rodzaj', 'RouteParam',
                                  'Sign', 'SignAngle', 'SignLabel', 'SignParam', 'SignPos', 'Speed', 'StreetDesc',
