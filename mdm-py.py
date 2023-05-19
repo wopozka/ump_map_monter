@@ -51,35 +51,23 @@ def sprawdz_czy_cvs_obecny():
         return 'Nie odnalazłem programu cvs. Zainstaluj go.'
 
 
-def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia, zmienne):
-    """
-    funkcja sprawdza czy w plikach zaznaczonych do commitu nie ma konfliktow jesli sa to zwraca ich nazwy
-    w postaci tupli, jesli nie ma zwraca pusta tuple
-    """
-    pliki_z_bledami = list()
-    for n_pliku in pliki_do_sprawdzenia:
-        nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
-        with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
-            for zawartosc in plik_w_cvs.readlines():
-                if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
-                        or zawartosc.startswith(">>>>>>>"):
-                    pliki_z_bledami.append(nazwa_pliku)
-                    break
-    return tuple(pliki_z_bledami)
-
-
-def cvs_sprawdz_czy_tylko_dozwolone_klucze(pliki_do_sprawdzenia, zmienne):
+def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzenia, zmienne):
     """
     funkcja sprawdza czy w plikach zaznaczonych do commitu sa tylko dozwolone klucze, jesli sa niedozwolone
-     to zwraca ich nazwy w postaci tupli, jesli nie ma zwraca pusta tuple
+    to zwraca ich nazwy w postaci tupli, jesli nie ma zwraca pusta tuple
+    dodatkowo sprawddzamy obecnosc konfliktow
     """
-    pliki_z_bledami = defaultdict(lambda: set())
+    pliki_z_niepoprawnymi_kluczami = defaultdict(lambda: set())
+    pliki_z_konfliktami = {}
     for n_pliku in pliki_do_sprawdzenia:
         nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
         with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
             for zawartosc in plik_w_cvs.readlines():
                 if zawartosc.startswith(';') or '=' not in zawartosc:
                     continue
+                elif zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
+                        or zawartosc.startswith(">>>>>>>"):
+                    pliki_z_konfliktami.add(n_pliku)
                 else:
                     klucz, wartosc = zawartosc.split('=', 1)
                     if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
@@ -92,8 +80,8 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze(pliki_do_sprawdzenia, zmienne):
                                 klucz_z_numerem_znaleziony = True
                                 break
                         if not klucz_z_numerem_znaleziony:
-                            pliki_z_bledami[nazwa_pliku].add(klucz)
-    return pliki_z_bledami
+                            pliki_z_niepoprawnymi_kluczami[n_pliku].add(klucz)
+    return pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami
 
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
 
@@ -2687,8 +2675,8 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickCvsCommit(self):
         if self.plikiDoCVS:
-            pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS, self.Zmienne)
-            pliki_z_niepoprawnymi_kluczami = cvs_sprawdz_czy_tylko_dozwolone_klucze(self.plikiDoCVS, self.Zmienne)
+            pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami = \
+                cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(self.plikiDoCVS, self.Zmienne)
             if pliki_z_niepoprawnymi_kluczami:
                 l_plik = '\n'.join([n_pliku + ': ' + ', '.join(pliki_z_niepoprawnymi_kluczami[n_pliku]) for
                                           n_pliku in pliki_z_niepoprawnymi_kluczami])
