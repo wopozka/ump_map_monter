@@ -56,6 +56,8 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
     funkcja sprawdza czy w plikach zaznaczonych do commitu sa tylko dozwolone klucze, jesli sa niedozwolone
     to zwraca ich nazwy w postaci tupli, jesli nie ma zwraca pusta tuple
     dodatkowo sprawddzamy obecnosc konfliktow
+    :param pliki_do_sprawdzenia = nazwy plikow do sprawdzenia, zmienne = inicjowane zmienne
+    :return (pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami)
     """
     pliki_z_niepoprawnymi_kluczami = defaultdict(lambda: set())
     pliki_z_konfliktami = {}
