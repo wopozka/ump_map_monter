@@ -65,12 +65,12 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
         nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
         with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
             for zawartosc in plik_w_cvs.readlines():
-                if zawartosc.startswith(';') or '=' not in zawartosc:
+                if zawartosc.startswith(';'):
                     continue
-                elif zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
+                if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
                         or zawartosc.startswith(">>>>>>>"):
                     pliki_z_konfliktami.add(n_pliku)
-                else:
+                if n_pliku.endswith('.txt'):
                     klucz, wartosc = zawartosc.split('=', 1)
                     if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
                             klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE:
