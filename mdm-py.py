@@ -70,7 +70,7 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
                 if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
                         or zawartosc.startswith(">>>>>>>"):
                     pliki_z_konfliktami.add(n_pliku)
-                if n_pliku.endswith('.txt'):
+                if n_pliku.endswith('.txt') and '=' in zawartosc:
                     klucz, wartosc = zawartosc.split('=', 1)
                     if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
                             klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE:
