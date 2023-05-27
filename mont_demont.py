@@ -1067,6 +1067,7 @@ class tabelaKonwersjiTypow(object):
             'policja': 'POLICJA',
             'Praktiker': 'BUDOWLANE',
             'Real': 'HIPER',
+            'Rossmann': 'SPECIAL',
             'Shell': 'PALIWO',
             'spo¿ywczy': 'SPOZYWCZY',
             'stacja paliw': 'PALIWO',
