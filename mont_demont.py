@@ -1941,7 +1941,7 @@ class PlikMP1(object):
     def stworz_ulice_nr_tel_url(daneDoZapisu):
         for klucz in ('StreetDesc', 'HouseNumber', 'Phone', 'MiscInfo'):
             if klucz in daneDoZapisu:
-                daneDoZapisu[klucz].replace(',', '°')
+                daneDoZapisu[klucz] = daneDoZapisu[klucz].replace(',', '°')
         if 'MiscInfo' in daneDoZapisu:
             if 'StreetDesc' not in daneDoZapisu:
                 daneDoZapisu['StreetDesc'] = ''
