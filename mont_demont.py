@@ -15,6 +15,7 @@ import argparse
 import glob
 import hashlib
 import difflib
+import json
 import subprocess
 import tempfile
 import shutil
@@ -746,7 +747,7 @@ class UstawieniaPoczatkowe(object):
 
 
 class tabelaKonwersjiTypow(object):
-    def __init__(self, Zmienne, stderr_stdout_writer):
+    def __init__(self, Zmienne, stderr_stdout_writer, wlasny_alias2type={}):
         self.Zmienne = Zmienne
         self.type2Alias = self.create_type2Alias()
         self.name2Alias = self.create_name2Alias()
@@ -760,8 +761,10 @@ class tabelaKonwersjiTypow(object):
         if not self.read_pnt2poi_txt():
             self.merge_alias2TypeFromFile_and_alias2Type()
             self.merge_type2AliasFromFile_and_type2Alias()
+        self.wlasny_alias2type = wlasny_alias2type
 
-    def create_type2Alias(self):
+    @staticmethod
+    def create_type2Alias():
         type_2_alias = {
             '0x0600': ["poi_large_citi", "poi_major_citi"],
             '0x0b00': ["city", "geo_name_man", "poi_small_citi"],
@@ -1033,7 +1036,8 @@ class tabelaKonwersjiTypow(object):
         }
         return type_2_alias
 
-    def create_name2Alias(self):
+    @staticmethod
+    def create_name2Alias():
         # mozna uzupelniac tabele konwersji nazwy na typ. Format jak ponizej. Prosze dodawac alfabetycznie
         # sortowanie po nazwie
         name_2_alias = {
@@ -1174,6 +1178,17 @@ class tabelaKonwersjiTypow(object):
                                 self.alias2TypeFromFile[alias] = type
             # print(self.alias2TypeFromFile)
             return 0
+
+    def zwroc_type_prefix_suffix_dla_aliasu(self, alias):
+        if alias in self.wlasny_alias2type:
+            return self.wlasny_alias2type[alias]['Type'], self.wlasny_alias2type[alias]['Prefix'], \
+                   self.wlasny_alias2type[alias]['Suffix']
+        elif alias in self.alias2Type:
+            return self.alias2Type[alias], '', ''
+        elif alias.startswith('0x'):
+            return alias, '', ''
+        else:
+            return '0x0', '', ''
 
 
 class Obszary(object):
@@ -2421,14 +2436,14 @@ class ObiektNaMapie(object):
     dla poi, miast, adresow, polyline, polygone
     """
 
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(0, 0)):
         self.Komentarz = []
         self.DataX = []
         self.PoiPolyPoly = ''
         self.Plik = Plik
         self.CityIdx = -1
         self.Dane1 = []
-        self.alias2Type = alias2Type.alias2Type
+        self.tab_konw_typow = tab_konw_typow
         self.args = args
         self.czyDodacCityIdx = args.cityidx
         self.errOutWriter = errOutWriter(args)
@@ -2437,6 +2452,8 @@ class ObiektNaMapie(object):
         self.tryb_mkgmap = False
         if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap:
             self.tryb_mkgmap = True
+        self.dlugoscRekordowMax = rekordy_max_min[0]
+        self.dlugoscRekordowMin = rekordy_max_min[1]
 
     def dodaj_komentarz_do_dane(self):
         if self.Komentarz:
@@ -2511,10 +2528,8 @@ class ObiektNaMapie(object):
 
 
 class Poi(ObiektNaMapie):
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args, typ_obj='pnt'):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
-        self.dlugoscRekordowMax = 8
-        self.dlugoscRekordowMin = 7
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, typ_obj='pnt'):
+        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(8, 7))
         self.entry_otwarte_do_extras = False
         if hasattr(args, 'entry_otwarte_do_extras'):
             self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
@@ -2559,36 +2574,26 @@ class Poi(ObiektNaMapie):
 
     def pnt2Dane(self, LiniaZPliku, orgLinia):
         """Funkcja konwertujaca linijke z pliku pnt na wewnetrzn¹ reprezentacje danego poi"""
-
         self.dodaj_komentarz_do_dane()
-        # 0 Dlugosc, 1 Szerokosc, 2 EndLevel, 3 Label, 4 UlNrTelUrl, 5 Miasto, 6 Type, 7 KodPoczt
+        # 0 Dlugosc, 1 Szerokosc, 2 EndLevel, 3 Label, 4 UlNrTelUrl, 5 Miasto, 6 Typ, 7 KodPoczt
         self.PoiPolyPoly = '[POI]'
         self.Dane1.append(self.PoiPolyPoly)
-        poi_type = '0x0'
-        # Tworzymy Type=
+        poi_type, label_prefix, label_suffix = self.tab_konw_typow.zwroc_type_prefix_suffix_dla_aliasu(LiniaZPliku[6])
         if self.typ_obj == 'pnt':
-            try:
-                poi_type = self.alias2Type[LiniaZPliku[6]]
-                self.Dane1.append('Type=' + poi_type)
-            except KeyError:
-                if LiniaZPliku[6].startswith('0x'):
-                    self.Dane1.append('Type=' + LiniaZPliku[6])
-                    poi_type = LiniaZPliku[6]
-                else:
-                    self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
-                    self.stderrorwrite(repr(orgLinia))
-                    self.Dane1.append('Type=0x0')
+            if poi_type == '0x0':
+                self.stderrorwrite('Nieznany typ %s w pliku %s' % (LiniaZPliku[6], self.Plik))
+                self.stderrorwrite(repr(orgLinia))
+            self.Dane1.append('Type=' + poi_type)
         else:
             if LiniaZPliku[6] == 'ADR' or LiniaZPliku[6] == 'HOUSENUMBER':
-                self.Dane1.append('Type=0x2800')
-                poi_type = '0x2800'
+                self.Dane1.append('Type=' + poi_type)
             else:
                 self.stderrorwrite('Niepoprawny typ dla punktu adresowego')
                 self.stderrorwrite(','.join(LiniaZPliku))
                 self.Dane1.append('Type=0x0')
         # Tworzymy Label=
         if LiniaZPliku[3]:
-            self.Dane1.append('Label=' + LiniaZPliku[3].strip().replace('°', ','))
+            self.Dane1.append('Label=' + label_prefix + LiniaZPliku[3].strip().replace('°', ',') + label_suffix)
         # Tworzymy EndLevel
         EndLevel = LiniaZPliku[2].lstrip()
         if EndLevel != '0':
@@ -2644,10 +2649,8 @@ class City(ObiektNaMapie):
                     '0x700': '7', '0x600': '8', '0x500': '9', '0x400': '10'}
     typetoEndlevel = [0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4]
 
-    def __init__(self, Plik, IndeksyMiast, alias2Type, args):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, alias2Type, args)
-        self.dlugoscRekordowMax = 4
-        self.dlugoscRekordowMin = 4
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args):
+        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(4, 4))
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.city2Dane(LiniaZPliku)
@@ -2920,6 +2923,46 @@ class plikPNT(object):
         return self.Dane1
 
 
+
+def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
+    # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
+    try:
+        with open(os.path.join(os.getcwd(), plik_z_definicjami_typow[0])) as plik_aliasow:
+            definicje_aliasow_z_pliku = plik_aliasow.readlines()
+    except FileNotFoundError:
+        print('Nie moge znalezc pliku: ' + os.path.join(os.getcwd(), plik_z_definicjami_typow))
+        print('Ignoruje definicje')
+        return {}
+    if definicje_aliasow_z_pliku:
+        return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
+    return {}
+
+def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku):
+    wlasne_definicje_typow = {}
+    dozwolone_klucze = {'Alias', 'Type', 'Prefix', 'Suffix'}
+    for definicja_aliasu in definicje_aliasow_z_pliku:
+        definicja_aliasu = definicja_aliasu.strip()
+        if not definicja_aliasu or definicja_aliasu.startswith('#'):
+            continue
+        try:
+            def_aliasu = json.loads(definicja_aliasu)
+        except json.decoder.JSONDecodeError:
+            print('Niepoprawna linia w pliku z aliasami:')
+            print(definicja_aliasu)
+            continue
+        if dozwolone_klucze.difference(a for a in def_aliasu):
+            #  jako ze plik z wlasnymi definicjami ma dzialac tylko w trybie wsadowym, dlatego nie uzywam
+            # stderrorwrite ale po prostu print. Ulatwia to tez testowanie, bo wtedy metoda jest po prostu
+            # statyczna
+            print('Niepoprawna definicja w pliku z aliasami, ignoruje')
+            print(definicja_aliasu)
+            continue
+        alias = def_aliasu['Alias']
+        print('Alias dla %s wczytany.' % alias)
+        def_aliasu.pop('Alias')
+        wlasne_definicje_typow[alias] = def_aliasu
+    return wlasne_definicje_typow
+
 def zwroc_dane_do_gui(args, listaDiffow, slownikHash):
     if hasattr(args, 'queue'):
         args.queue.put([listaDiffow, slownikHash])
@@ -3071,8 +3114,11 @@ def montujpliki(args, naglowek_mapy=''):
     # sprytne entrypoints
     if hasattr(args, 'sprytne_entrypoints') and args.sprytne_entrypoints:
         args.entry_otwarte_do_extras = True
-
-    tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
+    # wlasnorecznie zdefiniowane aliasy
+    wlasne_aliasy = {}
+    if hasattr(args, 'wlasne_typy') and args.wlasne_typy:
+        wlasne_aliasy = wczytaj_json_i_zwroc_wlasne_definicje_aliasow(args.wlasne_typy)
+    tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer, wlasny_alias2type=wlasne_aliasy)
     try:
         os.remove(os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
     except FileNotFoundError:
@@ -3881,17 +3927,18 @@ def kompiluj_mape(args):
                 skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
                 break
         if not skrot_kraju:
-            print('Nie moge ustalic skrotu kraju dla: %s' %plik_do_k)
+            print('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
         else:
             pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
     if not pliki_do_kompilacji:
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
-    if args.mkgmap_path is not None:
+    if args.mkgmap_path:
         mkg_map = args.mkgmap_path
     else:
         mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--code-page=1250', '--lower-case']
+    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--code-page=1250',
+                                                                        '--lower-case']
     if args.routing:
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
@@ -3928,9 +3975,9 @@ def ustaw_force_speed(args):
     podnies_poziom = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'podnies-poziom.pl')
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     wynik_mp_podnies_poziom = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
-                                                 delete=False)
+                                                          delete=False)
     wynik_mp_podnies_poziom.close()
-    podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '--inpfile' ,wynik_mp, '--outfile',
+    podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '--inpfile', wynik_mp, '--outfile',
                            wynik_mp_podnies_poziom.name]
     print(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
@@ -4012,6 +4059,9 @@ def main(argumenty):
                                       action='store_true', default=False)
     parser_montuj_mkgmap.add_argument('-p', '--podnies-poziom', help='Uruchom skrypt podnies-poziom.pl na pliku mp',
                                       action='store_true', default=False)
+    parser_montuj_mkgmap.add_argument('-wt', '--wlasne-typy', default=[], nargs=1,
+                                      help='Plik zawierajacy wlasne defnicje typow dla konwersji Typ->Type, oraz '
+                                           'reguly zmiany Label')
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
     # parser dla komendy demontuj/demont
@@ -4112,7 +4162,7 @@ def main(argumenty):
 
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
-    parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default=None, help='Sciezka do programu mkgmap')
+    parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
     parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
                                       help="Generuj plik gmapsupp.img")
     parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,

@@ -626,3 +626,11 @@ TEST_ZWROC_TYP_KOMENTARZ = (
 def testuj_zwroc_typ_komentarz(target, answer):
     assert mont_demont.zwroc_typ_komentarz(target) == answer
 
+TEST_WLASNE_ALIASY = (
+    (('{"Alias": "AAA", "Type": "0x0", "Prefix": "", "Suffix": ""}',), {'AAA': {'Type': '0x0', 'Prefix': '', 'Suffix': ''}}),
+    (('{"Alias": "AAA", "Type": "0x1", "Prefix": "", "Suffix": ""}', '{"Alias": "BBB", "Type": "0x2", "Prefix": "", "Suffix": ""}'), {'AAA': {'Type': '0x1', 'Prefix': '', 'Suffix': ''}, 'BBB': {'Type': '0x2', 'Prefix': '', 'Suffix': ''}}),
+    (('{"Alias": "AAA", "Type": "0x1", "Prefix": "", "Suffix": ""}', '{"Type": "0x2", "Prefix": "", "Suffix": ""}'), {'AAA': {'Type': '0x1', 'Prefix': '', 'Suffix': ''}}),
+)
+@pytest.mark.parametrize('target, answer', TEST_WLASNE_ALIASY)
+def testuj_zbuduj_defnicje_wlasne_defnicje_aliasow(target, answer):
+    assert mont_demont.zwroc_wlasne_definicje_aliasow(target) == answer
