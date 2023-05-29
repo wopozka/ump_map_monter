@@ -2931,8 +2931,13 @@ def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
         with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
     except FileNotFoundError:
-        print('Nie moge znalezc pliku: %s' % plik_ze_sciezka)
-        print('Ignoruje definicje')
+        print('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
+        return {}
+    except PermissionError:
+        print('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
+        return {}
+    except IOError:
+        print('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     if definicje_aliasow_z_pliku:
         return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
