@@ -27,29 +27,29 @@ from datetime import date
 from datetime import datetime
 
 
-class errOutWriter(object):
+class ErrOutWriter(object):
     def __init__(self, args):
         self.args = args
 
-    def stderrorwrite(self, string):
+    def stderrorwrite(self, string_to_print):
         if hasattr(self.args, 'stderrqueue'):
-            if not string.endswith('\n'):
-                string += '\n'
-            if string.startswith('\n'):
-                string = string.lstrip()
-            self.args.stderrqueue.put(string)
+            self.args.stderrqueue.put(self.modyfiku_komunikat(string_to_print))
         else:
-            print(string, file=sys.stderr)
+            print(string_to_print, file=sys.stderr)
 
-    def stdoutwrite(self, string):
+    def stdoutwrite(self, string_to_print):
         if hasattr(self.args, 'stdoutqueue'):
-            if not string.endswith('\n'):
-                string += '\n'
-            if string.startswith('\n'):
-                string = string.lstrip()
-            self.args.stdoutqueue.put(string)
+            self.args.stdoutqueue.put(self.modyfiku_komunikat(string_to_print))
         else:
-            print(string, file=sys.stdout)
+            print(string_to_print, file=sys.stdout)
+
+    @staticmethod
+    def modyfikoj_komunikat(komunikat):
+        if not komunikat.endswith('\n'):
+            komunikat += '\n'
+        if komunikat.startswith('\n'):
+            komunikat = string.lstrip()
+        return komunikat
 
 
 class TestyPoprawnosciDanych(object):
@@ -78,9 +78,10 @@ class TestyPoprawnosciDanych(object):
     # ponizsze klucze pojawiaja sie wielokrotnie w rekordzie, dlatego monter dodaje numery na koncu, aby je
     # rozroznic. Z tego powodu sa traktowane inaczej
     DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
+
     def __init__(self, args):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
-        self.error_out_writer = errOutWriter(args)
+        self.error_out_writer = ErrOutWriter(args)
         self.typy_label_z_miastem = [
             '0x1',  # motorway
             '0x2',  # principal highway
@@ -134,21 +135,21 @@ class TestyPoprawnosciDanych(object):
                                               'ForceClass': self.dozwolona_wartosc_dla_ForceClass,
                                               'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight
                                               }
-        self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak', # brak zakazu
-                                            'B-1', 'B1', 'ZAKAZ' , 'RESTRYKCJA', # inna restrykcja
-                                            'B-2', 'B2', 'ZAKAZ_PROSTO', 'Z_PROSTO', # zakaz na wprost
-                                            'B-21', 'B21', 'ZAKAZ_LEWO', 'Z_LEWO', # zakaz w lewo
-                                            'B-22', 'B22', 'ZAKAZ_PRAWO' ,'Z_PRAWO', # zakaz w prawo
-                                            'B-23', 'B23', 'ZAKAZ_ZAWRACANIA', 'Z_ZAWRACANIA' ,'NO_UTURN', # zakaz zawracania
-                                            'C-2', 'C2', 'NAKAZ_PRAWO', 'N_PRAWO', # nakaz w prawo
-                                            'C-4', 'C4', 'NAKAZ_LEWO' , 'N_LEWO', # nakaz w lewo
-                                            'C-5', 'C5', 'NAKAZ_PROSTO', 'N_PROSTO', # nakaz prosto
+        self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak',  # brak zakazu
+                                            'B-1', 'B1', 'ZAKAZ', 'RESTRYKCJA',  # inna restrykcja
+                                            'B-2', 'B2', 'ZAKAZ_PROSTO', 'Z_PROSTO',  # zakaz na wprost
+                                            'B-21', 'B21', 'ZAKAZ_LEWO', 'Z_LEWO',  # zakaz w lewo
+                                            'B-22', 'B22', 'ZAKAZ_PRAWO', 'Z_PRAWO',  # zakaz w prawo
+                                            'B-23', 'B23', 'ZAKAZ_ZAWRACANIA', 'Z_ZAWRACANIA', 'NO_UTURN',  # zakaz zawracania
+                                            'C-2', 'C2', 'NAKAZ_PRAWO', 'N_PRAWO',  # nakaz w prawo
+                                            'C-4', 'C4', 'NAKAZ_LEWO', 'N_LEWO',  # nakaz w lewo
+                                            'C-5', 'C5', 'NAKAZ_PROSTO', 'N_PROSTO',  # nakaz prosto
                                             'C-6', 'C6', 'NAKAZ_PRAWO_PROSTO', 'N_PRAWO_PROSTO', 'NAKAZ_PROSTO_PRAWO',
-                                            'N_PROSTO_PRAWO', # nakaz prosto lub w prawo
+                                            'N_PROSTO_PRAWO',  # nakaz prosto lub w prawo
                                             'C-7', 'C7', 'NAKAZ_LEWO_PROSTO', 'N_LEWO_PROSTO', 'NAKAZ_PROSTO_LEWO',
-                                            'N_PROSTO_LEWO', # nakaz prosto lub w lewo
+                                            'N_PROSTO_LEWO',  # nakaz prosto lub w lewo
                                             'C-8', 'C8', 'NAKAZ_LEWO_PRAWO', 'N_LEWO_PRAWO', 'NAKAZ_PRAWO_LEWO',
-                                            'N_PRAWO_LEWO' # nakaz prawo lub w lewo
+                                            'N_PRAWO_LEWO'  # nakaz prawo lub w lewo
                                             }
         self.dozwolone_wartosci_dla_ForceSpeed = {'0', '1', '2', '3', '4', '5', '6', '7', 'faster', 'slower'}
         self.dozwolone_wartosci_dla_ForceClass = {'0', '1', '2', '3', '4'}
@@ -238,15 +239,17 @@ class TestyPoprawnosciDanych(object):
 
     def dozwolona_wartosc_dla_EndLevel(self, wartosc):
         return wartosc in self.dozwolone_wartosci_dla_EndLevel, ", ".join(self.dozwolone_wartosci_dla_EndLevel)
-        
-    def dozwolona_wartosc_dla_SignAngle(self, wartosc):
+
+    @staticmethod
+    def dozwolona_wartosc_dla_SignAngle(wartosc):
         try:
             wartosc_int = int(wartosc)
         except ValueError:
             return False, 'dozwolone wartosci: -360 do 360'
         return -360 <= wartosc_int <= 360, 'dozwolone wartosci: -360 do 360'
 
-    def dozwolona_wartosc_dla_SignPos(self, wartosc):
+    @staticmethod
+    def dozwolona_wartosc_dla_SignPos(wartosc):
         if not (wartosc.startswith('(') and wartosc.endswith(')')):
             return False, '(XX.XXXXX,YY.YYYYY)'
         if ',' not in wartosc:
@@ -261,7 +264,8 @@ class TestyPoprawnosciDanych(object):
     def dozwolona_wartosc_dla_Sign(self, wartosc):
         return wartosc in self.dozwolone_wartosci_dla_sign, 'sprawdz na wiki: http://ump.fuw.edu.pl/wiki/Restrykcje'
 
-    def dozwolona_wartosc_dla_MaxWeight(self, wartosc):
+    @staticmethod
+    def dozwolona_wartosc_dla_MaxWeight(wartosc):
         try:
             maks_masa = float(wartosc)
         except ValueError:
@@ -274,7 +278,7 @@ class TestyPoprawnosciDanych(object):
         for tmpkey in dane_do_zapisu:
             if tmpkey.startswith('Data'):
                 if '),(' in dane_do_zapisu[tmpkey]:
-                    self.wspolrzedne_obiektu =  dane_do_zapisu[tmpkey].split('),(', 1)[0] + ')'
+                    self.wspolrzedne_obiektu = dane_do_zapisu[tmpkey].split('),(', 1)[0] + ')'
                 else:
                     self.wspolrzedne_obiektu = dane_do_zapisu[tmpkey]
                 return self.wspolrzedne_obiektu
@@ -407,7 +411,6 @@ class TestyPoprawnosciDanych(object):
                     return 'blad_krotkich_remontow'
         return ''
 
-
     @staticmethod
     def clockwisecheck(wspolrzedne):
         """
@@ -415,7 +418,7 @@ class TestyPoprawnosciDanych(object):
         :param wspolrzedne: wspolrzedne wielokata (ronda) w postaci stringa (XX.XXXXX,YY.YYYYY),(XX.XXXXX,YY.YYYYY)
         :return: -1: wielokat (rondo) kreci sie w lewo, 1: wielokat (rondo) kreci sie w prawo, 0: nie wiadomo
         """
-        Pole = 0
+        pole_wielokata = 0
         wspolrzedne = wspolrzedne.lstrip('(')
         wspolrzedne = wspolrzedne.rstrip(')')
         c = wspolrzedne.split('),(')
@@ -434,12 +437,12 @@ class TestyPoprawnosciDanych(object):
             y1 = XY[(2 * i + 1)]
             x2 = XY[(2 * i + 2)]
             y2 = XY[(2 * i + 3)]
-            Pole = Pole + (x1 * y2 - x2 * y1)
-        if Pole > 0:
+            pole_wielokata = pole_wielokata + (x1 * y2 - x2 * y1)
+        if pole_wielokata > 0:
             return 1
-        elif Pole < 0:
+        elif pole_wielokata < 0:
             return -1
-        elif Pole == 0:
+        elif pole_wielokata == 0:
             return 0
 
     def sprawdzKierunekRonda(self, dane_do_zapisu):
@@ -544,7 +547,7 @@ class PaczerGranicCzesciowych(object):
     def podziel_diff_granic_czesciowych_na_rekordy(granice_czesciowe_diff):
         """
         Funkcja dzieli diff granic czesciowych na pojedyncze rekordy
-        :param granicze_czesciowe_diff: plik diff granic czesciowych
+        :param granice_czesciowe_diff: plik diff granic czesciowych
         :return: lista list zawierajaca rekordy granic czesciowych
         """
         granice_czesciowe_rekordy = []
@@ -684,9 +687,9 @@ class UstawieniaPoczatkowe(object):
 
     def ustaw_katalog_home(self, katalog_home):
         self.KatalogzUMP = katalog_home
-        self.uaktualnijZalezneHome()
+        self.uaktualnij_zalezne_home()
 
-    def uaktualnijZalezneHome(self):
+    def uaktualnij_zalezne_home(self):
         self.KatalogRoboczy = os.path.join(self.KatalogzUMP, 'roboczy')
         self.NetGen = os.path.join(os.path.join(self.KatalogzUMP, 'narzedzia'), 'netgen.exe')
 
@@ -703,7 +706,7 @@ class UstawieniaPoczatkowe(object):
                     if konf['UMPHOME'].startswith('~'):
                         konf['UMPHOME'] = os.path.join(os.path.expanduser('~') + konf['UMPHOME'][1:])
                     self.KatalogzUMP = konf['UMPHOME']
-                    self.uaktualnijZalezneHome()
+                    self.uaktualnij_zalezne_home()
                 elif 'UMPHOME' in konf and 'KATALOGROBOCZY' in konf:
                     if konf['UMPHOME'].startswith('~'):
                         konf['UMPHOME'] = os.path.join(os.path.expanduser('~'), konf['UMPHOME'][1:])
@@ -741,13 +744,13 @@ class UstawieniaPoczatkowe(object):
                 if len(bbb) > 0:
                     self.KatalogzUMP = sciezkaDoSkryptu.split('narzedzia', 1)[0]
                     self.KatalogRoboczy = sciezkaDoSkryptu.split('narzedzia', 1)[0]
-                    self.uaktualnijZalezneHome()
+                    self.uaktualnij_zalezne_home()
                 else:
                     print('Nie moge zgadnac konfiguracji', file=sys.stderr)
 
 
 class tabelaKonwersjiTypow(object):
-    def __init__(self, Zmienne, stderr_stdout_writer, wlasny_alias2type={}):
+    def __init__(self, Zmienne, stderr_stdout_writer, wlasny_alias2type=None):
         self.Zmienne = Zmienne
         self.type2Alias = self.create_type2Alias()
         self.name2Alias = self.create_name2Alias()
@@ -761,7 +764,9 @@ class tabelaKonwersjiTypow(object):
         if not self.read_pnt2poi_txt():
             self.merge_alias2TypeFromFile_and_alias2Type()
             self.merge_type2AliasFromFile_and_type2Alias()
-        self.wlasny_alias2type = wlasny_alias2type
+        self.wlasny_alias2type = {}
+        if wlasny_alias2type is not None:
+            self.wlasny_alias2type = wlasny_alias2type
 
     @staticmethod
     def create_type2Alias():
@@ -1096,13 +1101,13 @@ class tabelaKonwersjiTypow(object):
         if len(set(a.lower() for a in self.type2Alias[Type])) == 1:
             return self.type2Alias[Type][-1].upper(), '0x0'
         else:
-            pasujaceTypy = [a for a in Label.strip().split(' ') if a.lower() in self.type2Alias[Type]]
-            if pasujaceTypy:
-                if len(pasujaceTypy) > 1:
+            pasujace_typy = [a for a in Label.strip().split(' ') if a.lower() in self.type2Alias[Type]]
+            if pasujace_typy:
+                if len(pasujace_typy) > 1:
                     self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
                                                             '\nUzywam pierwszej wartosci z listy: %s'
-                                                            % pasujaceTypy[0])
-                return '', pasujaceTypy[0].upper()
+                                                            % pasujace_typy[0])
+                return '', pasujace_typy[0].upper()
             self.stderr_stdout_writer.stderrorwrite('Nie moge jednoznacznie dopasowac Type po Label.'
                                                     '\nUzywam pierwszej wartosci z listy: %s'
                                                     % self.type2Alias[Type][0])
@@ -1169,13 +1174,13 @@ class tabelaKonwersjiTypow(object):
                                 pass
                             else:
                                 # print(a)
-                                alias, type = a.split('=')
-                                type = type.split('#')[0].strip()
+                                alias, type_ = a.split('=')
+                                type_ = type_.split('#')[0].strip()
                                 alias = alias.strip()
                                 if alias in self.alias2TypeFromFile:
                                     self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu %s w pliku ' +
                                     plik_pnt2poi + '.' % alias)
-                                self.alias2TypeFromFile[alias] = type
+                                self.alias2TypeFromFile[alias] = type_
             # print(self.alias2TypeFromFile)
             return 0
 
@@ -1219,7 +1224,8 @@ class Obszary(object):
                 return a
         return 'None'
 
-    def point_inside_polygon(self, x, y, polyx, polyy):
+    @staticmethod
+    def point_inside_polygon(x, y, polyx, polyy):
         n = len(polyx)
         inside = False
         p1x = polyx[0]
@@ -1253,7 +1259,7 @@ class Obszary(object):
         return True, obszar_dla_poly.pop(), listawspolrzednychdosprawdzenia[0]
 
 
-class autoPlikDlaPoi(object):
+class AutoPlikDlaPoi(object):
     def __init__(self):
         self.obszar_typ_plik = defaultdict(lambda: defaultdict(lambda: 0))
         self.typ_plik = defaultdict(lambda: defaultdict(lambda: 0))
@@ -1307,7 +1313,7 @@ class autoPlikDlaPoi(object):
         return ''
  
 
-class autoPolylinePolygone(object):
+class AutoPlikDlaPolylinePolygone(object):
     def __init__(self, Zmienne, plik_nowosci_txt):
         # zmienne z nazwami plikow, tak aby w razie czego zmieniac w jedny miejscu, a nie w wielu
         WODA = 'woda.txt'
@@ -1408,7 +1414,7 @@ class autoPolylinePolygone(object):
                                 '0x53': [OBSZARY],  # piasek, wydmy
                                 }
 
-    def wypelnijObszarPlikWspolrzedne(self, pliki):
+    def wypelnij_obszar_plik_wspolrzedne(self, pliki):
         for a in pliki:
             if a.startswith('UMP-'):
                 tmp = a.split(os.sep)
@@ -1446,12 +1452,12 @@ class autoPolylinePolygone(object):
         else:
             return 'brak_klucza'
 
-    def zwroc_plik_dla_poly(self, typobiektu, type, obszar, wspolrzedne):
+    def zwroc_plik_dla_poly(self, typobiektu, poly_type, obszar, wspolrzedne):
         try:
             if typobiektu == '[POLYGON]':
-                auto_obszary_typy = self.TypPolygon2Plik[type]
+                auto_obszary_typy = self.TypPolygon2Plik[poly_type]
             else:
-                auto_obszary_typy = self.TypPolyline2Plik[type]
+                auto_obszary_typy = self.TypPolyline2Plik[poly_type]
         except KeyError:
             return self.plik_nowosci_txt
         for mozliwepliki in auto_obszary_typy:
@@ -1471,16 +1477,16 @@ class IndeksyMiast(object):
                                'Region1=Wszystkie', 'CountryIdx1=1', '[END-Regions]\n', '[Cities]']
         self.sekcja_cityname = ('CountryName=Polska~[0x1d]PL', 'RegionName=Wszystkie', 'DistrictName=',)
 
-    def zwrocIndeksMiasta(self, nazwaMiasta):
-        if nazwaMiasta not in self.globalCityIdx:
+    def zwroc_indeks_miasta(self, nazwa_miasta):
+        if nazwa_miasta not in self.globalCityIdx:
             self.actCityIdx += 1
-            self.globalCityIdx[nazwaMiasta] = self.actCityIdx
-            self.sekcja_cityidx.append('City' + str(self.actCityIdx) + '=' + nazwaMiasta)
+            self.globalCityIdx[nazwa_miasta] = self.actCityIdx
+            self.sekcja_cityidx.append('City' + str(self.actCityIdx) + '=' + nazwa_miasta)
             self.sekcja_cityidx.append('RegionIdx' + str(self.actCityIdx) + '=1')
-        return self.globalCityIdx[nazwaMiasta]
+        return self.globalCityIdx[nazwa_miasta]
 
 
-class plikMP1(object):
+class PlikMP1(object):
     """przechowuje zawartosc pliku mp do zapisu"""
     def __init__(self, Zmienne, args, tabela_konwersji_typow, Montuj=1, naglowek_mapy=''):
 
@@ -1493,9 +1499,9 @@ class plikMP1(object):
         self.tabela_konwersji_typow = tabela_konwersji_typow
         self.domyslneMiasta2 = {}
         self.cityIdxMiasto = []
-        self.errOutWriter = errOutWriter(args)
+        self.errOutWriter = ErrOutWriter(args)
         self.sciezka_zwalidowana = set()
-        self.auto_pliki_dla_poi = autoPlikDlaPoi()
+        self.auto_pliki_dla_poi = AutoPlikDlaPoi()
         self.dozwolone_obszary_dla_plikow = None
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
@@ -1503,8 +1509,8 @@ class plikMP1(object):
         if Montuj:
             self.plikDokladnosc = {}
             if not naglowek_mapy:
+                plik_naglowka_nazwa = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt')
                 try:
-                    plik_naglowka_nazwa = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'header.txt')
                     with open(plik_naglowka_nazwa, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as plik_naglowka:
                         self.naglowek = plik_naglowka.read()
                 # self.zawartosc.append(self.naglowek.rstrip()+'\n')
@@ -1523,7 +1529,7 @@ class plikMP1(object):
             # odpowiednich plikow, na poczatku ustawione jako None,
             # zmienia sie po pierwszym wywolaniu zapiszTXT poprzez funkcje ustawObszary
             self.obszary = None
-            self.autoobszary = autoPolylinePolygone(self.Zmienne, self.plik_nowosci_txt)
+            self.autoobszary = AutoPlikDlaPolylinePolygone(self.Zmienne, self.plik_nowosci_txt)
 
     def stderrorwrite(self, error_msg):
         self.errOutWriter.stderrorwrite(error_msg)
@@ -1579,18 +1585,18 @@ class plikMP1(object):
         return nazwa_pliku in self.dozwolone_obszary_dla_plikow
 
     def zwaliduj_sciezki_do_plikow(self):
-        if  self.dozwolone_obszary_dla_plikow is None:
+        if self.dozwolone_obszary_dla_plikow is None:
             self.zbuduj_dozwolone_obszary_dla_plikow()
         for plik in self.plikizMp:
             if not self.sprawdz_poprawnosc_sciezki(plik):
                 self.sciezka_zwalidowana.add(plik)
 
-    def cyfryHash(self, liniazCyframiHashem, zaokraglij):
+    def cyfry_hash(self, linia_z_cyfram_i_hashem, zaokraglij):
         """
         Wczytuje dokladnosc danego pliku oraz hash tego pliku zapisany w pliku mp. Nastepnie otwiera plik z dysku.
         Jesli oba hashe sa sobie rowne wtedy zwraca 0, w przeciwnym wypadku 1. Gdy nie ma hasha - jest pusty zwraca 2
         """
-        plik, dokladnosc, wartosc_hash, Miasto = liniazCyframiHashem.strip().split(';', 4)
+        plik, dokladnosc, wartosc_hash, Miasto = linia_z_cyfram_i_hashem.strip().split(';', 4)
         if zaokraglij != '0':
             dokladnosc = zaokraglij
 
@@ -1765,7 +1771,7 @@ class plikMP1(object):
                     rekord_danych_do_mp.append('[POI]\n')
                 elif klucz_danych_do_zapisu.startswith('Data'):
                     rekord_danych_do_mp.append(klucz_danych_do_zapisu.split('_')[0] + '=' +
-                                                               daneDoZapisu[klucz_danych_do_zapisu] + '\n')
+                                               daneDoZapisu[klucz_danych_do_zapisu] + '\n')
 
                 # wartosci bez kluczy doddane jako dziwne zapisz tutaj
                 elif klucz_danych_do_zapisu == 'Dziwne':
@@ -1773,7 +1779,7 @@ class plikMP1(object):
                         rekord_danych_do_mp.append(tmpbbb + '\n')
                 else:
                     rekord_danych_do_mp.append(klucz_danych_do_zapisu + '=' +
-                                                               daneDoZapisu[klucz_danych_do_zapisu] + '\n')
+                                               daneDoZapisu[klucz_danych_do_zapisu] + '\n')
 
             rekord_danych_do_mp.append('[END]\n')
             rekord_danych_do_mp.append('\n')
@@ -1853,8 +1859,8 @@ class plikMP1(object):
             szerokosc, dlugosc = daneDoZapisu[tmpData[0]].lstrip('(').rstrip(')').split(',')
             UlNrTelUrl = self.stworz_ulice_nr_tel_url(daneDoZapisu)
             liniaDoPnt = '  ' + szerokosc + ',  ' + dlugosc + ',  ' + daneDoZapisu['EndLevel'] + ',' + \
-                       daneDoZapisu['Label'] + ',' + UlNrTelUrl + ',' + daneDoZapisu['Miasto'] + ',' + \
-                       daneDoZapisu['Typ']
+                         daneDoZapisu['Label'] + ',' + UlNrTelUrl + ',' + daneDoZapisu['Miasto'] + ',' + \
+                         daneDoZapisu['Typ']
             if 'KodPoczt' in daneDoZapisu:
                 liniaDoPnt = liniaDoPnt + ',' + daneDoZapisu['KodPoczt'] + '\n'
             else:
@@ -1898,10 +1904,10 @@ class plikMP1(object):
                 # mamy Data w postaci Data0_0, Data0_1, Data0_2 itd, dla rozroznienia, dlatego przy zapisie do
                 # pliku trzeba do _ usunaæ
                 # stad tez mamy tmpaaa.split('_')[0]
-                #self.plikizMp[daneDoZapisu['Plik']].append(klucz_z_dane_do_zapisu.split('_')[0] + '=' +
+                # self.plikizMp[daneDoZapisu['Plik']].append(klucz_z_dane_do_zapisu.split('_')[0] + '=' +
                 #                                           daneDoZapisu[klucz_z_dane_do_zapisu] + '\n')
                 rekord_danych_do_mp.append(klucz_z_dane_do_zapisu.split('_')[0] + '=' +
-                                                           daneDoZapisu[klucz_z_dane_do_zapisu] + '\n')
+                                           daneDoZapisu[klucz_z_dane_do_zapisu] + '\n')
 
             elif klucz_z_dane_do_zapisu == 'Miasto':
                 # najpierw sprawdz czy lista zawiera jakies elementy, aby wykluczyc grzebanie w pustej
@@ -1931,7 +1937,11 @@ class plikMP1(object):
         self.plikizMp[daneDoZapisu['Plik']] += rekord_danych_do_mp
         # return rekord_danych_do_mp
 
-    def stworz_ulice_nr_tel_url(self, daneDoZapisu):
+    @staticmethod
+    def stworz_ulice_nr_tel_url(daneDoZapisu):
+        for klucz in ('StreetDesc', 'HouseNumber', 'Phone', 'MiscInfo'):
+            if klucz in daneDoZapisu:
+                daneDoZapisu[klucz].replace(',', '°')
         if 'MiscInfo' in daneDoZapisu:
             if 'StreetDesc' not in daneDoZapisu:
                 daneDoZapisu['StreetDesc'] = ''
@@ -1939,25 +1949,20 @@ class plikMP1(object):
                 daneDoZapisu['HouseNumber'] = ''
             if 'Phone' not in daneDoZapisu:
                 daneDoZapisu['Phone'] = ''
-            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                         daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
-                         daneDoZapisu['Phone'].replace(',', '°') + ';' + \
-                         daneDoZapisu['MiscInfo'].replace(',', '°')
+            return daneDoZapisu['StreetDesc'] + ';' + daneDoZapisu['HouseNumber'] + ';' + daneDoZapisu['Phone'] + ';' \
+                   + daneDoZapisu['MiscInfo']
         elif 'Phone' in daneDoZapisu:
             if 'StreetDesc' not in daneDoZapisu:
                 daneDoZapisu['StreetDesc'] = ''
             if 'HouseNumber' not in daneDoZapisu:
                 daneDoZapisu['HouseNumber'] = ''
-            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                         daneDoZapisu['HouseNumber'].replace(',', '°') + ';' + \
-                         daneDoZapisu['Phone'].replace(',', '°')
+            return daneDoZapisu['StreetDesc'] + ';' + daneDoZapisu['HouseNumber'] + ';' + daneDoZapisu['Phone']
         elif 'HouseNumber' in daneDoZapisu:
             if 'StreetDesc' not in daneDoZapisu:
                 daneDoZapisu['StreetDesc'] = ''
-            return daneDoZapisu['StreetDesc'].replace(',', '°') + ';' + \
-                         daneDoZapisu['HouseNumber'].replace(',', '°')
+            return daneDoZapisu['StreetDesc'] + ';' + daneDoZapisu['HouseNumber']
         elif 'StreetDesc' in daneDoZapisu:
-            return daneDoZapisu['StreetDesc'].replace(',', '°')
+            return daneDoZapisu['StreetDesc']
         else:
             return ''
 
@@ -1990,7 +1995,7 @@ class plikMP1(object):
             self.stdoutwrite('Wczytuje dokladnosc pliku i sprawdzam sumy kontrolne.')
             for dokladnosc_i_hash_pliku in dokladnosci_hashe_plikow.strip().split('\n'):
                 try:
-                    if self.cyfryHash(dokladnosc_i_hash_pliku, args.X):
+                    if self.cyfry_hash(dokladnosc_i_hash_pliku, args.X):
                         if args.demonthash:
                             self.stderrorwrite('[...] %s [FALSE].' % dokladnosc_i_hash_pliku.split(';')[0])
                         else:
@@ -2030,7 +2035,7 @@ class plikMP1(object):
                         pnt_typ = bbb[6].strip()
                     plik_dla_typu_w_obszarze = self.auto_pliki_dla_poi.zwroc_plik_dla_typu(UMP_obszar, pnt_typ)
                     if UMP_obszar != 'None' and plik_dla_typu_w_obszarze:
-                        self.stdoutwrite('%s --> %s' %(punkt_z_nowosci_pnt.strip(), plik_dla_typu_w_obszarze))
+                        self.stdoutwrite('%s --> %s' % (punkt_z_nowosci_pnt.strip(), plik_dla_typu_w_obszarze))
                         # najpierw usuwamy i dodajemy komentarze
                         for komentarz in komentarz_w_nowosci:
                             self.plikizMp[plik_dla_typu_w_obszarze].append(komentarz)
@@ -2092,7 +2097,7 @@ class plikMP1(object):
         Poprawne definicje to: ;;EntryPoint:, ;otwarte:
         dane_do_zapisu['Komentarz'] zawiera komentarze oddzielone \n
         """
-        if not 'Komentarz' in dane_do_zapisu:
+        if 'Komentarz' not in dane_do_zapisu:
             return dane_do_zapisu
         tmp_kom = ''.join(dane_do_zapisu['Komentarz'])
         if 'otwarte' not in tmp_kom and 'entrypoint' not in tmp_kom.lower():
@@ -2197,7 +2202,6 @@ class plikMP1(object):
             self.plikDokladnosc[dane_do_zapisu['Plik']] = self.plikDokladnosc[self.plik_nowosci_txt]
         return dane_do_zapisu
 
-
     def modyfikuj_plik_dla_poi(self, dane_do_zapisu):
         HW = ('0x2000', '0x2001', '0x2100', '0x2101', '0x210f', '0x2110', '0x2111', '0x2200', '0x2201', '0x2202',
               '0x2300', '0x2400', '0x2500', '0x2502', '0x2600', '0x2700',)
@@ -2265,8 +2269,9 @@ class plikMP1(object):
             del(dane_do_zapisu['OrigType'])
         return dane_do_zapisu
 
-    def koreguj_wpisy_dla_miast(self, dane_do_zapisu):
-         # Miasta < od 1000 dostaj¹ typ 0xe00
+    @staticmethod
+    def koreguj_wpisy_dla_miast(dane_do_zapisu):
+        # Miasta < od 1000 dostaj¹ typ 0xe00
         if dane_do_zapisu['Type'] in ('0xf00', '0x1000', '0x1100'):
             dane_do_zapisu['Type'] = '0xe00'
         # miasta > od 1000000 dostaja typ 0x0400
@@ -2319,7 +2324,8 @@ class plikMP1(object):
             dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
         return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
 
-    def zamien_przecinki_na_stopnie(self, dane_do_zapisu):
+    @staticmethod
+    def zamien_przecinki_na_stopnie(dane_do_zapisu):
         dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
         return dane_do_zapisu
 
@@ -2348,7 +2354,7 @@ class PlikiDoMontowania(object):
         if not hasattr(args, 'montuj_wedlug_klas'):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
-        self.errOutWriter = errOutWriter(args)
+        self.errOutWriter = ErrOutWriter(args)
         self.KatalogZeZrodlami = zmienne.KatalogzUMP
         self.kodowanie = zmienne.Kodowanie
         self.Obszary = obszary
@@ -2429,7 +2435,7 @@ class PlikiDoMontowania(object):
     def zwroc_obszary_txt(self):
         return self.ograniczGranice('obszary.txt')
 
-#    Klasa ogólna dla ka¿dego obiektu na mapie, ka¿dy obiekt ma podobne cechy, szczególne bêda ju¿ w klasach pochodnych
+
 class ObiektNaMapie(object):
     """
     Ogolna klasa dla wszystkich obiektow na mapie:
@@ -2446,7 +2452,7 @@ class ObiektNaMapie(object):
         self.tab_konw_typow = tab_konw_typow
         self.args = args
         self.czyDodacCityIdx = args.cityidx
-        self.errOutWriter = errOutWriter(args)
+        self.errOutWriter = ErrOutWriter(args)
         # indeksy miast
         self.IndeksyMiast = IndeksyMiast
         self.tryb_mkgmap = False
@@ -2500,11 +2506,11 @@ class ObiektNaMapie(object):
             del(self.Dane1[0])
         return 0
 
-    def stderrorwrite(self, string):
-        self.errOutWriter.stderrorwrite(string)
+    def stderrorwrite(self, komunikat):
+        self.errOutWriter.stderrorwrite(komunikat)
 
-    def stdoutwrite(self, string):
-        self.errOutWriter.stdoutwrite(string)
+    def stdoutwrite(self, komunikat):
+        self.errOutWriter.stdoutwrite(komunikat)
 
     def wyczyscRekordy(self):
         self.Komentarz = []
@@ -2514,7 +2520,7 @@ class ObiektNaMapie(object):
         self.Dane1 = []
 
     def ustaw_wartosc_zmiennej_cityidx(self, nazwa_miasta):
-        self.CityIdx = self.IndeksyMiast.zwrocIndeksMiasta(nazwa_miasta)
+        self.CityIdx = self.IndeksyMiast.zwroc_indeks_miasta(nazwa_miasta)
         return 0
 
     def dodaj_indeksy_miast_do_obiektu(self, nazwa_miasta):
@@ -2751,7 +2757,7 @@ class plikTXT(object):
         self.Dokladnosc = ''
         self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
-        self.errOutWriter = errOutWriter(args)
+        self.errOutWriter = ErrOutWriter(args)
         self.Dane1 = []
         self.punktzTXT = punktzTXT
 
@@ -2834,12 +2840,13 @@ class plikPNT(object):
         self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
         self.punktzPntAdrCiti = punktzPntAdrCiti
-        self.errOutWriter = errOutWriter(args)
+        self.errOutWriter = ErrOutWriter(args)
         self.Dane1 = []
 
-    def usunNaglowek(self, zawartoscPliku):
+    @staticmethod
+    def usunNaglowek(zawartoscPliku):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
-        # pomijaj wszystko od pocz¹tku do wyst¹pienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
+        # pomijaj wszystko od poczatku do wystapienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
         if len(zawartoscPliku) == 1:
             if zawartoscPliku[0].strip() == 0:
@@ -2923,7 +2930,6 @@ class plikPNT(object):
         return self.Dane1
 
 
-
 def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
     # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
     plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow[0])
@@ -2942,6 +2948,7 @@ def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
     if definicje_aliasow_z_pliku:
         return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
     return {}
+
 
 def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku):
     wlasne_definicje_typow = {}
@@ -2968,6 +2975,7 @@ def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku):
         def_aliasu.pop('Alias')
         wlasne_definicje_typow[alias] = def_aliasu
     return wlasne_definicje_typow
+
 
 def zwroc_dane_do_gui(args, listaDiffow, slownikHash):
     if hasattr(args, 'queue'):
@@ -3073,7 +3081,7 @@ def zwroc_typ_komentarz(nazwa_pliku):
 
 
 def montujpliki(args, naglowek_mapy=''):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
@@ -3131,7 +3139,7 @@ def montujpliki(args, naglowek_mapy=''):
         pass
 
     globalneIndeksy = IndeksyMiast()
-    zawartoscPlikuMp = plikMP1(Zmienne, args, tabKonw, Montuj=1, naglowek_mapy=naglowek_mapy)
+    zawartoscPlikuMp = PlikMP1(Zmienne, args, tabKonw, Montuj=1, naglowek_mapy=naglowek_mapy)
     # ListaObiektowDoMontowania=[]
     for pliki in plikidomont.Pliki:
         try:
@@ -3340,7 +3348,7 @@ def demontuj(args):
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Pracuje')
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
@@ -3352,7 +3360,7 @@ def demontuj(args):
         Zmienne.KatalogRoboczy = os.getcwd()
     # print(Zmienne.KatalogRoboczy)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = plikMP1(Zmienne, args, tabKonw, Montuj=0, naglowek_mapy='')
+    plikMp = PlikMP1(Zmienne, args, tabKonw, Montuj=0, naglowek_mapy='')
 
     # obszarTypPlik_thread = threading.Thread(target=uruchom_obszary_dla_poi, args=(auto_poi_kolejka_wejsciowa,
     #                                                                               auto_poi_kolejka_wyjsciowa))
@@ -3390,7 +3398,7 @@ def demontuj(args):
 
     # mamy liste plikow, teraz dla autopoly nalezy wczytac wspolrzedne z plikow ktore lapia sie na autopoly
     if args.autopolypoly:
-        plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(plikMp.plikizMp)
+        plikMp.autoobszary.wypelnij_obszar_plik_wspolrzedne(plikMp.plikizMp)
 
     # jezeli string konczy sie na [END] to split zwroci liste w ktorej ostatnia pozycja jest rowna
     # '' dlatego [0:-1]. Dodatkowo na koncu pliku zamontowane sa warstwy ktorych tez nie potrzebujemy
@@ -3542,7 +3550,7 @@ def edytuj(args):
         Zmienne = UstawieniaPoczatkowe(args.InputFile)
     else:
         Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphone)
@@ -3588,7 +3596,7 @@ def edytuj(args):
 
 
 def sprawdz_numeracje(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
 
     if not hasattr(args, 'mode'):
@@ -3614,7 +3622,7 @@ def sprawdz_numeracje(args):
 
 
 def sprawdz(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     if hasattr(args, 'sprawdzbuttonqueue'):
         args.sprawdzbuttonqueue.put('Pracuje')
@@ -3697,7 +3705,7 @@ def sprawdz(args):
 
 def cvsup(args):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
@@ -3735,7 +3743,7 @@ def cvsup(args):
 
 def czysc(args):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     zawartoscKatRob = os.listdir(Zmienne.KatalogRoboczy)
     plikiDoUsuniecia = []
 
@@ -3786,7 +3794,7 @@ def czysc(args):
 
 def rozdziel_na_klasy(args):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     if len(args.obszary) > 0:
         if args.obszary[0] == 'pwd':
             if os.getcwd().find('UMP') >= 0:
@@ -3845,7 +3853,7 @@ def patch(args):
         patchExe = 'patch'
     else:
         patchExe = os.path.join(Zmienne.KatalogzUMP, 'narzedzia' + os.sep + 'patch.exe')
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -3864,7 +3872,7 @@ def patch(args):
 
 
 def dodaj_dane_routingowe(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     if isinstance(args.output_filename, list):
         plik_wyjsciowy = args.output_filename[0]
     else:
@@ -3888,7 +3896,7 @@ def dodaj_dane_routingowe(args):
 
 
 def wojkuj(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
@@ -3909,7 +3917,7 @@ def wojkuj(args):
     os.remove(wynik_mp_wojek.name)
 
 def kompiluj_mape(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
     # dwuliterowe kody pastw za https://pl.wikipedia.org/wiki/ISO_3166-1https://pl.wikipedia.org/wiki/ISO_3166-1
@@ -3976,7 +3984,7 @@ def kompiluj_mape(args):
 
 
 def ustaw_force_speed(args):
-    stderr_stdout_writer = errOutWriter(args)
+    stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     podnies_poziom = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'podnies-poziom.pl')
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
