@@ -2926,11 +2926,12 @@ class plikPNT(object):
 
 def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
     # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
+    plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow[0])
     try:
-        with open(os.path.join(os.getcwd(), plik_z_definicjami_typow[0])) as plik_aliasow:
+        with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
     except FileNotFoundError:
-        print('Nie moge znalezc pliku: ' + os.path.join(os.getcwd(), plik_z_definicjami_typow))
+        print('Nie moge znalezc pliku: %s' % plik_ze_sciezka)
         print('Ignoruje definicje')
         return {}
     if definicje_aliasow_z_pliku:
