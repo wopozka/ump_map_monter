@@ -33,22 +33,22 @@ class ErrOutWriter(object):
 
     def stderrorwrite(self, string_to_print):
         if hasattr(self.args, 'stderrqueue'):
-            self.args.stderrqueue.put(self.modyfiku_komunikat(string_to_print))
+            self.args.stderrqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stderr)
 
     def stdoutwrite(self, string_to_print):
         if hasattr(self.args, 'stdoutqueue'):
-            self.args.stdoutqueue.put(self.modyfiku_komunikat(string_to_print))
+            self.args.stdoutqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stdout)
 
     @staticmethod
-    def modyfikoj_komunikat(komunikat):
+    def modyfikuj_komunikat(komunikat):
         if not komunikat.endswith('\n'):
             komunikat += '\n'
         if komunikat.startswith('\n'):
-            komunikat = string.lstrip()
+            komunikat = komunikat.lstrip()
         return komunikat
 
 
@@ -514,7 +514,7 @@ class PaczerGranicCzesciowych(object):
         z granice.txt pod nazwa narzedzia-granice.txt i na niego nakladana jest latka po konwersji. Jesli wszystko sie
         uda, wtedy mozna spokojnie skopiowac plik do katalogu narzedzia
         :param Zmienne:
-        :param plik_z_granicami: plik z granicami, uzywany do testow jednostkowych
+        :param plik_z_granicami_do_testow: plik z granicami, uzywany do testow jednostkowych
         """
         self.Zmienne = Zmienne
         self.tryb_testowy = False
