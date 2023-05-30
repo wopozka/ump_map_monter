@@ -2281,49 +2281,6 @@ class PlikMP1(object):
             dane_do_zapisu['Rozmiar'] = City.type2Rozmiar[dane_do_zapisu['Type']]
         return dane_do_zapisu
 
-    def koreguj_wpisy_dla_poi(self, dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy):
-        tmpData = [dane_do_zapisu[a] for a in dane_do_zapisu if a.startswith['Data']]
-        if dane_do_zapisu['POIPOLY'] != '[POI]' or dane_do_zapisu['Type'] in City.rozmiar2Type:
-            return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
-        if 'Miasto' not in dane_do_zapisu:
-            dane_do_zapisu['Miasto'] = ''
-        if 'Typ' not in dane_do_zapisu:
-            # obslugujemy tworzenie typu po nazwie
-            if 'Label' in dane_do_zapisu:
-                zgadnietyTypDokladny, zgdanietyTypPoAliasie = \
-                    self.tabela_konwersji_typow.zwrocTypPoLabel(dane_do_zapisu['Label'], dane_do_zapisu['Type'])
-                if zgadnietyTypDokladny:
-                    dane_do_zapisu['Typ'] = zgadnietyTypDokladny
-                else:
-                    if zgdanietyTypPoAliasie.startswith('0x'):
-                        self.stderrorwrite('Nieznany alias dla Type=%s.\nPunkt o wspolrzednych %s' %
-                                           (dane_do_zapisu['Type'], dane_do_zapisu[tmpData[0]]))
-                        dane_do_zapisu['Typ'] = '0x0'
-                    else:
-                        dane_do_zapisu['Typ'] = zgdanietyTypPoAliasie
-            else:
-                try:
-                    dane_do_zapisu['Typ'] = self.tabela_konwersji_typow.type2Alias[dane_do_zapisu['Type']][0].upper()
-                except KeyError:
-                    self.stderrorwrite('Nieznany alias dla Type=%s. Punkt o wspolrzednych %s' %
-                                       (dane_do_zapisu['Type'], dane_do_zapisu[tmpData[0]]))
-                    dane_do_zapisu['Typ'] = '0x0'
-        else:
-            if dane_do_zapisu['Typ'].startswith('0x'):
-                pass
-            elif dane_do_zapisu['Typ'] not in self.tabela_konwersji_typow.alias2Type:
-                self.stderrorwrite('Nieznany typ POI %s, w punkcie %s.' %
-                                   (dane_do_zapisu['Typ'], dane_do_zapisu[tmpData[0]]))
-        if 'EndLevel' not in dane_do_zapisu:
-            dane_do_zapisu['EndLevel'] = '0'
-        if len(tmpData) > 1:
-            self.stderrorwrite('Wielokrotne DataX= dla POI o wspolrzednych %s' % tmpData[0])
-        if 'Label' not in dane_do_zapisu_kolejnosc_kluczy:
-            dane_do_zapisu['Label'] = ''
-        else:
-            dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
-        return dane_do_zapisu, dane_do_zapisu_kolejnosc_kluczy
-
     @staticmethod
     def zamien_przecinki_na_stopnie(dane_do_zapisu):
         dane_do_zapisu['Label'] = dane_do_zapisu['Label'].replace(',', '°')
