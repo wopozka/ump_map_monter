@@ -137,9 +137,9 @@ TEST_ZWROC_REKORD_PLIKU_MP = (
 def test_zwroc_rekord_pliku_mp(target, answer):
     zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     args = Args()
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabela_konwersji_typow = mont_demont.tabelaKonwersjiTypow(zmienne, stderr_stdout_writer)
-    assert mont_demont.plikMP1(zmienne, args, tabela_konwersji_typow, Montuj=0).zwroc_rekord_pliku_mp(target) == answer
+    assert mont_demont.PlikMP1(zmienne, args, tabela_konwersji_typow, Montuj=0).zwroc_rekord_pliku_mp(target) == answer
 
 
 TEST_ADR_TO_MP = (
@@ -241,7 +241,7 @@ def test_plik_pnt_procesuj(target, answer):
     args = Args()
     args.cityidx = False
     args.entry_otwarte_do_extras = True
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     globalneIndeksy = mont_demont.IndeksyMiast()
@@ -258,7 +258,7 @@ TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ = (
 
 @pytest.mark.parametrize('target, answer', TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ)
 def test_entrypoint_otwarte_na_komentarz(target, answer):
-    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == OrderedDict(answer)
+    assert mont_demont.PlikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == OrderedDict(answer)
 
 TEST_MODYFIKUJ_PLIK_DLA_POI = (
     ({'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
@@ -276,9 +276,9 @@ TEST_MODYFIKUJ_PLIK_DLA_POI = (
 def test_modyfikuj_plik_dla_poi(target, answer):
     args = Args()
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, 0)
     plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.bankomaty.pnt': [], 'UMP-PL-Lodz/src/cities-Lodz.pnt': []}
     plikMp.zwaliduj_sciezki_do_plikow()
     assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target)) == OrderedDict(answer)
@@ -302,18 +302,18 @@ def test_modyfikuj_plik_dla_polygon_polyline(target, answer):
     args = Args()
     args.autopolypoly = target[1]
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, 0)
     plikMp.obszary = mont_demont.Obszary(['Lodz'], Zmienne)
     plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.obszary.txt': [], 'UMP-PL-Lodz/src/LODZ.budynki.txt': [],
                        'UMP-PL-Lodz/src/LODZ.kolej.txt': [], 'UMP-PL-Lodz/src/LODZ.zakazy.txt': []}
     plikMp.zwaliduj_sciezki_do_plikow()
-    plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(['UMP-PL-Lodz/src/LODZ.obszary.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.budynki.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.kolej.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.zakazy.txt'
-                                                      ])
+    plikMp.autoobszary.wypelnij_obszar_plik_wspolrzedne(['UMP-PL-Lodz/src/LODZ.obszary.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.budynki.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.kolej.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.zakazy.txt'
+                                                        ])
     assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target[0])) == answer
 
 TEST_STWORZ_MISC_INFO = (
@@ -336,9 +336,9 @@ TEST_STWORZ_MISC_INFO = (
 def test_stworz_misc_info(target, answer):
     args = Args()
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, 0)
     assert plikMp.stworz_misc_info(OrderedDict(target)) == answer
 
 TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
@@ -347,7 +347,7 @@ TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
 )
 @pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
 def test_czy_plik_jest_wykluczony(target, answer):
-    assert mont_demont.autoPlikDlaPoi().czy_plik_jest_wykluczony(target) == answer
+    assert mont_demont.AutoPlikDlaPoi().czy_plik_jest_wykluczony(target) == answer
 
 TEST_PLIK_TYP_DANE = (
     {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
@@ -380,7 +380,7 @@ TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
 )
 @pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
 def test_zwroc_plik_dla_typu(target, answer):
-    auto_plik = mont_demont.autoPlikDlaPoi()
+    auto_plik = mont_demont.AutoPlikDlaPoi()
     for dane_do_zapisu in TEST_PLIK_TYP_DANE:
         auto_plik.dodaj_plik_dla_poi(dane_do_zapisu)
     assert auto_plik.zwroc_plik_dla_typu(target[0], target[1]) == answer
@@ -493,9 +493,9 @@ def test_testuj_wielokrotne_data(target, answer):
     args = Args()
     testy_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, 0)
     assert plikMp.testuj_wielokrotne_data(target, testy_poprawnosci_danych) == answer
 
 TEST_ZAOKRAGLIJ = (
@@ -508,7 +508,7 @@ TEST_ZAOKRAGLIJ = (
 @pytest.mark.parametrize('target, answer', TEST_ZAOKRAGLIJ)
 def test_testuj_wielokrotne_data(target, answer):
     data, dokladnosc = target
-    assert mont_demont.plikMP1.zaokraglij(data, dokladnosc) == answer
+    assert mont_demont.PlikMP1.zaokraglij(data, dokladnosc) == answer
 
 TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
     (([';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
@@ -614,7 +614,7 @@ TEST_USUN_PUSTA_NUMERACJE = (
 
 @pytest.mark.parametrize('target, answer', TEST_USUN_PUSTA_NUMERACJE)
 def testuj_usun_pusta_numeracje(target, answer):
-    assert mont_demont.plikMP1.usun_pusta_numeracje(target) == answer
+    assert mont_demont.PlikMP1.usun_pusta_numeracje(target) == answer
 
 TEST_ZWROC_TYP_KOMENTARZ = (
     ('UMP-PL-Lodz/src/LODZ.ulice.txt', ('txt', '....[TXT] %s')),
