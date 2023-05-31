@@ -288,7 +288,7 @@ class TestyPoprawnosciDanych(object):
         self.wspolrzedne_obiektu = ''
 
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
-        if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]',):
+        if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]'):
             return ''
         for tmp_label in ('Label', 'adrLabel'):
             if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
@@ -1891,7 +1891,7 @@ class PlikMP1(object):
         #     daneDoZapisuKolejnoscKluczy.append('Floors')
 
         for klucz_z_dane_do_zapisu in (klucze for klucze in daneDoZapisu if not klucze.startswith('Plik')):
-            if klucz_z_dane_do_zapisu in ('Komentarz', 'Dziwne',):
+            if klucz_z_dane_do_zapisu in ('Komentarz', 'Dziwne'):
                 for wartosc_klucza in daneDoZapisu[klucz_z_dane_do_zapisu]:
                     rekord_danych_do_mp.append(wartosc_klucza + '\n')
                     # self.plikizMp[daneDoZapisu['Plik']].append(wartosc_klucza + '\n')
@@ -2028,7 +2028,7 @@ class PlikMP1(object):
                 bbb = punkt_z_nowosci_pnt.split(',')
                 bbb_len = len(bbb)
                 UMP_obszar = self.obszary.zwroc_obszar(float(bbb[0]), float(bbb[1]))
-                if bbb_len in (4, 7, 8,):
+                if bbb_len in (4, 7, 8):
                     if bbb_len == 4:
                         pnt_typ = 'MIASTO'
                     else:
@@ -2102,8 +2102,8 @@ class PlikMP1(object):
         tmp_kom = ''.join(dane_do_zapisu['Komentarz'])
         if 'otwarte' not in tmp_kom and 'entrypoint' not in tmp_kom.lower():
             return dane_do_zapisu
-        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=',) if ep in tmp_kom]
-        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=',) if otw in tmp_kom]
+        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=') if ep in tmp_kom]
+        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=') if otw in tmp_kom]
         ep_set = set([ep.lstrip(';') for ep in entry_point_defs])
         otw_set = set([otw.lstrip(';') for otw in otwarte_defs])
         # je¶li nie ma ani otwarte ani entrypoint w komentarzu nie id¼ dalej
@@ -2139,7 +2139,7 @@ class PlikMP1(object):
     @staticmethod
     def przenies_otwarte_i_entrypoint_do_komentarza(dane_do_zapisu):
         przedrostek = {'EntryPoint': ';;EntryPoint: ', 'Otwarte': ';otwarte: '}
-        for key in ('EntryPoint', 'Otwarte',):
+        for key in ('EntryPoint', 'Otwarte'):
             if key in dane_do_zapisu:
                 if 'Komentarz' in dane_do_zapisu:
                     dane_do_zapisu['Komentarz'].append(przedrostek[key] + dane_do_zapisu[key])
@@ -2426,9 +2426,9 @@ class ObiektNaMapie(object):
     def komentarz_na_entrypoint_i_otwarte(self):
         if not self.Komentarz:
             return 1
-        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=',) if
+        entry_point_defs = [ep for ep in (';;EntryPoint:', ';;EntryPoint=') if
                             ep in self.Komentarz[0] and ';' + ep not in self.Komentarz[0]]
-        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=',)
+        otwarte_defs = [otw for otw in (';otwarte:', ';Otwarte:', ';otwarte=', ';Otwarte=')
                         if otw in self.Komentarz[0] and ';' + otw not in self.Komentarz[0]]
         ep_set = set([ep.lstrip(';') for ep in entry_point_defs])
         otw_set = set([otw.lstrip(';') for otw in otwarte_defs])
@@ -2671,7 +2671,7 @@ class PolylinePolygone(ObiektNaMapie):
                     print('Nieznana opcja: %s' % tmpbbb, file=sys.stderr)
                     self.Dane1.append(tmpbbb)
                 else:
-                    if klucz in ('Miasto', 'City',):
+                    if klucz in ('Miasto', 'City'):
                         Klucze.add(klucz)
                         self.Dane1.append(tmpbbb)
                         self.ustaw_wartosc_zmiennej_cityidx(wartosc)
@@ -3409,7 +3409,7 @@ def demontuj(args):
                 naglowek.append('255,65535,3,8,0,0,' + nazwa_pliku.split(os.sep)[-1] + '\n')
             plikMp.plikizMp[nazwa_pliku] = naglowek + plikMp.plikizMp[nazwa_pliku]
 
-        if nazwa_pliku in ('_nowosci.txt', '_nowosci.pnt',):
+        if nazwa_pliku in ('_nowosci.txt', '_nowosci.pnt'):
             # plik _nowosci.txt musi miec jakakolwiek zawartosc, a plik _nowosci.pnt musi byc dluzszy niz naglowek
             if (nazwa_pliku == '_nowosci.txt' and plikMp.plikizMp[nazwa_pliku]) \
                     or (nazwa_pliku == '_nowosci.pnt' and len(plikMp.plikizMp[nazwa_pliku]) > 5):
