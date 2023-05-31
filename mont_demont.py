@@ -2117,7 +2117,7 @@ class PlikMP1(object):
             elem_end = ''
             entrypoint_czy_otwarte = ''
             for elem in entry_point_defs + otwarte_defs:
-                # linia musi siê zaczynaæ dok³±dnie jak dany element, czyli z jednym ¶rednikiem albo dwoma
+                # linia musi siê zaczynaæ dok³adnie jak dany element, czyli z jednym ¶rednikiem albo dwoma
                 # w zale¿no¶ci od tego czy to otwarte czy entrypoint. Jak jest wiêcej ¶redników to znaczy
                 # ¿e to komentarz, st±d wyrzucamy ;;otwarte i ;;;Entrypoint, bo to sugueruje ¿e zakomentowano
                 # rekord w pliku pnt
