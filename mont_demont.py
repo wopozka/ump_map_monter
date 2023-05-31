@@ -79,9 +79,9 @@ class TestyPoprawnosciDanych(object):
     # rozroznic. Z tego powodu sa traktowane inaczej
     DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
 
-    def __init__(self, args):
+    def __init__(self, args, error_out_writer):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
-        self.error_out_writer = ErrOutWriter(args)
+        self.error_out_writer = error_out_writer
         self.typy_label_z_miastem = [
             '0x1',  # motorway
             '0x2',  # principal highway
@@ -1488,7 +1488,7 @@ class IndeksyMiast(object):
 
 class PlikMP1(object):
     """przechowuje zawartosc pliku mp do zapisu"""
-    def __init__(self, Zmienne, args, tabela_konwersji_typow, Montuj=1, naglowek_mapy=''):
+    def __init__(self, Zmienne, args, tabela_konwersji_typow, stderr_stdout_writer, Montuj=1, naglowek_mapy=''):
 
         # zawartosc nowo tworzonego pliku mp, zawartosc z plikow skladowych do montazu
         self.zawartosc = []
@@ -1499,7 +1499,7 @@ class PlikMP1(object):
         self.tabela_konwersji_typow = tabela_konwersji_typow
         self.domyslneMiasta2 = {}
         self.cityIdxMiasto = []
-        self.errOutWriter = ErrOutWriter(args)
+        self.errOutWriter = stderr_stdout_writer
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = AutoPlikDlaPoi()
         self.dozwolone_obszary_dla_plikow = None
@@ -2307,11 +2307,11 @@ class PlikMP1(object):
 
 
 class PlikiDoMontowania(object):
-    def __init__(self, zmienne, args):
+    def __init__(self, zmienne, args, stderr_stdout_writer):
         if not hasattr(args, 'montuj_wedlug_klas'):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
-        self.errOutWriter = ErrOutWriter(args)
+        self.errOutWriter = stderr_stdout_writer
         self.KatalogZeZrodlami = zmienne.KatalogzUMP
         self.kodowanie = zmienne.Kodowanie
         self.Obszary = obszary
@@ -2399,7 +2399,7 @@ class ObiektNaMapie(object):
     dla poi, miast, adresow, polyline, polygone
     """
 
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(0, 0)):
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer, rekordy_max_min=(0, 0)):
         self.Komentarz = []
         self.DataX = []
         self.PoiPolyPoly = ''
@@ -2409,7 +2409,7 @@ class ObiektNaMapie(object):
         self.tab_konw_typow = tab_konw_typow
         self.args = args
         self.czyDodacCityIdx = args.cityidx
-        self.errOutWriter = ErrOutWriter(args)
+        self.errOutWriter = stderr_stdout_writer
         # indeksy miast
         self.IndeksyMiast = IndeksyMiast
         self.tryb_mkgmap = False
@@ -2491,8 +2491,9 @@ class ObiektNaMapie(object):
 
 
 class Poi(ObiektNaMapie):
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, typ_obj='pnt'):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(8, 7))
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer, typ_obj='pnt'):
+        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer,
+                               rekordy_max_min=(8, 7))
         self.entry_otwarte_do_extras = False
         if hasattr(args, 'entry_otwarte_do_extras'):
             self.entry_otwarte_do_extras = args.entry_otwarte_do_extras
@@ -2612,8 +2613,9 @@ class City(ObiektNaMapie):
                     '0x700': '7', '0x600': '8', '0x500': '9', '0x400': '10'}
     typetoEndlevel = ('0', '1', '1', '2', '2', '3', '3', '3', '4', '4', '4')
 
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(4, 4))
+    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer):
+        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer,
+                               rekordy_max_min=(4, 4))
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
         self.city2Dane(LiniaZPliku)
@@ -2708,13 +2710,12 @@ class PolylinePolygone(ObiektNaMapie):
 
 
 class plikTXT(object):
-    def __init__(self, NazwaPliku, args, punktzTXT):
+    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer):
         self.domyslneMiasto = ''
-        self.sciezkaNazwaPliku = NazwaPliku
         self.Dokladnosc = ''
         self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
-        self.errOutWriter = ErrOutWriter(args)
+        self.errOutWriter = stderr_stdout_writer
         self.Dane1 = []
         self.punktzTXT = punktzTXT
 
@@ -2778,26 +2779,25 @@ class plikTXT(object):
     def procesuj(self, zawartoscPlikuTXT):
         if not zawartoscPlikuTXT:
             self.Dokladnosc = '0'
-            self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
+            self.errOutWriter.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
             return []
         for tmpaaa in self.txt2rekordy(zawartoscPlikuTXT):
             self.punktzTXT.rekord2Dane(tmpaaa, self.domyslneMiasto)
             if self.Dokladnosc not in ('5', '6') and self.punktzTXT.DataX:
                 if self.ustalDokladnosc(self.punktzTXT.DataX):
-                    self.punktzTXT.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
+                    self.errOutWriter.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
             self.Dane1.extend(self.punktzTXT.Dane1)
             self.punktzTXT.wyczyscRekordy()
         return self.Dane1
 
 
 class plikPNT(object):
-    def __init__(self, NazwaPliku, args, punktzPntAdrCiti):
-        self.sciezkaNazwaPliku = NazwaPliku
+    def __init__(self, NazwaPliku, stderr_stdout_writer, punktzPntAdrCiti):
         self.Dokladnosc = ''
         self.NazwaPliku = os.path.basename(NazwaPliku)
         self.sciezkaNazwa = NazwaPliku
         self.punktzPntAdrCiti = punktzPntAdrCiti
-        self.errOutWriter = ErrOutWriter(args)
+        self.errOutWriter = stderr_stdout_writer
         self.Dane1 = []
 
     @staticmethod
@@ -2869,8 +2869,8 @@ class plikPNT(object):
             else:
                 rekordy = liniaPliku.split(',')
                 if not self.punktzPntAdrCiti.dlugoscRekordowMin <= len(rekordy) <= self.punktzPntAdrCiti.dlugoscRekordowMax:
-                    self.punktzPntAdrCiti.stderrorwrite('Bledna linia w pliku %s' % self.NazwaPliku)
-                    self.punktzPntAdrCiti.stderrorwrite(repr(liniaPliku))
+                    self.errOutWriter.stderrorwrite('Bledna linia w pliku %s' % self.NazwaPliku)
+                    self.errOutWriter.stderrorwrite(repr(liniaPliku))
 
                 else:
                     # punktzCity=City(pliki,tabKonw,args.cityidx)
@@ -2880,8 +2880,8 @@ class plikPNT(object):
                     self.punktzPntAdrCiti.liniaZPliku2Dane(rekordy, liniaPliku)
                     if not self.Dokladnosc or self.Dokladnosc == '0':
                         if self.ustalDokladnosc(liniaPliku):
-                            self.punktzPntAdrCiti.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
-                                                                % self.NazwaPliku)
+                            self.errOutWriter.errOutWriter('Nie moge ustalic dokladnosci dla pliku %s'
+                                                            % self.NazwaPliku)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
         return self.Dane1
@@ -3064,7 +3064,7 @@ def montujpliki(args, naglowek_mapy=''):
     else:
         args.tylkodrogi = 0
     try:
-        plikidomont = PlikiDoMontowania(Zmienne, args)
+        plikidomont = PlikiDoMontowania(Zmienne, args, stderr_stdout_writer)
     except (IOError, FileNotFoundError):
         return 0
 
@@ -3096,7 +3096,7 @@ def montujpliki(args, naglowek_mapy=''):
         pass
 
     globalneIndeksy = IndeksyMiast()
-    zawartoscPlikuMp = PlikMP1(Zmienne, args, tabKonw, Montuj=1, naglowek_mapy=naglowek_mapy)
+    zawartoscPlikuMp = PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, Montuj=1, naglowek_mapy=naglowek_mapy)
     # ListaObiektowDoMontowania=[]
     for pliki in plikidomont.Pliki:
         try:
@@ -3126,11 +3126,11 @@ def montujpliki(args, naglowek_mapy=''):
             # montowanie plikow cities
             if typ_pliku in ('pnt', 'adr', 'cities'):
                 if typ_pliku == 'cities':
-                    punktzpnt = City(pliki, globalneIndeksy, tabKonw, args)
+                    punktzpnt = City(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
                 else:
-                    punktzpnt = Poi(pliki, globalneIndeksy, tabKonw, args, typ_obj=typ_pliku)
+                    punktzpnt = Poi(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer, typ_obj=typ_pliku)
                 punktzpnt.stdoutwrite((informacja % pliki))
-                przetwarzanyPlik = plikPNT(pliki, args, punktzpnt)
+                przetwarzanyPlik = plikPNT(pliki, stderr_stdout_writer, punktzpnt)
                 # komentarz=''
                 zawartosc_pliku_pnt = plikPNTTXT.readlines()
                 if not zawartosc_pliku_pnt:
@@ -3145,9 +3145,9 @@ def montujpliki(args, naglowek_mapy=''):
             ###########################################################################################################
             # montowanie plikow txt
             elif typ_pliku == 'txt':
-                punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args)
+                punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
                 punktzTXT.stdoutwrite(informacja % pliki)
-                przetwarzanyPlik = plikTXT(pliki, args, punktzTXT)
+                przetwarzanyPlik = plikTXT(pliki, punktzTXT,  stderr_stdout_writer)
                 zawartosc_pliku_txt = plikPNTTXT.read()
                 zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
                 zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
@@ -3317,7 +3317,7 @@ def demontuj(args):
         Zmienne.KatalogRoboczy = os.getcwd()
     # print(Zmienne.KatalogRoboczy)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = PlikMP1(Zmienne, args, tabKonw, Montuj=0, naglowek_mapy='')
+    plikMp = PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, Montuj=0, naglowek_mapy='')
 
     # obszarTypPlik_thread = threading.Thread(target=uruchom_obszary_dla_poi, args=(auto_poi_kolejka_wejsciowa,
     #                                                                               auto_poi_kolejka_wyjsciowa))
@@ -3364,7 +3364,7 @@ def demontuj(args):
 
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
     update_progress(0 / 100, args)
-    tester_poprawnosci_danych = TestyPoprawnosciDanych(args)
+    tester_poprawnosci_danych = TestyPoprawnosciDanych(args, stderr_stdout_writer)
     for numer_aktualnego_rekordu, rekord_z_pliku_mp in enumerate(rekordy_mp):
         if (numer_aktualnego_rekordu + 1) % int(ilosc_rekordow/100) == 0:
             update_progress(round((numer_aktualnego_rekordu + 1) / int(ilosc_rekordow), 2), args)
