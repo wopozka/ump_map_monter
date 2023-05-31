@@ -2610,7 +2610,7 @@ class City(ObiektNaMapie):
     rozmiar2Type = ('0xe00', '0xd00', '0xc00', '0xb00', '0xa00', '0x900', '0x800', '0x700', '0x600', '0x500', '0x400')
     type2Rozmiar = {'0xe00': '0', '0xd00': '1', '0xc00': '2', '0xb00': '3', '0xa00': '4', '0x900': '5', '0x800': '6',
                     '0x700': '7', '0x600': '8', '0x500': '9', '0x400': '10'}
-    typetoEndlevel = (0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4)
+    typetoEndlevel = ('0', '1', '1', '2', '2', '3', '3', '3', '4', '4', '4')
 
     def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args):
         ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, rekordy_max_min=(4, 4))
@@ -2630,7 +2630,7 @@ class City(ObiektNaMapie):
         # dodajemy City=Y
         self.Dane1.append('City=Y')
         # Tworzymy EndLevel
-        self.Dane1.append('EndLevel=' + str(City.typetoEndlevel[int(LiniaZPliku[2].lstrip())]))
+        self.Dane1.append('EndLevel=' + City.typetoEndlevel[int(LiniaZPliku[2].lstrip())])
         # Tworzymy Data0=(x,x)
         self.Dane1.append('Data0=(' + LiniaZPliku[0].lstrip() + ',' + LiniaZPliku[1].lstrip() + ')')
         # Tworzymy Miasto
