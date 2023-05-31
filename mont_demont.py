@@ -79,7 +79,7 @@ class TestyPoprawnosciDanych(object):
     # rozroznic. Z tego powodu sa traktowane inaczej
     DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
 
-    def __init__(self, args, error_out_writer):
+    def __init__(self, error_out_writer):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
         self.error_out_writer = error_out_writer
         self.typy_label_z_miastem = [
@@ -3364,7 +3364,7 @@ def demontuj(args):
 
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
     update_progress(0 / 100, args)
-    tester_poprawnosci_danych = TestyPoprawnosciDanych(args, stderr_stdout_writer)
+    tester_poprawnosci_danych = TestyPoprawnosciDanych(stderr_stdout_writer)
     for numer_aktualnego_rekordu, rekord_z_pliku_mp in enumerate(rekordy_mp):
         if (numer_aktualnego_rekordu + 1) % int(ilosc_rekordow/100) == 0:
             update_progress(round((numer_aktualnego_rekordu + 1) / int(ilosc_rekordow), 2), args)
