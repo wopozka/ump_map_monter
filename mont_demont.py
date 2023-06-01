@@ -4126,7 +4126,7 @@ def main(argumenty):
     parser_dodaj_dane_routingowe.set_defaults(func=dodaj_dane_routingowe)
 
     # parser dla komendy wojkuj
-    parser_wojkuj_mape = subparsers.add_parser('wojkuj', help="Dodane dane przy pomocy wojka")
+    parser_wojkuj_mape = subparsers.add_parser('wojkuj', help="Dodaj dane przy pomocy wojka")
     parser_wojkuj_mape.add_argument('-i', '--input-file', dest='plikmp', default=['wynik.mp'], nargs=1,
                  help='Nazwa pliku do przetworzenia. Domyslnie wynik.mp')
     parser_wojkuj_mape.set_defaults(func=wojkuj)
