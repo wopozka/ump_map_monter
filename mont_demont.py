@@ -3956,27 +3956,50 @@ def ustaw_force_speed(args):
     os.remove(wynik_mp)
     shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
     os.remove(wynik_mp_podnies_poziom.name)
-    # predkosci = {'0x1': 6, '0x2': 5, '0x3': 4, '0x5': 3, '0x6': 2, '0x7': 1, '0x8': 2, '0x9': 4, '0xa': 0,
-    #              '0xb': 2, '0xc': 1}
-    # kara_za_nazwe = 0
-    # if dane_do_zapisu['Type'] in {'0x3', '0x4', '0x5', '0x6', '0x7'} and 'Label' in dane_do_zapisu:
-    #     if dane_do_zapisu['Label'].startswith('~'):
-    #         tmp_label = dane_do_zapisu
-    #         tmp_label = dane_do_zapisu['Label'].strip().split(' ', 1)[1]
-    #         if len(tmp_label) > 1 and not tmp_label[1].startswith('{'):
-    #             kara_za_nazwe = 1
-    #     elif not dane_do_zapisu['Label'].startswith('{'):
-    #         kara_za_nazwe = 1
-    # faster_slower = 0
-    # if 'ForceSpeed' in dane_do_zapisu:
-    #     faster_slower = 1 if dane_do_zapisu['ForceSpeed'] == 'faster' else -1
-    # faster_slower = {'faster': 1, 'slower': -1}
-    # force_speed = predkosci[dane_do_zapisu['Type']] + kara_za_nazwe + faster_slower
-    # if force_speed > 6:
-    #     force_speed = 6
-    # elif force_speed < 0:
-    #     force_speed = 0
-    # dane_do_zapisu['ForceSpeed'] = str(force_speeds)
+
+
+def stworz_plik_typ(args):
+    """
+    funkcja tworzy plik typ z plikow czastkowych obecnych w
+    Parameters
+    ----------
+    args: argumenty wywo³ania
+
+    Returns: 0 sukces, 1 blad
+    -------
+    """
+    nazwa_typ = args.nazwa_typ
+    zmienne = UstawieniaPoczatkowe(args)
+    katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
+    katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
+    plik_typ_zawartosc = ['[_id]', 'ProductCode=1', 'FID=123', 'CodePage=1250', '[End]', '']
+    with open(os.path.join(katalog_ikonki, 'header.txt'), 'r') as header_file:
+        plik_typ_zawartosc += header_file.readlines()
+
+    if nazwa_typ in ('rzuq', 'olowos'):
+        n_pliku = 'point-rzuq003.txt' if nazwa_typ == 'rzuq' else 'point-olowos.txt'
+        with open(os.path.join(katalog_narzedzia, n_pliku)) as pl_ik:
+            pl_ik += rzuq_plik.readlines()
+    else:
+        for plik_ikonki in glob.glob(os.path.join(katalog_ikonki, 'punkty', '*day*.xps')):
+            font = ''
+            fontc = ''
+            mp_typ, nazwa_pl, nazwa_en, tryb = os.path.splitext(os.path.basename(plik_ikonki))[0].split('_', 3)
+            if '_' in tryb:
+                tryb, font = tryb.split('_', 1)
+            if '_' in font:
+                font, fontc = font.split('_', 1)
+            if len(mp_typ) == 4:
+                mp_type = mp_typ[0:2]
+                mp_subtype = mp_typ[2:5]
+                mp_specialny = ''
+            else:
+                mp_type = mp_typ[2:4]
+                mp_subtype = mp_typ[4:6]
+                mp_specialny = 'Marine=Y'
+            _, nazwa_pl, nazwa_en, _ = os.path.basename(plik_ikonki).split('_', 3)
+
+
 
 def main(argumenty):
 
