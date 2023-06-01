@@ -3972,19 +3972,22 @@ def stworz_plik_typ(args):
     zmienne = UstawieniaPoczatkowe(args)
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
-    plik_typ_zawartosc = ['[_id]', 'ProductCode=1', 'FID=123', 'CodePage=1250', '[End]', '']
+    plik_typ_zawartosc = ['[_id]', 'ProductCode=1', 'FID=123']
+    if args.ogonki:
+        plik_typ_zawartosc += ['CodePage=1250']
+    plik_typ_zawartosc += ['[End]', '']
     with open(os.path.join(katalog_ikonki, 'header.txt'), 'r') as header_file:
         plik_typ_zawartosc += header_file.readlines()
 
     if nazwa_typ in ('rzuq', 'olowos'):
         n_pliku = 'point-rzuq003.txt' if nazwa_typ == 'rzuq' else 'point-olowos.txt'
-        with open(os.path.join(katalog_narzedzia, n_pliku)) as pl_ik:
-            pl_ik += rzuq_plik.readlines()
+        with open(os.path.join(katalog_ikonki, n_pliku)) as plik_do_czyt:
+            plik_typ_zawartosc += plik_do_czyt.readlines()
     else:
-        for plik_ikonki in glob.glob(os.path.join(katalog_ikonki, 'punkty', '*day*.xps')):
+        for plik_ikonki_nazwa in glob.glob(os.path.join(katalog_ikonki, 'punkty', '*day*.xps')):
             font = ''
             fontc = ''
-            mp_typ, nazwa_pl, nazwa_en, tryb = os.path.splitext(os.path.basename(plik_ikonki))[0].split('_', 3)
+            mp_typ, nazwa_pl, nazwa_en, tryb = os.path.splitext(os.path.basename(plik_ikonki_nazwa))[0].split('_', 3)
             if '_' in tryb:
                 tryb, font = tryb.split('_', 1)
             if '_' in font:
@@ -3997,7 +4000,39 @@ def stworz_plik_typ(args):
                 mp_type = mp_typ[2:4]
                 mp_subtype = mp_typ[4:6]
                 mp_specialny = 'Marine=Y'
-            _, nazwa_pl, nazwa_en, _ = os.path.basename(plik_ikonki).split('_', 3)
+            plik_typ_zawartosc.append('[_point]')
+            plik_typ_zawartosc.append('Type=0x' + mp_type)
+            plik_typ_zawartosc.append('SubType=0x' + mp_subtype)
+            if mp_specialny:
+                plik_typ_zawartosc.append(mp_specialny)
+            plik_typ_zawartosc.append('string1=0x04,' + nazwa_en)
+            plik_typ_zawartosc.append('string2=0x15,' + nazwa_pl)
+            if font:
+                plik_typ_zawartosc.append('Font=' + font)
+            if fontc:
+                if tryb == 'day':
+                    plik_typ_zawartosc.append('DayFontColor=0x' + fontc)
+                elif tryb == 'night':
+                    plik_typ_zawartosc.append('NightFontColor=0x' + fontc)
+            with open(plik_ikonki_nazwa, 'r') as plik_ikonki:
+                ikonka = plik_ikonki.readlines
+            plik_typ_zawartosc.append(tryb + 'xpm=' + ikonka[2].replace('.',''))
+            plik_typ_zawartosc += ikonka[3:]
+            plik_typ_zawartosc += ['[end]', '']
+
+    nazwa_typu_plik = {'reczniak': ['polygon-outdoor.txt', 'linie-outdoor.txt'],
+                       'rzuq': ['polygon-rzuq003.txt', 'line-rzuq003.txt'],
+                       'olowos': ['polygon-olowos.txt', 'line-olowos.txt'],
+                       'domyslna': ['polygon.txt', 'linie.txt']}
+
+    for plik in nazwa_typu_plik[nazwa_typ]:
+        with open(plik, 'r') as pl:
+            definicje = pl.readlines()
+        if args.bez_warstwic and 'polygon' in plik:
+            plik_typ_zawartosc += [a.replace('# c #AAAA00', '# c none') for a in definicje]
+        else:
+            plik_typ_zawartosc += definicje
+
 
 
 
