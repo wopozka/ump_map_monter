@@ -1261,8 +1261,8 @@ class Obszary(object):
 
 class AutoPlikDlaPoi(object):
     def __init__(self):
-        self.obszar_typ_plik = defaultdict(lambda: defaultdict(lambda: 0))
-        self.typ_plik = defaultdict(lambda: defaultdict(lambda: 0))
+        self.obszar_typ_plik = defaultdict(lambda: defaultdict(lambda: ''))
+        self.typ_plik = defaultdict(lambda: defaultdict(lambda: ''))
         self.autopoiWykluczoneWartosciPlik = ('.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
                                               '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
                                               '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
