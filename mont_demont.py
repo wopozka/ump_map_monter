@@ -3272,7 +3272,7 @@ def montuj_mkgmap(args):
         montujpliki(args, naglowek_mapy=naglowek_mapy)
         # zamieniam KodPoczt na Zip
         print('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
-        with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
+        with open(os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
             plik_do_konwersji = plik_mp_do_czyt.readlines()
         for num, linia in enumerate(plik_do_konwersji):
             if linia.startswith('KodPoczt='):
@@ -3281,7 +3281,7 @@ def montuj_mkgmap(args):
                 plik_do_konwersji[num] = linia.replace('{', '(').replace('}', ')')
             elif linia.startswith('CityName'):
                 plik_do_konwersji[num] = linia.replace('@', ';')
-        with open (os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
+        with open(os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'w', encoding=zmienne.Kodowanie) as plik_mp_do_zap:
             plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.podnies_poziom:
             args.output_filename = args.plikmp
@@ -3889,6 +3889,10 @@ def kompiluj_mape(args):
                                 # karaiby, kosowo, nepal, pomijam
                                 }
     mapset_name = []
+    nazwa_sciezka_pliku_typ = ''
+    if args.plik_typ != 'brak':
+        args.nazwa_typ = args.plik_typ
+        nazwa_sciezka_pliku_typ = stworz_plik_typ(args)
     for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
         opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
         pliki_do_kompilacji.append('--description=' + opis + '_' + date.today().strftime('%d%b%y'))
@@ -3908,15 +3912,26 @@ def kompiluj_mape(args):
         mkg_map = args.mkgmap_path
     else:
         mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--code-page=1250',
-                                                                        '--lower-case']
+    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--lower-case']
+    if args.code_page == 'cp1250':
+        java_call_args.append('--code-page=1250')
+    java_call_args.append('--family-id=' + args.family_id[0])
+    java_call_args.append('--output-dir=' + Zmienne.KatalogRoboczy)
+    if nazwa_sciezka_pliku_typ:
+        print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + nazwa_sciezka_pliku_typ)
+        process = subprocess.Popen(java_call_args + [nazwa_sciezka_pliku_typ])
+        process.wait()
+        nazwa_sciezka_pliku_typ.replace('.txt', '.typ')
+        if not os.path.isfile(nazwa_sciezka_pliku_typ):
+            print('Skompilowanie pliku typ nie powiodlo sie. Nie uzywam.')
+            nazwa_sciezka_pliku_typ = ''
     if args.routing:
         java_call_args += ['--route', '--drive-on=detect,right']
     if args.gmapsupp:
-        java_call_args += ['--gmapsupp']
+        java_call_args.append('--gmapsupp')
         mapset_name = ['--description=UMP pcPL']
     else:
-        java_call_args += ['--gmapi']
+        java_call_args.append('--gmapi')
     if args.index:
         java_call_args += ['--index', '--split-name-index']
     try:
@@ -3933,7 +3948,8 @@ def kompiluj_mape(args):
     java_call_args += ['--license-file=' + plik_licencji]
     java_call_args += ['--area-name=' + 'UMP to']
     # wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args = java_call_args + ['--output-dir=' + Zmienne.KatalogRoboczy] + pliki_do_kompilacji + mapset_name
+    java_call_args = java_call_args + pliki_do_kompilacji + \
+                     [nazwa_sciezka_pliku_typ] + mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
@@ -3965,29 +3981,36 @@ def stworz_plik_typ(args):
     ----------
     args: argumenty wywo³ania
 
-    Returns: 0 sukces, 1 blad
+    Returns: nazwa_pliku sukces, '' blad
     -------
     """
-    nazwa_typ = args.nazwa_typ
+    nazwa_typ = args.nazwa_typ[0]
     zmienne = UstawieniaPoczatkowe(args)
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
-    plik_typ_zawartosc = ['[_id]', 'ProductCode=1', 'FID=123']
-    if args.ogonki:
-        plik_typ_zawartosc += ['CodePage=1250']
-    plik_typ_zawartosc += ['[End]', '']
-    with open(os.path.join(katalog_ikonki, 'header.txt'), 'r') as header_file:
+    plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id[0] + '\n']
+    if not args.code_page[0] == 'cp1250':
+        plik_typ_zawartosc += ['CodePage=1250\n']
+    plik_typ_zawartosc += ['[end]\n\n', '']
+    with open(os.path.join(katalog_ikonki, 'header.txt'), 'r', encoding=zmienne.Kodowanie) as header_file:
         plik_typ_zawartosc += header_file.readlines()
 
     if nazwa_typ in ('rzuq', 'olowos'):
         n_pliku = 'point-rzuq003.txt' if nazwa_typ == 'rzuq' else 'point-olowos.txt'
-        with open(os.path.join(katalog_ikonki, n_pliku)) as plik_do_czyt:
+        with open(os.path.join(katalog_ikonki, n_pliku), encoding=zmienne.Kodowanie) as plik_do_czyt:
             plik_typ_zawartosc += plik_do_czyt.readlines()
     else:
-        for plik_ikonki_nazwa in glob.glob(os.path.join(katalog_ikonki, 'punkty', '*day*.xps')):
+        for plik_ikonki_nazwa in glob.glob(os.path.join(katalog_ikonki, 'punkty', '*day*.xpm')):
             font = ''
             fontc = ''
-            mp_typ, nazwa_pl, nazwa_en, tryb = os.path.splitext(os.path.basename(plik_ikonki_nazwa))[0].split('_', 3)
+            try:
+                mp_typ, nazwa_pl, nazwa_en, tryb = \
+                    os.path.splitext(os.path.basename(plik_ikonki_nazwa))[0].split('_', 3)
+            except ValueError:
+                print('Bledna nazwa dla pliku ikonki %s. Poprawny format nazwy to: '
+                      'typ_nazwaPl_nazwaEn_day.xpm lub night. Ignoruje ikonke')
+                continue
+
             if '_' in tryb:
                 tryb, font = tryb.split('_', 1)
             if '_' in font:
@@ -3999,41 +4022,45 @@ def stworz_plik_typ(args):
             else:
                 mp_type = mp_typ[2:4]
                 mp_subtype = mp_typ[4:6]
-                mp_specialny = 'Marine=Y'
-            plik_typ_zawartosc.append('[_point]')
-            plik_typ_zawartosc.append('Type=0x' + mp_type)
-            plik_typ_zawartosc.append('SubType=0x' + mp_subtype)
+                # mp_specialny = 'Marine=Y\n'
+                mp_specialny = ''
+            plik_typ_zawartosc += ['\n', '[_point]\n']
+            plik_typ_zawartosc.append('Type=0x' + mp_type + '\n')
+            plik_typ_zawartosc.append('SubType=0x' + mp_subtype + '\n')
             if mp_specialny:
                 plik_typ_zawartosc.append(mp_specialny)
-            plik_typ_zawartosc.append('string1=0x04,' + nazwa_en)
-            plik_typ_zawartosc.append('string2=0x15,' + nazwa_pl)
-            if font:
-                plik_typ_zawartosc.append('Font=' + font)
+            plik_typ_zawartosc.append('string1=0x04,' + nazwa_en + '\n')
+            plik_typ_zawartosc.append('string2=0x15,' + nazwa_pl + '\n')
+            # if font:
+            #     plik_typ_zawartosc.append('Font=' + font + '\n')
             if fontc:
                 if tryb == 'day':
-                    plik_typ_zawartosc.append('DayFontColor=0x' + fontc)
+                    plik_typ_zawartosc.append('DayFontColor=0x' + fontc + '\n')
                 elif tryb == 'night':
-                    plik_typ_zawartosc.append('NightFontColor=0x' + fontc)
-            with open(plik_ikonki_nazwa, 'r') as plik_ikonki:
-                ikonka = plik_ikonki.readlines
-            plik_typ_zawartosc.append(tryb + 'xpm=' + ikonka[2].replace('.',''))
+                    plik_typ_zawartosc.append('NightFontColor=0x' + fontc + '\n')
+            with open(plik_ikonki_nazwa, 'r', encoding=zmienne.Kodowanie) as plik_ikonki:
+                ikonka = plik_ikonki.readlines()
+            plik_typ_zawartosc.append(tryb + 'xpm=' + ikonka[2].replace('.', ''))
             plik_typ_zawartosc += ikonka[3:]
-            plik_typ_zawartosc += ['[end]', '']
+            plik_typ_zawartosc += ['[end]', '\n']
 
-    nazwa_typu_plik = {'reczniak': ['polygon-outdoor.txt', 'linie-outdoor.txt'],
+    nazwa_typu_plik = {'reczniak': ['polygon-outdoor.txt', 'line-outdoor.txt'],
                        'rzuq': ['polygon-rzuq003.txt', 'line-rzuq003.txt'],
                        'olowos': ['polygon-olowos.txt', 'line-olowos.txt'],
-                       'domyslna': ['polygon.txt', 'linie.txt']}
+                       'domyslny': ['polygon.txt', 'line.txt']}
 
     for plik in nazwa_typu_plik[nazwa_typ]:
-        with open(plik, 'r') as pl:
+        with open(os.path.join(katalog_ikonki, plik), 'r', encoding=zmienne.Kodowanie) as pl:
             definicje = pl.readlines()
-        if args.bez_warstwic and 'polygon' in plik:
+        if not args.uwzglednij_warstwice and 'polygon' in plik:
             plik_typ_zawartosc += [a.replace('# c #AAAA00', '# c none') for a in definicje]
         else:
             plik_typ_zawartosc += definicje
 
-
+    plik_typ_txt = os.path.join(zmienne.KatalogRoboczy, 'ump_typ_' + nazwa_typ + '.txt')
+    with open(plik_typ_txt, 'w', encoding=zmienne.Kodowanie) as typ_file:
+        typ_file.writelines(plik_typ_zawartosc)
+    return plik_typ_txt
 
 
 def main(argumenty):
@@ -4153,7 +4180,9 @@ def main(argumenty):
     parsers_cvsup.set_defaults(func=cvsup)
 
     # parser dla komendu czysc
-    parsers_czysc = subparsers.add_parser('czysc', help='usuwa wynik.mp (domyslnie), granice-czesciowe.txt (domyslnie) oraz czysci katalog roboczy z plikow diff, plikow oryginalnych, plikow bledow')
+    parsers_czysc = subparsers.add_parser('czysc', help='usuwa wynik.mp (domyslnie), granice-czesciowe.txt (domyslnie) '
+                                                        'oraz czysci katalog roboczy z plikow diff, '
+                                                        'plikow oryginalnych, plikow bledow')
     parsers_czysc.add_argument('-w', '--wszystko', dest='wszystko', action='store_true',
                                help='usuwa pliki diff, pliki oryginalne, pliki bledow oraz wynik.mp')
     parsers_czysc.add_argument('-d', '--diff', dest='diff', action='store_true', help='usuwa tylko pliki diff')
@@ -4164,7 +4193,8 @@ def main(argumenty):
 
     # parser dla komendy rozdziel na klasy
     parser_rozdziel_na_klasy = subparsers.add_parser('rozdziel-na-klasy',
-                                                     help='montuje wynik.mp, dodaje dane routingowe netgenem, a potem rozklada na klasy')
+                                                     help='montuje wynik.mp, dodaje dane routingowe netgenem, '
+                                                          'a potem rozklada na klasy')
     parser_rozdziel_na_klasy.add_argument('obszary', nargs="*", default=['pwd'])
     parser_rozdziel_na_klasy.set_defaults(func=rozdziel_na_klasy)
 
@@ -4192,6 +4222,15 @@ def main(argumenty):
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
+    parser_kompiluj_mape.add_argument('-f', '--family-id', default=['6324'], nargs=1,
+                                      help='family id mapy, domyslnie 6324')
+    parser_kompiluj_mape.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+                                      help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
+    parser_kompiluj_mape.add_argument('-t', '--plik-typ', nargs=1, default=['domyslny'],
+                                      choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
+                                      help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
+    parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
+                                     help='Dodaj warstwice do pliku mapy')
     parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
                                       help="Generuj plik gmapsupp.img")
     parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,
@@ -4203,6 +4242,18 @@ def main(argumenty):
     parser_kompiluj_mape.add_argument('-mj', '--max-jobs', nargs=1, default=['0'],
                                       help='Maksymalna ilosc watkow do kompilacji (domyslnie auto)')
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
+
+    # parser dla komendy skompiluj_typ
+    parser_kompiluj_typ = subparsers.add_parser('kompiluj-typ', help='stworzenie i kmpilacja pliku typ')
+    parser_kompiluj_typ.add_argument('nazwa_typ', nargs=1, default=['domyslny'],
+                                     choices=['domyslny', 'rzuq', 'olowos', 'reczniak'],
+                                     help='rodzaj pliku typ do wyboru')
+    parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ')
+    parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
+                                     help='Dodaj warstwice do pliku typ')
+    parser_kompiluj_typ.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+                                     help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
+    parser_kompiluj_typ.set_defaults(func=stworz_plik_typ)
 
     args = parser.parse_args()
     args.func(args)
