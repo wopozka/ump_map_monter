@@ -26,6 +26,51 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+class Mkgmap(object):
+    def __init__(self, args, zmienne):
+        self.args = args
+        if args.mkgmap_path:
+            self.mkg_map = args.mkgmap_path
+        else:
+            self.mkg_map = os.path.join(os.path.join(zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+
+    def java_call_general(self):
+        java_call_args = ['java'] + ['-Xmx' + self.args.maksymalna_pamiec[0]] + ['-jar', self.mkg_map, '--lower-case']
+        if self.args.code_page == 'cp1250':
+            java_call_args.append('--code-page=1250')
+        java_call_args.append('--family-id=' + self.args.family_id[0])
+        java_call_args.append('--output-dir=' + self.Zmienne.KatalogRoboczy)
+        return java_call_args
+
+    def java_call_typ(self):
+        return self.java_call_genera()
+
+    def java_call_mkgmap(self):
+        java_call_args = self.java_call_general()
+        if self.args.routing:
+            java_call_args += ['--route', '--drive-on=detect,right']
+        if self.args.gmapsupp:
+            java_call_args.append('--gmapsupp')
+            mapset_name = ['--description=UMP pcPL']
+        else:
+            java_call_args.append('--gmapi')
+        if self.args.index:
+            java_call_args += ['--index', '--split-name-index']
+        try:
+            int(self.args.max_jobs[0])
+        except ValueError:
+            pass
+        else:
+            if int(self.args.max_jobs[0]):
+                java_call_args += ['--max-jobs=' + args.max_jobs[0]]
+        nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
+        java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
+        plik_licencji = os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
+        java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
+        java_call_args += ['--license-file=' + plik_licencji]
+        java_call_args += ['--area-name=' + 'UMP to']
+        return java_call_args, mapset_name
+
 
 class ErrOutWriter(object):
     def __init__(self, args):
