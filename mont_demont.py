@@ -26,6 +26,53 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+class Mkgmap(object):
+    def __init__(self, args, zmienne):
+        self.args = args
+        if args.mkgmap_path:
+            self.mkg_map = args.mkgmap_path
+        else:
+            self.mkg_map = os.path.join(os.path.join(zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+        self.zmienne = zmienne
+
+    def java_call_general(self):
+        java_call_args = ['java'] + ['-Xmx' + self.args.maksymalna_pamiec[0]] + ['-jar', self.mkg_map, '--lower-case']
+        if self.args.code_page == 'cp1250':
+            java_call_args.append('--code-page=1250')
+        java_call_args.append('--family-id=' + self.args.family_id[0])
+        java_call_args.append('--output-dir=' + self.zmienne.KatalogRoboczy)
+        return java_call_args
+
+    def java_call_typ(self):
+        return self.java_call_general()
+
+    def java_call_mkgmap(self):
+        mapset_name = []
+        java_call_args = self.java_call_general()
+        if self.args.routing:
+            java_call_args += ['--route', '--drive-on=detect,right']
+        if self.args.gmapsupp:
+            java_call_args.append('--gmapsupp')
+            mapset_name = ['--description=UMP pcPL']
+        else:
+            java_call_args.append('--gmapi')
+        if self.args.index:
+            java_call_args += ['--index', '--split-name-index']
+        try:
+            int(self.args.max_jobs[0])
+        except ValueError:
+            pass
+        else:
+            if int(self.args.max_jobs[0]):
+                java_call_args += ['--max-jobs=' + args.max_jobs[0]]
+        nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
+        java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
+        plik_licencji = os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
+        java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
+        java_call_args += ['--license-file=' + plik_licencji]
+        java_call_args += ['--area-name=' + 'UMP to']
+        return java_call_args, mapset_name
+
 
 class ErrOutWriter(object):
     def __init__(self, args):
@@ -3875,7 +3922,7 @@ def wojkuj(args):
 
 def kompiluj_mape(args):
     stderr_stdout_writer = ErrOutWriter(args)
-    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
     # dwuliterowe kody pastw za https://pl.wikipedia.org/wiki/ISO_3166-1https://pl.wikipedia.org/wiki/ISO_3166-1
     # w formacie numer kierunkowy: skrot, kolejnosc wedlug pliku lista.map
@@ -3888,12 +3935,12 @@ def kompiluj_mape(args):
                                 '41': 'CH', '216': 'TN', '90': 'TR', '380': 'UA', '36': 'HU', '298': 'FO', '238': 'CV'
                                 # karaiby, kosowo, nepal, pomijam
                                 }
-    mapset_name = []
+    # mapset_name = []
     nazwa_sciezka_pliku_typ = ''
-    if args.plik_typ != 'brak':
+    if args.plik_typ[0] != 'brak':
         args.nazwa_typ = args.plik_typ
         nazwa_sciezka_pliku_typ = stworz_plik_typ(args)
-    for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
+    for plik_do_k in glob.glob(os.path.join(zmienne.KatalogRoboczy, '*mkgmap.mp')):
         opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
         pliki_do_kompilacji.append('--description=' + opis + '_' + date.today().strftime('%d%b%y'))
         skrot_kraju = ''
@@ -3908,48 +3955,13 @@ def kompiluj_mape(args):
         pliki_do_kompilacji.append(plik_do_k)
     if not pliki_do_kompilacji:
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
-    if args.mkgmap_path:
-        mkg_map = args.mkgmap_path
-    else:
-        mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--lower-case']
-    if args.code_page == 'cp1250':
-        java_call_args.append('--code-page=1250')
-    java_call_args.append('--family-id=' + args.family_id[0])
-    java_call_args.append('--output-dir=' + Zmienne.KatalogRoboczy)
+        return
+
+    java_call_args, mapset_name = Mkgmap(args, zmienne).java_call_mkgmap()
+    java_call_args += pliki_do_kompilacji
     if nazwa_sciezka_pliku_typ:
-        print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + nazwa_sciezka_pliku_typ)
-        process = subprocess.Popen(java_call_args + [nazwa_sciezka_pliku_typ])
-        process.wait()
-        nazwa_sciezka_pliku_typ.replace('.txt', '.typ')
-        if not os.path.isfile(nazwa_sciezka_pliku_typ):
-            print('Skompilowanie pliku typ nie powiodlo sie. Nie uzywam.')
-            nazwa_sciezka_pliku_typ = ''
-    if args.routing:
-        java_call_args += ['--route', '--drive-on=detect,right']
-    if args.gmapsupp:
-        java_call_args.append('--gmapsupp')
-        mapset_name = ['--description=UMP pcPL']
-    else:
-        java_call_args.append('--gmapi')
-    if args.index:
-        java_call_args += ['--index', '--split-name-index']
-    try:
-        int(args.max_jobs[0])
-    except ValueError:
-        pass
-    else:
-        if int(args.max_jobs[0]):
-            java_call_args += ['--max-jobs=' + args.max_jobs[0]]
-    nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
-    java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
-    plik_licencji = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
-    java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
-    java_call_args += ['--license-file=' + plik_licencji]
-    java_call_args += ['--area-name=' + 'UMP to']
-    # wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args = java_call_args + pliki_do_kompilacji + \
-                     [nazwa_sciezka_pliku_typ] + mapset_name
+        java_call_args += [nazwa_sciezka_pliku_typ]
+    java_call_args += mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
@@ -4060,7 +4072,22 @@ def stworz_plik_typ(args):
     plik_typ_txt = os.path.join(zmienne.KatalogRoboczy, 'ump_typ_' + nazwa_typ + '.txt')
     with open(plik_typ_txt, 'w', encoding=zmienne.Kodowanie) as typ_file:
         typ_file.writelines(plik_typ_zawartosc)
-    return plik_typ_txt
+    if os.path.isfile(plik_typ_txt):
+        print('Zapisalem plik typ: %s' % plik_typ_txt)
+    else:
+        print('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' %plik_typ_txt)
+        return ''
+    java_call_args = Mkgmap(args, zmienne).java_call_typ()
+    print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + plik_typ_txt)
+    process = subprocess.Popen(java_call_args + [plik_typ_txt])
+    process.wait()
+    plik_typ = plik_typ_txt.replace('.txt', '.typ')
+    if not os.path.isfile(plik_typ):
+        print('Skompilowanie pliku typ nie powiodlo sie.')
+        return ''
+    else:
+        print('Kompilacja zakonczona sukcesem. Stworzylem plik %s' % plik_typ)
+    return plik_typ
 
 
 def main(argumenty):
@@ -4248,6 +4275,9 @@ def main(argumenty):
     parser_kompiluj_typ.add_argument('nazwa_typ', nargs=1, default=['domyslny'],
                                      choices=['domyslny', 'rzuq', 'olowos', 'reczniak'],
                                      help='rodzaj pliku typ do wyboru')
+    parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
+    parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
+                                      help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
     parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
