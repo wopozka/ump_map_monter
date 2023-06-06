@@ -3957,52 +3957,11 @@ def kompiluj_mape(args):
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
         return
 
-    # if args.mkgmap_path:
-    #     mkg_map = args.mkgmap_path
-    # else:
-    #     mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    # java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--lower-case']
-    # if args.code_page == 'cp1250':
-    #     java_call_args.append('--code-page=1250')
-    # java_call_args.append('--family-id=' + args.family_id[0])
-    # java_call_args.append('--output-dir=' + Zmienne.KatalogRoboczy)
-    # if nazwa_sciezka_pliku_typ:
-    #     print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + nazwa_sciezka_pliku_typ)
-    #     process = subprocess.Popen(java_call_args + [nazwa_sciezka_pliku_typ])
-    #     process.wait()
-    #     nazwa_sciezka_pliku_typ.replace('.txt', '.typ')
-    #     if not os.path.isfile(nazwa_sciezka_pliku_typ):
-    #         print('Skompilowanie pliku typ nie powiodlo sie. Nie uzywam.')
-    #         nazwa_sciezka_pliku_typ = ''
-    # if args.routing:
-    #     java_call_args += ['--route', '--drive-on=detect,right']
-    # if args.gmapsupp:
-    #     java_call_args.append('--gmapsupp')
-    #     mapset_name = ['--description=UMP pcPL']
-    # else:
-    #     java_call_args.append('--gmapi')
-    # if args.index:
-    #     java_call_args += ['--index', '--split-name-index']
-    # try:
-    #     int(args.max_jobs[0])
-    # except ValueError:
-    #     pass
-    # else:
-    #     if int(args.max_jobs[0]):
-    #         java_call_args += ['--max-jobs=' + args.max_jobs[0]]
-    # nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
     java_call_args, mapset_name = Mkgmap(args, zmienne).java_call_mkgmap()
-    # java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
-    # plik_licencji = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
-    # java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
-    # java_call_args += ['--license-file=' + plik_licencji]
-    # java_call_args += ['--area-name=' + 'UMP to']
-    # wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args = java_call_args + pliki_do_kompilacji
+    java_call_args += pliki_do_kompilacji
     if nazwa_sciezka_pliku_typ:
-        java_call_args =  java_call_args + [nazwa_sciezka_pliku_typ] + mapset_name
-    else:
-        java_call_args += mapset_name
+        java_call_args += [nazwa_sciezka_pliku_typ]
+    java_call_args += mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     print(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
