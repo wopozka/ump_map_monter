@@ -100,6 +100,7 @@ class ErrOutWriter(object):
 
 
 class TestyPoprawnosciDanych(object):
+    DOZWOLONE_ZNAKI_CP1250 = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåûß'
     DOZWOLONE_KLUCZE = {'adrLabel',
                         'City', 'CityIdx', 'Czas',
                         'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
@@ -211,6 +212,9 @@ class TestyPoprawnosciDanych(object):
                                     '0x1a',  # ferry
                                     }
         self.wspolrzedne_obiektu = ''
+        self.dozwolone_znaki_cp1250 = set(TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250 +
+                                      TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250[:-1].upper() +
+                                      string.printable[:-5] + '°')
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
         if 'ForceClass' not in dane_do_zapisu or dane_do_zapisu['POIPOLY'] != '[POLYLINE]' \
@@ -513,18 +517,36 @@ class TestyPoprawnosciDanych(object):
         elif a == 1 and ruch_lewostronny:
             return ''
         elif a == 0:
-            self.error_out_writer .stderrorwrite(
+            self.error_out_writer.stderrorwrite(
                 'Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(coords))
             return 'NIE_WIEM'
         else:
             self.error_out_writer.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(coords))
             return 'ODWROTNE'
 
+    def sprawdz_czy_tylko_znaki_cp1250(self, dane_do_zapisu):
+        for klucz in ('adrLabel', 'Label', 'Label2', 'Label3', 'Miasto', 'StreetName', 'Komentarz'):
+            if klucz in dane_do_zapisu:
+                if klucz == 'Komentarz':
+                    literki_set = set()
+                    for kom in dane_do_zapisu['Komentarz']:
+                        literki_set = literki_set.union(set(kom))
+                else:
+                    literki_set = set(dane_do_zapisu[klucz])
+                if not literki_set.issubset(self.dozwolone_znaki_cp1250):
+                    nl = ''.join(literki_set.difference(self.dozwolone_znaki_cp1250))
+                    coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                    self.error_out_writer.stderrorwrite('Literka spoza zakresu cp1250: %s %s' % (nl, coords))
+                    return 'cp1250_nie_ok'
+        return 'cp1250_ok'
+
+
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
         self.resetuj_wspolrzedne()
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
@@ -539,6 +561,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
         self.resetuj_wspolrzedne()
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
@@ -2943,6 +2966,14 @@ class plikPNT(object):
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
         return self.Dane1
+
+
+def cp1250_to_ascii(cp1250_string):
+    zamien_co = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåû'
+    zamien_na_co = 'oacelnszzaaeeioucsayaenor¾coulu'
+    tabela_konwersji = str.maketrans(zamien_co + str.upper(zamien_co) + 'ß',
+                                      zamien_na_co + str.upper(zamien_na_co) + 's')
+    ascii_string = cp1250_string.translate(tabela_konwersji)
 
 
 def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
