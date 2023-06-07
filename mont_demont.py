@@ -29,7 +29,7 @@ from datetime import datetime
 class Mkgmap(object):
     def __init__(self, args, zmienne):
         self.args = args
-        if args.mkgmap_path:
+        if hasattr(args, 'mkgmap_path') and args.mkgmap_path:
             self.mkg_map = args.mkgmap_path
         else:
             self.mkg_map = os.path.join(os.path.join(zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
@@ -4018,7 +4018,7 @@ def ustaw_force_speed(args):
     wynik_mp_podnies_poziom.close()
     podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '--inpfile', wynik_mp, '--outfile',
                            wynik_mp_podnies_poziom.name]
-    print(' '.join(podnies_poziom_call))
+    stderr_stdout_writer.stdoutwrite(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
     process.wait()
     os.remove(wynik_mp)
@@ -4036,6 +4036,7 @@ def stworz_plik_typ(args):
     Returns: nazwa_pliku sukces, '' blad
     -------
     """
+    stderr_stdout_writer = ErrOutWriter(args)
     nazwa_typ = args.nazwa_typ[0]
     zmienne = UstawieniaPoczatkowe(args)
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
@@ -4059,8 +4060,8 @@ def stworz_plik_typ(args):
                 mp_typ, nazwa_pl, nazwa_en, tryb = \
                     os.path.splitext(os.path.basename(plik_ikonki_nazwa))[0].split('_', 3)
             except ValueError:
-                print('Bledna nazwa dla pliku ikonki %s. Poprawny format nazwy to: '
-                      'typ_nazwaPl_nazwaEn_day.xpm lub night. Ignoruje ikonke')
+                stderr_stdout_writer.stdoutwrite('Bledna nazwa dla pliku ikonki %s. Poprawny format nazwy to: '
+                                                 'typ_nazwaPl_nazwaEn_day.xpm lub night. Ignoruje ikonke')
                 continue
 
             if '_' in tryb:
@@ -4113,20 +4114,20 @@ def stworz_plik_typ(args):
     with open(plik_typ_txt, 'w', encoding=zmienne.Kodowanie) as typ_file:
         typ_file.writelines(plik_typ_zawartosc)
     if os.path.isfile(plik_typ_txt):
-        print('Zapisalem plik typ: %s' % plik_typ_txt)
+        stderr_stdout_writer.stdoutwrite('Zapisalem plik typ: %s' % plik_typ_txt)
     else:
-        print('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' %plik_typ_txt)
+        stderr_stdout_writer.stdoutwrite('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' %plik_typ_txt)
         return ''
     java_call_args = Mkgmap(args, zmienne).java_call_typ()
-    print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + plik_typ_txt)
+    stderr_stdout_writer.stdoutwrite('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + plik_typ_txt)
     process = subprocess.Popen(java_call_args + [plik_typ_txt])
     process.wait()
     plik_typ = plik_typ_txt.replace('.txt', '.typ')
     if not os.path.isfile(plik_typ):
-        print('Skompilowanie pliku typ nie powiodlo sie.')
+        stderr_stdout_writer.stdoutwrite('Skompilowanie pliku typ nie powiodlo sie.')
         return ''
     else:
-        print('Kompilacja zakonczona sukcesem. Stworzylem plik %s' % plik_typ)
+        stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Stworzylem plik %s' % plik_typ)
     return plik_typ
 
 
@@ -4318,7 +4319,8 @@ def main(argumenty):
     parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
     parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
-    parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ')
+    parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ'
+                                                                                          'domyslnie 6324')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
     parser_kompiluj_typ.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],

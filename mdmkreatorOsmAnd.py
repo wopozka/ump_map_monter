@@ -6,6 +6,15 @@ import subprocess
 import threading
 import mdmMp2xml
 
+class Argumenty(object):
+    def __init__(self):
+        self.umphome = None
+        self.plikmp = None
+        self.katrob = None
+        self.obszary = []
+        self.notopo = 0
+
+
 class txt2osmArgumenty(object):
     def __init__(self, katalogroboczy):
         self.borders_file = None
@@ -331,10 +340,10 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         self._dodaj_odstep_pionowy(body)
         dodatkowe_opcje_frame = tkinter.ttk.Frame(body)
         dodatkowe_opcje_frame.pack()
-        family_id_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Family ID mapy (1-65535')
+        family_id_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Family ID mapy (1-65535)')
         family_id_frame.pack(side='left')
-        family_entry = tkinter.Entry(family_id_frame)
-        family_entry.pack()
+        self.family_entry = tkinter.Entry(family_id_frame)
+        self.family_entry.pack()
         warstwice_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Uwzglednij warstwice')
         warstwice_frame.pack(side='left')
         self.warstwice_variable = tkinter.BooleanVar()
@@ -360,7 +369,8 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         self._dodaj_odstep_pionowy(body)
         buttons_frame = tkinter.Frame(body)
         buttons_frame.pack(fill='both', expand=1)
-        przycisk_utworz = tkinter.ttk.Button(buttons_frame, text=u'Utworz i skompiluj plik typ')
+        przycisk_utworz = tkinter.ttk.Button(buttons_frame, text=u'Utworz i skompiluj plik typ',
+                                             command=self.utworz_i_kompiluj_typ)
         przycisk_utworz.pack(side='left')
         przycisk_anuluj = tkinter.ttk.Button(buttons_frame, text=u'Anuluj', command=self.destroy)
         przycisk_anuluj.pack(side='right')
@@ -381,6 +391,22 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         space = tkinter.Frame(frame, height=10)
         space.pack()
 
+    def utworz_i_kompiluj_typ(self):
+        print('tworze typ')
+        args = Argumenty()
+        args.nazwa_typ = [self.wybor_typ_variable.get()]
+        args.family_id = [self.family_entry.get()]
+        if not args.family_id[0].isdigit() or 0 > int(args.family_id[0]) > 65535:
+            args.family_id = ['6324']
+        args.uwzglednij_warstwice = True if self.warstwice_variable.get() == 'Tak' else False
+        args.code_page = [self.kodowanie_variable.get()]
+        args.stderrqueue = self.logerrqueue
+        args.stdoutqueue = self.logerrqueue
+        args.mkgmap_path = ''
+        args.maksymalna_pamiec = ['1G']
+        mont_demont.stworz_plik_typ(args)
+
+
 class LogErrText(tkinter.scrolledtext.ScrolledText):
     def __init__(self, master, logqueue, **options):
         tkinter.scrolledtext.ScrolledText.__init__(self, master, **options)
@@ -398,11 +424,3 @@ class LogErrText(tkinter.scrolledtext.ScrolledText):
             pass
 
         self.after(100, self.update_me)
-
-class Argumenty(object):
-    def __init__(self):
-        self.umphome = None
-        self.plikmp = None
-        self.katrob = None
-        self.obszary = []
-        self.notopo = 0
