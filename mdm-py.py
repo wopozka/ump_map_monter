@@ -1928,6 +1928,12 @@ class mdm_gui_py(tkinter.Tk):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
         aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
 
+    def kreator_stworz_plik_typ(self):
+        aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self)
+
+    def kreator_skompiluj_mape(self):
+        pass
+
     def cvs_co(self, obszar):
         cvs_status = sprawdz_czy_cvs_obecny()
         if cvs_status:
@@ -1958,6 +1964,8 @@ class mdm_gui_py(tkinter.Tk):
         menuKreatory = tkinter.Menu(menubar, tearoff=0)
         menuKreatory.add_command(label=u'Mapa dla OSMAnda', command=self.kreatorMapaOSMAnd)
         menuKreatory.add_command(label=u'Mapa z podziałem dróg na klasy', command=self.kreatorKlasDrog)
+        menuKreatory.add_command(label=u'Stworz i skompiluj plik typ.', command=self.kreator_stworz_plik_typ)
+        menuKreatory.add_command(label=u'Skompiluj mape przy pomocy mkgmap.', command=self.kreator_skompiluj_mape)
         menubar.add_cascade(label=u'Kreatory', menu=menuKreatory)
 
         # menu CVS

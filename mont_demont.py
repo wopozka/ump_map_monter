@@ -2359,23 +2359,22 @@ class PlikiDoMontowania(object):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
         self.errOutWriter = stderr_stdout_writer
-        self.KatalogZeZrodlami = zmienne.KatalogzUMP
-        self.kodowanie = zmienne.Kodowanie
+        self.zmienne = zmienne
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
             self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
         for aaa in obszary:
-            if os.path.isdir(os.path.join(self.KatalogZeZrodlami, aaa, 'src')):
+            if os.path.isdir(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src')):
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.txt'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.txt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.pnt'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.pnt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.adr'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.adr'))]
             else:
                 self.errOutWriter.stderrorwrite('Problem z dostêpem do %s.' %
-                                                os.path.join(self.KatalogZeZrodlami, aaa, 'src'))
+                                                os.path.join(self.zmienne.KatalogzUMP, aaa, 'src'))
                 self.errOutWriter.stderrorwrite('Obszar %s nie istnieje' % aaa)
                 raise FileNotFoundError
         # przenosimy zakazy na koniec, aby montowane byly na koncu i aby byly nad drogami a nie pod nimi:
@@ -2413,13 +2412,13 @@ class PlikiDoMontowania(object):
                 self.Pliki = [f for f in self.Pliki if f.find('szlaki') < 0]
         return
 
-    def ograniczGranice(self, plik_do_ograniczenia):
-        with open(os.path.join(os.path.join(self.KatalogZeZrodlami, 'narzedzia'), plik_do_ograniczenia),
-                  encoding=self.kodowanie) as plik_do_ogr:
+    def ogranicz_granice_lub_obszary(self, plik_do_ograniczenia):
+        with open(os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), plik_do_ograniczenia),
+                  encoding=self.zmienne.Kodowanie) as plik_do_ogr:
             zaw_pliku_do_ogr = plik_do_ogr.read().split('[END]\n')
         tylko_wybrany_obszar = []
         for a in self.Obszary:
-            for b in zaw_pliku_do_ogr[:]:
+            for b in tuple(zaw_pliku_do_ogr):
                 if b.find(a.split('-')[-1]) > 0:
                     tylko_wybrany_obszar.append(b.strip() + '\n[END]\n\n')
                     zaw_pliku_do_ogr.remove(b)
@@ -2434,10 +2433,22 @@ class PlikiDoMontowania(object):
         return tylko_wybrany_obszar
 
     def zwroc_granice_czesciowe(self):
-        return self.ograniczGranice('granice.txt')
+        return self.ogranicz_granice_lub_obszary('granice.txt')
 
     def zwroc_obszary_txt(self):
-        return self.ograniczGranice('obszary.txt')
+        return self.ogranicz_granice_lub_obszary('obszary.txt')
+
+    def zamien_granice_na_granice_czesciowe(self):
+        agranice = self.zwroc_granice_czesciowe()
+        with open(os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w',
+                  encoding=self.zmienne.Kodowanie, errors=self.zmienne.WriteErrors) as f:
+            for a in agranice:
+                f.write(a)
+        self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+
+    def usun_plik_z_granicami(self):
+        if 'granice' in self.Pliki[0]:
+            self.Pliki = self.Pliki[1:]
 
 
 class ObiektNaMapie(object):
@@ -3122,12 +3133,10 @@ def montujpliki(args, naglowek_mapy=''):
     # uklon w strone arta, montowanie tylko granic obszarow
     if hasattr(args, 'graniceczesciowe') and not args.tylkodrogi and not args.trybosmand:
         if args.graniceczesciowe:
-            agranice = plikidomont.zwroc_granice_czesciowe()
-            with open(os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w', encoding=Zmienne.Kodowanie,
-                      errors=Zmienne.WriteErrors) as f:
-                for a in agranice:
-                    f.write(a)
-            plikidomont.Pliki[0] = os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+            plikidomont.zamien_granice_na_granice_czesciowe()
+    # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
+    if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
+        plikidomont.usun_plik_z_granicami()
 
     # sprytne entrypoints
     if hasattr(args, 'sprytne_entrypoints') and args.sprytne_entrypoints:
