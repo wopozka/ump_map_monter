@@ -311,16 +311,16 @@ class Klasy2EndLevelCreator(tkinter.Toplevel):
 
 
 class KreatorKompilacjiTyp(tkinter.Toplevel):
-    def __init__(self, parent, **options):
+    def __init__(self, parent, mdm_config, **options):
         self.parent = parent
+        self.mdm_config = mdm_config
         super().__init__(parent, **options)
         self.transient(self.parent)
         self.title(u'Tworzenie i kompilacja pliku typ')
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
         # ramka z wyborem pliku typ
-        self.wybor_typ_variable = tkinter.StringVar()
-        self.wybor_typ_variable.set('domyslny')
+        self.wybor_typ_variable = self.mdm_config.zwroc_zmienna_opcji('nazwa_typ')
         wybor_typ_frame = tkinter.ttk.LabelFrame(body, text=u'Wybór pliku typ do stworzenia')
         wybor_typ_frame.pack()
         typ_domyslny = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'domyślny', variable=self.wybor_typ_variable,
@@ -342,12 +342,12 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         dodatkowe_opcje_frame.pack()
         family_id_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Family ID mapy (1-65535)')
         family_id_frame.pack(side='left')
-        self.family_entry = tkinter.Entry(family_id_frame)
+        self.family_id_entry_var = self.mdm_config.zwroc_zmienna_opcji('family_id')
+        self.family_entry = tkinter.Entry(family_id_frame, textvariable=self.family_id_entry_var)
         self.family_entry.pack()
         warstwice_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Uwzglednij warstwice')
         warstwice_frame.pack(side='left')
-        self.warstwice_variable = tkinter.BooleanVar()
-        self.warstwice_variable.set(False)
+        self.warstwice_variable = self.mdm_config.zwroc_zmienna_opcji('uwzglednij_warstwice')
         warstwice_tak = tkinter.ttk.Radiobutton(warstwice_frame, text=u'Tak', variable=self.warstwice_variable,
                                                 value=True)
         warstwice_tak.pack(side='left')
@@ -356,8 +356,7 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         warstwice_nie.pack(side='left')
         kodowanie_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Kodowanie')
         kodowanie_frame.pack(side='left')
-        self.kodowanie_variable = tkinter.StringVar()
-        self.kodowanie_variable.set('cp1250')
+        self.kodowanie_variable = self.mdm_config.zwroc_zmienna_opcji('code_page')
         kodowanie_ascii = tkinter.ttk.Radiobutton(kodowanie_frame, text=u'Kodowanie ASCII',
                                                   variable=self.kodowanie_variable, value='ascii')
         kodowanie_ascii.pack(side='left')
@@ -393,7 +392,8 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
 
     def utworz_i_kompiluj_typ(self):
         print('tworze typ')
-        args = Argumenty()
+        self.mdm_config.saveConfig()
+        args = self.mdm_config.zwroc_args_do_kompiluj_typ()
         args.nazwa_typ = [self.wybor_typ_variable.get()]
         args.family_id = [self.family_entry.get()]
         if not args.family_id[0].isdigit() or 0 > int(args.family_id[0]) > 65535:

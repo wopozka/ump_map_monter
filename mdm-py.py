@@ -799,11 +799,19 @@ class mdmConfig(object):
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
                              'standaryzuj_komentarz': False, 'usun_puste_numery': False}
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
+        self.kompiluj_typ_opcje = {'mkgmap_path': '', 'maksymalna_pamiec': '1G', 'family_id': '6324',
+                                   'uwzglednij_warstwice': False, 'code_page': 'cp1250', 'nazwa_typ': 'domyslny'}
+        self.kompiluj_mape_opcje = {'plik_typ': 'domyslny', 'uwzglednij_warstwice': False, 'gmapsupp': False,
+                                    'routing': False, 'index': False, 'max_jobs': '0'}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
         self.stworz_zmienne_mont_demont(self.demont_opcje)
         self.stworz_zmienne_mont_demont(self.mont_demont_opcje)
+        self.stworz_zmienne_mont_demont(self.kompiluj_typ_opcje)
+        self.stworz_zmienne_mont_demont(self.kompiluj_mape_opcje)
         self.readConfig()
 
+    def zwroc_zmienna_opcji(self, nazwa_opcji):
+        return self.montDemontOptions[nazwa_opcji]
     def stworz_zmienne_mont_demont(self, zmienne):
         for key in zmienne:
             if isinstance(zmienne[key], bool):
@@ -811,32 +819,37 @@ class mdmConfig(object):
             else:
                 self.montDemontOptions[key] = tkinter.StringVar(value=zmienne[key])
 
+    def zwroc_args_do_kompiluj_typ(self):
+        return self.zwroc_args(self.kompiluj_typ_opcje)
+
     def zwroc_args_do_mont(self):
         args = self.zwroc_args(self.mont_opcje)
+        args = self.zwroc_args(self.mont_demont_opcje, args)
         args.plikmp = 'wynik.mp'
         return args
 
 
     def zwroc_args_do_demont(self):
         args = self.zwroc_args(self.demont_opcje)
+        args = self.zwroc_args(self.mont_demont_opcje, args)
         args.katrob = None
         return args
 
-    def zwroc_args(self, argumenty):
-        args = Argumenty()
+    def zwroc_args(self, argumenty, args_=None):
+        if args_ is None:
+            args = Argumenty()
+        else:
+            args = args_
         for atrybut in argumenty:
-            setattr(args, atrybut, self.montDemontOptions[atrybut].get())
-        for atrybut in self.mont_demont_opcje:
             setattr(args, atrybut, self.montDemontOptions[atrybut].get())
         return args
 
     def saveConfig(self):
         with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'w') as configfile:
             for key in self.montDemontOptions:
-                if key in ('format_indeksow',):
-                    value = self.montDemontOptions[key].get()
-                else:
-                    value = str(int(self.montDemontOptions[key].get()))
+                value = self.montDemontOptions[key].get()
+                if isinstance(value, bool):
+                    value = str(int(value))
                 linia = key + '=' + value + '\n'
                 configfile.write(linia)
 
@@ -852,15 +865,10 @@ class mdmConfig(object):
                 if klucz not in self.montDemontOptions:
                     pass
                 else:
-                    if klucz not in ('X', 'format_indeksow'):
+                    if isinstance(self.montDemontOptions[klucz], tkinter.BooleanVar):
                         self.montDemontOptions[klucz].set(int(wartosc))
-                    elif klucz == 'X':
-                        if wartosc in ('0', '5', '6'):
-                            self.montDemontOptions[klucz].set(wartosc)
-                    if klucz in ('format_indeksow',):
-                        self.montDemontOptions[klucz].set(wartosc)
                     else:
-                        pass
+                        self.montDemontOptions[klucz].set(wartosc)
         except FileNotFoundError:
             pass
 
@@ -1929,7 +1937,7 @@ class mdm_gui_py(tkinter.Tk):
         aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
 
     def kreator_stworz_plik_typ(self):
-        aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self)
+        aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
 
     def kreator_skompiluj_mape(self):
         pass
@@ -2000,15 +2008,14 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('entry_otwarte_do_extras'))
         menu_montuj_opcje.add_checkbutton(label=u'Sprytne EntryPoints',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['sprytne_entrypoints'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('sprytne_entrypoints'))
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
-                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
-                                                        'format_indeksow'])
+                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityname',
                                                     variable=self.mdmMontDemontOptions.montDemontOptions[
                                                         'format_indeksow'])
