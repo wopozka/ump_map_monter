@@ -2017,19 +2017,18 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
                                                     variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityname',
-                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
-                                                        'format_indeksow'])
+                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
         menu_montuj_opcje.add_cascade(label=u'Format indeksu miast', menu=menu_montuj_format_indeksow)
         menu_demontuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje demontażu', menu=menu_demontuj_opcje)
         menu_demontuj_opcje.add_checkbutton(label=u'Usuń pustą numeracją',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['usun_puste_numery'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('usun_puste_numery'))
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('standaryzuj_komentarz'))
         menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
         menu_demontuj_opcje.add_checkbutton(label=u'Automatyczny rozkład obszarów i linii',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['autopolypoly'],
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('autopolypoly'),
                                             command=lambda: self.selectUnselect_aol(None))
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
@@ -2134,7 +2133,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.cityidx= tkinter.BooleanVar()
         # self.cityidx.set(False)
         self.montOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Obsługa indeksu miast',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('cityidx'),
                                                                 onvalue=True, offvalue=False)
         self.montOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
@@ -2142,7 +2141,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.adrfile = tkinter.BooleanVar()
         # self.adrfile.set(False)
         self.montOptionAdrCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij adresy',
-                                                            variable=self.mdmMontDemontOptions.montDemontOptions['adrfile'],
+                                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('adrfile'),
                                                             onvalue=True, offvalue=False)
         self.montOptionAdrCheckbutton.grid(column=1, row=0, sticky='W')
 
@@ -2150,7 +2149,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.noszlaki = tkinter.BooleanVar()
         # self.noszlaki.set(False)
         self.montOptionNoszlakiCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij szlaki',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['noszlaki'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('noszlaki'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNoszlakiCheckbutton.grid(column=0, row=1, sticky='W')
 
@@ -2158,7 +2157,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.nocity = tkinter.BooleanVar()
         # self.nocity.set(False)
         self.montOptionNocityCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij miasta',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['nocity'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('nocity'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNocityCheckbutton.grid(column=1, row=1, sticky='W')
 
@@ -2166,7 +2165,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.nopnt = tkinter.BooleanVar()
         # self.nopnt.set(False)
         self.montOptionNopntCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij punkty',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['nopnt'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('nopnt'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNopntCheckbutton.grid(column=0, row=2, sticky='W')
 
@@ -2174,7 +2173,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.monthash= tkinter.BooleanVar()
         # self.monthash.set(False)
         self.montOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Generuj sumy kontrolne',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['monthash'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('monthash'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNohashCheckbutton.grid(column=1, row=2, sticky='W')
 
@@ -2183,7 +2182,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.extratypes.set(False)
         self.montOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,
                                                                        text=u'Specjalne traktowanie typów',
-                                                                       variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                       variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('extratypes'),
                                                                        onvalue=True, offvalue=False)
         self.montOptionExtratypesCheckbutton.grid(column=0, row=3, sticky='W')
 
@@ -2191,7 +2190,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.graniceczesciowe=tkinter.BooleanVar()
         # self.graniceczesciowe.set(False)
         self.montOptionGraniceCzescioweCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Granice częściowe',
-                                                                             variable=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'],
+                                                                             variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('graniceczesciowe'),
                                                                              onvalue=True, offvalue=False)
         self.montOptionGraniceCzescioweCheckbutton.grid(column=1, row=3, sticky='W')
 
@@ -2215,7 +2214,7 @@ class mdm_gui_py(tkinter.Tk):
 
         # obsługa indeksu miast
         self.demontOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Obsługa indeksu miast',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('cityidx'),
                                                                     onvalue=True, offvalue=False)
         self.demontOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
@@ -2223,7 +2222,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.demonthash= tkinter.BooleanVar()
         # self.demonthash.set(False)
         self.demontOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Sprawdzaj sumy kontrolne',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['demonthash'],
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('demonthash'),
                                                                     onvalue=False, offvalue=True)
         self.demontOptionNohashCheckbutton.grid(column=0, row=1, sticky='W')
 
@@ -2231,7 +2230,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.autopoi = tkinter.BooleanVar()
         # self.autopoi.set(False)
         self.demontOptionAutopoiLabel = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Automatyczny rozkład poi',
-                                                            variable=self.mdmMontDemontOptions.montDemontOptions['autopoi'],
+                                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('autopoi'),
                                                             onvalue=True, offvalue=False)
         self.demontOptionAutopoiLabel.grid(column=0, row=2, sticky='W')
 
@@ -2239,19 +2238,19 @@ class mdm_gui_py(tkinter.Tk):
         # self.X = tkinter.StringVar()
         # self.X.set('0')
         self.demontOptionZaokraglanieRadio0 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Nie zaokrąglaj',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='0')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='0')
         self.demontOptionZaokraglanieRadio0.grid(column=1, row=0, sticky='W')
         self.demontOptionZaokraglanieRadio5 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Zaokrąglij do 5 cyfr',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='5')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='5')
         self.demontOptionZaokraglanieRadio5.grid(column=1, row=1, sticky='W')
         self.demontOptionZaokraglanieRadio6 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Zaokrąglij do 6 cyfr',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='6')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='6')
         self.demontOptionZaokraglanieRadio6.grid(column=1, row=2, sticky='W')
 
         # extratypes
         self.demontOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame,
                                                                          text=u'Specjalne traktowanie typów',
-                                                                         variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                         variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('extratypes'),
                                                                          onvalue=True, offvalue=False)
         self.demontOptionExtratypesCheckbutton.grid(columnspan=2, row=3, sticky='W')
 
