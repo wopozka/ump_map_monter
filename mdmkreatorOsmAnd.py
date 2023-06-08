@@ -5,6 +5,7 @@ import queue
 import subprocess
 import threading
 import mdmMp2xml
+import os.path
 
 class Argumenty(object):
     def __init__(self):
@@ -52,7 +53,7 @@ class ButtonZdalnieSterowany(tkinter.ttk.Button):
 
 class OSMAndKreator(tkinter.Toplevel):
     def __init__(self, parent, obszary, **options):
-        if 1:
+        if 0:
             tkinter.messagebox.showwarning(u'Na razie nie działa',u'Kreator dla OSMAnd na razie nie działa')
         else:
             self.args = Argumenty()
@@ -64,6 +65,7 @@ class OSMAndKreator(tkinter.Toplevel):
             self.title(u'Kreator tworzenia mapy dla OSMAnda')
             self.parent = parent
             self.kolejnyetap = 'uaktualnianie'
+            self.kolejka_komunikacyjna = queue.Queue()
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -80,24 +82,25 @@ class OSMAndKreator(tkinter.Toplevel):
             statusFrame = tkinter.Frame(body)
             statusFrame.pack()
             sfd = 10
-            self.uaktualnianie = tkinter.Label(statusFrame, text = u'Uaktualniam źródła', bg = self.nal)
-            self.uaktualnianie.pack(side = 'left', fill = 'x', expand=1)
-            space1 = tkinter.Frame(statusFrame, width = sfd)
-            space1.pack(side = 'left')
-            self.montowanie = tkinter.Label(statusFrame, text = u'Montuje mapę', bg = self.nal)
-            self.montowanie.pack(side = 'left', fill = 'x', expand=1)
+            self.labele_stanow = {}
+            self.labele_stanow['uaktualnianie'] = tkinter.Label(statusFrame, text=u'Uaktualniam źródła', bg=self.nal)
+            self.labele_stanow['uaktualnianie'].pack(side='left', fill='x', expand=1)
+            space1 = tkinter.Frame(statusFrame, width=sfd)
+            space1.pack(side='left')
+            self.labele_stanow['montowanie'] = tkinter.Label(statusFrame, text=u'Montuje mapę', bg=self.nal)
+            self.labele_stanow['montowanie'].pack(side='left', fill='x', expand=1)
             space2 = tkinter.Frame(statusFrame, width=sfd)
             space2.pack(side='left')
-            self.mp2OSM = tkinter.Label(statusFrame, text = u'Konwertuję mapę do formatu OSM', bg = self.nal)
-            self.mp2OSM.pack(side = 'left', fill = 'x', expand=1)
+            self.labele_stanow['mp2OSM'] = tkinter.Label(statusFrame, text=u'Konwertuję mapę do formatu OSM', bg=self.nal)
+            self.labele_stanow['mp2OSM'].pack(side='left', fill='x', expand=1)
             space3 = tkinter.Frame(statusFrame, width=sfd)
             space3.pack(side='left')
-            self.kompilacja = tkinter.Label(statusFrame, text = u'Przygotowuję mapę', bg = self.nal)
-            self.kompilacja.pack(side = 'left', fill = 'x', expand=1)
+            self.labele_stanow['kompilacja'] = tkinter.Label(statusFrame, text=u'Przygotowuję mapę', bg=self.nal)
+            self.labele_stanow['kompilacja'].pack(side='left', fill='x', expand=1)
             space4 = tkinter.Frame(statusFrame, width=sfd)
             space4.pack(side='left')
-            self.gotowe = tkinter.Label(statusFrame, text = 'Gotowe!', bg = self.nal)
-            self.gotowe.pack(side = 'left', fill = 'x', expand=1)
+            self.labele_stanow['gotowe'] = tkinter.Label(statusFrame, text=u'Gotowe!', bg=self.nal)
+            self.labele_stanow['gotowe'].pack(side='left', fill='x', expand=1)
             space6 = tkinter.Frame(statusFrame, width=sfd)
             space6.pack(side='left')
 
@@ -121,6 +124,7 @@ class OSMAndKreator(tkinter.Toplevel):
             textFrame.pack()
             self.text = LogErrText(textFrame, self.logerrqueue)
             self.text.pack(fill='both', expand=1)
+            self.update_me()
 
 
 
@@ -140,50 +144,45 @@ class OSMAndKreator(tkinter.Toplevel):
             self.focus_set()
             self.wait_window(self)
 
+    def update_me(self):
+        try:
+            while 1:
+                _obj, _var = self.kolejka_komunikacyjna.get_nowait()
+                print(repr(_obj), repr(_var))
+                if _obj == 'kolejnyetap':
+                    self.kolejnyetap = _var
+                elif _obj in ('uaktualnianie', 'montowanie', 'mp2OSM', 'kompilacja', 'gotowe'):
+                    self.labele_stanow[_obj].config(bg=self.al)
+                else:
+                    break
+        except queue.Empty:
+            pass
+        self.after(100, self.update_me)
+
     def next(self):
         if self.kolejnyetap == 'uaktualnianie':
             thread = threading.Thread(target=self.cvsup)
             thread.start()
 
         elif self.kolejnyetap == 'montowanie':
-            self.args.obszary = []
-            self.args.obszary = self.obszary
-            self.args.plikmp = 'wynik.mp'
-            self.args.adrfile = 1
-            self.args.cityidx = 0
-            self.args.nocity = 0
-            self.args.noszlaki = 1
-            # self.args.nopnt=self.nopnt.get()
-            self.args.nopnt = 1
-            # self.args.hash=self.monthash.get()
-            self.args.hash = 1
-            # self.args.extratypes=self.extratypes.get()
-            self.args.extratypes = 0
-            # self.args.graniceczesciowe=self.graniceczesciowe.get()
-            self.args.trybosmand = 1
-
-            self.args.stderrqueue = self.logerrqueue
-            self.args.stdoutqueue = self.logerrqueue
-            thread = threading.Thread(target=mont_demont.montujpliki, args=(self.args,))
+            thread = threading.Thread(target=self.montuj_pliki, args=(self.args,))
             thread.start()
-            self.kolejnyetap = 'konwertowanie'
 
 
         elif self.kolejnyetap == 'konwertowanie':
             # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
             self.logerrqueue.put('Ujednolicam kodowanie latin2->cp1250.\n')
-            with open(self.Zmienne.KatalogRoboczy + self.Zmienne.InputFile, encoding=self.Zmienne.Kodowanie,
-                      errors=self.Zmienne.WriteErrors) as f:
+            with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'r',
+                      encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
                 zawartosc = f.read()
             zawartosc = zawartosc.translate(str.maketrans("±ćęłńó¶ĽżˇĆĘŁŃÓ¦¬Ż", "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"))
-            with open(self.Zmienne.KatalogRoboczy + self.Zmienne.InputFile, 'w', encoding=self.Zmienne.Kodowanie,
-                      errors=self.Zmienne.WriteErrors) as f:
+            with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'w',
+                      encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
                 f.write(zawartosc)
             self.logerrqueue.put('Gotowe.\n')
-            self.kolejnyetap = 'mp2osm'
+            self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
 
         elif self.kolejnyetap == 'mp2osm':
-            
             args = txt2osmArgumenty(self.Zmienne.KatalogRoboczy)
             mdmMp2xml.main(args, [self.Zmienne.KatalogRoboczy + self.Zmienne.InputFile])
 
@@ -221,8 +220,32 @@ class OSMAndKreator(tkinter.Toplevel):
                 line = process.stdout.readline()
                 self.logerrqueue.put(line.decode(Zmienne.Kodowanie))
         self.logerrqueue.put('Gotowe\n')
-        self.kolejnyetap = 'montowanie'
-        self.uaktualnianie.config(bg = self.al)
+        self.kolejka_komunikacyjna.put(('kolejnyetap', 'montowanie'))
+        self.kolejka_komunikacyjna.put(('uaktualnianie', ''))
+
+    def montuj_pliki(self, args):
+        args.obszary = []
+        args.obszary = self.obszary
+        args.plikmp = 'wynik.mp'
+        args.adrfile = 1
+        args.cityidx = 0
+        args.nocity = 0
+        args.noszlaki = 1
+        # self.args.nopnt=self.nopnt.get()
+        args.nopnt = 1
+        # self.args.hash=self.monthash.get()
+        args.monthash = 1
+        # self.args.extratypes=self.extratypes.get()
+        args.extratypes = 0
+        # self.args.graniceczesciowe=self.graniceczesciowe.get()
+        args.trybosmand = 1
+
+        args.stderrqueue = self.logerrqueue
+        args.stdoutqueue = self.logerrqueue
+        mont_demont.montujpliki(self.args)
+        self.kolejka_komunikacyjna.put(('kolejnyetap', 'konwertowanie'))
+        self.kolejka_komunikacyjna.put(('montowanie', ''))
+
 
 class Klasy2EndLevelCreator(tkinter.Toplevel):
     def __init__(self, parent, obszary, **options):
