@@ -431,6 +431,78 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         mont_demont.stworz_plik_typ(args)
 
 
+class KreatorKompilacjiMdmmap(tkinter.Toplevel):
+    def __init__(self, parent, mdm_config, **options):
+        self.parent = parent
+        self.mdm_config = mdm_config
+        super().__init__(parent, **options)
+        self.transient(self.parent)
+        self.title(u'Tworzenie i kompilacja pliku mp do img')
+        body = tkinter.Frame(self)
+        body.pack(padx=5, pady=5, fill='both', expand=1)
+        # ramka z wyborem pliku typ
+        self.wybor_typ_variable = self.mdm_config.zwroc_zmienna_opcji('nazwa_typ')
+        wybor_typ_frame = tkinter.ttk.LabelFrame(body, text=u'Wybór pliku typ do stworzenia')
+        wybor_typ_frame.pack()
+        typ_domyslny = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'domyślny', variable=self.wybor_typ_variable,
+                                               value='domyslny')
+        typ_domyslny.pack(side='left')
+        typ_reczniak = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'reczniak', variable=self.wybor_typ_variable,
+                                               value='reczniak')
+        typ_reczniak.pack(side='left')
+        typ_rzuq = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'rzuq', variable=self.wybor_typ_variable,
+                                           value='rzuq')
+        typ_rzuq.pack(side='left')
+        typ_olowos = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'olowos', variable=self.wybor_typ_variable,
+                                             value='olowos')
+        typ_olowos.pack(side='left')
+
+        # ramka na dodatkowe opcje tworzenia pliku typ
+        self._dodaj_odstep_pionowy(body)
+        dodatkowe_opcje_frame = tkinter.ttk.Frame(body)
+        dodatkowe_opcje_frame.pack()
+        family_id_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Family ID mapy (1-65535)')
+        family_id_frame.pack(side='left')
+        self.family_id_entry_var = self.mdm_config.zwroc_zmienna_opcji('family_id')
+        self.family_entry = tkinter.Entry(family_id_frame, textvariable=self.family_id_entry_var)
+        self.family_entry.pack()
+        warstwice_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Uwzglednij warstwice')
+        warstwice_frame.pack(side='left')
+        self.warstwice_variable = self.mdm_config.zwroc_zmienna_opcji('uwzglednij_warstwice')
+        warstwice_tak = tkinter.ttk.Radiobutton(warstwice_frame, text=u'Tak', variable=self.warstwice_variable,
+                                                value=True)
+        warstwice_tak.pack(side='left')
+        warstwice_nie = tkinter.ttk.Radiobutton(warstwice_frame, text=u'Nie', variable=self.warstwice_variable,
+                                                value=False)
+        warstwice_nie.pack(side='left')
+        kodowanie_frame = tkinter.ttk.LabelFrame(dodatkowe_opcje_frame, text=u'Kodowanie')
+        kodowanie_frame.pack(side='left')
+        self.kodowanie_variable = self.mdm_config.zwroc_zmienna_opcji('code_page')
+        kodowanie_ascii = tkinter.ttk.Radiobutton(kodowanie_frame, text=u'Kodowanie ASCII',
+                                                  variable=self.kodowanie_variable, value='ascii')
+        kodowanie_ascii.pack(side='left')
+        kodowanie_cp1250 = tkinter.ttk.Radiobutton(kodowanie_frame, text=u'Kodowanie cp1250',
+                                                   variable=self.kodowanie_variable, value='cp1250')
+        kodowanie_cp1250.pack(side='left')
+
+        # wybor formatu mapy: gmapsupp albo gmapii
+        self._dodaj_odstep_pionowy(body)
+        format_mapy_frame = tkinter.LabelFrame(body, text=u'Format pliku wyjściowego')
+        format_mapy_frame.pack()
+        self.format_skompilowanej_mapy = self.mdm_config.zwroc_zmienna_opcji('gmapsupp')
+        format_gmapsupp = tkinter.ttk.Radiobutton(format_mapy_frame, text=u'gmapsupp',
+                                                  variable=self.format_skompilowanej_mapy, value='gmapsupp')
+        format_gmapsupp.pack(side='left')
+        format_gmapi = tkinter.ttk.Radiobutton(format_mapy_frame, text=u'gmapi',
+                                                  variable=self.format_skompilowanej_mapy, value='gmapi')
+        format_gmapi.pack(side='left')
+
+    def _dodaj_odstep_pionowy(self, frame):
+        space = tkinter.Frame(frame, height=10)
+        space.pack()
+
+
+
 class LogErrText(tkinter.scrolledtext.ScrolledText):
     def __init__(self, master, logqueue, **options):
         tkinter.scrolledtext.ScrolledText.__init__(self, master, **options)
