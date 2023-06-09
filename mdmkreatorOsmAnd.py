@@ -44,7 +44,7 @@ class ButtonZdalnieSterowany(tkinter.ttk.Button):
         try:
             string = self.statusqueue.get_nowait()
             if string.startswith('Koniec'):
-                self.configure(state='Normal')
+                self.configure(state='normal')
         except queue.Empty:
             #self.previousFunkcjaPrzyciskuPracuje = self.funkcjaPrzyciskuPracuje = 0
             pass
@@ -113,8 +113,8 @@ class OSMAndKreator(tkinter.Toplevel):
             buttonZamknij.pack(side = 'left')
             space7 = tkinter.Frame(buttonFrame, width=sfd)
             space7.pack(side = 'left')
-            buttonNext = tkinter.ttk.Button(buttonFrame, text = u'Dalej', command = self.next)
-            buttonNext.pack(side = 'left')
+            self.buttonNext = tkinter.ttk.Button(buttonFrame, text = u'Dalej', command = self.next)
+            self.buttonNext.pack(side = 'left')
             # space8 = tkinter.Frame(buttonFrame, width=sfd)
             # space8.pack(side='left')
 
@@ -148,11 +148,11 @@ class OSMAndKreator(tkinter.Toplevel):
         try:
             while 1:
                 _obj, _var = self.kolejka_komunikacyjna.get_nowait()
-                print(repr(_obj), repr(_var))
                 if _obj == 'kolejnyetap':
                     self.kolejnyetap = _var
                 elif _obj in ('uaktualnianie', 'montowanie', 'mp2OSM', 'kompilacja', 'gotowe'):
                     self.labele_stanow[_obj].config(bg=self.al)
+                    self.buttonNext.config(state='normal')
                 else:
                     break
         except queue.Empty:
@@ -160,6 +160,7 @@ class OSMAndKreator(tkinter.Toplevel):
         self.after(100, self.update_me)
 
     def next(self):
+        self.buttonNext.config(state='disabled')
         if self.kolejnyetap == 'uaktualnianie':
             thread = threading.Thread(target=self.cvsup)
             thread.start()
@@ -439,8 +440,9 @@ class LogErrText(tkinter.scrolledtext.ScrolledText):
     def update_me(self):
         try:
             while 1:
-                string = self.logqueue.get_nowait()
-                self.insert('end', string.lstrip())
+                msg = self.logqueue.get_nowait()
+                print(msg)
+                self.insert('end', msg.lstrip())
                 self.see(tkinter.END)
 
         except queue.Empty:
