@@ -1124,7 +1124,7 @@ class ParsingError(Exception):
     pass
 
 
-def printdebug(string):
+def printdebug(string, options):
     global working_thread
     if options.verbose:
         sys.stderr.write("\tDEBUG: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
@@ -2485,7 +2485,7 @@ def output_navit(prefix, num):
     out.close()
 
 
-def output_index(prefix, num):
+def output_index(prefix, num, options):
     global maxid
     global idpfx
 
@@ -2577,12 +2577,12 @@ def output_index(prefix, num):
     out.close()
 
 
-def output_nominatim(prefix,num):
+def output_nominatim(prefix, num, options):
     global streets_counter
     global maxid
     global idpfx
 
-    printdebug("City=>Streets scan start: "+str(datetime.now()))
+    printdebug("City=>Streets scan start: "+str(datetime.now()), options)
     #
     #  fragment dodajacy krotkie odcinki drog dla wsi
     #  ktore nie posiadaja ulic
@@ -2609,7 +2609,7 @@ def output_nominatim(prefix,num):
                 l=[]
                 l.append(m)
                 streets_counter[n]=l
-    printdebug("City=>Streets scan part1: "+str(datetime.now()))
+    printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
     # teraz skan wszystkich ulic
     for way in ways:
         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
@@ -2656,21 +2656,21 @@ def output_nominatim(prefix,num):
                                 break
                         if found == 0:
                             printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) +
-                                       "," + str(waylon) + ")")
+                                       "," + str(waylon) + ")", options)
                     else:
                         printdebug("Brak Miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) + "," +
-                                   str(waylon) + ")")
+                                   str(waylon) + ")", options)
             except IndexError:
                 pprint.pprint(way, sys.stderr)
                 
-    printdebug("City=>Streets scan part2: " + str(datetime.now()))
+    printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
     # i dodawanie krotkich ulic
     for m in streets_counter:
         for k in streets_counter[m]:
             if k['cnt'] != 0:
-                printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']))
+                printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']), options)
             else:
-                printdebug("Short way added:" + m)
+                printdebug("Short way added:" + m, options)
                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
                 attrs = {'_timestamp': filestamp}
@@ -2689,7 +2689,7 @@ def output_nominatim(prefix,num):
                     'highway': "residental"
                 }
                 ways.append(way)
-    printdebug("City=>Streets scan stop: "+str(datetime.now()))
+    printdebug("City=>Streets scan stop: "+str(datetime.now()), options)
 
 
     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
@@ -2826,9 +2826,9 @@ def worker(task, options):
     if options.nonumber_file != None:
         output_nonumbers("UMP-PL", task['idx'])	# no data change
     if options.index_file != None:
-        output_index("UMP-PL", task['idx'])	# no data change
+        output_index("UMP-PL", task['idx'], options)	# no data change
     if options.nominatim_file != None:
-        output_nominatim("UMP-PL", task['idx'])  # data is changed
+        output_nominatim("UMP-PL", task['idx'], options)  # data is changed
 
 # ilosc id w obszarze. brak ostrzegania przy normalizacji
     maxid = maxid - idperarea * task['idx']
@@ -3066,16 +3066,36 @@ def main(options, args):
         printinfo_nlf("Normal output... ")
         elapsed = datetime.now().replace(microsecond=0)
         try:
-            shutil.copyfileobj(open(headerf,'r'), sys.stdout)
+            if options.outputfile:
+                shutil.copyfileobj(open(headerf, 'r'), open(options.outputfile, 'w'))
+            else:
+                shutil.copyfileobj(open(headerf,'r'), sys.stdout)
             for workelem in worklist:
                 file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
                 if options.normalize_ids:
-                    parsecopy(open(file2, 'r'), sys.stdout, workelem['idx'],
+                    if options.outputfile:
+                        dest_ = open(options.outputfile, 'a')
+                    else:
+                        dest_ = sys.stdout
+                    parsecopy(open(file2, 'r'), dest_, workelem['idx'],
                               workelem['baseid'] - idperarea*workelem['idx'])
+                    if options.outputfile:
+                        dest_.close()
                 else:
-                    shutil.copyfileobj(open(file2, 'r'), sys.stdout)
+                    if options.outputfile:
+                        dest_ = open(options.outputfile, 'a')
+                    else:
+                        dest_ = sys.stdout
+                    shutil.copyfileobj(open(file2, 'r'), dest_)
+                    if options.outputfile:
+                        dest_.close()
                 os.remove(file2)
-            print("</osm>")
+            if options.outputfile:
+                dest_ = open(options.outputfile, 'a')
+                dest_.write('</osm>\n')
+                dest_.close()
+            else:
+                print("</osm>")
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
