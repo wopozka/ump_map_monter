@@ -30,7 +30,7 @@ class txt2osmArgumenty(object):
         self.normalize_ids = False
         self.ignore_errors = False
         self.regions = False
-        self.outputfile = katalogroboczy + 'MapaOSMAnd.osm'
+        self.outputfile = os.path.join(katalogroboczy, 'MapaOSMAnd.osm')
 
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
@@ -168,23 +168,9 @@ class OSMAndKreator(tkinter.Toplevel):
             thread = threading.Thread(target=self.montuj_pliki, args=(self.args,))
             thread.start()
 
-
-        elif self.kolejnyetap == 'konwertowanie':
-            # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-            self.logerrqueue.put('Ujednolicam kodowanie latin2->cp1250.\n')
-            with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'r',
-                      encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
-                zawartosc = f.read()
-            zawartosc = zawartosc.translate(str.maketrans("±ćęłńó¶ĽżˇĆĘŁŃÓ¦¬Ż", "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"))
-            with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'w',
-                      encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
-                f.write(zawartosc)
-            self.logerrqueue.put('Gotowe.\n')
-            self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
-
         elif self.kolejnyetap == 'mp2osm':
             args = txt2osmArgumenty(self.Zmienne.KatalogRoboczy)
-            mdmMp2xml.main(args, [self.Zmienne.KatalogRoboczy + self.Zmienne.InputFile])
+            mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
 
         elif self.kolejnyetap == 'kompilowanie':
             pass
@@ -223,6 +209,19 @@ class OSMAndKreator(tkinter.Toplevel):
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'montowanie'))
         self.kolejka_komunikacyjna.put(('uaktualnianie', ''))
 
+    def latin2_to_cp1250(self):
+        # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
+        self.logerrqueue.put('Ujednolicam kodowanie latin2->cp1250.\n')
+        with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'r',
+                  encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
+            zawartosc = f.read()
+        zawartosc = zawartosc.translate(str.maketrans("±ćęłńó¶ĽżˇĆĘŁŃÓ¦¬Ż", "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"))
+        with open(os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile), 'w',
+                  encoding=self.Zmienne.Kodowanie, errors=self.Zmienne.WriteErrors) as f:
+            f.write(zawartosc)
+        self.logerrqueue.put('Gotowe.\n')
+
+
     def montuj_pliki(self, args):
         args.obszary = []
         args.obszary = self.obszary
@@ -243,7 +242,8 @@ class OSMAndKreator(tkinter.Toplevel):
         args.stderrqueue = self.logerrqueue
         args.stdoutqueue = self.logerrqueue
         mont_demont.montujpliki(self.args)
-        self.kolejka_komunikacyjna.put(('kolejnyetap', 'konwertowanie'))
+        self.latin2_to_cp1250()
+        self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
         self.kolejka_komunikacyjna.put(('montowanie', ''))
 
 
