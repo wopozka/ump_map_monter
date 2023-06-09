@@ -627,6 +627,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.ump_mdm_mode = tkinter.IntVar()
         self.umpcvsusername = tkinter.StringVar()
         self.umpPatchProgramPath = tkinter.StringVar()
+        self.mkgmmap_jar_path = tkinter.StringVar()
 
         self.umpSourceValue.set(self.Konfiguracja.KatalogzUMP)
         self.umpRoboczyValue.set(self.Konfiguracja.KatalogRoboczy)
@@ -634,6 +635,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.umpMapedit2Path.set(self.Konfiguracja.MapEdit2Exe)
         self.umpNetGenPath.set(self.Konfiguracja.NetGen)
         self.umpcvsusername.set(self.Konfiguracja.CvsUserName)
+        self.mkgmmap_jar_path.set(self.Konfiguracja.mkgmap_jar_path)
         if self.Konfiguracja.mdm_mode == 'edytor':
             self.ump_mdm_mode.set(1)
         else:
@@ -679,6 +681,7 @@ class ConfigWindow(tkinter.Toplevel):
                                                       command=self.OnButtonClickMapedit2)
         umpmapedit2WybierzButton.grid(row=0, column=1, sticky='e')
 
+        # sciezka do programu netgen
         umpnetgenLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Ścieżka do programu netgen.exe')
         umpnetgenLabelFrame.grid(row=4, column=0, sticky='we', columnspan=2)
         umpnetgen = tkinter.Label(umpnetgenLabelFrame, textvariable=self.umpNetGenPath)
@@ -688,17 +691,27 @@ class ConfigWindow(tkinter.Toplevel):
                                                     command=self.OnButtonClickNetgen)
         umpnetgenWybierzButton.grid(row=0, column=1, sticky='e')
 
+        # sciezka do mkgmap
+        mkgmap_jar_path_frame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Ścieżka do programu mkgmap.jar')
+        mkgmap_jar_path_frame.grid(row=5, column=0, columnspan=2, sticky='we')
+        mkgmap_jar_path_label = tkinter.Label(mkgmap_jar_path_frame, textvariable=self.mkgmmap_jar_path)
+        mkgmap_jar_path_label.grid(row=0, column=0, sticky='w')
+        mkgmap_jar_path_frame.grid_columnconfigure(0, weight=1)
+        mkgmap_jar_path_label_button = tkinter.ttk.Button(mkgmap_jar_path_frame, text='Wybierz',
+                                                          command=self.OnButtonClickMkgmapJarPath)
+        mkgmap_jar_path_label_button.grid(row=0, column=1, sticky='e')
+
         # login dla cvs
         umpcvsloginLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame,
                                                        text=u'Login do CVS, jeśli nie masz pozostaw guest')
-        umpcvsloginLabelFrame.grid(row=5, column=0, sticky='we', columnspan=2)
+        umpcvsloginLabelFrame.grid(row=6, column=0, sticky='we', columnspan=2)
         umpcvsloginLabelFrame.grid_columnconfigure(0, weight=1)
         umpcvsEntry = tkinter.Entry(umpcvsloginLabelFrame, textvariable=self.umpcvsusername)
         umpcvsEntry.grid(row=0, column=0, sticky='ew')
 
         # tryb pracy gui
         umpmdmmodeLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Tryb pracy mdm')
-        umpmdmmodeLabelFrame.grid(row=6, column=0, columnspan=2, sticky='we')
+        umpmdmmodeLabelFrame.grid(row=7, column=0, columnspan=2, sticky='we')
         umpmdmmodeRadio1 = tkinter.ttk.Radiobutton(umpmdmmodeLabelFrame, text='Edytor', value=1,
                                                    variable=self.ump_mdm_mode)
         umpmdmmodeRadio1.grid(row=0, column=0)
@@ -755,6 +768,9 @@ class ConfigWindow(tkinter.Toplevel):
                 configfile.write('MDMMODE=wrzucacz')
             configfile.write('\n')
             configfile.write('CVSUSERNAME=' + self.umpcvsusername.get())
+            configfile.write('\n')
+            configfile.write('MKGMAPJARPATH=' + self.mkgmmap_jar_path.get())
+            configfile.write('\n')
 
             command = self.destroy()
 
@@ -788,6 +804,11 @@ class ConfigWindow(tkinter.Toplevel):
             self.umpRoboczyValue.set(aaa)
             self.Konfiguracja.KatalogRoboczy = aaa
 
+    def OnButtonClickMkgmapJarPath(self):
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka do pliku mkgmap.jar'))
+        if aaa:
+            self.mkgmmap_jar_path.set(aaa)
+            self.Konfiguracja.mkgmap_jar_path = aaa
 
 class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało

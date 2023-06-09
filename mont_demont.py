@@ -32,7 +32,7 @@ class Mkgmap(object):
         if hasattr(args, 'mkgmap_path') and args.mkgmap_path:
             self.mkg_map = args.mkgmap_path
         else:
-            self.mkg_map = os.path.join(os.path.join(zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
+            self.mkg_map = zmienne.mkgmap_jar_path
         self.zmienne = zmienne
 
     def java_call_general(self):
@@ -753,6 +753,7 @@ class UstawieniaPoczatkowe(object):
             self.Kodowanie = 'cp1250'
         self.ReadErrors = 'ignore'
         self.WriteErrors = 'ignore'
+        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\mkgmap.jar'
         self.wczytajKonfiguracje()
 
     def ustaw_katalog_home(self, katalog_home):
@@ -801,6 +802,8 @@ class UstawieniaPoczatkowe(object):
                         self.mdm_mode = 'wrzucacz'
                 if 'CVSUSERNAME' in konf:
                     self.CvsUserName = konf['CVSUSERNAME']
+                if 'MKGMAPJARPATH' in konf:
+                    self.mkgmap_jar_path = konf['MKGMAPJARPATH']
                 else:
                     pass
 
