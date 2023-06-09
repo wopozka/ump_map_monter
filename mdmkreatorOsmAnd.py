@@ -441,9 +441,27 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
         # ramka z wyborem pliku typ
+        max_pam_max_jobs_typ_frame = tkinter.Frame(body)
+        max_pam_max_jobs_typ_frame.pack()
+        maksymalna_pamiec_frame = tkinter.ttk.LabelFrame(max_pam_max_jobs_typ_frame,
+                                                         text=u'Maksymalna pamięć dla Javy (GB)')
+        maksymalna_pamiec_frame.pack(side='left')
+        self.maksymalna_pamiec_entry_var = self.mdm_config.zwroc_zmienna_opcji('maksymalna_pamiec')
+        self.maksymalna_pamiec = tkinter.Entry(maksymalna_pamiec_frame, textvariable=self.maksymalna_pamiec_entry_var)
+        self.maksymalna_pamiec.pack()
+
+        maksymalna_ilosc_watkow_frame = tkinter.ttk.LabelFrame(max_pam_max_jobs_typ_frame,
+                                                         text=u'Maksymalna ilosc watkow (0 to auto)')
+        maksymalna_ilosc_watkow_frame.pack(side='left')
+        self.maksymalna_ilosc_watkow_entry_var = self.mdm_config.zwroc_zmienna_opcji('max_jobs')
+        self.maksymalna_ilosc_watkow_entry = tkinter.Entry(maksymalna_ilosc_watkow_frame,
+                                                        textvariable=self.maksymalna_ilosc_watkow_entry_var)
+        self.maksymalna_ilosc_watkow_entry.pack()
+
+
         self.wybor_typ_variable = self.mdm_config.zwroc_zmienna_opcji('nazwa_typ')
-        wybor_typ_frame = tkinter.ttk.LabelFrame(body, text=u'Wybór pliku typ do stworzenia')
-        wybor_typ_frame.pack()
+        wybor_typ_frame = tkinter.ttk.LabelFrame(max_pam_max_jobs_typ_frame, text=u'Wybór pliku typ do stworzenia')
+        wybor_typ_frame.pack(side='left')
         typ_domyslny = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'domyślny', variable=self.wybor_typ_variable,
                                                value='domyslny')
         typ_domyslny.pack(side='left')
@@ -487,15 +505,30 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
 
         # wybor formatu mapy: gmapsupp albo gmapii
         self._dodaj_odstep_pionowy(body)
-        format_mapy_frame = tkinter.LabelFrame(body, text=u'Format pliku wyjściowego')
-        format_mapy_frame.pack()
-        self.format_skompilowanej_mapy = self.mdm_config.zwroc_zmienna_opcji('gmapsupp')
+        index_routing_format_frame = tkinter.Frame(body)
+        index_routing_format_frame.pack()
+        format_mapy_frame = tkinter.LabelFrame(index_routing_format_frame, text=u'Format pliku wyjściowego')
+        format_mapy_frame.pack(side='left')
+        self.format_skompilowanej_mapy = self.mdm_config.zwroc_zmienna_opcji('format_mapy')
         format_gmapsupp = tkinter.ttk.Radiobutton(format_mapy_frame, text=u'gmapsupp',
                                                   variable=self.format_skompilowanej_mapy, value='gmapsupp')
         format_gmapsupp.pack(side='left')
         format_gmapi = tkinter.ttk.Radiobutton(format_mapy_frame, text=u'gmapi',
                                                   variable=self.format_skompilowanej_mapy, value='gmapi')
         format_gmapi.pack(side='left')
+        index_frame = tkinter.ttk.LabelFrame(index_routing_format_frame, text=u'Indeks adresów')
+        index_frame.pack(side='left')
+        self.indeksy_adresow = self.mdm_config.zwroc_zmienna_opcji('index')
+        index_checkbutton = tkinter.ttk.Checkbutton(index_frame, text=u'Generuj indeks adresów',
+                                                    variable=self.indeksy_adresow, onvalue=True, offvalue=False)
+        index_checkbutton.pack(side='left')
+
+        routing_frame = tkinter.ttk.LabelFrame(index_routing_format_frame, text=u'Mapa z routingiem')
+        routing_frame.pack(side='left')
+        self.routing = self.mdm_config.zwroc_zmienna_opcji('routing')
+        routing_checkbutton = tkinter.ttk.Checkbutton(routing_frame, text=u'Generuj mapę z routingiem',
+                                                    variable=self.routing, onvalue=True, offvalue=False)
+        routing_checkbutton.pack(side='left')
 
     def _dodaj_odstep_pionowy(self, frame):
         space = tkinter.Frame(frame, height=10)

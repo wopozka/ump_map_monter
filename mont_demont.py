@@ -51,7 +51,7 @@ class Mkgmap(object):
         java_call_args = self.java_call_general()
         if self.args.routing:
             java_call_args += ['--route', '--drive-on=detect,right']
-        if self.args.gmapsupp[0] == 'gmapsupp':
+        if self.args.format_mapy[0] == 'gmapsupp':
             java_call_args.append('--gmapsupp')
             mapset_name = ['--description=UMP pcPL']
         else:
@@ -4302,7 +4302,7 @@ def main(argumenty):
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
     parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku mapy')
-    parser_kompiluj_mape.add_argument('-g', '--gmapsupp', default=['gmapsupp'], nargs=1, choices=['gmapsupp', 'gmapi'],
+    parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default=['gmapsupp'], nargs=1, choices=['gmapsupp', 'gmapi'],
                                       help="Generuj mape w formacie gmapsupp.img albo gmapii. "
                                            "Gmapsupp wgrywasz do odbiornika, gmapi wgrywasz do mapsource/basecamp.")
     parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,

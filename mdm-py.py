@@ -822,7 +822,7 @@ class mdmConfig(object):
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
         self.kompiluj_typ_opcje = {'mkgmap_path': '', 'maksymalna_pamiec': '1G', 'family_id': '6324',
                                    'uwzglednij_warstwice': False, 'code_page': 'cp1250', 'nazwa_typ': 'domyslny'}
-        self.kompiluj_mape_opcje = {'plik_typ': 'domyslny', 'uwzglednij_warstwice': False, 'gmapsupp': 'gmapsupp',
+        self.kompiluj_mape_opcje = {'plik_typ': 'domyslny', 'uwzglednij_warstwice': False, 'format_mapy': 'gmapsupp',
                                     'routing': False, 'index': False, 'max_jobs': '0'}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
         self.stworz_zmienne_mont_demont(self.demont_opcje)
