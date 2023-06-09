@@ -530,9 +530,31 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
                                                     variable=self.routing, onvalue=True, offvalue=False)
         routing_checkbutton.pack(side='left')
 
+        # plik do wlasnych typow
+        self.wlasne_typy_var = self.mdm_config.zwroc_zmienna_opcji('wlasne_typy')
+        wlasne_typy_frame = tkinter.ttk.LabelFrame(body, text=u'Obsługa własnych definicji aliasow do typów.')
+        wlasne_typy_frame.pack(fill='x')
+        wlasne_typy_label = tkinter.ttk.Label(wlasne_typy_frame, textvariable=self.wlasne_typy_var, anchor='w',
+                                              background='green2', width=-120)
+        wlasne_typy_label.pack(side='left', fill='x')
+        wlasne_typy_button_wybierz = tkinter.ttk.Button(wlasne_typy_frame, text='Wybierz',
+                                                        command=self.wlasne_typy_wybierz_plik)
+        wlasne_typy_button_wybierz.pack(side='right')
+        wlasne_typy_button_czysc = tkinter.ttk.Button(wlasne_typy_frame, text='Czysc',
+                                                        command=self.wlasne_typy_czysc_plik)
+        wlasne_typy_button_czysc.pack(side='right')
+
     def _dodaj_odstep_pionowy(self, frame):
         space = tkinter.Frame(frame, height=10)
         space.pack()
+
+    def wlasne_typy_wybierz_plik(self):
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka definicji wlasnych aliasow'))
+        if len(aaa) > 0:
+            self.wlasne_typy_var.set(aaa)
+
+    def wlasne_typy_czysc_plik(self):
+        self.wlasne_typy_var.set('')
 
 
 
