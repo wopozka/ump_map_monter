@@ -531,6 +531,7 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         routing_checkbutton.pack(side='left')
 
         # plik do wlasnych typow
+        self._dodaj_odstep_pionowy(body)
         self.wlasne_typy_var = self.mdm_config.zwroc_zmienna_opcji('wlasne_typy')
         wlasne_typy_frame = tkinter.ttk.LabelFrame(body, text=u'Obsługa własnych definicji aliasow do typów.')
         wlasne_typy_frame.pack(fill='x')
@@ -544,6 +545,28 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
                                                         command=self.wlasne_typy_czysc_plik)
         wlasne_typy_button_czysc.pack(side='right')
 
+        # guziki kompiluj mape oraz cancel
+        self._dodaj_odstep_pionowy(body)
+        kompiluj_cancel_frame = tkinter.Frame(body)
+        kompiluj_cancel_frame.pack()
+        kompiluj_button = tkinter.ttk.Button(kompiluj_cancel_frame, text=u'Kompiluj mapę', command=self.kompiluj_mape)
+        kompiluj_button.pack(side='left')
+        cancel_button = tkinter.ttk.Button(kompiluj_cancel_frame, text=u'Anuluj', command=self.destroy)
+        cancel_button.pack(side='left')
+
+        # okienko z logami
+        self._dodaj_odstep_pionowy(body)
+        self.logerrqueue = queue.Queue()
+        textFrame = tkinter.ttk.LabelFrame(body, text='Komunikaty')
+        textFrame.pack(fill='both', expand=1)
+        self.log_err_text = LogErrText(textFrame, self.logerrqueue, heigh=10)
+        self.log_err_text.pack(fill='both', expand=1)
+
+        self.grab_set()
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.focus_set()
+        self.wait_window(self)
+
     def _dodaj_odstep_pionowy(self, frame):
         space = tkinter.Frame(frame, height=10)
         space.pack()
@@ -555,6 +578,9 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
 
     def wlasne_typy_czysc_plik(self):
         self.wlasne_typy_var.set('')
+
+    def kompiluj_mape(self):
+        pass
 
 
 
