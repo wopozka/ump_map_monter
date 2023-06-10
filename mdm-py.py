@@ -823,7 +823,8 @@ class mdmConfig(object):
         self.kompiluj_typ_opcje = {'mkgmap_path': '', 'maksymalna_pamiec': '1G', 'family_id': '6324',
                                    'uwzglednij_warstwice': False, 'code_page': 'cp1250', 'nazwa_typ': 'domyslny'}
         self.kompiluj_mape_opcje = {'plik_typ': 'domyslny', 'uwzglednij_warstwice': False, 'format_mapy': 'gmapsupp',
-                                    'routing': False, 'index': False, 'max_jobs': '0', 'wlasne_typy': ''}
+                                    'dodaj_routing': False, 'index': False, 'max_jobs': '0', 'wlasne_typy': '',
+                                    'dodaj_adresy': False, 'uruchom_wojka': True, 'podnies_poziom': True}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
         self.stworz_zmienne_mont_demont(self.demont_opcje)
         self.stworz_zmienne_mont_demont(self.mont_demont_opcje)
@@ -842,6 +843,17 @@ class mdmConfig(object):
 
     def zwroc_args_do_kompiluj_typ(self):
         return self.zwroc_args(self.kompiluj_typ_opcje)
+
+    def zwroc_args_do_montuj_mkgmap(self):
+        options = {}
+        for key in self.kompiluj_mape_opcje:
+            options[key] = self.kompiluj_mape_opcje[key]
+        for key in self.kompiluj_typ_opcje:
+            options[key] = self.kompiluj_typ_opcje[key]
+        args = self.zwroc_args(options)
+        setattr(args, 'trybosmand', False)
+        return args
+
 
     def zwroc_args_do_mont(self):
         args = self.zwroc_args(self.mont_opcje)
@@ -1961,7 +1973,8 @@ class mdm_gui_py(tkinter.Tk):
         aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
 
     def kreator_skompiluj_mape(self):
-        aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions)
+        obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
+        aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
 
     def cvs_co(self, obszar):
         cvs_status = sprawdz_czy_cvs_obecny()

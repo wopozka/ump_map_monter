@@ -432,9 +432,10 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
 
 
 class KreatorKompilacjiMdmmap(tkinter.Toplevel):
-    def __init__(self, parent, mdm_config, **options):
+    def __init__(self, parent, mdm_config, obszary, **options):
         self.parent = parent
         self.mdm_config = mdm_config
+        self.obszary = obszary
         super().__init__(parent, **options)
         self.transient(self.parent)
         self.title(u'Tworzenie i kompilacja pliku mp do img')
@@ -474,6 +475,9 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         typ_olowos = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'olowos', variable=self.wybor_typ_variable,
                                              value='olowos')
         typ_olowos.pack(side='left')
+        typ_brak = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'Bez pliku typ', variable=self.wybor_typ_variable,
+                                           value='brak')
+        typ_brak.pack(side='left')
 
         # ramka na dodatkowe opcje tworzenia pliku typ
         self._dodaj_odstep_pionowy(body)
@@ -523,12 +527,25 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
                                                     variable=self.indeksy_adresow, onvalue=True, offvalue=False)
         index_checkbutton.pack(side='left')
 
-        routing_frame = tkinter.ttk.LabelFrame(index_routing_format_frame, text=u'Mapa z routingiem')
-        routing_frame.pack(side='left')
-        self.routing = self.mdm_config.zwroc_zmienna_opcji('routing')
-        routing_checkbutton = tkinter.ttk.Checkbutton(routing_frame, text=u'Generuj mapę z routingiem',
+        opcje_montowania_frame = tkinter.ttk.LabelFrame(body, text=u'Opcje montowania')
+        opcje_montowania_frame.pack()
+        self.routing = self.mdm_config.zwroc_zmienna_opcji('dodaj_routing')
+        routing_checkbutton = tkinter.ttk.Checkbutton(opcje_montowania_frame, text=u'Generuj mapę z routingiem',
                                                     variable=self.routing, onvalue=True, offvalue=False)
         routing_checkbutton.pack(side='left')
+        self.dodaj_adresy = self.mdm_config.zwroc_zmienna_opcji('dodaj_adresy')
+        adresy_checkbutton = tkinter.ttk.Checkbutton(opcje_montowania_frame, text=u'Dodaj adresy z plików adr',
+                                                     variable=self.dodaj_adresy, onvalue=True, offvalue=False)
+        adresy_checkbutton.pack(side='left')
+        self.uruchom_wojka = self.mdm_config.zwroc_zmienna_opcji('uruchom_wojka')
+        wojek_checkbutton = tkinter.ttk.Checkbutton(opcje_montowania_frame, text=u'Uruchom wojka (zalecane)',
+                                                     variable=self.uruchom_wojka, onvalue=True, offvalue=False)
+        wojek_checkbutton.pack(side='left')
+        self.podnies_poziom = self.mdm_config.zwroc_zmienna_opcji('podnies_poziom')
+        poziom_checkbutton = tkinter.ttk.Checkbutton(opcje_montowania_frame,
+                                                     text=u'Uruchom skrypt podnieś poziom (zalecane)',
+                                                     variable=self.podnies_poziom, onvalue=True, offvalue=False)
+        poziom_checkbutton.pack(side='left')
 
         # plik do wlasnych typow
         self._dodaj_odstep_pionowy(body)
@@ -580,7 +597,17 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         self.wlasne_typy_var.set('')
 
     def kompiluj_mape(self):
-        pass
+        self._kompiluj_mape()
+
+    def _kompiluj_mape(self):
+        # najpierw trzeba zmontować mapę dla mkgmap
+        args = self.mdm_config.zwroc_args_do_montuj_mkgmap()
+        args.stderrqueue = self.logerrqueue
+        args.stdoutqueue = self.logerrqueue
+        args.obszary = self.obszary
+        mont_demont.montuj_mkgmap(args)
+        mont_demont.kompiluj_mape(args)
+
 
 
 

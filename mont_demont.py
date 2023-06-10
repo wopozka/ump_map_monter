@@ -49,7 +49,7 @@ class Mkgmap(object):
     def java_call_mkgmap(self):
         mapset_name = []
         java_call_args = self.java_call_general()
-        if self.args.routing:
+        if self.args.dodaj_routing:
             java_call_args += ['--route', '--drive-on=detect,right']
         if self.args.format_mapy[0] == 'gmapsupp':
             java_call_args.append('--gmapsupp')
@@ -76,17 +76,22 @@ class Mkgmap(object):
 
 class ErrOutWriter(object):
     def __init__(self, args):
-        self.args = args
+        self.stderrqueue = None
+        self.stdoutqueue = None
+        if hasattr(args, 'stderrqueue'):
+            self.stderrqueue = args.stderrqueue
+        if hasattr(args, 'stdoutqueue'):
+            self.stdoutqueue = args.stdoutqueue
 
     def stderrorwrite(self, string_to_print):
-        if hasattr(self.args, 'stderrqueue'):
-            self.args.stderrqueue.put(self.modyfikuj_komunikat(string_to_print))
+        if self.stderrqueue is not None:
+            self.stderrqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stderr)
 
     def stdoutwrite(self, string_to_print):
-        if hasattr(self.args, 'stdoutqueue'):
-            self.args.stdoutqueue.put(self.modyfikuj_komunikat(string_to_print))
+        if self.stdoutqueue is not None:
+            self.stdoutqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stdout)
 
@@ -4176,7 +4181,7 @@ def main(argumenty):
     parser_montuj.set_defaults(func=montujpliki)
 
     # parser dla komendy montuj_mkgmap
-    parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
+    parser_montuj_mkgmap = subparsers.add_parser('montuj-mkgmap', help="Montowanie mapy dla mkgmap")
     parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
     parser_montuj_mkgmap.add_argument('-a', '--dodaj-adresy', action='store_true', help="Dodaj punkty adresowe",
                                       default=False)
@@ -4305,7 +4310,7 @@ def main(argumenty):
     parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default=['gmapsupp'], nargs=1, choices=['gmapsupp', 'gmapi'],
                                       help="Generuj mape w formacie gmapsupp.img albo gmapii. "
                                            "Gmapsupp wgrywasz do odbiornika, gmapi wgrywasz do mapsource/basecamp.")
-    parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,
+    parser_kompiluj_mape.add_argument('-r', '--dodaj-routing', action='store_true', default=False,
                                       help="Generuj mape z routingiem")
     parser_kompiluj_mape.add_argument('-i', '--index', action='store_true', default=False,
                                       help="Generuj index do wyszukiwania adresow")
