@@ -868,6 +868,26 @@ class mdmConfig(object):
         args.katrob = None
         return args
 
+    def zwroc_args_do_kompilacji_osmand(self):
+        args = Argumenty()
+        args.borders_file = None
+        args.threadnum = 1
+        args.index_file = None
+        args.nominatim_file = None
+        args.navit_file = None
+        args.nonumber_file = None
+        args.verbose = False
+        args.skip_housenumbers = False
+        args.positive_ids = False
+        args.normalize_ids = False
+        args.ignore_errors = False
+        args.regions = False
+        return args
+
+    def zwroc_args_dla_rozdzialu_klas(self):
+        return Argumenty()
+
+
     def zwroc_args(self, argumenty, args_=None):
         if args_ is None:
             args = Argumenty()
@@ -1963,11 +1983,11 @@ class mdm_gui_py(tkinter.Tk):
 
     def kreatorMapaOSMAnd(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.OSMAndKreator(self, obszary)
+        aaa = mdmkreatorOsmAnd.OSMAndKreator(self, self.mdmMontDemontOptions, obszary)
 
     def kreatorKlasDrog(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
+        aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, self.mdmMontDemontOptions, obszary)
 
     def kreator_stworz_plik_typ(self):
         aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)

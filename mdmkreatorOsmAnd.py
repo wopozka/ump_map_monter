@@ -7,31 +7,6 @@ import threading
 import mdmMp2xml
 import os.path
 
-class Argumenty(object):
-    def __init__(self):
-        self.umphome = None
-        self.plikmp = None
-        self.katrob = None
-        self.obszary = []
-        self.notopo = 0
-
-
-class txt2osmArgumenty(object):
-    def __init__(self, katalogroboczy):
-        self.borders_file = None
-        self.threadnum = 1
-        self.index_file = None
-        self.nominatim_file = None
-        self.navit_file = None
-        self.nonumber_file = None
-        self.verbose = False
-        self.skip_housenumbers = False
-        self.positive_ids = False
-        self.normalize_ids = False
-        self.ignore_errors = False
-        self.regions = False
-        self.outputfile = os.path.join(katalogroboczy, 'MapaOSMAnd.osm')
-
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
         self.master = parent
@@ -40,7 +15,6 @@ class ButtonZdalnieSterowany(tkinter.ttk.Button):
         self.update_me()
      
     def update_me(self):
-
         try:
             string = self.statusqueue.get_nowait()
             if string.startswith('Koniec'):
@@ -52,11 +26,11 @@ class ButtonZdalnieSterowany(tkinter.ttk.Button):
         self.after(100, self.update_me)
 
 class OSMAndKreator(tkinter.Toplevel):
-    def __init__(self, parent, obszary, **options):
+    def __init__(self, parent, mdm_config, obszary, **options):
         if 0:
             tkinter.messagebox.showwarning(u'Na razie nie działa',u'Kreator dla OSMAnd na razie nie działa')
         else:
-            self.args = Argumenty()
+            self.args = mdm_config.zwroc_args_do_kompilacji_osmand()
             self.Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
             self.obszary = obszary
             self.logerrqueue = queue.Queue()
@@ -170,7 +144,8 @@ class OSMAndKreator(tkinter.Toplevel):
             thread.start()
 
         elif self.kolejnyetap == 'mp2osm':
-            args = txt2osmArgumenty(self.Zmienne.KatalogRoboczy)
+            args = self.args
+            args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
             mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
 
         elif self.kolejnyetap == 'kompilowanie':
@@ -249,10 +224,10 @@ class OSMAndKreator(tkinter.Toplevel):
 
 
 class Klasy2EndLevelCreator(tkinter.Toplevel):
-    def __init__(self, parent, obszary, **options):
+    def __init__(self, parent, mdm_config, obszary, **options):
         if 'UMP-radary' in obszary:
             obszary.remove('UMP-radary')
-        self.args = Argumenty()
+        self.args = mdm_config.zwroc_args_dla_rozdzialu_klas()
         self.Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
         self.obszary = obszary
         self.args.obszary = obszary
@@ -321,7 +296,7 @@ class Klasy2EndLevelCreator(tkinter.Toplevel):
             tkinter.messagebox.showwarning(u'Brak zaznaczenia',u'Musisz zaznaczyć conajmniej jeden obszar i nie mogą to być radary')
     
     def utworz(self):
-        self.args.zobaczbuttonqueue=self.buttonZobacz.statusqueue
+        self.args.zobaczbuttonqueue = self.buttonZobacz.statusqueue
         self.buttonUtworz.configure(state='disabled')
         thread = threading.Thread(target=mont_demont.rozdziel_na_klasy, args=(self.args, ))
         thread.start()
