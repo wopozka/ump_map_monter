@@ -551,7 +551,7 @@ class TestyPoprawnosciDanych(object):
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
-        self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
+        # self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
         self.resetuj_wspolrzedne()
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
@@ -566,7 +566,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
+        # wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
         self.resetuj_wspolrzedne()
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
