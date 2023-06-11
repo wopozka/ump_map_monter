@@ -3305,8 +3305,9 @@ def montujpliki(args, naglowek_mapy=''):
 # montaz dla mkgmap
 ###############################################################################
 def montuj_mkgmap(args):
+    stderr_stdout_writer = ErrOutWriter(args)
     if not args.obszary:
-        print('Wybierz przynajmniej jeden obszar!')
+        stderr_stdout_writer.stderrorwrite('Wybierz przynajmniej jeden obszar!')
         return
     # wczytaj liste map
     zmienne = UstawieniaPoczatkowe('wynik.mp')
@@ -3363,10 +3364,10 @@ def montuj_mkgmap(args):
         for elem_naglowka in naglowek:
             naglowek_mapy += elem_naglowka + '=' + naglowek[elem_naglowka] + '\n'
         naglowek_mapy += '[END-IMG ID]\n\n'
-        print('montuje mape')
+        stderr_stdout_writer.stdoutwrite('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
         # zamieniam KodPoczt na Zip
-        print('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
+        stderr_stdout_writer.stdoutwrite('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
         with open(os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
             plik_do_konwersji = plik_mp_do_czyt.readlines()
         for num, linia in enumerate(plik_do_konwersji):
@@ -3380,15 +3381,15 @@ def montuj_mkgmap(args):
             plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.podnies_poziom:
             args.output_filename = args.plikmp
-            print('Dostosowuje predkosci przy pomocy podnies-poziom.pl')
+            stderr_stdout_writer.stdoutwrite('Dostosowuje predkosci przy pomocy podnies-poziom.pl')
             ustaw_force_speed(args)
         if args.uruchom_wojka:
             args.output_filename = args.plikmp
-            print('dodaje dane wojkiem')
+            stderr_stdout_writer.stdoutwrite('dodaje dane wojkiem')
             wojkuj(args)
         if args.dodaj_routing:
             args.output_filename = args.plikmp
-            print('dodaje dane routingowe')
+            stderr_stdout_writer.stdoutwrite('dodaje dane routingowe')
             args.input_file = args.plikmp
             dodaj_dane_routingowe(args)
 

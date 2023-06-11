@@ -597,7 +597,8 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         self.wlasne_typy_var.set('')
 
     def kompiluj_mape(self):
-        self._kompiluj_mape()
+        thread = threading.Thread(target=self._kompiluj_mape)
+        thread.start()
 
     def _kompiluj_mape(self):
         # najpierw trzeba zmontować mapę dla mkgmap
@@ -606,7 +607,7 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         args.stdoutqueue = self.logerrqueue
         args.obszary = self.obszary
         mont_demont.montuj_mkgmap(args)
-        mont_demont.kompiluj_mape(args)
+        # mont_demont.kompiluj_mape(args)
 
 
 
