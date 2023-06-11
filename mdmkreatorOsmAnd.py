@@ -390,19 +390,18 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         space.pack()
 
     def utworz_i_kompiluj_typ(self):
-        print('tworze typ')
         self.mdm_config.saveConfig()
         args = self.mdm_config.zwroc_args_do_kompiluj_typ()
-        args.nazwa_typ = [self.wybor_typ_variable.get()]
-        args.family_id = [self.family_entry.get()]
+        args.nazwa_typ = self.wybor_typ_variable.get()
+        args.family_id = self.family_entry.get()
         if not args.family_id[0].isdigit() or 0 > int(args.family_id[0]) > 65535:
-            args.family_id = ['6324']
+            args.family_id = '6324'
         args.uwzglednij_warstwice = True if self.warstwice_variable.get() == 'Tak' else False
-        args.code_page = [self.kodowanie_variable.get()]
+        args.code_page = self.kodowanie_variable.get()
         args.stderrqueue = self.logerrqueue
         args.stdoutqueue = self.logerrqueue
         args.mkgmap_path = ''
-        args.maksymalna_pamiec = ['1G']
+        args.maksymalna_pamiec = '1G'
         mont_demont.stworz_plik_typ(args)
 
 
