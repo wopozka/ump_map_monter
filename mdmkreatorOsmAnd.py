@@ -623,7 +623,6 @@ class LogErrText(tkinter.scrolledtext.ScrolledText):
         try:
             while 1:
                 msg = self.logqueue.get_nowait()
-                print(msg)
                 self.insert('end', msg.lstrip())
                 self.see(tkinter.END)
 

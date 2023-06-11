@@ -4012,7 +4012,7 @@ def kompiluj_mape(args):
         java_call_args += [nazwa_sciezka_pliku_typ]
     java_call_args += mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
-    print(' '.join(java_call_args))
+    stderr_stdout_writer.stdoutwrite(' '.join(java_call_args))
     process = subprocess.Popen(java_call_args)
     process.wait()
 
