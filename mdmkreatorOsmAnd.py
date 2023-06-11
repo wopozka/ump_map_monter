@@ -605,9 +605,10 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         args = self.mdm_config.zwroc_args_do_montuj_mkgmap()
         args.stderrqueue = self.logerrqueue
         args.stdoutqueue = self.logerrqueue
+        print(self.obszary)
         args.obszary = self.obszary
         mont_demont.montuj_mkgmap(args)
-        # mont_demont.kompiluj_mape(args)
+        mont_demont.kompiluj_mape(args)
 
 
 

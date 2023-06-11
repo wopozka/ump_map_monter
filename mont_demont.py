@@ -36,10 +36,10 @@ class Mkgmap(object):
         self.zmienne = zmienne
 
     def java_call_general(self):
-        java_call_args = ['java'] + ['-Xmx' + self.args.maksymalna_pamiec[0]] + ['-jar', self.mkg_map, '--lower-case']
+        java_call_args = ['java'] + ['-Xmx' + self.args.maksymalna_pamiec] + ['-jar', self.mkg_map, '--lower-case']
         if self.args.code_page == 'cp1250':
             java_call_args.append('--code-page=1250')
-        java_call_args.append('--family-id=' + self.args.family_id[0])
+        java_call_args.append('--family-id=' + self.args.family_id)
         java_call_args.append('--output-dir=' + self.zmienne.KatalogRoboczy)
         return java_call_args
 
@@ -51,7 +51,7 @@ class Mkgmap(object):
         java_call_args = self.java_call_general()
         if self.args.dodaj_routing:
             java_call_args += ['--route', '--drive-on=detect,right']
-        if self.args.format_mapy[0] == 'gmapsupp':
+        if self.args.format_mapy == 'gmapsupp':
             java_call_args.append('--gmapsupp')
             mapset_name = ['--description=UMP pcPL']
         else:
@@ -59,12 +59,12 @@ class Mkgmap(object):
         if self.args.index:
             java_call_args += ['--index', '--split-name-index']
         try:
-            int(self.args.max_jobs[0])
+            int(self.args.max_jobs)
         except ValueError:
             pass
         else:
-            if int(self.args.max_jobs[0]):
-                java_call_args += ['--max-jobs=' + args.max_jobs[0]]
+            if int(self.args.max_jobs):
+                java_call_args += ['--max-jobs=' + args.max_jobs]
         nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
         java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
         plik_licencji = os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
@@ -3986,7 +3986,7 @@ def kompiluj_mape(args):
                                 }
     # mapset_name = []
     nazwa_sciezka_pliku_typ = ''
-    if args.plik_typ[0] != 'brak':
+    if args.plik_typ != 'brak':
         args.nazwa_typ = args.plik_typ
         nazwa_sciezka_pliku_typ = stworz_plik_typ(args)
     for plik_do_k in glob.glob(os.path.join(zmienne.KatalogRoboczy, '*mkgmap.mp')):
@@ -3998,7 +3998,7 @@ def kompiluj_mape(args):
                 skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
                 break
         if not skrot_kraju:
-            print('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
+            stderr_stdout_writer.stderrwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
         else:
             pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
@@ -4045,13 +4045,17 @@ def stworz_plik_typ(args):
     Returns: nazwa_pliku sukces, '' blad
     -------
     """
+    # z gui przekazywane to jest jako string, dlatego trzeba tak obchodzic.
     stderr_stdout_writer = ErrOutWriter(args)
-    nazwa_typ = args.nazwa_typ[0]
+    if isinstance(args.nazwa_typ, list):
+        nazwa_typ = args.nazwa_typ[0]
+    else:
+        nazwa_typ = args.nazwa_typ
     zmienne = UstawieniaPoczatkowe(args)
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
-    plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id[0] + '\n']
-    if not args.code_page[0] == 'cp1250':
+    plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id + '\n']
+    if not args.code_page == 'cp1250':
         plik_typ_zawartosc += ['CodePage=1250\n']
     plik_typ_zawartosc += ['[end]\n\n', '']
     with open(os.path.join(katalog_ikonki, 'header.txt'), 'r', encoding=zmienne.Kodowanie) as header_file:
@@ -4157,7 +4161,7 @@ def main(argumenty):
     parser_montuj = subparsers.add_parser('mont', help="montowanie obszarow do pliku mp")
     parser_montuj.add_argument('obszary', nargs="*", default=['pwd'])
     parser_montuj.add_argument('-idx', '--city-idx', action="store_true", dest='cityidx', help="tworzy indeks miast")
-    parser_montuj.add_argument('-if', '--format-indeksow', action='store', help='Format indeksów', default='cityidx',
+    parser_montuj.add_argument('-fi', '--format-indeksow', action='store', help='Format indeksów', default='cityidx',
                                choices=['cityidx', 'cityname'])
     parser_montuj.add_argument('-adr', '--adr-files', action='store_true', dest='adrfile', help="montuj pliki adresowe")
     parser_montuj.add_argument('-nt', '--no-topo', action='store_true', dest='notopo', help='nie montuj plikow topo')
@@ -4299,25 +4303,24 @@ def main(argumenty):
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
-    parser_kompiluj_mape.add_argument('-f', '--family-id', default=['6324'], nargs=1,
-                                      help='family id mapy, domyslnie 6324')
-    parser_kompiluj_mape.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+    parser_kompiluj_mape.add_argument('-f', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
+    parser_kompiluj_mape.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                       help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
-    parser_kompiluj_mape.add_argument('-t', '--plik-typ', nargs=1, default=['domyslny'],
+    parser_kompiluj_mape.add_argument('-t', '--plik-typ', default='domyslny',
                                       choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
     parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku mapy')
-    parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default=['gmapsupp'], nargs=1, choices=['gmapsupp', 'gmapi'],
+    parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default='gmapsupp', choices=['gmapsupp', 'gmapi'],
                                       help="Generuj mape w formacie gmapsupp.img albo gmapii. "
                                            "Gmapsupp wgrywasz do odbiornika, gmapi wgrywasz do mapsource/basecamp.")
     parser_kompiluj_mape.add_argument('-r', '--dodaj-routing', action='store_true', default=False,
                                       help="Generuj mape z routingiem")
     parser_kompiluj_mape.add_argument('-i', '--index', action='store_true', default=False,
                                       help="Generuj index do wyszukiwania adresow")
-    parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
+    parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
-    parser_kompiluj_mape.add_argument('-mj', '--max-jobs', nargs=1, default=['0'],
+    parser_kompiluj_mape.add_argument('-mj', '--max-jobs', default='0',
                                       help='Maksymalna ilosc watkow do kompilacji (domyslnie auto)')
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
@@ -4327,13 +4330,13 @@ def main(argumenty):
                                      choices=['domyslny', 'rzuq', 'olowos', 'reczniak'],
                                      help='rodzaj pliku typ do wyboru')
     parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
-    parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
+    parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
-    parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ'
+    parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ'
                                                                                           'domyslnie 6324')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
-    parser_kompiluj_typ.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+    parser_kompiluj_typ.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                      help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
     parser_kompiluj_typ.set_defaults(func=stworz_plik_typ)
 
