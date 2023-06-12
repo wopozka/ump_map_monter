@@ -144,9 +144,8 @@ class OSMAndKreator(tkinter.Toplevel):
             thread.start()
 
         elif self.kolejnyetap == 'mp2osm':
-            args = self.args
-            args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
-            mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
+            thread = threading.Thread(target=self.mp2osm)
+            thread.start()
 
         elif self.kolejnyetap == 'kompilowanie':
             pass
@@ -203,7 +202,8 @@ class OSMAndKreator(tkinter.Toplevel):
         args.obszary = self.obszary
         args.plikmp = 'wynik.mp'
         args.adrfile = 1
-        args.cityidx = 0
+        args.cityidx = 1
+        args.format_indeksow = 'cityname'
         args.nocity = 0
         args.noszlaki = 1
         # self.args.nopnt=self.nopnt.get()
@@ -221,6 +221,19 @@ class OSMAndKreator(tkinter.Toplevel):
         self.latin2_to_cp1250()
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
         self.kolejka_komunikacyjna.put(('montowanie', ''))
+
+    def mp2osm(self):
+        self.logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
+        args = self.args
+        args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
+        mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
+        if os.path.exists(args.outputfile):
+            self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
+        else:
+            self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % args.outputfile)
+        self.kolejka_komunikacyjna.put(('kolejnyetap', 'kompilowanie'))
+        self.kolejka_komunikacyjna.put(('mp2OSM', ''))
+
 
 
 class Klasy2EndLevelCreator(tkinter.Toplevel):
