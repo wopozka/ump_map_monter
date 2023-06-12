@@ -359,6 +359,7 @@ pline_types = {
     0x10e17: ["aerialway", "drag_lift"],
     0x10e1a: ["man_made", "dyke", "embankment", "yes"],  # TODO
     0x10e1b: ["barrier", "city_wall"],
+    0x10e1c: ["boundary", "national_park"],
     0x10f14: ["line", "blue"],
     0x10f15: ["line", "white"],
     0x10f16: ["line", "yellow"],
@@ -538,7 +539,7 @@ poi_types = {
     0x1615: ["man_made", "beacon", "mark_type", "blue"],
     0x1616: ["man_made", "beacon", "mark_type", "multicolored"],
     0x1708: ["note",     "deadend"],
-    0x1709: ["bridge",   "yes"],
+    0x1709: ["note",   "flyover"],
     0x170b: ["note",     "verify!"],
     0x170f: ["man_made", "beacon", "mark_type", "white" ],
     0x1710: ["barrier",  "gate"],
@@ -680,6 +681,7 @@ poi_types = {
     0x2c0a: ["amenity",  "restaurant", "cuisine", "wine_bar"],
     0x2c0b: ["amenity",  "place_of_worship", "religion", "christian"],
     0x2c0c: ["natural",  "spring", "amenity", "spa"],
+    0x2c10: ["tourism", "artwork", "artwork_type", "mural"],
     0x2d00: ["leisure",  "track"],
     0x2d01: ["amenity",  "theatre"],
     0x2d02: ["amenity",  "pub"],
@@ -1586,7 +1588,7 @@ def convert_tag(way, key, value, feat):
         if '=' in value:
             misckey, miscvalue = value.split("=", 1)
             if misckey == 'url':
-                if not miscvalue.startswith('http'):
+                if miscvalue.startswith('http') or miscvalue.find(':') > 0:
                     way['website'] = miscvalue
                 else:
                     way['website'] = r"http://"+miscvalue
