@@ -1998,14 +1998,22 @@ class mdm_gui_py(tkinter.Tk):
             tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
     def kreator_stworz_plik_typ(self):
-        aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
+        if shutil.which('java') is not None:
+            aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska java. Zainstaluj!')
 
     def kreator_skompiluj_mape(self):
-        obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        if obszary:
-            aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
+        if shutil.which('java') is None:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska java. Zainstaluj!')
+        elif shutil.which('perl') is None:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska perl. Zainstaluj!')
         else:
-            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
+            obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
+            if obszary:
+                aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
+            else:
+                tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
 
     def cvs_co(self, obszar):
