@@ -2986,7 +2986,7 @@ def cp1250_to_ascii(cp1250_string):
 
 def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
     # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
-    plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow[0])
+    plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow)
     try:
         with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
@@ -4219,7 +4219,7 @@ def main(argumenty):
                                       action='store_true', default=False)
     parser_montuj_mkgmap.add_argument('-p', '--podnies-poziom', help='Uruchom skrypt podnies-poziom.pl na pliku mp',
                                       action='store_true', default=False)
-    parser_montuj_mkgmap.add_argument('-wt', '--wlasne-typy', default=[], nargs=1,
+    parser_montuj_mkgmap.add_argument('-wt', '--wlasne-typy', default='',
                                       help='Plik zawierajacy wlasne defnicje typow dla konwersji Typ->Type, oraz '
                                            'reguly zmiany Label')
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
@@ -4349,7 +4349,7 @@ def main(argumenty):
 
     # parser dla komendy skompiluj_typ
     parser_kompiluj_typ = subparsers.add_parser('kompiluj-typ', help='stworzenie i kmpilacja pliku typ')
-    parser_kompiluj_typ.add_argument('nazwa_typ', nargs=1, default=['domyslny'],
+    parser_kompiluj_typ.add_argument('nazwa_typ', default='domyslny',
                                      choices=['domyslny', 'rzuq', 'olowos', 'reczniak'],
                                      help='rodzaj pliku typ do wyboru')
     parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
