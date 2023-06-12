@@ -4326,13 +4326,13 @@ def main(argumenty):
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
-    parser_kompiluj_mape.add_argument('-f', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
+    parser_kompiluj_mape.add_argument('-fi', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
     parser_kompiluj_mape.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                       help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
-    parser_kompiluj_mape.add_argument('-n', '--nazwa-typ', default='domyslny',
+    parser_kompiluj_mape.add_argument('-nt', '--nazwa-typ', default='domyslny',
                                       choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
-    parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
+    parser_kompiluj_mape.add_argument('-uw', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku mapy')
     parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default='gmapsupp', choices=['gmapsupp', 'gmapi'],
                                       help="Generuj mape w formacie gmapsupp.img albo gmapii. "
