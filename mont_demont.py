@@ -71,7 +71,7 @@ class Mkgmap(object):
         java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
         java_call_args += ['--license-file=' + plik_licencji]
         java_call_args += ['--area-name=' + 'UMP to']
-        return java_call_args, mapset_name
+        return java_call_args, mapset_name, nazwa_map
 
 
 class ErrOutWriter(object):
@@ -3970,6 +3970,7 @@ def wojkuj(args):
     os.remove(wynik_mp_wojek.name)
 
 def kompiluj_mape(args):
+
     stderr_stdout_writer = ErrOutWriter(args)
     zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
@@ -3986,8 +3987,8 @@ def kompiluj_mape(args):
                                 }
     # mapset_name = []
     nazwa_sciezka_pliku_typ = ''
-    if args.plik_typ != 'brak':
-        args.nazwa_typ = args.plik_typ
+    print(args.nazwa_typ)
+    if args.nazwa_typ != 'brak':
         nazwa_sciezka_pliku_typ = stworz_plik_typ(args)
     for plik_do_k in glob.glob(os.path.join(zmienne.KatalogRoboczy, '*mkgmap.mp')):
         opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
@@ -4006,15 +4007,37 @@ def kompiluj_mape(args):
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
         return
 
-    java_call_args, mapset_name = Mkgmap(args, zmienne).java_call_mkgmap()
+    java_call_args, mapset_name, nazwa_map = Mkgmap(args, zmienne).java_call_mkgmap()
     java_call_args += pliki_do_kompilacji
     if nazwa_sciezka_pliku_typ:
         java_call_args += [nazwa_sciezka_pliku_typ]
     java_call_args += mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     stderr_stdout_writer.stdoutwrite(' '.join(java_call_args))
+    gmapsupp_img_path = os.path.join(zmienne.KatalogRoboczy, 'gmapsupp.img')
+    gmapi_folder_path =os.path.join(zmienne.KatalogRoboczy, nazwa_map + '.gmap')
+    if args.format_mapy == 'gmapsupp':
+        if os.path.exists(gmapsupp_img_path):
+            os.remove(gmapsupp_img_path)
+    else:
+        if os.path.exists(gmapi_folder_path):
+            shutil.rmtree(gmapi_folder_path)
     process = subprocess.Popen(java_call_args)
     process.wait()
+    if args.format_mapy == 'gmapsupp':
+        if os.path.exists(gmapsupp_img_path ):
+            stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal plik %s' % gmapsupp_img_path)
+        else:
+            stderr_stdout_writer.stderrwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
+                                             gmapsupp_img_path)
+
+    else:
+        if os.path.exists(gmapi_folder_path):
+            stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal katalog %s' % gmapi_folder_path)
+        else:
+            stderr_stdout_writer.stdoutwrite('Kompilacja nieudana. Nie powstal katalog %s. Sprawdz konsole!' %
+                                             gmapi_folder_path)
+    return
 
 
 def ustaw_force_speed(args):
@@ -4306,7 +4329,7 @@ def main(argumenty):
     parser_kompiluj_mape.add_argument('-f', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
     parser_kompiluj_mape.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                       help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
-    parser_kompiluj_mape.add_argument('-t', '--plik-typ', default='domyslny',
+    parser_kompiluj_mape.add_argument('-n', '--nazwa-typ', default='domyslny',
                                       choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
     parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',

@@ -822,7 +822,7 @@ class mdmConfig(object):
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
         self.kompiluj_typ_opcje = {'mkgmap_path': '', 'maksymalna_pamiec': '1G', 'family_id': '6324',
                                    'uwzglednij_warstwice': False, 'code_page': 'cp1250', 'nazwa_typ': 'domyslny'}
-        self.kompiluj_mape_opcje = {'plik_typ': 'domyslny', 'uwzglednij_warstwice': False, 'format_mapy': 'gmapsupp',
+        self.kompiluj_mape_opcje = {'uwzglednij_warstwice': False, 'format_mapy': 'gmapsupp',
                                     'dodaj_routing': False, 'index': False, 'max_jobs': '0', 'wlasne_typy': '',
                                     'dodaj_adresy': False, 'uruchom_wojka': True, 'podnies_poziom': True}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
@@ -834,6 +834,7 @@ class mdmConfig(object):
 
     def zwroc_zmienna_opcji(self, nazwa_opcji):
         return self.montDemontOptions[nazwa_opcji]
+
     def stworz_zmienne_mont_demont(self, zmienne):
         for key in zmienne:
             if isinstance(zmienne[key], bool):
@@ -842,7 +843,8 @@ class mdmConfig(object):
                 self.montDemontOptions[key] = tkinter.StringVar(value=zmienne[key])
 
     def zwroc_args_do_kompiluj_typ(self):
-        return self.zwroc_args(self.kompiluj_typ_opcje)
+        args = self.zwroc_args(self.kompiluj_typ_opcje)
+        return args
 
     def zwroc_args_do_montuj_mkgmap(self):
         options = {}

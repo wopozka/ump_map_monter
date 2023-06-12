@@ -320,6 +320,8 @@ class KreatorKompilacjiTyp(tkinter.Toplevel):
         body.pack(padx=5, pady=5, fill='both', expand=1)
         # ramka z wyborem pliku typ
         self.wybor_typ_variable = self.mdm_config.zwroc_zmienna_opcji('nazwa_typ')
+        if self.wybor_typ_variable.get() == 'brak':
+            self.wybor_typ_variable.set('domyslny')
         wybor_typ_frame = tkinter.ttk.LabelFrame(body, text=u'Wybór pliku typ do stworzenia')
         wybor_typ_frame.pack()
         typ_domyslny = tkinter.ttk.Radiobutton(wybor_typ_frame, text=u'domyślny', variable=self.wybor_typ_variable,
@@ -579,7 +581,6 @@ class KreatorKompilacjiMdmmap(tkinter.Toplevel):
         args = self.mdm_config.zwroc_args_do_montuj_mkgmap()
         args.stderrqueue = self.logerrqueue
         args.stdoutqueue = self.logerrqueue
-        print(self.obszary)
         args.obszary = self.obszary
         mont_demont.montuj_mkgmap(args)
         mont_demont.kompiluj_mape(args)
