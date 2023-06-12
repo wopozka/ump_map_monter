@@ -2626,7 +2626,7 @@ class Poi(ObiektNaMapie):
             self.Dane1.append('Data0=' + origdata)
 
     def pnt2Dane(self, LiniaZPliku, orgLinia):
-        """Funkcja konwertujaca linijke z pliku pnt na wewnetrzn¹ reprezentacje danego poi"""
+        """Funkcja konwertujaca linijke z pliku pnt na wewnetrzna reprezentacje danego poi"""
         self.dodaj_komentarz_do_dane()
         # 0 Dlugosc, 1 Szerokosc, 2 EndLevel, 3 Label, 4 UlNrTelUrl, 5 Miasto, 6 Typ, 7 KodPoczt
         self.PoiPolyPoly = '[POI]'
