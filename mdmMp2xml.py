@@ -39,6 +39,7 @@ from datetime import datetime
 from xml.sax import saxutils
 from optparse import OptionParser
 from collections import defaultdict
+import os.path
 
 
 # Kwadrat dla Polski.
@@ -1123,7 +1124,7 @@ class ParsingError(Exception):
     pass
 
 
-def printdebug(string):
+def printdebug(string, options):
     global working_thread
     if options.verbose:
         sys.stderr.write("\tDEBUG: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
@@ -2402,7 +2403,7 @@ def post_load_processing():
                     del pointattrs[node]['_out']    
 
             
-def output_normal(prefix, num):
+def output_normal(prefix, num, options):
     global maxid
     global idpfx
 
@@ -2484,7 +2485,7 @@ def output_navit(prefix, num):
     out.close()
 
 
-def output_index(prefix, num):
+def output_index(prefix, num, options):
     global maxid
     global idpfx
 
@@ -2576,12 +2577,12 @@ def output_index(prefix, num):
     out.close()
 
 
-def output_nominatim(prefix,num):
+def output_nominatim(prefix, num, options):
     global streets_counter
     global maxid
     global idpfx
 
-    printdebug("City=>Streets scan start: "+str(datetime.now()))
+    printdebug("City=>Streets scan start: "+str(datetime.now()), options)
     #
     #  fragment dodajacy krotkie odcinki drog dla wsi
     #  ktore nie posiadaja ulic
@@ -2608,7 +2609,7 @@ def output_nominatim(prefix,num):
                 l=[]
                 l.append(m)
                 streets_counter[n]=l
-    printdebug("City=>Streets scan part1: "+str(datetime.now()))
+    printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
     # teraz skan wszystkich ulic
     for way in ways:
         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
@@ -2655,21 +2656,21 @@ def output_nominatim(prefix,num):
                                 break
                         if found == 0:
                             printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) +
-                                       "," + str(waylon) + ")")
+                                       "," + str(waylon) + ")", options)
                     else:
                         printdebug("Brak Miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) + "," +
-                                   str(waylon) + ")")
+                                   str(waylon) + ")", options)
             except IndexError:
                 pprint.pprint(way, sys.stderr)
                 
-    printdebug("City=>Streets scan part2: " + str(datetime.now()))
+    printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
     # i dodawanie krotkich ulic
     for m in streets_counter:
         for k in streets_counter[m]:
             if k['cnt'] != 0:
-                printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']))
+                printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']), options)
             else:
-                printdebug("Short way added:" + m)
+                printdebug("Short way added:" + m, options)
                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
                 attrs = {'_timestamp': filestamp}
@@ -2688,7 +2689,7 @@ def output_nominatim(prefix,num):
                     'highway': "residental"
                 }
                 ways.append(way)
-    printdebug("City=>Streets scan stop: "+str(datetime.now()))
+    printdebug("City=>Streets scan stop: "+str(datetime.now()), options)
 
 
     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
@@ -2762,7 +2763,7 @@ def parsecopy(source, destination, elemnr, elembase):
         fileout += line
     destination.write(fileout)
 
-def worker(task):
+def worker(task, options):
     # workelem={'idx':n+1,'file':f}
     global points
     global pointattrs
@@ -2819,15 +2820,15 @@ def worker(task):
     # print "maxtypes="+str(len(maxtypes))
     
     
-    output_normal("UMP-PL", task['idx'])
+    output_normal("UMP-PL", task['idx'], options)
     if options.navit_file != None:
         output_navit("UMP-PL", task['idx'])	# no data change
     if options.nonumber_file != None:
         output_nonumbers("UMP-PL", task['idx'])	# no data change
     if options.index_file != None:
-        output_index("UMP-PL", task['idx'])	# no data change
+        output_index("UMP-PL", task['idx'], options)	# no data change
     if options.nominatim_file != None:
-        output_nominatim("UMP-PL", task['idx'])  # data is changed
+        output_nominatim("UMP-PL", task['idx'], options)  # data is changed
 
 # ilosc id w obszarze. brak ostrzegania przy normalizacji
     maxid = maxid - idperarea * task['idx']
@@ -2843,50 +2844,15 @@ def worker(task):
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
     task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
-    
-    
-# Main program.
-if __name__ == '__main__':
-    usage = "usage: %prog [options] input1.mp [input2.mp input3.mp ...]"
-    parser = OptionParser(usage=usage)
-    parser.add_option("--borders", dest="borders_file", type="string" , action="store",
-                      help="read boarders from FILE", metavar="FILE")
-    parser.add_option("--threads", dest="threadnum", type="int", action="store", default=1,
-                      help="threads number")
-    parser.add_option("--index", dest="index_file", type="string" , action="store",
-                      help="write index output to FILE", metavar="FILE")              
-    parser.add_option("--nominatim", dest="nominatim_file", type="string" , action="store",
-                      help="write nominatim output to FILE", metavar="FILE")           
-    parser.add_option("--navit", dest="navit_file", type="string" , action="store",
-                      help="write Navit output to FILE", metavar="FILE")
-    parser.add_option("--no_NumberX", dest="nonumber_file", type="string", action="store",
-                      help="write output to FILE, NumberX lines skipped", metavar="FILE") 
-    parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose", default=False,
-                      help="more debug info")
-    parser.add_option("--skip_housenumbers",
-                      action="store_true", dest="skip_housenumbers", default=False,
-                      help="skip housenumbers (Type=0x2800) in stdout")
-    parser.add_option("--positive_ids",
-                      action="store_true", dest="positive_ids", default=False,
-                      help="obsolete")
-    parser.add_option("--normalize_ids",
-                      action="store_true", dest="normalize_ids", default=False,
-                      help="remove gaps in id usage")
-    parser.add_option("--ignore_errors",
-                      action="store_true", dest="ignore_errors", default=False,
-                      help="try to ignore errors in .mp file")   
-    parser.add_option("--regions",
-             action="store_true", dest="regions", default=False,
-                      help="attach regions to cities in the index file")
 
 
-                      
-    (options, args) = parser.parse_args()
+def main(options, args):
     if len(args) < 1:
         parser.print_help()
         sys.exit()
 
+    global runstamp
+    global borderstamp
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
@@ -2961,11 +2927,11 @@ if __name__ == '__main__':
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:                
-                result = worker(workelem)
+                result = worker(workelem, options)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
         else:   
             pool = Pool(processes=options.threadnum)
-            result = pool.map(worker, worklist)
+            result = pool.map(worker, worklist, options)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
@@ -3100,16 +3066,36 @@ if __name__ == '__main__':
         printinfo_nlf("Normal output... ")
         elapsed = datetime.now().replace(microsecond=0)
         try:
-            shutil.copyfileobj(open(headerf,'r'), sys.stdout)
+            if options.outputfile:
+                shutil.copyfileobj(open(headerf, 'r'), open(options.outputfile, 'w'))
+            else:
+                shutil.copyfileobj(open(headerf,'r'), sys.stdout)
             for workelem in worklist:
                 file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
                 if options.normalize_ids:
-                    parsecopy(open(file2, 'r'), sys.stdout, workelem['idx'],
+                    if options.outputfile:
+                        dest_ = open(options.outputfile, 'a')
+                    else:
+                        dest_ = sys.stdout
+                    parsecopy(open(file2, 'r'), dest_, workelem['idx'],
                               workelem['baseid'] - idperarea*workelem['idx'])
+                    if options.outputfile:
+                        dest_.close()
                 else:
-                    shutil.copyfileobj(open(file2, 'r'), sys.stdout)
+                    if options.outputfile:
+                        dest_ = open(options.outputfile, 'a')
+                    else:
+                        dest_ = sys.stdout
+                    shutil.copyfileobj(open(file2, 'r'), dest_)
+                    if options.outputfile:
+                        dest_.close()
                 os.remove(file2)
-            print("</osm>")
+            if options.outputfile:
+                dest_ = open(options.outputfile, 'a')
+                dest_.write('</osm>\n')
+                dest_.close()
+            else:
+                print("</osm>")
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
@@ -3122,3 +3108,41 @@ if __name__ == '__main__':
     else:
         sys.stderr.write("\tINFO: Border file required when more than one area given: --border \n")
 
+
+# Main program.
+if __name__ == '__main__':
+    usage = "usage: %prog [options] input1.mp [input2.mp input3.mp ...]"
+    parser = OptionParser(usage=usage)
+    parser.add_option("--borders", dest="borders_file", type="string", action="store",
+                      help="read boarders from FILE", metavar="FILE")
+    parser.add_option("--threads", dest="threadnum", type="int", action="store", default=1,
+                      help="threads number")
+    parser.add_option("--index", dest="index_file", type="string", action="store",
+                      help="write index output to FILE", metavar="FILE")
+    parser.add_option("--nominatim", dest="nominatim_file", type="string", action="store",
+                      help="write nominatim output to FILE", metavar="FILE")
+    parser.add_option("--navit", dest="navit_file", type="string", action="store",
+                      help="write Navit output to FILE", metavar="FILE")
+    parser.add_option("--no_NumberX", dest="nonumber_file", type="string", action="store",
+                      help="write output to FILE, NumberX lines skipped", metavar="FILE")
+    parser.add_option("-v", "--verbose",
+                      action="store_true", dest="verbose", default=False,
+                      help="more debug info")
+    parser.add_option("--skip_housenumbers",
+                      action="store_true", dest="skip_housenumbers", default=False,
+                      help="skip housenumbers (Type=0x2800) in stdout")
+    parser.add_option("--positive_ids",
+                      action="store_true", dest="positive_ids", default=False,
+                      help="obsolete")
+    parser.add_option("--normalize_ids",
+                      action="store_true", dest="normalize_ids", default=False,
+                      help="remove gaps in id usage")
+    parser.add_option("--ignore_errors",
+                      action="store_true", dest="ignore_errors", default=False,
+                      help="try to ignore errors in .mp file")
+    parser.add_option("--regions",
+                      action="store_true", dest="regions", default=False,
+                      help="attach regions to cities in the index file")
+
+    (options, args) = parser.parse_args()
+    main(options, args)

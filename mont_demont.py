@@ -26,20 +26,72 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+class Mkgmap(object):
+    def __init__(self, args, zmienne):
+        self.args = args
+        if hasattr(args, 'mkgmap_path') and args.mkgmap_path:
+            self.mkg_map = args.mkgmap_path
+        else:
+            self.mkg_map = zmienne.mkgmap_jar_path
+        self.zmienne = zmienne
+
+    def java_call_general(self):
+        java_call_args = ['java'] + ['-Xmx' + self.args.maksymalna_pamiec] + ['-jar', self.mkg_map, '--lower-case']
+        if self.args.code_page == 'cp1250':
+            java_call_args.append('--code-page=1250')
+        java_call_args.append('--family-id=' + self.args.family_id)
+        java_call_args.append('--output-dir=' + self.zmienne.KatalogRoboczy)
+        return java_call_args
+
+    def java_call_typ(self):
+        return self.java_call_general()
+
+    def java_call_mkgmap(self):
+        mapset_name = []
+        java_call_args = self.java_call_general()
+        if self.args.dodaj_routing:
+            java_call_args += ['--route', '--drive-on=detect,right']
+        if self.args.format_mapy == 'gmapsupp':
+            java_call_args.append('--gmapsupp')
+            mapset_name = ['--description=UMP pcPL']
+        else:
+            java_call_args.append('--gmapi')
+        if self.args.index:
+            java_call_args += ['--index', '--split-name-index']
+        try:
+            int(self.args.max_jobs)
+        except ValueError:
+            pass
+        else:
+            if int(self.args.max_jobs):
+                java_call_args += ['--max-jobs=' + args.max_jobs]
+        nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
+        java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
+        plik_licencji = os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
+        java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
+        java_call_args += ['--license-file=' + plik_licencji]
+        java_call_args += ['--area-name=' + 'UMP to']
+        return java_call_args, mapset_name, nazwa_map
+
 
 class ErrOutWriter(object):
     def __init__(self, args):
-        self.args = args
+        self.stderrqueue = None
+        self.stdoutqueue = None
+        if hasattr(args, 'stderrqueue'):
+            self.stderrqueue = args.stderrqueue
+        if hasattr(args, 'stdoutqueue'):
+            self.stdoutqueue = args.stdoutqueue
 
     def stderrorwrite(self, string_to_print):
-        if hasattr(self.args, 'stderrqueue'):
-            self.args.stderrqueue.put(self.modyfikuj_komunikat(string_to_print))
+        if self.stderrqueue is not None:
+            self.stderrqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stderr)
 
     def stdoutwrite(self, string_to_print):
-        if hasattr(self.args, 'stdoutqueue'):
-            self.args.stdoutqueue.put(self.modyfikuj_komunikat(string_to_print))
+        if self.stdoutqueue is not None:
+            self.stdoutqueue.put(self.modyfikuj_komunikat(string_to_print))
         else:
             print(string_to_print, file=sys.stdout)
 
@@ -53,6 +105,7 @@ class ErrOutWriter(object):
 
 
 class TestyPoprawnosciDanych(object):
+    DOZWOLONE_ZNAKI_CP1250 = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåûß'
     DOZWOLONE_KLUCZE = {'adrLabel',
                         'City', 'CityIdx', 'Czas',
                         'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
@@ -164,6 +217,9 @@ class TestyPoprawnosciDanych(object):
                                     '0x1a',  # ferry
                                     }
         self.wspolrzedne_obiektu = ''
+        self.dozwolone_znaki_cp1250 = set(TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250 +
+                                      TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250[:-1].upper() +
+                                      string.printable[:-5] + '°')
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
         if 'ForceClass' not in dane_do_zapisu or dane_do_zapisu['POIPOLY'] != '[POLYLINE]' \
@@ -466,18 +522,36 @@ class TestyPoprawnosciDanych(object):
         elif a == 1 and ruch_lewostronny:
             return ''
         elif a == 0:
-            self.error_out_writer .stderrorwrite(
+            self.error_out_writer.stderrorwrite(
                 'Nie moge okreslic kierunku ronda {!s}.\nZbyt malo punktow.'.format(coords))
             return 'NIE_WIEM'
         else:
             self.error_out_writer.stderrorwrite('Rondo z odwrotnym kierunkiem {!s}'.format(coords))
             return 'ODWROTNE'
 
+    def sprawdz_czy_tylko_znaki_cp1250(self, dane_do_zapisu):
+        for klucz in ('adrLabel', 'Label', 'Label2', 'Label3', 'Miasto', 'StreetName', 'Komentarz'):
+            if klucz in dane_do_zapisu:
+                if klucz == 'Komentarz':
+                    literki_set = set()
+                    for kom in dane_do_zapisu['Komentarz']:
+                        literki_set = literki_set.union(set(kom))
+                else:
+                    literki_set = set(dane_do_zapisu[klucz])
+                if not literki_set.issubset(self.dozwolone_znaki_cp1250):
+                    nl = ''.join(literki_set.difference(self.dozwolone_znaki_cp1250))
+                    coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                    self.error_out_writer.stderrorwrite('Literka spoza zakresu cp1250: %s %s' % (nl, coords))
+                    return 'cp1250_nie_ok'
+        return 'cp1250_ok'
+
+
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        # self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
         self.resetuj_wspolrzedne()
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
@@ -492,6 +566,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
+        # wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
         self.resetuj_wspolrzedne()
         if wyniki_testow:
             return ','.join(a for a in wyniki_testow if a)
@@ -683,6 +758,7 @@ class UstawieniaPoczatkowe(object):
             self.Kodowanie = 'cp1250'
         self.ReadErrors = 'ignore'
         self.WriteErrors = 'ignore'
+        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\mkgmap.jar'
         self.wczytajKonfiguracje()
 
     def ustaw_katalog_home(self, katalog_home):
@@ -731,6 +807,8 @@ class UstawieniaPoczatkowe(object):
                         self.mdm_mode = 'wrzucacz'
                 if 'CVSUSERNAME' in konf:
                     self.CvsUserName = konf['CVSUSERNAME']
+                if 'MKGMAPJARPATH' in konf:
+                    self.mkgmap_jar_path = konf['MKGMAPJARPATH']
                 else:
                     pass
 
@@ -2312,23 +2390,22 @@ class PlikiDoMontowania(object):
             args.montuj_wedlug_klas = 0
         obszary = args.obszary
         self.errOutWriter = stderr_stdout_writer
-        self.KatalogZeZrodlami = zmienne.KatalogzUMP
-        self.kodowanie = zmienne.Kodowanie
+        self.zmienne = zmienne
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
             self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
         for aaa in obszary:
-            if os.path.isdir(os.path.join(self.KatalogZeZrodlami, aaa, 'src')):
+            if os.path.isdir(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src')):
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.txt'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.txt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.pnt'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.pnt'))]
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
-                               for a in glob.glob(os.path.join(self.KatalogZeZrodlami, aaa, 'src/*.adr'))]
+                               for a in glob.glob(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src/*.adr'))]
             else:
                 self.errOutWriter.stderrorwrite('Problem z dostêpem do %s.' %
-                                                os.path.join(self.KatalogZeZrodlami, aaa, 'src'))
+                                                os.path.join(self.zmienne.KatalogzUMP, aaa, 'src'))
                 self.errOutWriter.stderrorwrite('Obszar %s nie istnieje' % aaa)
                 raise FileNotFoundError
         # przenosimy zakazy na koniec, aby montowane byly na koncu i aby byly nad drogami a nie pod nimi:
@@ -2366,13 +2443,13 @@ class PlikiDoMontowania(object):
                 self.Pliki = [f for f in self.Pliki if f.find('szlaki') < 0]
         return
 
-    def ograniczGranice(self, plik_do_ograniczenia):
-        with open(os.path.join(os.path.join(self.KatalogZeZrodlami, 'narzedzia'), plik_do_ograniczenia),
-                  encoding=self.kodowanie) as plik_do_ogr:
+    def ogranicz_granice_lub_obszary(self, plik_do_ograniczenia):
+        with open(os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), plik_do_ograniczenia),
+                  encoding=self.zmienne.Kodowanie) as plik_do_ogr:
             zaw_pliku_do_ogr = plik_do_ogr.read().split('[END]\n')
         tylko_wybrany_obszar = []
         for a in self.Obszary:
-            for b in zaw_pliku_do_ogr[:]:
+            for b in tuple(zaw_pliku_do_ogr):
                 if b.find(a.split('-')[-1]) > 0:
                     tylko_wybrany_obszar.append(b.strip() + '\n[END]\n\n')
                     zaw_pliku_do_ogr.remove(b)
@@ -2387,10 +2464,22 @@ class PlikiDoMontowania(object):
         return tylko_wybrany_obszar
 
     def zwroc_granice_czesciowe(self):
-        return self.ograniczGranice('granice.txt')
+        return self.ogranicz_granice_lub_obszary('granice.txt')
 
     def zwroc_obszary_txt(self):
-        return self.ograniczGranice('obszary.txt')
+        return self.ogranicz_granice_lub_obszary('obszary.txt')
+
+    def zamien_granice_na_granice_czesciowe(self):
+        agranice = self.zwroc_granice_czesciowe()
+        with open(os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w',
+                  encoding=self.zmienne.Kodowanie, errors=self.zmienne.WriteErrors) as f:
+            for a in agranice:
+                f.write(a)
+        self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+
+    def usun_plik_z_granicami(self):
+        if 'granice' in self.Pliki[0]:
+            self.Pliki = self.Pliki[1:]
 
 
 class ObiektNaMapie(object):
@@ -2887,6 +2976,14 @@ class plikPNT(object):
         return self.Dane1
 
 
+def cp1250_to_ascii(cp1250_string):
+    zamien_co = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåû'
+    zamien_na_co = 'oacelnszzaaeeioucsayaenor¾coulu'
+    tabela_konwersji = str.maketrans(zamien_co + str.upper(zamien_co) + 'ß',
+                                      zamien_na_co + str.upper(zamien_na_co) + 's')
+    ascii_string = cp1250_string.translate(tabela_konwersji)
+
+
 def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
     # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
     plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow[0])
@@ -3075,12 +3172,10 @@ def montujpliki(args, naglowek_mapy=''):
     # uklon w strone arta, montowanie tylko granic obszarow
     if hasattr(args, 'graniceczesciowe') and not args.tylkodrogi and not args.trybosmand:
         if args.graniceczesciowe:
-            agranice = plikidomont.zwroc_granice_czesciowe()
-            with open(os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w', encoding=Zmienne.Kodowanie,
-                      errors=Zmienne.WriteErrors) as f:
-                for a in agranice:
-                    f.write(a)
-            plikidomont.Pliki[0] = os.path.join(Zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+            plikidomont.zamien_granice_na_granice_czesciowe()
+    # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
+    if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
+        plikidomont.usun_plik_z_granicami()
 
     # sprytne entrypoints
     if hasattr(args, 'sprytne_entrypoints') and args.sprytne_entrypoints:
@@ -3210,8 +3305,9 @@ def montujpliki(args, naglowek_mapy=''):
 # montaz dla mkgmap
 ###############################################################################
 def montuj_mkgmap(args):
+    stderr_stdout_writer = ErrOutWriter(args)
     if not args.obszary:
-        print('Wybierz przynajmniej jeden obszar!')
+        stderr_stdout_writer.stderrorwrite('Wybierz przynajmniej jeden obszar!')
         return
     # wczytaj liste map
     zmienne = UstawieniaPoczatkowe('wynik.mp')
@@ -3268,10 +3364,10 @@ def montuj_mkgmap(args):
         for elem_naglowka in naglowek:
             naglowek_mapy += elem_naglowka + '=' + naglowek[elem_naglowka] + '\n'
         naglowek_mapy += '[END-IMG ID]\n\n'
-        print('montuje mape')
+        stderr_stdout_writer.stdoutwrite('montuje mape')
         montujpliki(args, naglowek_mapy=naglowek_mapy)
         # zamieniam KodPoczt na Zip
-        print('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
+        stderr_stdout_writer.stdoutwrite('Zamieniam KodPoczt na ZipCode, zamienam {} na ()')
         with open(os.path.join(zmienne.KatalogRoboczy, args.plikmp), 'r', encoding=zmienne.Kodowanie) as plik_mp_do_czyt:
             plik_do_konwersji = plik_mp_do_czyt.readlines()
         for num, linia in enumerate(plik_do_konwersji):
@@ -3285,15 +3381,15 @@ def montuj_mkgmap(args):
             plik_mp_do_zap.writelines(plik_do_konwersji)
         if args.podnies_poziom:
             args.output_filename = args.plikmp
-            print('Dostosowuje predkosci przy pomocy podnies-poziom.pl')
+            stderr_stdout_writer.stdoutwrite('Dostosowuje predkosci przy pomocy podnies-poziom.pl')
             ustaw_force_speed(args)
         if args.uruchom_wojka:
             args.output_filename = args.plikmp
-            print('dodaje dane wojkiem')
+            stderr_stdout_writer.stdoutwrite('dodaje dane wojkiem')
             wojkuj(args)
         if args.dodaj_routing:
             args.output_filename = args.plikmp
-            print('dodaje dane routingowe')
+            stderr_stdout_writer.stdoutwrite('dodaje dane routingowe')
             args.input_file = args.plikmp
             dodaj_dane_routingowe(args)
 
@@ -3874,8 +3970,9 @@ def wojkuj(args):
     os.remove(wynik_mp_wojek.name)
 
 def kompiluj_mape(args):
+
     stderr_stdout_writer = ErrOutWriter(args)
-    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
     # dwuliterowe kody pastw za https://pl.wikipedia.org/wiki/ISO_3166-1https://pl.wikipedia.org/wiki/ISO_3166-1
     # w formacie numer kierunkowy: skrot, kolejnosc wedlug pliku lista.map
@@ -3888,12 +3985,12 @@ def kompiluj_mape(args):
                                 '41': 'CH', '216': 'TN', '90': 'TR', '380': 'UA', '36': 'HU', '298': 'FO', '238': 'CV'
                                 # karaiby, kosowo, nepal, pomijam
                                 }
-    mapset_name = []
+    # mapset_name = []
     nazwa_sciezka_pliku_typ = ''
-    if args.plik_typ != 'brak':
-        args.nazwa_typ = args.plik_typ
+    print(args.nazwa_typ)
+    if args.nazwa_typ != 'brak':
         nazwa_sciezka_pliku_typ = stworz_plik_typ(args)
-    for plik_do_k in glob.glob(os.path.join(Zmienne.KatalogRoboczy, '*mkgmap.mp')):
+    for plik_do_k in glob.glob(os.path.join(zmienne.KatalogRoboczy, '*mkgmap.mp')):
         opis, kod_kraju, _mkgmap = os.path.basename(plik_do_k).split('_')
         pliki_do_kompilacji.append('--description=' + opis + '_' + date.today().strftime('%d%b%y'))
         skrot_kraju = ''
@@ -3902,58 +3999,45 @@ def kompiluj_mape(args):
                 skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
                 break
         if not skrot_kraju:
-            print('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
+            stderr_stdout_writer.stderrwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
         else:
             pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
     if not pliki_do_kompilacji:
         stderr_stdout_writer.stderrorwrite('Brak plikow do kompilacji w katalogu roboczym: *mkgmap.img')
-    if args.mkgmap_path:
-        mkg_map = args.mkgmap_path
-    else:
-        mkg_map = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'mkgmap-r4905'), 'mkgmap.jar')
-    java_call_args = ['java'] + ['-Xmx' + args.maksymalna_pamiec[0]] + ['-jar', mkg_map, '--lower-case']
-    if args.code_page == 'cp1250':
-        java_call_args.append('--code-page=1250')
-    java_call_args.append('--family-id=' + args.family_id[0])
-    java_call_args.append('--output-dir=' + Zmienne.KatalogRoboczy)
+        return
+
+    java_call_args, mapset_name, nazwa_map = Mkgmap(args, zmienne).java_call_mkgmap()
+    java_call_args += pliki_do_kompilacji
     if nazwa_sciezka_pliku_typ:
-        print('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + nazwa_sciezka_pliku_typ)
-        process = subprocess.Popen(java_call_args + [nazwa_sciezka_pliku_typ])
-        process.wait()
-        nazwa_sciezka_pliku_typ.replace('.txt', '.typ')
-        if not os.path.isfile(nazwa_sciezka_pliku_typ):
-            print('Skompilowanie pliku typ nie powiodlo sie. Nie uzywam.')
-            nazwa_sciezka_pliku_typ = ''
-    if args.routing:
-        java_call_args += ['--route', '--drive-on=detect,right']
-    if args.gmapsupp:
-        java_call_args.append('--gmapsupp')
-        mapset_name = ['--description=UMP pcPL']
-    else:
-        java_call_args.append('--gmapi')
-    if args.index:
-        java_call_args += ['--index', '--split-name-index']
-    try:
-        int(args.max_jobs[0])
-    except ValueError:
-        pass
-    else:
-        if int(args.max_jobs[0]):
-            java_call_args += ['--max-jobs=' + args.max_jobs[0]]
-    nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
-    java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
-    plik_licencji = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
-    java_call_args += ['--overview-mapname=' + 'UMP_mkgmap']
-    java_call_args += ['--license-file=' + plik_licencji]
-    java_call_args += ['--area-name=' + 'UMP to']
-    # wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
-    java_call_args = java_call_args + pliki_do_kompilacji + \
-                     [nazwa_sciezka_pliku_typ] + mapset_name
+        java_call_args += [nazwa_sciezka_pliku_typ]
+    java_call_args += mapset_name
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
-    print(' '.join(java_call_args))
+    stderr_stdout_writer.stdoutwrite(' '.join(java_call_args))
+    gmapsupp_img_path = os.path.join(zmienne.KatalogRoboczy, 'gmapsupp.img')
+    gmapi_folder_path =os.path.join(zmienne.KatalogRoboczy, nazwa_map + '.gmap')
+    if args.format_mapy == 'gmapsupp':
+        if os.path.exists(gmapsupp_img_path):
+            os.remove(gmapsupp_img_path)
+    else:
+        if os.path.exists(gmapi_folder_path):
+            shutil.rmtree(gmapi_folder_path)
     process = subprocess.Popen(java_call_args)
     process.wait()
+    if args.format_mapy == 'gmapsupp':
+        if os.path.exists(gmapsupp_img_path ):
+            stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal plik %s' % gmapsupp_img_path)
+        else:
+            stderr_stdout_writer.stderrwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
+                                             gmapsupp_img_path)
+
+    else:
+        if os.path.exists(gmapi_folder_path):
+            stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal katalog %s' % gmapi_folder_path)
+        else:
+            stderr_stdout_writer.stdoutwrite('Kompilacja nieudana. Nie powstal katalog %s. Sprawdz konsole!' %
+                                             gmapi_folder_path)
+    return
 
 
 def ustaw_force_speed(args):
@@ -3966,7 +4050,7 @@ def ustaw_force_speed(args):
     wynik_mp_podnies_poziom.close()
     podnies_poziom_call = ['perl', podnies_poziom, '--speed', '--city', '--inpfile', wynik_mp, '--outfile',
                            wynik_mp_podnies_poziom.name]
-    print(' '.join(podnies_poziom_call))
+    stderr_stdout_writer.stdoutwrite(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
     process.wait()
     os.remove(wynik_mp)
@@ -3984,12 +4068,17 @@ def stworz_plik_typ(args):
     Returns: nazwa_pliku sukces, '' blad
     -------
     """
-    nazwa_typ = args.nazwa_typ[0]
+    # z gui przekazywane to jest jako string, dlatego trzeba tak obchodzic.
+    stderr_stdout_writer = ErrOutWriter(args)
+    if isinstance(args.nazwa_typ, list):
+        nazwa_typ = args.nazwa_typ[0]
+    else:
+        nazwa_typ = args.nazwa_typ
     zmienne = UstawieniaPoczatkowe(args)
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
-    plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id[0] + '\n']
-    if not args.code_page[0] == 'cp1250':
+    plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id + '\n']
+    if not args.code_page == 'cp1250':
         plik_typ_zawartosc += ['CodePage=1250\n']
     plik_typ_zawartosc += ['[end]\n\n', '']
     with open(os.path.join(katalog_ikonki, 'header.txt'), 'r', encoding=zmienne.Kodowanie) as header_file:
@@ -4007,8 +4096,8 @@ def stworz_plik_typ(args):
                 mp_typ, nazwa_pl, nazwa_en, tryb = \
                     os.path.splitext(os.path.basename(plik_ikonki_nazwa))[0].split('_', 3)
             except ValueError:
-                print('Bledna nazwa dla pliku ikonki %s. Poprawny format nazwy to: '
-                      'typ_nazwaPl_nazwaEn_day.xpm lub night. Ignoruje ikonke')
+                stderr_stdout_writer.stdoutwrite('Bledna nazwa dla pliku ikonki %s. Poprawny format nazwy to: '
+                                                 'typ_nazwaPl_nazwaEn_day.xpm lub night. Ignoruje ikonke')
                 continue
 
             if '_' in tryb:
@@ -4060,7 +4149,22 @@ def stworz_plik_typ(args):
     plik_typ_txt = os.path.join(zmienne.KatalogRoboczy, 'ump_typ_' + nazwa_typ + '.txt')
     with open(plik_typ_txt, 'w', encoding=zmienne.Kodowanie) as typ_file:
         typ_file.writelines(plik_typ_zawartosc)
-    return plik_typ_txt
+    if os.path.isfile(plik_typ_txt):
+        stderr_stdout_writer.stdoutwrite('Zapisalem plik typ: %s' % plik_typ_txt)
+    else:
+        stderr_stdout_writer.stdoutwrite('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' %plik_typ_txt)
+        return ''
+    java_call_args = Mkgmap(args, zmienne).java_call_typ()
+    stderr_stdout_writer.stdoutwrite('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + plik_typ_txt)
+    process = subprocess.Popen(java_call_args + [plik_typ_txt])
+    process.wait()
+    plik_typ = plik_typ_txt.replace('.txt', '.typ')
+    if not os.path.isfile(plik_typ):
+        stderr_stdout_writer.stdoutwrite('Skompilowanie pliku typ nie powiodlo sie.')
+        return ''
+    else:
+        stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Stworzylem plik %s' % plik_typ)
+    return plik_typ
 
 
 def main(argumenty):
@@ -4080,7 +4184,7 @@ def main(argumenty):
     parser_montuj = subparsers.add_parser('mont', help="montowanie obszarow do pliku mp")
     parser_montuj.add_argument('obszary', nargs="*", default=['pwd'])
     parser_montuj.add_argument('-idx', '--city-idx', action="store_true", dest='cityidx', help="tworzy indeks miast")
-    parser_montuj.add_argument('-if', '--format-indeksow', action='store', help='Format indeksów', default='cityidx',
+    parser_montuj.add_argument('-fi', '--format-indeksow', action='store', help='Format indeksów', default='cityidx',
                                choices=['cityidx', 'cityname'])
     parser_montuj.add_argument('-adr', '--adr-files', action='store_true', dest='adrfile', help="montuj pliki adresowe")
     parser_montuj.add_argument('-nt', '--no-topo', action='store_true', dest='notopo', help='nie montuj plikow topo')
@@ -4105,7 +4209,7 @@ def main(argumenty):
     parser_montuj.set_defaults(func=montujpliki)
 
     # parser dla komendy montuj_mkgmap
-    parser_montuj_mkgmap = subparsers.add_parser('montuj_mkgmap', help="Montowanie mapy dla mkgmap")
+    parser_montuj_mkgmap = subparsers.add_parser('montuj-mkgmap', help="Montowanie mapy dla mkgmap")
     parser_montuj_mkgmap.add_argument('obszary', nargs="*", default=[])
     parser_montuj_mkgmap.add_argument('-a', '--dodaj-adresy', action='store_true', help="Dodaj punkty adresowe",
                                       default=False)
@@ -4222,24 +4326,24 @@ def main(argumenty):
     # parser dla komendy kompiluj mape
     parser_kompiluj_mape = subparsers.add_parser('kompiluj-mape', help="Kompiluj mapê przy pomocy mkgmap")
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
-    parser_kompiluj_mape.add_argument('-f', '--family-id', default=['6324'], nargs=1,
-                                      help='family id mapy, domyslnie 6324')
-    parser_kompiluj_mape.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+    parser_kompiluj_mape.add_argument('-fi', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
+    parser_kompiluj_mape.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                       help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
-    parser_kompiluj_mape.add_argument('-t', '--plik-typ', nargs=1, default=['domyslny'],
+    parser_kompiluj_mape.add_argument('-nt', '--nazwa-typ', default='domyslny',
                                       choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
-    parser_kompiluj_mape.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
+    parser_kompiluj_mape.add_argument('-uw', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku mapy')
-    parser_kompiluj_mape.add_argument('-g', '--gmapsupp', action='store_true', default=False,
-                                      help="Generuj plik gmapsupp.img")
-    parser_kompiluj_mape.add_argument('-r', '--routing', action='store_true', default=False,
+    parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default='gmapsupp', choices=['gmapsupp', 'gmapi'],
+                                      help="Generuj mape w formacie gmapsupp.img albo gmapii. "
+                                           "Gmapsupp wgrywasz do odbiornika, gmapi wgrywasz do mapsource/basecamp.")
+    parser_kompiluj_mape.add_argument('-r', '--dodaj-routing', action='store_true', default=False,
                                       help="Generuj mape z routingiem")
     parser_kompiluj_mape.add_argument('-i', '--index', action='store_true', default=False,
                                       help="Generuj index do wyszukiwania adresow")
-    parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default=['1G'], nargs=1,
+    parser_kompiluj_mape.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
-    parser_kompiluj_mape.add_argument('-mj', '--max-jobs', nargs=1, default=['0'],
+    parser_kompiluj_mape.add_argument('-mj', '--max-jobs', default='0',
                                       help='Maksymalna ilosc watkow do kompilacji (domyslnie auto)')
     parser_kompiluj_mape.set_defaults(func=kompiluj_mape)
 
@@ -4248,10 +4352,14 @@ def main(argumenty):
     parser_kompiluj_typ.add_argument('nazwa_typ', nargs=1, default=['domyslny'],
                                      choices=['domyslny', 'rzuq', 'olowos', 'reczniak'],
                                      help='rodzaj pliku typ do wyboru')
-    parser_kompiluj_typ.add_argument('-f', '--family-id', default=['6324'], nargs=1, help='Family ID dla pliku typ')
+    parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
+    parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
+                                      help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
+    parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ'
+                                                                                'domyslnie 6324')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
-    parser_kompiluj_typ.add_argument('-cp', '--code-page', default=['cp1250'], nargs=1, choices=['cp1250', 'ascii'],
+    parser_kompiluj_typ.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
                                      help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
     parser_kompiluj_typ.set_defaults(func=stworz_plik_typ)
 
