@@ -1985,18 +1985,28 @@ class mdm_gui_py(tkinter.Tk):
 
     def kreatorMapaOSMAnd(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.OSMAndKreator(self, self.mdmMontDemontOptions, obszary)
+        if obszary:
+            aaa = mdmkreatorOsmAnd.OSMAndKreator(self, self.mdmMontDemontOptions, obszary)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
     def kreatorKlasDrog(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, self.mdmMontDemontOptions, obszary)
+        if obszary:
+            aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, self.mdmMontDemontOptions, obszary)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
     def kreator_stworz_plik_typ(self):
         aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
 
     def kreator_skompiluj_mape(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
+        if obszary:
+            aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
+
 
     def cvs_co(self, obszar):
         cvs_status = sprawdz_czy_cvs_obecny()
