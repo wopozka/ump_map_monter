@@ -898,7 +898,7 @@ poi_types = {
     0x660c: ["place",    "locality", "note", "fixme"],
     0x660d: ["place",    "locality", "note", "fixme"],
     0x660e: ["natural",  "volcano"],
-    0x660f: ["amenity",  "signpost"],
+    0x660f: ["man_made",  "windmill"],
     0x6610: ["mountain_pass", "yes"],
     0x6611: ["man_made", "tower"],
     0x6612: ["amenity",  "watersports_rental"],
