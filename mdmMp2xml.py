@@ -403,9 +403,9 @@ shape_types = {
     0x1e: ["landuse",  "forest", "leisure", "nature_reserve"],
     0x1f: ["landuse",  "forest", "leisure", "nature_reserve"],
     0x20: ["tourism",  "attraction"],  # a wild guess (forest?)
-    0x28: ["natural",  "coastline"],
+    0x28: ["natural",  "water"],
     0x29: ["natural",  "water"],
-    0x32: ["natural",  "coastline"],
+    0x32: ["natural",  "water"],
     0x3b: ["natural",  "water"],  # how does this differ from 0x40?
     0x3c: ["natural",  "water"],  # how does this differ from 0x40?
     0x3d: ["natural",  "water"],  # how does this differ from 0x40?
