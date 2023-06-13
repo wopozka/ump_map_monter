@@ -2984,27 +2984,42 @@ def cp1250_to_ascii(cp1250_string):
     ascii_string = cp1250_string.translate(tabela_konwersji)
 
 
-def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow):
+def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow, err_out_writer):
+    """
+    funkcja wczytuje zawartosc pliku. Rozdzielenie czytania pliku i jego procesingu ulatwia unitesty i istnieje tylko
+    z tego powodu
+    :param plik_z_definicjami_typow: string nazwa pliku z definicjami ze sciezka
+    :param err_out_writer: referencja do klasy obslugujacej wypisywanie informacja na konsole albo do okienek
+    :return: wczytany plik w postaci listy
+    """
     # rozdzielamy czytanie pliku i przetwarzanie danych aby moc latwo zbudowac unitesty do tego
     plik_ze_sciezka = os.path.join(os.getcwd(), plik_z_definicjami_typow)
+    err_out_writer.stdoutwrite('Wczytuje definicje aliasow z pliku %s' % plik_ze_sciezka)
     try:
         with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
     except FileNotFoundError:
-        print('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrwrite('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except PermissionError:
-        print('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except IOError:
-        print('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     if definicje_aliasow_z_pliku:
         return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
     return {}
 
 
-def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku):
+def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer):
+    """
+    funkcja tworzy slownik s³owników z definicjami aliasu w postaci 'Alias': {'Type': 'XXX', 'Prefix': 'XXX',
+    'Suffix": 'XXX}
+    :param definicje_aliasow_z_pliku: (list) lista linijek z pliku z definicjami
+    :param err_out_writer: referencja do klasy z wlasna obsluga drukowania na ekranie albo w okienkach
+    :return: {'Alias': {'Type': 'XXX', 'Prefix': 'XXX', 'Suffix': 'XXX'}}
+    """
     wlasne_definicje_typow = {}
     dozwolone_klucze = {'Alias', 'Type', 'Prefix', 'Suffix'}
     for definicja_aliasu in definicje_aliasow_z_pliku:
@@ -3014,18 +3029,15 @@ def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku):
         try:
             def_aliasu = json.loads(definicja_aliasu)
         except json.decoder.JSONDecodeError:
-            print('Niepoprawna linia w pliku z aliasami:')
-            print(definicja_aliasu)
+            perr_out_writer.stderrwrite('Niepoprawna linia w pliku z aliasami:')
+            err_out_writer.stderrwrite(str(definicja_aliasu))
             continue
         if dozwolone_klucze.difference(a for a in def_aliasu):
-            #  jako ze plik z wlasnymi definicjami ma dzialac tylko w trybie wsadowym, dlatego nie uzywam
-            # stderrorwrite ale po prostu print. Ulatwia to tez testowanie, bo wtedy metoda jest po prostu
-            # statyczna
-            print('Niepoprawna definicja w pliku z aliasami, ignoruje')
-            print(definicja_aliasu)
+            err_out_writer.stderrwrite'Niepoprawna definicja w pliku z aliasami, ignoruje')
+            err_out_writer.stderrwrite(str(definicja_aliasu))
             continue
         alias = def_aliasu['Alias']
-        print('Alias dla %s wczytany.' % alias)
+        err_out_writer.stdoutwrite('Alias dla %s wczytany.' % alias)
         def_aliasu.pop('Alias')
         wlasne_definicje_typow[alias] = def_aliasu
     return wlasne_definicje_typow
