@@ -3119,6 +3119,8 @@ if __name__ == '__main__':
     parser = OptionParser(usage=usage)
     parser.add_option("--borders", dest="borders_file", type="string", action="store",
                       help="read boarders from FILE", metavar="FILE")
+    parser.add_option("--outputfile", dest="outputfile", type="string", action="store",
+                     help="output file filename")
     parser.add_option("--threads", dest="threadnum", type="int", action="store", default=1,
                       help="threads number")
     parser.add_option("--index", dest="index_file", type="string", action="store",
