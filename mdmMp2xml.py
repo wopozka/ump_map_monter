@@ -1795,12 +1795,17 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_txt(infile, options):
+def parse_txt(infile, options, num_lines_to_process=0):
     polyline = None
     feat = None
     comment = None
     linenum = 0
+    _line_num = 0
     for line in infile:
+        _line_num += 1
+        if _line_num % int(num_lines_to_process/100) == 0:
+            if hasattr(options, 'progress_bar_queue'):
+                options.progress_bar_queue.put(('curr', _line_num))
         line = line.strip()
         linenum += 1
         if line == "[POLYLINE]":
@@ -2812,7 +2817,7 @@ def worker(task, options):
     except:
         filestamp = runstamp
 
-    parse_txt(infile, options)
+    parse_txt(infile, options, num_lines_to_process=task['num_lines_to_process'])
     infile.close()
     post_load_processing()
     
@@ -2919,16 +2924,24 @@ def main(options, args):
 
         worklist=[]
         elapsed = datetime.now().replace(microsecond=0)
+        num_lines_to_process = 0
         for n, f in enumerate(args):
             try:
-                infile = open(f, "r")
+                if sys.platform.startswith('linux'):
+                    file_encoding = 'latin2'
+                else:
+                    file_encoding = 'cp1250'
+                infile = open(f, "r", encoding=file_encoding)
+                num_lines_to_process += len(infile.readlines())
             except IOError:
                 sys.stderr.write("\tERROR: Can't open file " + f + "!\n")
                 sys.exit()
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
-            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'num_lines_to_process': num_lines_to_process}
             worklist.append(workelem)
+            if hasattr(options, 'progress_bar_queue'):
+                options.progress_bar_queue.put(('max', num_lines_to_process))
         if options.threadnum == 1:
             for workelem in worklist:                
                 result = worker(workelem, options)
@@ -2950,6 +2963,7 @@ def main(options, args):
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
+        options.progress_bar_queue.put(('done', num_lines_to_process))
 
         # naglowek osm i punkty granic
         printinfo_nlf("Working on header... ")
@@ -3073,7 +3087,7 @@ def main(options, args):
             if options.outputfile:
                 shutil.copyfileobj(open(headerf, 'r'), open(options.outputfile, 'w'))
             else:
-                shutil.copyfileobj(open(headerf,'r'), sys.stdout)
+                shutil.copyfileobj(open(headerf, 'r'), sys.stdout)
             for workelem in worklist:
                 file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
                 if options.normalize_ids:

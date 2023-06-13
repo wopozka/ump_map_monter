@@ -25,7 +25,7 @@ class ButtonZdalnieSterowany(tkinter.ttk.Button):
         #self.master.update_idletasks()
         self.after(100, self.update_me)
 
-class OSMAndKreator(tkinter.Toplevel):
+class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
     def __init__(self, parent, mdm_config, obszary, **options):
         if 0:
             tkinter.messagebox.showwarning(u'Na razie nie działa',u'Kreator dla OSMAnd na razie nie działa')
@@ -40,6 +40,7 @@ class OSMAndKreator(tkinter.Toplevel):
             self.parent = parent
             self.kolejnyetap = 'uaktualnianie'
             self.kolejka_komunikacyjna = queue.Queue()
+            self.progress_bar_max_value = 0
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -78,24 +79,31 @@ class OSMAndKreator(tkinter.Toplevel):
             space6 = tkinter.Frame(statusFrame, width=sfd)
             space6.pack(side='left')
 
-            buttonDistanceFrame = tkinter.Frame(body, height = '10')
-            buttonDistanceFrame.pack(fill = 'x', expand = 1)
+            buttonDistanceFrame = tkinter.Frame(body, height='10')
+            buttonDistanceFrame.pack(fill='x')
 
             buttonFrame = tkinter.Frame(body)
             buttonFrame.pack()
             buttonZamknij = tkinter.ttk.Button(buttonFrame, text='Zamknij', command=self.destroy)
-            buttonZamknij.pack(side = 'left')
+            buttonZamknij.pack(side='left')
             space7 = tkinter.Frame(buttonFrame, width=sfd)
-            space7.pack(side = 'left')
-            self.buttonNext = tkinter.ttk.Button(buttonFrame, text = u'Dalej', command = self.next)
-            self.buttonNext.pack(side = 'left')
+            space7.pack(side='left')
+            self.buttonNext = tkinter.ttk.Button(buttonFrame, text=u'Dalej', command=self.next)
+            self.buttonNext.pack(side='left')
             # space8 = tkinter.Frame(buttonFrame, width=sfd)
             # space8.pack(side='left')
 
             textDistanceFrame = tkinter.Frame(body, height='10')
-            textDistanceFrame.pack(fill='x', expand=1)
-            textFrame = tkinter.ttk.LabelFrame(body, text = 'Komunikaty')
-            textFrame.pack()
+            textDistanceFrame.pack(fill='x')
+
+            progress_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania')
+            progress_bar_frame.pack(fill='x', anchor='n')
+            self.progress_bar_queue = queue.Queue()
+            self.progress_bar = tkinter.ttk.Progressbar(progress_bar_frame, mode='determinate')
+            self.progress_bar.pack(fill='x', expand=0, anchor='n')
+
+            textFrame = tkinter.ttk.LabelFrame(body, text='Komunikaty')
+            textFrame.pack(fill='both', expand=1)
             self.text = LogErrText(textFrame, self.logerrqueue)
             self.text.pack(fill='both', expand=1)
             self.update_me()
@@ -119,6 +127,7 @@ class OSMAndKreator(tkinter.Toplevel):
             self.wait_window(self)
 
     def update_me(self):
+        # obsługa labelek stanóœ oraz przełączanie następnego etapu
         try:
             while 1:
                 _obj, _var = self.kolejka_komunikacyjna.get_nowait()
@@ -127,6 +136,22 @@ class OSMAndKreator(tkinter.Toplevel):
                 elif _obj in ('uaktualnianie', 'montowanie', 'mp2OSM', 'kompilacja', 'gotowe'):
                     self.labele_stanow[_obj].config(bg=self.al)
                     self.buttonNext.config(state='normal')
+                else:
+                    break
+        except queue.Empty:
+            pass
+        # obsługa progressbaru
+        try:
+            while 1:
+                val_meaning, val = self.progress_bar_queue.get_nowait()
+                if val_meaning == 'max':
+                    self.progress_bar_max_value = val
+                    self.progress_bar['maximum'] = val
+                elif val_meaning == 'curr':
+                    # if val % int(self.progress_bar_max_value/100) == 0:
+                    self.progress_bar['value'] = val
+                elif val_meaning == 'done':
+                    self.progress_bar['value'] = self.progress_bar_max_value
                 else:
                     break
         except queue.Empty:
@@ -226,6 +251,7 @@ class OSMAndKreator(tkinter.Toplevel):
         self.logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
         args = self.args
         args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
+        args.progress_bar_queue = self.progress_bar_queue
         mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
         if os.path.exists(args.outputfile):
             self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)

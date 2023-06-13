@@ -1986,7 +1986,7 @@ class mdm_gui_py(tkinter.Tk):
     def kreatorMapaOSMAnd(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
         if obszary:
-            aaa = mdmkreatorOsmAnd.OSMAndKreator(self, self.mdmMontDemontOptions, obszary)
+            aaa = mdmkreatorOsmAnd.KreatorKompilacjiOSMAnd(self, self.mdmMontDemontOptions, obszary)
         else:
             tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
