@@ -1200,7 +1200,7 @@ def cut_prefix(string):
     return string
 
 
-def convert_btag(way, key, value, feat):
+def convert_btag(way, key, value, feat, options):
     if key.lower() in ('label',):
         pass
     elif key in ('Data0',):
@@ -1223,7 +1223,7 @@ def convert_btag(way, key, value, feat):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_borders(infile):
+def parse_borders(infile, options):
     polyline = None
     feat = None
     comment = None
@@ -1248,7 +1248,7 @@ def parse_borders(infile):
             way = {'_timestamp': borderstamp}
             for key in polyline:
                 if polyline[key] != '':
-                    convert_btag(way, key, polyline[key], feat)
+                    convert_btag(way, key, polyline[key], feat, options)
             polyline = None
         elif feat == Features.ignore:
             pass
@@ -1490,7 +1490,7 @@ def prepare_line(nodes_str, closed):
     return pts, node_indices
 
             
-def convert_tag(way, key, value, feat):
+def convert_tag(way, key, value, feat, options):
     if key.lower() in ('label',):
         label = value
         refpos = label.find("~[")
@@ -1784,6 +1784,8 @@ def convert_tag(way, key, value, feat):
     elif key.startswith('Nod'):
         # lets omit routing params for maps with routing data
         pass
+    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):  # WebPage jest tagiem dla budynkow, ignorujemy na chwile obecna
+        pass
     else:
         if options.ignore_errors:
             printwarn("W: Unknown key: " + key)
@@ -1793,7 +1795,7 @@ def convert_tag(way, key, value, feat):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_txt(infile):
+def parse_txt(infile, options):
     polyline = None
     feat = None
     comment = None
@@ -1818,7 +1820,7 @@ def parse_txt(infile):
             way = {'_timestamp': filestamp}
             for key in polyline:
                 if polyline[key] != '':
-                    convert_tag(way, key, polyline[key], feat)
+                    convert_tag(way, key, polyline[key], feat, options)
 
             if feat == Features.polygon:
                 if 'ump:typ' in way:
@@ -2810,7 +2812,7 @@ def worker(task, options):
     except:
         filestamp = runstamp
 
-    parse_txt(infile)
+    parse_txt(infile, options)
     infile.close()
     post_load_processing()
     
@@ -2902,7 +2904,7 @@ def main(options, args):
             except:
                 borderstamp = runstamp
 
-            parse_borders(borderf)    
+            parse_borders(borderf, options)
             borderf.close()
             globalid = len(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
