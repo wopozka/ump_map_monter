@@ -3033,7 +3033,7 @@ def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer):
             err_out_writer.stderrwrite(str(definicja_aliasu))
             continue
         if dozwolone_klucze.difference(a for a in def_aliasu):
-            err_out_writer.stderrwrite'Niepoprawna definicja w pliku z aliasami, ignoruje')
+            err_out_writer.stderrwrite('Niepoprawna definicja w pliku z aliasami, ignoruje')
             err_out_writer.stderrwrite(str(definicja_aliasu))
             continue
         alias = def_aliasu['Alias']
