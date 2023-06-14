@@ -2036,6 +2036,8 @@ class NodesToWayNotFound(ValueError):
 
 def nodes_to_way(a, b):
     for way in ways:
+        if way is None:
+            continue
         # print("DEBUG: way['_nodes']: %r" % (way['_nodes'],)
         if a in way['_nodes'] and b in way['_nodes']:
             if 'ump:type' in way:
@@ -2318,10 +2320,10 @@ def print_relation(rel, index, ostr):
 def post_load_processing(options):
     global relations
     global maxtypes
+    global ways
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
-    pb_name = 'drp'
     relations = [rel for rel in ways if '_rel' in rel]
     levelledways = [way for way in ways if '_levels' in way]
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
@@ -2361,7 +2363,6 @@ def post_load_processing(options):
 
         ways[rel['_in_ways_position']] = None
         rel['_timestamp'] = filestamp
-    ways = [a for a in ways if a is not None]
     print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start))
     start = time.time()
     print('Przetwarzanie relacji: przygotowanie restrykcji')
@@ -2383,7 +2384,7 @@ def post_load_processing(options):
     for way in levelledways:
         _line_num += 1
         progress_bar.set_val(_line_num)
-        ways.remove(way)
+        ways[way['_in_ways_position']] = None
         if '_levels' in way:
             nodes = way['_nodes']
             levels = way.pop('_levels')
@@ -2400,6 +2401,7 @@ def post_load_processing(options):
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
+    ways = [a for a in ways if a is not None]
     print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start))
     start = time.time()
     print('innernodes')
