@@ -38,8 +38,9 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.transient(parent)
             self.title(u'Kreator tworzenia mapy dla OSMAnda')
             self.parent = parent
-            self.kolejnyetap = 'uaktualnianie'
+            self.kolejnyetap = 'montowanie'
             self.kolejka_komunikacyjna = queue.Queue()
+            self.progress_bar = dict()
             self.progress_bar_max_value = 0
 
             body = tkinter.Frame(self)
@@ -96,11 +97,17 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             textDistanceFrame = tkinter.Frame(body, height='10')
             textDistanceFrame.pack(fill='x')
 
-            progress_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania')
+            progress_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania pliku mp')
             progress_bar_frame.pack(fill='x', anchor='n')
             self.progress_bar_queue = queue.Queue()
-            self.progress_bar = tkinter.ttk.Progressbar(progress_bar_frame, mode='determinate')
-            self.progress_bar.pack(fill='x', expand=0, anchor='n')
+            self.progress_bar['mp'] = tkinter.ttk.Progressbar(progress_bar_frame, mode='determinate')
+            self.progress_bar['mp'].pack(fill='x', expand=0, anchor='n')
+
+            # progressbar dla przetwarzania drog, relacji oraz punktow (drp)
+            progress_drp_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania dróg, relacji i punktów.')
+            progress_drp_bar_frame.pack(fill='x', anchor='n')
+            self.progress_bar['drp'] = tkinter.ttk.Progressbar(progress_drp_bar_frame, mode='determinate')
+            self.progress_bar['drp'].pack(fill='x', expand=0, anchor='n')
 
             textFrame = tkinter.ttk.LabelFrame(body, text='Komunikaty')
             textFrame.pack(fill='both', expand=1)
@@ -143,15 +150,13 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         # obsługa progressbaru
         try:
             while 1:
-                val_meaning, val = self.progress_bar_queue.get_nowait()
+                pb_name, val_meaning, val = self.progress_bar_queue.get_nowait()
                 if val_meaning == 'max':
                     self.progress_bar_max_value = val
-                    self.progress_bar['maximum'] = val
-                elif val_meaning == 'curr':
+                    self.progress_bar[pb_name]['maximum'] = val
+                elif val_meaning in ('curr', 'done'):
                     # if val % int(self.progress_bar_max_value/100) == 0:
-                    self.progress_bar['value'] = val
-                elif val_meaning == 'done':
-                    self.progress_bar['value'] = self.progress_bar_max_value
+                    self.progress_bar[pb_name]['value'] = val
                 else:
                     break
         except queue.Empty:

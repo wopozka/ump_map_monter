@@ -35,6 +35,7 @@ except:
     import pickle
 from multiprocessing import Pool
 from datetime import datetime
+import time
 # import pdb
 from xml.sax import saxutils
 from optparse import OptionParser
@@ -1126,6 +1127,32 @@ class ParsingError(Exception):
     pass
 
 
+class ProgressBar(object):
+    def __init__(self, options, pb_name, num_lines_to_process):
+        self.nltp = num_lines_to_process
+        self.pb_name = pb_name
+        self.progress_bar_queue = None
+        if hasattr(options, 'progress_bar_queue'):
+            self.progress_bar_queue = options.progress_bar_queue
+        self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
+                                          if a % int(num_lines_to_process/100) == 0])
+
+    def set_val(self, _line_num):
+        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
+            self.progress_bar_queue.put((self.pb_name, 'curr', _line_num))
+        return
+
+    def start(self):
+        if self.progress_bar_queue is not None:
+            self.progress_bar_queue.put((self.pb_name, 'max', self.nltp))
+        return
+
+    def set_done(self):
+        if self.progress_bar_queue is not None:
+            self.progress_bar_queue.put((self.pb_name, 'done', self.nltp))
+        return
+
+
 def printdebug(string, options):
     global working_thread
     if options.verbose:
@@ -1796,18 +1823,16 @@ def convert_tag(way, key, value, feat, options):
 
 
 def parse_txt(infile, options, num_lines_to_process=0):
+    progress_bar = ProgressBar(options, 'mp', num_lines_to_process)
+    progress_bar.start()
     polyline = None
     feat = None
     comment = None
     linenum = 0
-    _line_num = 0
     for line in infile:
-        _line_num += 1
-        if _line_num % int(num_lines_to_process/100) == 0:
-            if hasattr(options, 'progress_bar_queue'):
-                options.progress_bar_queue.put(('curr', _line_num))
-        line = line.strip()
         linenum += 1
+        progress_bar.set_val(linenum)
+        line = line.strip()
         if line == "[POLYLINE]":
             polyline = {}
             feat = Features.polyline
@@ -1962,6 +1987,7 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 if not way.pop('_c'):
                     way['_out'] = 1
             else:
+                # way['_in_ways_position'] = len(ways)
                 ways.append(way)
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
@@ -1992,6 +2018,7 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 comment = strn
         elif line != '':
             raise ParsingError('Unhandled line ' + line)
+    progress_bar.set_done()
 
 
 class NodesToWayNotFound(ValueError):
@@ -2287,13 +2314,24 @@ def print_relation(rel, index, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing():
+def post_load_processing(options):
     global relations
     global maxtypes
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
+    pb_name = 'drp'
+    relations = [rel for rel in ways if '_rel' in rel]
+    levelledways = [way for way in ways if '_levels' in way]
+    num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
+    _line_num = 0
+    progress_bar = ProgressBar(options, 'drp', num_lines_to_process)
+    progress_bar.start()
+    start = time.time()
+    print('przetwarzanie rond')
     for way in ways:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if 'junction' in way and way['junction'] == 'roundabout':
             maxtype = 0x7  # service
             for i in way['_nodes']:
@@ -2303,6 +2341,7 @@ def post_load_processing():
             if 'oneway' in way:
                 del way['oneway']
             # TODO make sure nodes are ordered counter-clockwise
+    print('przetwarzanie rond koniec', _line_num, num_lines_to_process, str(time.time() - start))
 
     # Relations:
     # find them, remove from /ways/ and move to /relations/
@@ -2311,24 +2350,35 @@ def post_load_processing():
     # at the "via" node as required by
     # http://wiki.openstreetmap.org/wiki/Relation:restriction
 
-    relations = [rel for rel in ways if '_rel' in rel]
+    start = time.time()
+    print('Przetwarzanie relacji usuwanie _rel - ilosc %s' % str(len(relations)))
     for rel in relations:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         rel['type'] = rel.pop('_rel')
         ways.remove(rel)
         rel['_timestamp'] = filestamp
-
+    print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    start = time.time()
+    print('Przetwarzanie relacji: przygotowanie restrykcji')
     for rel in relations:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 preprepare_restriction(rel)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+    print('Przetwarzanie relacji: przygotowanie restrykcji koniec', _line_num, num_lines_to_process, str(time.time() - start))
 
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
-    levelledways = [way for way in ways if '_levels' in way]
+    start = time.time()
+    print('Przygotowanie levelledways')
     for way in levelledways:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         ways.remove(way)
         if '_levels' in way:
             nodes = way['_nodes']
@@ -2346,8 +2396,12 @@ def post_load_processing():
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
-               
+    print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    start = time.time()
+    print('innernodes')
     for way in ways:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if '_innernodes' in way:
             if '_join' in way:
                 del way['_join']
@@ -2357,14 +2411,23 @@ def post_load_processing():
                     ways.append(subway)
             else:
                 relations.append(make_multipolygon(way, way.pop('_innernodes')))
-                
+    print('innernodes koniec', _line_num, num_lines_to_process, time.time() - start)
+    start = time.time()
+    print('prepare restriction')
     for rel in relations:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 prepare_restriction(rel)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+    print('prepare restriction koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    start = time.time()
+    print('make_restriction_fromviato')
     for rel in relations:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 rnodes = make_restriction_fromviato(rel)
@@ -2374,16 +2437,24 @@ def post_load_processing():
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to " +
                             "preprepare restriction from rel: %r\n" % (rel,))
-
+    print('make_restriction_fromviatokoniec', _line_num, num_lines_to_process, str(time.time()- start))
     # Quirks, but do not overwrite specific values
+    start = time.time()
+    print('maxspeed dla motorway i highway')
     for way in ways:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if 'highway' in way and 'maxspeed' not in way:
             if way['highway'] == 'motorway':
                 way['maxspeed'] = '140'
             if way['highway'] == 'trunk':
                 way['maxspeed'] = '120'
-
+    print('maxspeed dla motorway i highway koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    start = time.time()
+    print('pointattrs')
     for index, point in pointattrs.items():
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if 'shop' in point and point['shop'] == 'fixme':
             for way in ways:
                 if index in way['_nodes'] and 'highway' in way:
@@ -2404,12 +2475,20 @@ def post_load_processing():
                 if speedpos > -1:
                     n1, spd = point['name'].split('@')
                     point['maxspeed'] = spd.strip()
-                    point['newname'] = n1.strip() 
+                    point['newname'] = n1.strip()
+
+    print('pointattrs koniec', _line_num, num_lines_to_process, str(time.time()- start))
+    start = time.time()
+    print('usuwanie _out z pointattrs')
     for way in ways:
+        _line_num += 1
+        progress_bar.set_val(_line_num)
         if way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
-                    del pointattrs[node]['_out']    
+                    del pointattrs[node]['_out']
+    print('usuwanie _out z pointattrs', _line_num, num_lines_to_process, str(time.time() - start))
+    progress_bar.set_done()
 
             
 def output_normal(prefix, num, options):
@@ -2819,7 +2898,7 @@ def worker(task, options):
 
     parse_txt(infile, options, num_lines_to_process=task['num_lines_to_process'])
     infile.close()
-    post_load_processing()
+    post_load_processing(options)
     
     # print "bpoints="+str(len(bpoints))
     # print "points="+str(len(points)-idperarea*task['idx'])
@@ -2831,11 +2910,11 @@ def worker(task, options):
     
     output_normal("UMP-PL", task['idx'], options)
     if options.navit_file != None:
-        output_navit("UMP-PL", task['idx'])	# no data change
+        output_navit("UMP-PL", task['idx'])	 # no data change
     if options.nonumber_file != None:
-        output_nonumbers("UMP-PL", task['idx'])	# no data change
+        output_nonumbers("UMP-PL", task['idx'])	 # no data change
     if options.index_file != None:
-        output_index("UMP-PL", task['idx'], options)	# no data change
+        output_index("UMP-PL", task['idx'], options)  # no data change
     if options.nominatim_file != None:
         output_nominatim("UMP-PL", task['idx'], options)  # data is changed
 
@@ -2941,7 +3020,7 @@ def main(options, args):
             workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'num_lines_to_process': num_lines_to_process}
             worklist.append(workelem)
             if hasattr(options, 'progress_bar_queue'):
-                options.progress_bar_queue.put(('max', num_lines_to_process))
+                options.progress_bar_queue.put(('mp', 'max', num_lines_to_process))
         if options.threadnum == 1:
             for workelem in worklist:                
                 result = worker(workelem, options)
@@ -2963,7 +3042,6 @@ def main(options, args):
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
-        options.progress_bar_queue.put(('done', num_lines_to_process))
 
         # naglowek osm i punkty granic
         printinfo_nlf("Working on header... ")
