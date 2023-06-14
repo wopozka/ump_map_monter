@@ -39,7 +39,7 @@ import time
 # import pdb
 from xml.sax import saxutils
 from optparse import OptionParser
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import os.path
 
 
@@ -1103,6 +1103,7 @@ bpoints = MylistB()
 points = list()
 # pointattrs = {}
 pointattrs = defaultdict(dict)
+node_ways_relation = defaultdict(list)
 ways = []
 relations = []
 
@@ -1480,14 +1481,14 @@ def prepare_line(nodes_str, closed):
         element = element.strip('()')
         nodes.append(element)
 
-#  lats = nodes[::2]
-#  longs = nodes[1::2]
+    #  lats = nodes[::2]
+    #  longs = nodes[1::2]
 
     lats = []
     longs = []
 
     for la in nodes[::2]:
-        l=len(la)
+        l = len(la)
         if l < 9:
             la += '0' * (9 - l)
         lats.append(la)
@@ -1987,9 +1988,12 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 if not way.pop('_c'):
                     way['_out'] = 1
             else:
-                # _in_ways_position provides index of given element in the ways list, that speeds up processing
-                way['_in_ways_position'] = len(ways)
                 ways.append(way)
+                # for faster restriction processing correlate nodes with given road
+                for _node in way['_nodes']:
+                    if int(way['ump:type'], 16) <= 0x16:  # here put better routing definitions, as there are additional
+                        node_ways_relation[_node].append(len(ways) - 1)
+
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
             # rule picks up something interesting, e.g. a polyline
@@ -2035,32 +2039,27 @@ class NodesToWayNotFound(ValueError):
 
 
 def nodes_to_way(a, b):
-    for way in ways:
-        if way is None:
-            continue
-        # print("DEBUG: way['_nodes']: %r" % (way['_nodes'],)
-        if a in way['_nodes'] and b in way['_nodes']:
-            if 'ump:type' in way:
-                if int(way['ump:type'], 16) <= 0x16:
-                    # Szukamy tylko wsrod drog
-                    # Hopefully there's only one
-                    return way
-#                else:
-#                    printerror("DEBUG: nodes_to_way: %r\n" % (way,))
-#            else:
-#                printerror("DEBUG: nodes_to_way: %r\n" % (way,))
-
-    raise NodesToWayNotFound(a, b)
-
-    for way in ways:
-        way_nodes = way['_nodes']
-        if a in way_nodes:
-            printerror("DEBUG: node a: %r found in way: %r" % (a, way))
-        if b in way_nodes:
-            printerror("DEBUG: node b: %r found in way: %r" % (b, way))
-
-    # print "DEBUG: no way nodes: a: %r b: %r" % (a, b)
-    raise NodesToWayNotFound(a, b)
+    ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
+    ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
+    way_ids = ways_a.intersection(ways_b)
+    if len(way_ids) == 1:
+        return ways[tuple(way_ids)[0]]
+    elif len(way_ids) > 1:
+        printerror("DEBUG: multiple roads found for restriction. Using only one")
+        for way_id in way_ids:
+            printerror(str(ways[way_id]))
+        return ways[tuple(way_ids)[0]]
+    else:
+        for way in ways:
+            if way is None:
+                continue
+            way_nodes = way['_nodes']
+            if a in way_nodes:
+                printerror("DEBUG: node a: %r found in way: %r" % (a, way))
+            if b in way_nodes:
+                printerror("DEBUG: node b: %r found in way: %r" % (b, way))
+        raise NodesToWayNotFound(a, b)
+    return None
 
 
 def distKM(lat0, lon0, lat1, lon1):
@@ -2092,7 +2091,15 @@ def split_way(way, node):
     newway = way.copy()
     ways.append(newway)
     newway['_nodes'] = way['_nodes'][:i + 1]
+    # when we split the road, we need to create a new entry in node_ways_relation, otherwise we will have errors
+    road_id = ways.index(way)
+    for _nod in newway['_nodes']:
+        node_ways_relation[_nod].append(len(ways) - 1)
+    for _nod in way['_nodes']:
+        node_ways_relation[_nod].remove(road_id)
     way['_nodes'] = way['_nodes'][i:]
+    for _nod in way['_nodes']:
+        node_ways_relation[_nod].append(road_id)
 
 
 def name_turn_restriction(rel, nodes):
@@ -2324,14 +2331,23 @@ def post_load_processing(options):
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
-    relations = [rel for rel in ways if '_rel' in rel]
-    levelledways = [way for way in ways if '_levels' in way]
+    # relations = [rel for rel in ways if '_rel' in rel]
+    # relations = OrderedDict({rel_no: ways[rel_no] for rel_no in range(len(ways)) if '_rel' in ways[rel_no]})
+    # levelledways = [way for way in ways if '_levels' in way]
+    relations = OrderedDict()
+    levelledways = OrderedDict()
+    for way_no in range(len(ways)):
+        if '_rel' in ways[way_no]:
+            relations[way_no] = ways[way_no]
+        elif '_levels' in ways[way_no]:
+            levelledways[way_no] = ways[way_no]
+
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
     _line_num = 0
     progress_bar = ProgressBar(options, 'drp', num_lines_to_process)
     progress_bar.start()
     start = time.time()
-    print('przetwarzanie rond')
+    print('przetwarzanie rond', file=sys.stderr)
     for way in ways:
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2344,7 +2360,7 @@ def post_load_processing(options):
             if 'oneway' in way:
                 del way['oneway']
             # TODO make sure nodes are ordered counter-clockwise
-    print('przetwarzanie rond koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('przetwarzanie rond koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
 
     # Relations:
     # find them, remove from /ways/ and move to /relations/
@@ -2354,19 +2370,17 @@ def post_load_processing(options):
     # http://wiki.openstreetmap.org/wiki/Relation:restriction
 
     start = time.time()
-    print('Przetwarzanie relacji usuwanie _rel - ilosc %s' % str(len(relations)))
-    for rel in relations:
+    print('Przetwarzanie relacji usuwanie _rel - ilosc %s' % str(len(relations)), file=sys.stderr)
+    for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
         rel['type'] = rel.pop('_rel')
-        # ways.remove(rel)
-
-        ways[rel['_in_ways_position']] = None
+        ways[way_id] = None
         rel['_timestamp'] = filestamp
-    print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
-    print('Przetwarzanie relacji: przygotowanie restrykcji')
-    for rel in relations:
+    print('Przetwarzanie relacji: preprepare restriction', file=sys.stderr)
+    for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
@@ -2375,16 +2389,16 @@ def post_load_processing(options):
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-    print('Przetwarzanie relacji: przygotowanie restrykcji koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('Przetwarzanie relacji: preprepare restriction', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
 
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
     start = time.time()
-    print('Przygotowanie levelledways')
-    for way in levelledways:
+    print('Przygotowanie levelledways', file=sys.stderr)
+    for way_id, way in levelledways.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
-        ways[way['_in_ways_position']] = None
+        ways[way_id] = None
         if '_levels' in way:
             nodes = way['_nodes']
             levels = way.pop('_levels')
@@ -2401,12 +2415,16 @@ def post_load_processing(options):
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
-    ways = [a for a in ways if a is not None]
-    print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
     print('innernodes')
+
+    # we have to transfer relations odreded dict into the list, as it is easier to add elements to the end
+    relations = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
+        if way is None:
+            continue
         progress_bar.set_val(_line_num)
         if '_innernodes' in way:
             if '_join' in way:
@@ -2416,10 +2434,11 @@ def post_load_processing(options):
                     subway['_nodes'] = segment
                     ways.append(subway)
             else:
+
                 relations.append(make_multipolygon(way, way.pop('_innernodes')))
-    print('innernodes koniec', _line_num, num_lines_to_process, time.time() - start)
+    print('innernodes koniec', _line_num, num_lines_to_process, time.time() - start, file=sys.stderr)
     start = time.time()
-    print('prepare restriction')
+    print('prepare restriction', file=sys.stderr)
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2428,9 +2447,9 @@ def post_load_processing(options):
                 prepare_restriction(rel)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-    print('prepare restriction koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('prepare restriction koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
-    print('make_restriction_fromviato')
+    print('make_restriction_fromviato', file=sys.stderr)
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2443,21 +2462,23 @@ def post_load_processing(options):
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to " +
                             "preprepare restriction from rel: %r\n" % (rel,))
-    print('make_restriction_fromviatokoniec', _line_num, num_lines_to_process, str(time.time()- start))
+    print('make_restriction_fromviatokoniec', _line_num, num_lines_to_process, str(time.time()- start), file=sys.stderr)
     # Quirks, but do not overwrite specific values
     start = time.time()
-    print('maxspeed dla motorway i highway')
+    print('maxspeed dla motorway i highway', file=sys.stderr)
     for way in ways:
         _line_num += 1
+        if way is None:
+            continue
         progress_bar.set_val(_line_num)
         if 'highway' in way and 'maxspeed' not in way:
             if way['highway'] == 'motorway':
                 way['maxspeed'] = '140'
             if way['highway'] == 'trunk':
                 way['maxspeed'] = '120'
-    print('maxspeed dla motorway i highway koniec', _line_num, num_lines_to_process, str(time.time() - start))
+    print('maxspeed dla motorway i highway koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
-    print('pointattrs')
+    print('pointattrs', file=sys.stderr)
     for index, point in pointattrs.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2483,17 +2504,20 @@ def post_load_processing(options):
                     point['maxspeed'] = spd.strip()
                     point['newname'] = n1.strip()
 
-    print('pointattrs koniec', _line_num, num_lines_to_process, str(time.time()- start))
+    print('pointattrs koniec', _line_num, num_lines_to_process, str(time.time()- start), file=sys.stderr)
     start = time.time()
-    print('usuwanie _out z pointattrs')
+    print('usuwanie _out z pointattrs', file=sys.stderr)
     for way in ways:
         _line_num += 1
+        if way is None:
+            continue
         progress_bar.set_val(_line_num)
         if way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
-    print('usuwanie _out z pointattrs', _line_num, num_lines_to_process, str(time.time() - start))
+    print('usuwanie _out z pointattrs', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
+    ways = [a for a in ways if a is not None]
     progress_bar.set_done()
 
             
