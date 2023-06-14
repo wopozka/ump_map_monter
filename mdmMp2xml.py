@@ -12,7 +12,7 @@
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# This program is distributed in the hope that it will be useful,wa
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -1987,7 +1987,8 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 if not way.pop('_c'):
                     way['_out'] = 1
             else:
-                # way['_in_ways_position'] = len(ways)
+                # _in_ways_position provides index of given element in the ways list, that speeds up processing
+                way['_in_ways_position'] = len(ways)
                 ways.append(way)
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
@@ -2356,8 +2357,11 @@ def post_load_processing(options):
         _line_num += 1
         progress_bar.set_val(_line_num)
         rel['type'] = rel.pop('_rel')
-        ways.remove(rel)
+        # ways.remove(rel)
+
+        ways[rel['_in_ways_position']] = None
         rel['_timestamp'] = filestamp
+    ways = [a for a in ways if a is not None]
     print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start))
     start = time.time()
     print('Przetwarzanie relacji: przygotowanie restrykcji')
