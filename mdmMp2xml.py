@@ -2090,10 +2090,10 @@ def next_node(pivot=None, direction=None):
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
-def split_way(way=None, node_fromvia_viato=None):
+def split_way(way=None, splitting_point=None):
     global node_ways_relation
     l = len(way['_nodes'])
-    i = way['_nodes'].index(node_fromvia_viato)
+    i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
         return
     way_nodes = set(way['_nodes'])
@@ -2147,10 +2147,10 @@ def prepare_restriction(rel):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
-    viato = rel['_nodes'][-2]
+    tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
-    split_way(way=nodes_to_way(fromnode, fromvia), node_fromvia_viato=fromvia)
-    split_way(way=nodes_to_way(tonode, viato), node_fromvia_viato=viato)
+    split_way(way=nodes_to_way(fromnode, fromvia), splitting_point=fromvia)
+    split_way(way=nodes_to_way(tonode, viato), splitting_point=tovia)
 
 
 def make_restriction_fromviato(rel):
