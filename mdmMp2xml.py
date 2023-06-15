@@ -2104,7 +2104,7 @@ def split_way(way, node):
     newway['_nodes'] = way['_nodes'][:i + 1]
     way['_nodes'] = way['_nodes'][i:]
     for node in way_nodes.difference(set(way['_nodes'])):
-        node_ways_relation[node].remove(way_id)
+        node_ways_relation[node].discard(way_id)
     for node in newway['_nodes']:
         node_ways_relation[node].add(newway_id)
 
@@ -2414,7 +2414,7 @@ def post_load_processing(options):
         if '_levels' in way:
             ways[way_id] = None
             for node in way['_nodes']:
-                node_ways_relation[node].remove(way_id)
+                node_ways_relation[node].discard(way_id)
             nodes = way['_nodes']
             levels = way.pop('_levels')
             for segment in levels:
