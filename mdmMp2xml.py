@@ -2419,7 +2419,7 @@ def post_load_processing(options):
     start = time.time()
     print('innernodes')
 
-    # we have to transfer relations odreded dict into the list, as it is easier to add elements to the end
+    # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
     relations = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
