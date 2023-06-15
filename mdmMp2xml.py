@@ -1135,8 +1135,11 @@ class ProgressBar(object):
         self.progress_bar_queue = None
         if hasattr(options, 'progress_bar_queue'):
             self.progress_bar_queue = options.progress_bar_queue
-        self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
-                                          if a % int(num_lines_to_process/100) == 0])
+        if num_lines_to_process > 100:
+            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
+                                              if a % int(num_lines_to_process/100) == 0])
+        else:
+            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)])
 
     def set_val(self, _line_num):
         if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
@@ -1989,10 +1992,6 @@ def parse_txt(infile, options, num_lines_to_process=0):
                     way['_out'] = 1
             else:
                 ways.append(way)
-                # for faster restriction processing correlate nodes with given road
-                for _node in way['_nodes']:
-                    if int(way['ump:type'], 16) <= 0x16:  # here put better routing definitions, as there are additional
-                        node_ways_relation[_node].append(len(ways) - 1)
 
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
@@ -2036,6 +2035,14 @@ class NodesToWayNotFound(ValueError):
 
     def __str__(self):
         return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
+def create_node_ways_relation(all_ways):
+    tmp_node_ways_rel = defaultdict(set)
+    for way_no, way in enumerate(all_ways):
+        if way is not None and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+            for node in way["_nodes"]:
+                tmp_node_ways_rel[node].add(way_no)
+    return tmp_node_ways_rel
 
 
 def nodes_to_way(a, b):
@@ -2084,22 +2091,22 @@ def next_node(pivot, dir):
 
 
 def split_way(way, node):
+    global node_ways_relation
     l = len(way['_nodes'])
     i = way['_nodes'].index(node)
     if i == 0 or i == l - 1:
         return
+    way_nodes = set(way['_nodes'])
+    way_id = ways.index(way)
     newway = way.copy()
     ways.append(newway)
+    newway_id = len(ways) - 1
     newway['_nodes'] = way['_nodes'][:i + 1]
-    # when we split the road, we need to create a new entry in node_ways_relation, otherwise we will have errors
-    road_id = ways.index(way)
-    for _nod in newway['_nodes']:
-        node_ways_relation[_nod].append(len(ways) - 1)
-    for _nod in way['_nodes']:
-        node_ways_relation[_nod].remove(road_id)
     way['_nodes'] = way['_nodes'][i:]
-    for _nod in way['_nodes']:
-        node_ways_relation[_nod].append(road_id)
+    for node in way_nodes.difference(set(way['_nodes'])):
+        node_ways_relation[node].remove(way_id)
+    for node in newway['_nodes']:
+        node_ways_relation[node].add(newway_id)
 
 
 def name_turn_restriction(rel, nodes):
@@ -2173,7 +2180,8 @@ def make_multipolygon(outer, holes):
             '_nodes': inner,
         }
         ways.append(way)
-        rel['_members']['inner'][1].append(ways.index(way))
+        # rel['_members']['inner'][1].append(ways.index(way))
+        rel['_members']['inner'][1].append(len(ways) - 1)
         polygon_make_ccw(way)
 
         # Assume that the polygon with most nodes is the outer shape and
@@ -2328,6 +2336,7 @@ def post_load_processing(options):
     global relations
     global maxtypes
     global ways
+    global node_ways_relation
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
@@ -2341,6 +2350,9 @@ def post_load_processing(options):
             relations[way_no] = ways[way_no]
         elif '_levels' in ways[way_no]:
             levelledways[way_no] = ways[way_no]
+
+    start = time.time()
+    print('tworzenie tmpaaa, czas wykonania: ', str(time.time() - start), file=sys.stderr)
 
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
     _line_num = 0
@@ -2380,6 +2392,7 @@ def post_load_processing(options):
     print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
     print('Przetwarzanie relacji: preprepare restriction', file=sys.stderr)
+    node_ways_relation = create_node_ways_relation(ways)
     for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2398,8 +2411,10 @@ def post_load_processing(options):
     for way_id, way in levelledways.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
-        ways[way_id] = None
         if '_levels' in way:
+            ways[way_id] = None
+            for node in way['_nodes']:
+                node_ways_relation[node].remove(way_id)
             nodes = way['_nodes']
             levels = way.pop('_levels')
             for segment in levels:
@@ -2415,12 +2430,16 @@ def post_load_processing(options):
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
+                new_way_id = len(ways) - 1
+                for node in ways[-1]['_nodes']:
+                    node_ways_relation[node].add(new_way_id)
     print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start), file=sys.stderr)
     start = time.time()
     print('innernodes')
 
     # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
     relations = [relations[road_id] for road_id in relations]
+    print(len([way for way in ways if way is not None and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16]), file=sys.stderr)
     for way in ways:
         _line_num += 1
         if way is None:
@@ -2428,14 +2447,16 @@ def post_load_processing(options):
         progress_bar.set_val(_line_num)
         if '_innernodes' in way:
             if '_join' in way:
+                print(way, file=sys.stderr)
                 del way['_join']
                 for segment in way.pop('_innernodes'):
                     subway = way.copy()
                     subway['_nodes'] = segment
                     ways.append(subway)
             else:
-
                 relations.append(make_multipolygon(way, way.pop('_innernodes')))
+
+    print(len(ways), len(node_ways_relation) - len(create_node_ways_relation(ways)), file=sys.stderr)
     print('innernodes koniec', _line_num, num_lines_to_process, time.time() - start, file=sys.stderr)
     start = time.time()
     print('prepare restriction', file=sys.stderr)
@@ -2911,7 +2932,7 @@ def worker(task, options):
         
     try:
         if sys.platform.startswith('linux'):
-            file_encoding = 'latin2'
+            file_encoding = 'cp1250'
         else:
             file_encoding = 'cp1250'
         infile = open(task['file'], "r", encoding=file_encoding)
