@@ -2049,13 +2049,6 @@ def nodes_to_way(a, b):
     ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
     ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
     way_ids = ways_a.intersection(ways_b)
-
-    ccc = None
-    for way in ways:
-        if a in way['_nodes'] and b in way['_nodes']:
-            if 'ump:type' in way and int(way['_ump:type'], 16) <= 0x16:
-              ccc = way
-
     if len(way_ids) == 1:
         return ways[tuple(way_ids)[0]]
     elif len(way_ids) > 1:
@@ -2097,10 +2090,10 @@ def next_node(pivot=None, direction=None):
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
-def split_way(way, node):
+def split_way(way=None, node_fromvia_viato=None):
     global node_ways_relation
     l = len(way['_nodes'])
-    i = way['_nodes'].index(node)
+    i = way['_nodes'].index(node_fromvia_viato)
     if i == 0 or i == l - 1:
         return
     way_nodes = set(way['_nodes'])
@@ -2155,8 +2148,9 @@ def prepare_restriction(rel):
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     viato = rel['_nodes'][-2]
-    split_way(nodes_to_way(fromnode, fromvia), fromvia)
-    split_way(nodes_to_way(tonode, viato), viato)
+    # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
+    split_way(way=nodes_to_way(fromnode, fromvia), node_fromvia_viato=fromvia)
+    split_way(way=nodes_to_way(tonode, viato), node_fromvia_viato=viato)
 
 
 def make_restriction_fromviato(rel):
