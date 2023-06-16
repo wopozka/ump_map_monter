@@ -1103,7 +1103,7 @@ bpoints = MylistB()
 points = list()
 # pointattrs = {}
 pointattrs = defaultdict(dict)
-node_ways_relation = defaultdict(list)
+node_ways_relation = dict
 ways = []
 relations = []
 
@@ -1680,7 +1680,7 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError('HLevel0 used on a polygon')
         curlevel = 0
         curnode = 0
-        list = []
+        level_list = []
         for level in value.split(')'):
             if level == "":
                 break
@@ -1688,11 +1688,11 @@ def convert_tag(way, key, value, feat, options):
             start = int(pair[0], 0)
             level = int(pair[1], 0)
             if start > curnode and level != curlevel:
-                list.append((curnode, start, curlevel))
+                level_list.append((curnode, start, curlevel))
                 curnode = start
             curlevel = level
-        list.append((curnode, -1, curlevel))
-        way['_levels'] = list
+        level_list.append((curnode, -1, curlevel))
+        way['_levels'] = level_list
     elif key == 'Szlak':
         ref = []
         for colour in value.split(','):
@@ -2039,13 +2039,21 @@ def parse_txt(infile, options, num_lines_to_process=0):
 def create_node_ways_relation(all_ways):
     tmp_node_ways_rel = defaultdict(set)
     for way_no, way in enumerate(all_ways):
-        if way is not None and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+        if way is None:
+            continue
+        if '_levels' in way:
             for node in way["_nodes"]:
                 tmp_node_ways_rel[node].add(way_no)
-    return tmp_node_ways_rel
+        if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+            for node in way["_nodes"]:
+                tmp_node_ways_rel[node].add(way_no)
+    # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
+    # comperhention
+    return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}
 
 
-def nodes_to_way(a, b):
+def nodes_to_way(a, b, debug_caller=''):
+    global node_ways_relation
     ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
     ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
     way_ids = ways_a.intersection(ways_b)
@@ -2055,8 +2063,13 @@ def nodes_to_way(a, b):
         printerror("DEBUG: multiple roads found for restriction. Using only one")
         for way_id in way_ids:
             printerror(str(ways[way_id]))
+            printerror(str([points[node] for node in ways[way_id]['_nodes']]))
         return ways[tuple(way_ids)[0]]
     else:
+        printerror(debug_caller + " DEBUG: no roads found for restriction.")
+        printerror(','.join(points[a]) + ' ' + ','.join(points[b]))
+        printerror(str(node_ways_relation[a]))
+        printerror(str(node_ways_relation[b]))
         for way in ways:
             if way is None:
                 continue
@@ -2085,7 +2098,7 @@ def signbit(x):
 
 
 def next_node(pivot=None, direction=None):
-    way_nodes = nodes_to_way(direction, pivot)['_nodes']
+    way_nodes = nodes_to_way(direction, pivot, debug_caller='preprepare_restriction')['_nodes']
     pivotidx = way_nodes.index(pivot)
     # _next_node = way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
     # _next_node_coords = ','.join(points[_next_node])
@@ -2149,7 +2162,7 @@ def preprepare_restriction(rel):
     new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1])
     rel['_nodes'][0] = new_rel_node_first
     rel['_nodes'][-1] = new_rel_node_last
-            
+
 
 def prepare_restriction(rel):
     fromnode = rel['_nodes'][0]
@@ -2157,8 +2170,8 @@ def prepare_restriction(rel):
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
-    split_way(way=nodes_to_way(fromnode, fromvia), splitting_point=fromvia)
-    split_way(way=nodes_to_way(tonode, tovia), splitting_point=tovia)
+    split_way(way=nodes_to_way(fromnode, fromvia, debug_caller='prepare_restriction split_way from fromvia'), splitting_point=fromvia)
+    split_way(way=nodes_to_way(tonode, tovia, debug_caller='prepare_restriction split_way to tovia'), splitting_point=tovia)
 
 
 def make_restriction_fromviato(rel):
@@ -2414,7 +2427,6 @@ def post_load_processing(options):
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
     for way_id, way in levelledways.items():
