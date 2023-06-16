@@ -1157,6 +1157,17 @@ class ProgressBar(object):
         return
 
 
+class NodesToWayNotFound(ValueError):
+    """
+    Raised when way of two nodes can not be found
+    """
+    def __init__(self, node_a, node_b):
+        self.node_a = node_a
+        self.node_b = node_b
+
+    def __str__(self):
+        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
 def printdebug(string, options):
     global working_thread
     if options.verbose:
@@ -2025,17 +2036,6 @@ def parse_txt(infile, options, num_lines_to_process=0):
     progress_bar.set_done()
 
 
-class NodesToWayNotFound(ValueError):
-    """
-    Raised when way of two nodes can not be found
-    """
-    def __init__(self, node_a, node_b):
-        self.node_a = node_a
-        self.node_b = node_b
-
-    def __str__(self):
-        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
-
 def create_node_ways_relation(all_ways):
     tmp_node_ways_rel = defaultdict(set)
     for way_no, way in enumerate(all_ways):
@@ -2087,26 +2087,33 @@ def signbit(x):
 def next_node(pivot=None, direction=None):
     way_nodes = nodes_to_way(direction, pivot)['_nodes']
     pivotidx = way_nodes.index(pivot)
+    # _next_node = way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
+    # _next_node_coords = ','.join(points[_next_node])
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
 def split_way(way=None, splitting_point=None):
     global node_ways_relation
+    global ways
     l = len(way['_nodes'])
     i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
         return
-    way_nodes = set(way['_nodes'])
+    # let's remove the roadid from node_ways_relation we will put it back later
     way_id = ways.index(way)
+    for way_node in way['_nodes']:
+        node_ways_relation[way_node].discard(way_id)
     newway = way.copy()
-    ways.append(newway)
-    newway_id = len(ways) - 1
     newway['_nodes'] = way['_nodes'][:i + 1]
     way['_nodes'] = way['_nodes'][i:]
-    for node in way_nodes.difference(set(way['_nodes'])):
-        node_ways_relation[node].discard(way_id)
-    for node in newway['_nodes']:
-        node_ways_relation[node].add(newway_id)
+    # lets add way nodes to the node_ways_relation
+    for way_node in way['_nodes']:
+        node_ways_relation[way_node].add(way_id)
+    ways.append(newway)
+    newway_id = len(ways) - 1
+    # lets add newway nodes to the node_ways_relation
+    for way_node in newway['_nodes']:
+        node_ways_relation[way_node].add(newway_id)
 
 
 def name_turn_restriction(rel, nodes):
@@ -2133,7 +2140,8 @@ def name_turn_restriction(rel, nodes):
 
 def preprepare_restriction(rel):
     """
-    modification of relation so
+    modification of relation nodes so, that it starts and ends one node from and one node before central point
+    called pivot here.
     :param rel: relaton
     :return:
     """
@@ -2150,7 +2158,7 @@ def prepare_restriction(rel):
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
     split_way(way=nodes_to_way(fromnode, fromvia), splitting_point=fromvia)
-    split_way(way=nodes_to_way(tonode, viato), splitting_point=tovia)
+    split_way(way=nodes_to_way(tonode, tovia), splitting_point=tovia)
 
 
 def make_restriction_fromviato(rel):
@@ -2258,6 +2266,8 @@ def print_point(point, index, ostr):
     ostr.write("</node>\n")
 
 def print_way(way, index, ostr):
+    if way is None:
+        return
     global maxid
     global idpfx
 
@@ -2394,6 +2404,7 @@ def post_load_processing(options):
     ways = [a for a in ways if a is not None]
     node_ways_relation = create_node_ways_relation(ways)
 
+    # move start and end nodes of restriction to the next/before node to via
     for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2449,6 +2460,8 @@ def post_load_processing(options):
             else:
                 relations.append(make_multipolygon(way, way.pop('_innernodes')))
 
+    # for each relation/restriction split ways at via points as the "from" and "to" members must start/end at the
+    # Role via node or the Role via way(s)
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2517,7 +2530,6 @@ def post_load_processing(options):
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
-    ways = [a for a in ways if a is not None]
     progress_bar.set_done()
 
             
