@@ -2041,14 +2041,11 @@ def create_node_ways_relation(all_ways):
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
-        # if '_levels' in way:
-        #     for node in way["_nodes"]:
-        #         tmp_node_ways_rel[node].add(way_no)
         if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
             for node in way["_nodes"]:
                 tmp_node_ways_rel[node].add(way_no)
     # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
-    # comperhention
+    # comprehension
     return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}
 
 
@@ -2100,10 +2097,15 @@ def signbit(x):
 
 
 def next_node(pivot=None, direction=None):
+    """
+    return either next or previous node relative to the pivot point. In some cases does not do anythnig as the next
+    point is the only one
+    :param pivot: the node that is our reference
+    :param direction: in which direction we are looking, according or against nodes order
+    :return: one node of given road
+    """
     way_nodes = nodes_to_way(direction, pivot)['_nodes']
     pivotidx = way_nodes.index(pivot)
-    # _next_node = way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
-    # _next_node_coords = ','.join(points[_next_node])
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
@@ -2155,10 +2157,10 @@ def name_turn_restriction(rel, nodes):
 
 def preprepare_restriction(rel):
     """
-    modification of relation nodes so, that it starts and ends one node from and one node before central point
-    called pivot here.
+    modification of relation nodes so, that it starts and ends one node after and one node before central point
+    called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
     :param rel: relaton
-    :return:
+    :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0])
     new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1])
@@ -2487,6 +2489,9 @@ def post_load_processing(options):
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
 
+    # theoretically here we could do
+    # ways = [a for a in ways if a is not None]
+    # node_ways_relation = create_node_ways_relation(ways)
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
