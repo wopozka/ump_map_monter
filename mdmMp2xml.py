@@ -2041,9 +2041,9 @@ def create_node_ways_relation(all_ways):
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
-        if '_levels' in way:
-            for node in way["_nodes"]:
-                tmp_node_ways_rel[node].add(way_no)
+        # if '_levels' in way:
+        #     for node in way["_nodes"]:
+        #         tmp_node_ways_rel[node].add(way_no)
         if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
             for node in way["_nodes"]:
                 tmp_node_ways_rel[node].add(way_no)
@@ -2052,8 +2052,10 @@ def create_node_ways_relation(all_ways):
     return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}
 
 
-def nodes_to_way(a, b, debug_caller=''):
+def nodes_to_way(a, b):
     global node_ways_relation
+    if a not in node_ways_relation or b not in node_ways_relation:
+        raise NodesToWayNotFound(a, b)
     ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
     ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
     way_ids = ways_a.intersection(ways_b)
@@ -2066,7 +2068,7 @@ def nodes_to_way(a, b, debug_caller=''):
             printerror(str([points[node] for node in ways[way_id]['_nodes']]))
         return ways[tuple(way_ids)[0]]
     else:
-        printerror(debug_caller + " DEBUG: no roads found for restriction.")
+        printerror("DEBUG: no roads found for restriction.")
         printerror(','.join(points[a]) + ' ' + ','.join(points[b]))
         printerror(str(node_ways_relation[a]))
         printerror(str(node_ways_relation[b]))
@@ -2098,7 +2100,7 @@ def signbit(x):
 
 
 def next_node(pivot=None, direction=None):
-    way_nodes = nodes_to_way(direction, pivot, debug_caller='preprepare_restriction')['_nodes']
+    way_nodes = nodes_to_way(direction, pivot)['_nodes']
     pivotidx = way_nodes.index(pivot)
     # _next_node = way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
     # _next_node_coords = ','.join(points[_next_node])
@@ -2170,8 +2172,8 @@ def prepare_restriction(rel):
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
-    split_way(way=nodes_to_way(fromnode, fromvia, debug_caller='prepare_restriction split_way from fromvia'), splitting_point=fromvia)
-    split_way(way=nodes_to_way(tonode, tovia, debug_caller='prepare_restriction split_way to tovia'), splitting_point=tovia)
+    split_way(way=nodes_to_way(fromnode, fromvia), splitting_point=fromvia)
+    split_way(way=nodes_to_way(tonode, tovia), splitting_point=tovia)
 
 
 def make_restriction_fromviato(rel):
@@ -2434,11 +2436,12 @@ def post_load_processing(options):
         progress_bar.set_val(_line_num)
         if '_levels' in way:
             ways[way_id] = None
-            for node in way['_nodes']:
-                node_ways_relation[node].discard(way_id)
+            if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+                for node in way['_nodes']:
+                    node_ways_relation[node].discard(way_id)
             nodes = way['_nodes']
-            levels = way.pop('_levels')
-            for segment in levels:
+            # levels = way.pop('_levels')
+            for segment in way.pop('_levels'):
                 subway = way.copy()
                 if segment[1] == -1:
                     subway['_nodes'] = nodes[segment[0]:]
@@ -2451,9 +2454,10 @@ def post_load_processing(options):
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
-                new_way_id = len(ways) - 1
-                for node in ways[-1]['_nodes']:
-                    node_ways_relation[node].add(new_way_id)
+                if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
+                    new_way_id = len(ways) - 1
+                    for node in ways[-1]['_nodes']:
+                        node_ways_relation[node].add(new_way_id)
 
     # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
     relations = [relations[road_id] for road_id in relations]
