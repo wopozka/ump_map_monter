@@ -3007,7 +3007,7 @@ def main(options, args):
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
-    sys.stderr.write("INFO: txt2osmMP.py ver:" + __version__ +" ran at " + runstamp + "\n")
+    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ +" ran at " + runstamp + "\n")
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -3116,7 +3116,7 @@ def main(options, args):
             printerror("\nCan't create header file " + headerf + "!")
             sys.exit()
         out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
-        out.write("<osm version='0.6' generator='txt2osm %s converter for UMP-PL'>\n" % __version__)
+        out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
         maxid = 0
         idpfx = ""
         if options.borders_file != None:
@@ -3258,7 +3258,7 @@ def main(options, args):
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
-            printinfo("txt2osmMP.py finished after " + str(elapsed) + ".\n")
+            printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
         except IOError:
             sys.stderr.write("\n\tERROR: Normal output failed!\n")
             sys.exit()
