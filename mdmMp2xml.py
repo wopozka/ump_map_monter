@@ -2498,9 +2498,9 @@ def post_load_processing(options):
 
     # theoretically here we could do
     # ways = [a for a in ways if a is not None]
-    # node_ways_relation = create_node_ways_relation(ways)
+    # below connects obj identifier to position in the list, speeds up restriction creation,
+    # but uses aprox 10 MB more for aprox 90000 polylines
     road_to_road_id = {id(b): a for a, b in enumerate(ways)}
-    time_start = time.time()
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
@@ -2563,7 +2563,7 @@ def post_load_processing(options):
                     del pointattrs[node]['_out']
     progress_bar.set_done()
 
-            
+
 def output_normal(prefix, num, options):
     global maxid
     global idpfx
