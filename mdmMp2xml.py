@@ -2178,12 +2178,19 @@ def prepare_restriction(rel):
     split_way(way=nodes_to_way(tonode, tovia), splitting_point=tovia)
 
 
-def make_restriction_fromviato(rel):
+def return_roadid_in_ways(way, road_to_road_id=None):
+    return road_to_road_id[id(way)]
+
+def make_restriction_fromviato(rel, road_to_road_id=None):
     nodes = rel.pop('_nodes')
+    # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
+    # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
+    from_way_index = road_to_road_id[id(nodes_to_way(nodes[0], nodes[1]))]
+    to_way_index = road_to_road_id[id(nodes_to_way(nodes[-2], nodes[-1]))]
     rel['_members'] = {
-        'from': ('way', [ways.index(nodes_to_way(nodes[0], nodes[1]))]),
+        'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
-        'to':   ('way', [ways.index(nodes_to_way(nodes[-2], nodes[-1]))]),
+        'to':   ('way', [to_way_index]),
     }
 
     rel['_c'] = ways[rel['_members']['from'][1][0]]['_c'] + ways[rel['_members']['to'][1][0]]['_c']
@@ -2492,18 +2499,21 @@ def post_load_processing(options):
     # theoretically here we could do
     # ways = [a for a in ways if a is not None]
     # node_ways_relation = create_node_ways_relation(ways)
+    road_to_road_id = {id(b): a for a, b in enumerate(ways)}
+    time_start = time.time()
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                rnodes = make_restriction_fromviato(rel)
+                rnodes = make_restriction_fromviato(rel, road_to_road_id=road_to_road_id)
 
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to " +
                             "preprepare restriction from rel: %r\n" % (rel,))
+
 
     # Quirks, but do not overwrite specific values
     for way in ways:
