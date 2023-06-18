@@ -1103,7 +1103,6 @@ bpoints = MylistB()
 points = list()
 # pointattrs = {}
 pointattrs = defaultdict(dict)
-node_ways_relation = dict
 ways = []
 relations = []
 
@@ -2049,21 +2048,20 @@ def create_node_ways_relation(all_ways):
     return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}
 
 
-def nodes_to_way(a, b):
-    global node_ways_relation
+def nodes_to_way_id(a, b, node_ways_relation=None):
     if a not in node_ways_relation or b not in node_ways_relation:
         raise NodesToWayNotFound(a, b)
     ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
     ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
     way_ids = ways_a.intersection(ways_b)
     if len(way_ids) == 1:
-        return ways[tuple(way_ids)[0]]
+        return tuple(way_ids)[0]
     elif len(way_ids) > 1:
         printerror("DEBUG: multiple roads found for restriction. Using only one")
         for way_id in way_ids:
             printerror(str(ways[way_id]))
             printerror(str([points[node] for node in ways[way_id]['_nodes']]))
-        return ways[tuple(way_ids)[0]]
+        return tuple(way_ids)[0]
     else:
         printerror("DEBUG: no roads found for restriction.")
         printerror(','.join(points[a]) + ' ' + ','.join(points[b]))
@@ -2081,6 +2079,10 @@ def nodes_to_way(a, b):
     return None
 
 
+def nodes_to_way(a, b, node_ways_relation=None):
+    return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation)]
+
+
 def distKM(lat0, lon0, lat1, lon1):
     degtokm = math.pi * 12742 / 360
     latcorr = math.cos(math.radians(float(lat1)))
@@ -2096,7 +2098,7 @@ def signbit(x):
         return -1
 
 
-def next_node(pivot=None, direction=None):
+def next_node(pivot=None, direction=None, node_ways_relation=None):
     """
     return either next or previous node relative to the pivot point. In some cases does not do anythnig as the next
     point is the only one
@@ -2104,13 +2106,12 @@ def next_node(pivot=None, direction=None):
     :param direction: in which direction we are looking, according or against nodes order
     :return: one node of given road
     """
-    way_nodes = nodes_to_way(direction, pivot)['_nodes']
+    way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation)['_nodes']
     pivotidx = way_nodes.index(pivot)
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
-def split_way(way=None, splitting_point=None):
-    global node_ways_relation
+def split_way(way=None, splitting_point=None, node_ways_relation=None):
     global ways
     l = len(way['_nodes'])
     i = way['_nodes'].index(splitting_point)
@@ -2155,38 +2156,42 @@ def name_turn_restriction(rel, nodes):
         rel['restriction'] = 'no_u_turn'    
     
 
-def preprepare_restriction(rel):
+def preprepare_restriction(rel, node_ways_relation=None):
     """
     modification of relation nodes so, that it starts and ends one node after and one node before central point
     called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
     :param rel: relaton
     :return: None, id modifies nodes by reference
     """
-    new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0])
-    new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1])
+    new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
+                                   node_ways_relation=node_ways_relation)
+    new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1],
+                                  node_ways_relation=node_ways_relation)
     rel['_nodes'][0] = new_rel_node_first
     rel['_nodes'][-1] = new_rel_node_last
 
 
-def prepare_restriction(rel):
+def prepare_restriction(rel, node_ways_relation=None):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
-    split_way(way=nodes_to_way(fromnode, fromvia), splitting_point=fromvia)
-    split_way(way=nodes_to_way(tonode, tovia), splitting_point=tovia)
+    split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation), splitting_point=fromvia,
+              node_ways_relation=node_ways_relation)
+    split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation), splitting_point=tovia,
+              node_ways_relation=node_ways_relation)
 
 
 def return_roadid_in_ways(way, road_to_road_id=None):
     return road_to_road_id[id(way)]
 
-def make_restriction_fromviato(rel):
+def make_restriction_fromviato(rel, node_ways_relation=None):
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
-    from_way_index = nodes_to_way(nodes[0], nodes[1])['_rid']
-    to_way_index = nodes_to_way(nodes[-2], nodes[-1])['_rid']
+    from_way_index = nodes_to_way_id(nodes[0], nodes[1], node_ways_relation=node_ways_relation)
+    to_way_index = nodes_to_way_id(nodes[-2], nodes[-1], node_ways_relation=node_ways_relation)
     rel['_members'] = {
         'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
@@ -2378,7 +2383,6 @@ def post_load_processing(options):
     global relations
     global maxtypes
     global ways
-    global node_ways_relation
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
@@ -2434,7 +2438,7 @@ def post_load_processing(options):
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                preprepare_restriction(rel)
+                preprepare_restriction(rel, node_ways_relation=node_ways_relation)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
@@ -2492,27 +2496,18 @@ def post_load_processing(options):
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                prepare_restriction(rel)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
 
     # theoretically here we could do
     # ways = [a for a in ways if a is not None]
-    # below connects obj identifier to position in the list, speeds up restriction creation,
-    # but uses aprox 10 MB more for aprox 90000 polylines
-    road_to_road_id = {id(b): a for a, b in enumerate(ways)}
-    for way_id, way in enumerate(ways):
-        if way is None:
-            continue
-        way['_rid'] = way_id
-
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                rnodes = make_restriction_fromviato(rel)
-
+                rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation)
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes)
             except NodesToWayNotFound:
