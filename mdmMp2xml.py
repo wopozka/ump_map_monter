@@ -2181,12 +2181,12 @@ def prepare_restriction(rel):
 def return_roadid_in_ways(way, road_to_road_id=None):
     return road_to_road_id[id(way)]
 
-def make_restriction_fromviato(rel, road_to_road_id=None):
+def make_restriction_fromviato(rel):
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
-    from_way_index = road_to_road_id[id(nodes_to_way(nodes[0], nodes[1]))]
-    to_way_index = road_to_road_id[id(nodes_to_way(nodes[-2], nodes[-1]))]
+    from_way_index = nodes_to_way(nodes[0], nodes[1])['_rid']
+    to_way_index = nodes_to_way(nodes[-2], nodes[-1])['_rid']
     rel['_members'] = {
         'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
@@ -2501,12 +2501,17 @@ def post_load_processing(options):
     # below connects obj identifier to position in the list, speeds up restriction creation,
     # but uses aprox 10 MB more for aprox 90000 polylines
     road_to_road_id = {id(b): a for a, b in enumerate(ways)}
+    for way_id, way in enumerate(ways):
+        if way is None:
+            continue
+        way['_rid'] = way_id
+
     for rel in relations:
         _line_num += 1
         progress_bar.set_val(_line_num)
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                rnodes = make_restriction_fromviato(rel, road_to_road_id=road_to_road_id)
+                rnodes = make_restriction_fromviato(rel)
 
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes)
