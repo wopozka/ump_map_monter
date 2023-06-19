@@ -41,6 +41,7 @@ from xml.sax import saxutils
 from optparse import OptionParser
 from collections import defaultdict, OrderedDict
 import os.path
+from functools import partial
 
 
 # Kwadrat dla Polski.
@@ -3051,7 +3052,7 @@ def main(options, args):
             #  parsowanie po nowemu. Najpierw plik granic a potem pliki po kolei.
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                borderf = open(options.borders_file, "r")
+                borderf = open(options.borders_file, "r", encoding='cp1250')
             except IOError:
                 sys.stderr.write("\tERROR: Can't open border input file " + options.borders_file + "!\n")
                 sys.exit()
@@ -3100,7 +3101,8 @@ def main(options, args):
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
         else:   
             pool = Pool(processes=options.threadnum)
-            result = pool.map(worker, worklist, options)
+            # result = pool.map(worker, worklist, options)
+            result = pool.map(partial(worker, options=options), worklist)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
