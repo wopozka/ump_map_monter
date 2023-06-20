@@ -99,15 +99,15 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
 
             progress_bar_lframe = tkinter.LabelFrame(body, text=u'Postęp przetwarzania plików mp')
             progress_bar_lframe.pack(fill='x', anchor='n')
-            self.progress_bar_canv_frame = tkinter.Frame(progress_bar_lframe)
-            self.progress_bar_canv_frame.pack(fill='x', side='left')
-            progress_bar_canv = tkinter.Canvas(self.progress_bar_canv_frame, height=100)
-            progress_bar_canv.pack(side='left', fill='x')
+            self.progress_bar_canv_frame = tkinter.ttk.LabelFrame(progress_bar_lframe)
+            self.progress_bar_canv_frame.pack(fill='x', side='left', expand=1)
+            self.progress_bar_canv = tkinter.Canvas(self.progress_bar_canv_frame, height=100)
+            self.progress_bar_canv.pack(side='left', fill='x')
             progress_bar_canv_scroll = tkinter.ttk.Scrollbar(progress_bar_lframe)
             progress_bar_canv_scroll.pack(side='right', expand=0, fill='y')
 
-            progress_bars_frame = tkinter.Frame(progress_bar_canv)
-            progress_bar_canv.create_window(10, 10, anchor='nw', window=progress_bars_frame)
+            progress_bars_frame = tkinter.Frame(self.progress_bar_canv)
+            self.progress_bar_canv.create_window(10, 10, anchor='nw', window=progress_bars_frame)
             self.progress_bar_queue = queue.Queue()
             self.progress_bar['mp'] = tkinter.ttk.Progressbar(progress_bars_frame, mode='determinate')
             self.progress_bar['mp'].pack(fill='x', expand=1, anchor='n')
@@ -115,7 +115,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             # progressbar dla przetwarzania drog, relacji oraz punktow (drp)
             # progress_drp_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania dróg, relacji i punktów.')
             # progress_drp_bar_frame.pack(fill='x', anchor='n')
-            self.progress_bar['drp'] = tkinter.ttk.Progressbar(progress_bars_frame, mode='determinate', length=400)
+            self.progress_bar['drp'] = tkinter.ttk.Progressbar(progress_bars_frame, mode='determinate')
             self.progress_bar['drp'].pack(fill='x', expand=1, anchor='n')
 
             textFrame = tkinter.ttk.LabelFrame(body, text='Komunikaty')
@@ -123,9 +123,6 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.text = LogErrText(textFrame, self.logerrqueue)
             self.text.pack(fill='both', expand=1)
             self.update_me()
-
-
-
             # self.buttonbox()
             # self.keyboardShortcuts()
 
@@ -138,11 +135,16 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.bind('<Escape>', lambda event: self.destroy())
             # self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
             #							parent.winfo_rooty()+50))
-            self.update()
-            self.progress_bar['mp'].configure(length=self.progress_bar_canv_frame.winfo_height())
+            self.update_length_after_resize()
             self.focus_set()
             self.wait_window(self)
 
+    def update_length_after_resize(self):
+        self.update()
+        width = self.progress_bar_canv_frame.winfo_width()
+        self.progress_bar_canv.configure(width=width)
+        self.progress_bar['mp'].configure(length=width-20)
+        self.progress_bar['drp'].configure(length=width-20)
     def update_me(self):
         # obsługa labelek stanóœ oraz przełączanie następnego etapu
         try:
