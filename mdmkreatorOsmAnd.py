@@ -97,17 +97,26 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             textDistanceFrame = tkinter.Frame(body, height='10')
             textDistanceFrame.pack(fill='x')
 
-            progress_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania pliku mp')
-            progress_bar_frame.pack(fill='x', anchor='n')
+            progress_bar_lframe = tkinter.LabelFrame(body, text=u'Postęp przetwarzania plików mp')
+            progress_bar_lframe.pack(fill='x', anchor='n')
+            self.progress_bar_canv_frame = tkinter.Frame(progress_bar_lframe)
+            self.progress_bar_canv_frame.pack(fill='x', side='left')
+            progress_bar_canv = tkinter.Canvas(self.progress_bar_canv_frame, height=100)
+            progress_bar_canv.pack(side='left', fill='x')
+            progress_bar_canv_scroll = tkinter.ttk.Scrollbar(progress_bar_lframe)
+            progress_bar_canv_scroll.pack(side='right', expand=0, fill='y')
+
+            progress_bars_frame = tkinter.Frame(progress_bar_canv)
+            progress_bar_canv.create_window(10, 10, anchor='nw', window=progress_bars_frame)
             self.progress_bar_queue = queue.Queue()
-            self.progress_bar['mp'] = tkinter.ttk.Progressbar(progress_bar_frame, mode='determinate')
-            self.progress_bar['mp'].pack(fill='x', expand=0, anchor='n')
+            self.progress_bar['mp'] = tkinter.ttk.Progressbar(progress_bars_frame, mode='determinate')
+            self.progress_bar['mp'].pack(fill='x', expand=1, anchor='n')
 
             # progressbar dla przetwarzania drog, relacji oraz punktow (drp)
-            progress_drp_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania dróg, relacji i punktów.')
-            progress_drp_bar_frame.pack(fill='x', anchor='n')
-            self.progress_bar['drp'] = tkinter.ttk.Progressbar(progress_drp_bar_frame, mode='determinate')
-            self.progress_bar['drp'].pack(fill='x', expand=0, anchor='n')
+            # progress_drp_bar_frame = tkinter.LabelFrame(body, text=u'Postęp przetwarzania dróg, relacji i punktów.')
+            # progress_drp_bar_frame.pack(fill='x', anchor='n')
+            self.progress_bar['drp'] = tkinter.ttk.Progressbar(progress_bars_frame, mode='determinate', length=400)
+            self.progress_bar['drp'].pack(fill='x', expand=1, anchor='n')
 
             textFrame = tkinter.ttk.LabelFrame(body, text='Komunikaty')
             textFrame.pack(fill='both', expand=1)
@@ -129,7 +138,8 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.bind('<Escape>', lambda event: self.destroy())
             # self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
             #							parent.winfo_rooty()+50))
-
+            self.update()
+            self.progress_bar['mp'].configure(length=self.progress_bar_canv_frame.winfo_height())
             self.focus_set()
             self.wait_window(self)
 
