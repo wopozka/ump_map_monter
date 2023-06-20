@@ -23,7 +23,6 @@
 # MA 02110-1301, USA.
 
 import sys
-import time
 import math
 import re
 import pprint
@@ -43,6 +42,143 @@ from collections import defaultdict, OrderedDict
 import os.path
 from functools import partial
 
+class MylistB(object):
+    """
+    The class for storage of borders file data points
+    """
+    def __init__(self):
+        # dictionary containing key: value pairs. key is an integer number seperate for each point
+        # value is actuall reference to node data (see below for self.v)
+        self.k = {}
+        # a list of nodes data, node is in a form of dict eg: dictionary eg.
+        # {id: '1600019', timestamp: '2023-06-16T16:02:23Z', visible: 'true',  version: '1', changeset: '1',
+        # lat: '50.157630', lon: '19.332180}
+        self.v = []
+
+    def __len__(self):
+        return len(self.k)
+
+    def __getitem__(self, key):
+        return self.v[key] #
+        for k in self.k:
+            if self.k[k] == key:
+                return k
+
+    def index(self, value):
+        return self.k[value]
+
+    def __setitem__(self, key, value): #
+        if key in self.v: #
+            del self.k[self.v[key]] #
+        self.k[value] = key #
+        self.v[key] = value #
+
+    def __contains__(self, value):
+        return value in self.k
+
+    def append(self, value):
+        self.v.append(value) #
+        self.k[value] = len(self.k)
+
+    def __iter__(self):
+        return self.v.__iter__() #
+        return self.k.__iter__()
+
+
+class Mylist(object):
+    """
+    The modified list bultin type, that support faster return of element index
+    """
+    def __init__(self, borders, base):
+        self.k = {}
+        self.v = []
+        self.b = base
+        self.borders = borders
+
+    def __len__(self):  # OK
+        return len(self.v) + self.b
+
+    def __getitem__(self, key):  # OK
+        if key < len(self.borders):
+            return self.borders[key]
+        return self.v[key - self.b]
+
+    def index(self, value):          # OK
+        if value in self.borders:
+            return self.borders.index(value)
+        return self.k[value]
+
+    def __setitem__(self, key, value):  #
+        raise ParsingError('Hej hej')
+        if key in v:  #
+            del self.k[self.v[key]]  #
+        self.k[value] = key  #
+        self.v[key] = value  #
+
+    def __contains__(self, value):    # OK
+        if value in self.borders:
+            return True
+        return value in self.k
+
+    def append(self, value):          # OK
+        self.v.append(value)
+        self.k[value] = len(self.v)+self.b-1
+
+    def __iter__(self):               # OK
+        # return self.v.__iter__() #
+        return self.k.__iter__()
+
+
+class Features(object):  # fake enum
+    poi, polyline, polygon, ignore = range(4)
+
+
+class ParsingError(Exception):
+    pass
+
+
+class ProgressBar(object):
+    def __init__(self, options, pb_name, num_lines_to_process):
+        self.nltp = num_lines_to_process
+        self.pb_name = pb_name
+        self.progress_bar_queue = None
+        if hasattr(options, 'progress_bar_queue'):
+            self.progress_bar_queue = options.progress_bar_queue
+        if num_lines_to_process > 100:
+            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
+                                              if a % int(num_lines_to_process/100) == 0])
+        else:
+            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)])
+
+    def set_val(self, _line_num):
+        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
+            self.progress_bar_queue.put((self.pb_name, 'curr', _line_num))
+        return
+
+    def start(self):
+        if self.progress_bar_queue is not None:
+            self.progress_bar_queue.put((self.pb_name, 'max', self.nltp))
+        return
+
+    def set_done(self):
+        if self.progress_bar_queue is not None:
+            self.progress_bar_queue.put((self.pb_name, 'done', self.nltp))
+        return
+
+
+class NodesToWayNotFound(ValueError):
+    """
+    Raised when way of two nodes can not be found
+    """
+    def __init__(self, node_a, node_b):
+        self.node_a = node_a
+        self.node_b = node_b
+
+    def __str__(self):
+        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
+
+__version__ = '0.8.1'
 
 # Kwadrat dla Polski.
 # 54.85628,13.97873
@@ -58,8 +194,6 @@ maxE = 50.00000
 # zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
 # sobie wyznaczaja/obliczaja/zapamietuja etc (przyklad: nominatim)
 idperarea = 1600000
-
-__version__ = '0.8.1'
 
 # 0.5.1 changes
 # - 'addr:city' with ';' instead of '@'
@@ -326,7 +460,7 @@ pline_types = {
     0x6707: ["highway", "path", "ref", "Niebieski szlak", "bicycle", "yes", "marked_trail_blue", "yes", "access", "no"],
     0x10e00: ["highway", "footway", "ref", "Czerwony szlak", "marked_trail_red", "yes", "osmc", "yes", "osmc_color",
               "red", "route", "hiking", "access", "no"],
-    0x10e01: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes" , "osmc", "yes", "osmc_color",
+    0x10e01: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes", "osmc", "yes", "osmc_color",
               "yellow", "route", "hiking", "access", "no"],
     0x10e02: ["highway", "footway", "ref", "Zielony szlak",
              "marked_trail_green", "yes", "osmc", "yes", "osmc_color", "green", "route", "hiking", "access", "no"],
@@ -335,9 +469,9 @@ pline_types = {
     0x10e04: ["highway", "footway", "ref", "Czarny szlak",
               "marked_trail_black", "yes", "osmc", "yes", "osmc_color", "black", "route", "hiking", "access", "no"],
     0x10e07: ["highway", "footway", "ref", "Szlak", "note", "FIXME",
-              "marked_trail_multi", "yes" , "osmc", "yes", "osmc_color", "multi", "route", "hiking", "access", "no"],
+              "marked_trail_multi", "yes", "osmc", "yes", "osmc_color", "multi", "route", "hiking", "access", "no"],
     0x10e08: ["highway", "cycleway", "ref", "Czerwony szlak",
-              "marked_trail_red", "yes", "osmc", "yes", "osmc_color", "red", "route" , "bicycle", "access", "no"],
+              "marked_trail_red", "yes", "osmc", "yes", "osmc_color", "red", "route", "bicycle", "access", "no"],
     0x10e09: ["highway", "cycleway", "ref", "Żółty szlak", "marked_trail_yellow",
               "yes", "osmc", "yes", "osmc_color", "yellow", "route", "bicycle", "access", "no"],
     0x10e0a: ["highway", "cycleway", "ref", "Zielony szlak",
@@ -543,9 +677,9 @@ poi_types = {
     0x1708: ["note",     "deadend"],
     0x1709: ["note",   "flyover"],
     0x170b: ["note",     "verify!"],
-    0x170f: ["man_made", "beacon", "mark_type", "white" ],
+    0x170f: ["man_made", "beacon", "mark_type", "white"],
     0x1710: ["barrier",  "gate"],
-    0x17105:["highway",  "stop"],
+    0x17105: ["highway",  "stop"],
     0x1711: ["note",     "FIXME"],
     0x1712: ["landuse",  "construction"],
     0x170a: ["note",     "FIXME: verify"],
@@ -627,13 +761,13 @@ poi_types = {
     0x2a00: ["amenity",  "restaurant"],
     0x2a01: ["amenity",  "restaurant", "cuisine", "american"],
     0x2a02: ["amenity",  "restaurant", "cuisine", "asian"],
-    0x2a025:["amenity",  "restaurant", "cuisine", "sushi"],
+    0x2a025: ["amenity",  "restaurant", "cuisine", "sushi"],
     0x2a03: ["amenity",  "restaurant", "cuisine", "barbecue"],
-    0x2a030:["amenity",  "restaurant", "cuisine", "barbecue"],
-    0x2a031:["amenity",  "restaurant", "cuisine", "grill"],
-    0x2a032:["amenity",  "restaurant", "cuisine", "kebab"],
+    0x2a030: ["amenity",  "restaurant", "cuisine", "barbecue"],
+    0x2a031: ["amenity",  "restaurant", "cuisine", "grill"],
+    0x2a032: ["amenity",  "restaurant", "cuisine", "kebab"],
     0x2a04: ["amenity",  "restaurant", "cuisine", "chinese"],
-    0x2a041:["amenity",  "restaurant", "cuisine", "thai"],
+    0x2a041: ["amenity",  "restaurant", "cuisine", "thai"],
     0x2a05: ["shop",     "bakery"],
     0x2a06: ["amenity",  "restaurant", "cuisine", "international"],
     0x2a07: ["amenity",  "fast_food",  "cuisine", "burger"],
@@ -1016,89 +1150,12 @@ turn_lanes = {
 }
 
 
-class MylistB(object):
 
-    def __init__(self):
-        self.k = {}
-        self.v = [] #
-
-    def __len__(self):
-        return len(self.k)
-
-    def __getitem__(self, key):
-        return self.v[key] #
-        for k in self.k:
-            if self.k[k] == key:
-                return k
-
-    def index(self, value):
-        return self.k[value]
-
-    def __setitem__(self, key, value): #
-        if key in self.v: #
-            del self.k[self.v[key]] #
-        self.k[value] = key #
-        self.v[key] = value #
-
-    def __contains__(self, value):
-        return value in self.k
-
-    def append(self, value):
-        self.v.append(value) #
-        self.k[value] = len(self.k)
-
-    def __iter__(self):
-        return self.v.__iter__() #
-        return self.k.__iter__()
-
-
-class Mylist(object):
-
-    def __init__(self, borders, base):
-        self.k = {}
-        self.v = []
-        self.b = base
-        self.borders = borders
-
-    def __len__(self):  # OK
-        return len(self.v) + self.b 
-
-    def __getitem__(self, key):  # OK
-        if key < len(self.borders):
-            return self.borders[key]
-        return self.v[key - self.b]
-
-    def index(self, value):          # OK
-        if value in self.borders:
-            return self.borders.index(value)
-        return self.k[value]
-
-    def __setitem__(self, key, value):  #
-        raise ParsingError('Hej hej')
-        if key in v:  #
-            del self.k[self.v[key]]  #
-        self.k[value] = key  #
-        self.v[key] = value  #
-
-    def __contains__(self, value):    # OK
-        if value in self.borders:
-            return  True
-        return value in self.k
-
-    def append(self, value):          # OK
-        self.v.append(value)
-        self.k[value] = len(self.v)+self.b-1
-
-    def __iter__(self):               # OK
-        # return self.v.__iter__() #
-        return self.k.__iter__()
         
 # Lines with a # above can be removed to save half of the memory used
 # (but some look-ups will be slower)
 # k zawiera slownik {[lat,lon]->poz,....} ; mapowanie (lat,lon)->id
 # v zawiera tablice { [lat,lon], [lat,lon],....}  mapowanie id->(lat,lon)
-
-
 bpoints = MylistB()
 
 points = list()
@@ -1118,55 +1175,8 @@ streets_counter = {}
 # borders_resize = 1
 # nominatim_build = 0
 extra_tags = " version='1' changeset='1' "
-
-
-class Features(object):  # fake enum
-    poi, polyline, polygon, ignore = range(4)
-
-
-class ParsingError(Exception):
-    pass
-
-
-class ProgressBar(object):
-    def __init__(self, options, pb_name, num_lines_to_process):
-        self.nltp = num_lines_to_process
-        self.pb_name = pb_name
-        self.progress_bar_queue = None
-        if hasattr(options, 'progress_bar_queue'):
-            self.progress_bar_queue = options.progress_bar_queue
-        if num_lines_to_process > 100:
-            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
-                                              if a % int(num_lines_to_process/100) == 0])
-        else:
-            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)])
-
-    def set_val(self, _line_num):
-        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
-            self.progress_bar_queue.put((self.pb_name, 'curr', _line_num))
-        return
-
-    def start(self):
-        if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'max', self.nltp))
-        return
-
-    def set_done(self):
-        if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'done', self.nltp))
-        return
-
-
-class NodesToWayNotFound(ValueError):
-    """
-    Raised when way of two nodes can not be found
-    """
-    def __init__(self, node_a, node_b):
-        self.node_a = node_a
-        self.node_b = node_b
-
-    def __str__(self):
-        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+idpfx = ""
+maxid = 0
 
 def printdebug(string, options):
     global working_thread
@@ -1826,7 +1836,8 @@ def convert_tag(way, key, value, feat, options):
     elif key.startswith('Nod'):
         # lets omit routing params for maps with routing data
         pass
-    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):  # WebPage jest tagiem dla budynkow, ignorujemy na chwile obecna
+    # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
+    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
         pass
     else:
         if options.ignore_errors:
@@ -1922,12 +1933,10 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 elif 'alt_name' in way and cut_prefix(way['alt_name']) != way['alt_name']:
                     way['short_name'] = cut_prefix(way['alt_name'])
 
-
                 # nie pchajmy rowerow przez '{schody}'
                 if 'ump:type' in way and (way['ump:type'] == "0x16") and ('name' in way) and \
                         (way['name'].find('schody') > -1):
                     way['highway'] = "steps"
-
 
             if comment is not None:
                 # way['note'] = comment
@@ -2392,11 +2401,11 @@ def post_load_processing(options):
     # levelledways = [way for way in ways if '_levels' in way]
     relations = OrderedDict()
     levelledways = OrderedDict()
-    for way_no in range(len(ways)):
-        if '_rel' in ways[way_no]:
-            relations[way_no] = ways[way_no]
+    for way_no, way in enumerate(ways):
+        if '_rel' in way:
+            relations[way_no] = way
         elif '_levels' in ways[way_no]:
-            levelledways[way_no] = ways[way_no]
+            levelledways[way_no] = way
 
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
     _line_num = 0
@@ -2430,7 +2439,6 @@ def post_load_processing(options):
         ways[way_id] = None
         rel['_timestamp'] = filestamp
 
-    ways = [a for a in ways if a is not None]
     node_ways_relation = create_node_ways_relation(ways)
 
     # move start and end nodes of restriction to the next/before node to via
@@ -3050,13 +3058,17 @@ def main(options, args):
         if options.borders_file != None:
 
             #  parsowanie po nowemu. Najpierw plik granic a potem pliki po kolei.
+            if options.borders_file.startswith('~'):
+                border_filename = os.path.expanduser(options.borders_file)
+            else:
+                border_filename = os.path.abspath(options.borders_file)
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                borderf = open(options.borders_file, "r", encoding='cp1250')
+                borderf = open(border_filename, "r", encoding='cp1250')
             except IOError:
-                sys.stderr.write("\tERROR: Can't open border input file " + options.borders_file + "!\n")
+                sys.stderr.write("\tERROR: Can't open border input file " + border_filename + "!\n")
                 sys.exit()
-            borderstamp = datetime.fromtimestamp(os.path.getmtime(options.borders_file)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
             try:
                 borderstamp
             except:
