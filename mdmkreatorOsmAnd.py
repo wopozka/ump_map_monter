@@ -6,6 +6,7 @@ import subprocess
 import threading
 import mdmMp2xml
 import os.path
+from multiprocessing import Queue as mp_queue
 
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
@@ -42,8 +43,10 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.kolejka_komunikacyjna = queue.Queue()
             # format: [obszar][mp/drp] = referencja do progressbara
             self.progress_bar = dict(dict())
-            self.progress_bar_queue = queue.Queue()
-            # self.progress_bar_max_value = 0
+            if len(self.obszary) == 1:
+                self.progress_bar_queue = queue.Queue()
+            else:
+                self.progress_bar_queue = mp_queue()
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -218,8 +221,6 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         self.logerrqueue.put(('CVSROOT=' + CVSROOT + '\n'))
 
         for obszary in self.obszary:
-
-
             self.logerrqueue.put(('cvs up ' + obszary + '\n'))
             process = subprocess.Popen(['cvs', '-q', CVSROOT, 'up', obszary], stdout=subprocess.PIPE,
                                              stderr=subprocess.STDOUT)
@@ -273,7 +274,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         args.stdoutqueue = self.logerrqueue
         for obszar in self.obszary:
             args.obszary=[obszar]
-            args.plikmp = obszar + 'wynik.mp'
+            args.plikmp = obszar + '_wynik.mp'
             mont_demont.montujpliki(args)
             self.latin2_to_cp1250(args.plikmp)
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
@@ -282,9 +283,13 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
     def mp2osm(self):
         self.logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
         args = self.args
+        if len(self.obszary) > 1:
+            args.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
         args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
+        args.threadnum = 3
         args.progress_bar_queue = self.progress_bar_queue
-        mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, self.Zmienne.InputFile)])
+        mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, obszar + '_wynik.mp')
+                              for obszar in self.obszary])
         if os.path.exists(args.outputfile):
             self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
         else:

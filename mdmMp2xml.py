@@ -138,31 +138,38 @@ class ParsingError(Exception):
 
 
 class ProgressBar(object):
-    def __init__(self, options, pb_name, num_lines_to_process):
-        self.nltp = num_lines_to_process
-        self.pb_name = pb_name
+    def __init__(self, options, obszar=None):
         self.progress_bar_queue = None
+        self.obszar = None
+        if obszar:
+            self.obszar = os.path.basename(obszar).split('_')[0]
         if hasattr(options, 'progress_bar_queue'):
             self.progress_bar_queue = options.progress_bar_queue
-        if num_lines_to_process > 100:
-            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
-                                              if a % int(num_lines_to_process/100) == 0])
-        else:
-            self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)])
+        self.vals_to_increase_pbar= {'mp': None, 'drp': None}
+        self.nltp = 0
 
-    def set_val(self, _line_num):
-        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
-            self.progress_bar_queue.put((self.pb_name, 'curr', _line_num))
+
+    def set_val(self, _line_num, pb_name):
+        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar[pb_name]:
+            self.progress_bar_queue.put((self.obszar, pb_name, 'curr', _line_num))
         return
 
-    def start(self):
-        if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'max', self.nltp))
+    def start(self, num_lines_to_process, pb_name):
+        if self.progress_bar_queue is None:
+            return
+        if self.vals_to_increase_pbar[pb_name] is None:
+            if num_lines_to_process > 100:
+                self.vals_to_increase_pbar[pb_name] = set([a for a in range(1, num_lines_to_process)
+                                                  if a % int(num_lines_to_process/100) == 0])
+            else:
+                self.vals_to_increase_pbar[pb_name] = set([a for a in range(1, num_lines_to_process)])
+        self.progress_bar_queue.put((self.obszar, pb_name, 'max', num_lines_to_process))
+        self.nltp = num_lines_to_process
         return
 
-    def set_done(self):
+    def set_done(self, pb_name):
         if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'done', self.nltp))
+            self.progress_bar_queue.put((self.obszar, pb_name, 'done', self.nltp))
         return
 
 
@@ -1848,16 +1855,14 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_txt(infile, options, num_lines_to_process=0):
-    progress_bar = ProgressBar(options, 'mp', num_lines_to_process)
-    progress_bar.start()
+def parse_txt(infile, options, filename='', progress_bar=None):
     polyline = None
     feat = None
     comment = None
     linenum = 0
     for line in infile:
         linenum += 1
-        progress_bar.set_val(linenum)
+        progress_bar.set_val(linenum, 'mp')
         line = line.strip()
         if line == "[POLYLINE]":
             polyline = {}
@@ -2042,7 +2047,6 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 comment = strn
         elif line != '':
             raise ParsingError('Unhandled line ' + line)
-    progress_bar.set_done()
 
 
 def create_node_ways_relation(all_ways):
@@ -2389,7 +2393,7 @@ def print_relation(rel, index, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options):
+def post_load_processing(options, filename='', progress_bar = None):
     global relations
     global maxtypes
     global ways
@@ -2409,12 +2413,11 @@ def post_load_processing(options):
 
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
     _line_num = 0
-    progress_bar = ProgressBar(options, 'drp', num_lines_to_process)
-    progress_bar.start()
+    progress_bar.start(num_lines_to_process, 'drp')
     # processing roundabouts
     for way in ways:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if 'junction' in way and way['junction'] == 'roundabout':
             maxtype = 0x7  # service
             for i in way['_nodes']:
@@ -2434,7 +2437,7 @@ def post_load_processing(options):
 
     for way_id, rel in relations.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         rel['type'] = rel.pop('_rel')
         ways[way_id] = None
         rel['_timestamp'] = filestamp
@@ -2444,7 +2447,7 @@ def post_load_processing(options):
     # move start and end nodes of restriction to the next/before node to via
     for way_id, rel in relations.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 preprepare_restriction(rel, node_ways_relation=node_ways_relation)
@@ -2455,7 +2458,7 @@ def post_load_processing(options):
     # TODO: possibly emit a relation to group the ways
     for way_id, way in levelledways.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if '_levels' in way:
             ways[way_id] = None
             if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
@@ -2487,7 +2490,7 @@ def post_load_processing(options):
         _line_num += 1
         if way is None:
             continue
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if '_innernodes' in way:
             if '_join' in way:
                 del way['_join']
@@ -2502,7 +2505,7 @@ def post_load_processing(options):
     # Role via node or the Role via way(s)
     for rel in relations:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 prepare_restriction(rel, node_ways_relation=node_ways_relation)
@@ -2513,7 +2516,7 @@ def post_load_processing(options):
     # ways = [a for a in ways if a is not None]
     for rel in relations:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation)
@@ -2529,7 +2532,7 @@ def post_load_processing(options):
         _line_num += 1
         if way is None:
             continue
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if 'highway' in way and 'maxspeed' not in way:
             if way['highway'] == 'motorway':
                 way['maxspeed'] = '140'
@@ -2538,7 +2541,7 @@ def post_load_processing(options):
 
     for index, point in pointattrs.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if 'shop' in point and point['shop'] == 'fixme':
             for way in ways:
                 if index in way['_nodes'] and 'highway' in way:
@@ -2565,12 +2568,11 @@ def post_load_processing(options):
         _line_num += 1
         if way is None:
             continue
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
-    progress_bar.set_done()
 
 
 def output_normal(prefix, num, options):
@@ -2960,6 +2962,7 @@ def worker(task, options):
     working_thread = str(os.getpid())
     workid = task['idx']
     maxid = 0
+    num_lines_to_process = 0
         
     try:
         if sys.platform.startswith('linux'):
@@ -2967,6 +2970,9 @@ def worker(task, options):
         else:
             file_encoding = 'cp1250'
         infile = open(task['file'], "r", encoding=file_encoding)
+        num_lines_to_process = len(infile.readlines())
+        infile.seek(0)
+
     except IOError:
         printerror("Can't open file " + task['file'])
         sys.exit()
@@ -2978,9 +2984,13 @@ def worker(task, options):
     except:
         filestamp = runstamp
 
-    parse_txt(infile, options, num_lines_to_process=task['num_lines_to_process'])
+    progress_bar = ProgressBar(options, obszar=task['file'])
+    progress_bar.start(num_lines_to_process, 'mp')
+    parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
+    progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(options)
+    post_load_processing(options, task['file'], progress_bar=progress_bar)
+    progress_bar.set_done('drp')
     
     # print "bpoints="+str(len(bpoints))
     # print "points="+str(len(points)-idperarea*task['idx'])
@@ -3052,7 +3062,6 @@ def main(options, args):
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
 
 
-        
     if options.borders_file != None or len(args) == 1:
 
         if options.borders_file != None:
@@ -3089,7 +3098,6 @@ def main(options, args):
 
         worklist=[]
         elapsed = datetime.now().replace(microsecond=0)
-        num_lines_to_process = 0
         for n, f in enumerate(args):
             try:
                 if sys.platform.startswith('linux'):
@@ -3097,16 +3105,13 @@ def main(options, args):
                 else:
                     file_encoding = 'cp1250'
                 infile = open(f, "r", encoding=file_encoding)
-                num_lines_to_process += len(infile.readlines())
             except IOError:
                 sys.stderr.write("\tERROR: Can't open file " + f + "!\n")
                 sys.exit()
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
-            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'num_lines_to_process': num_lines_to_process}
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
             worklist.append(workelem)
-            if hasattr(options, 'progress_bar_queue'):
-                options.progress_bar_queue.put(('mp', 'max', num_lines_to_process))
         if options.threadnum == 1:
             for workelem in worklist:                
                 result = worker(workelem, options)
