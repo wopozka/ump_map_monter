@@ -145,12 +145,12 @@ class ProgressBar(object):
             self.obszar = os.path.basename(obszar).split('_')[0]
         if hasattr(options, 'progress_bar_queue'):
             self.progress_bar_queue = options.progress_bar_queue
-        self.vals_to_increase_pbar= {'mp': None, 'drp': None}
-        self.nltp = 0
-
+        self.vals_to_increase_pbar = {'mp': [0, 0], 'drp': [0, 0]}
+        self.nltp = {'mp': 0, 'drp': 0}
 
     def set_val(self, _line_num, pb_name):
-        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar[pb_name]:
+        if self.progress_bar_queue is not None and _line_num == self.vals_to_increase_pbar[pb_name][1]:
+            self.vals_to_increase_pbar[pb_name][1] += self.vals_to_increase_pbar[pb_name][0]
             self.progress_bar_queue.put((self.obszar, pb_name, 'curr', _line_num))
         return
 
@@ -159,17 +159,16 @@ class ProgressBar(object):
             return
         if self.vals_to_increase_pbar[pb_name] is None:
             if num_lines_to_process > 100:
-                self.vals_to_increase_pbar[pb_name] = set([a for a in range(1, num_lines_to_process)
-                                                  if a % int(num_lines_to_process/100) == 0])
+                self.vals_to_increase_pbar[pb_name] = [num_lines_to_process % 100, 0]
             else:
-                self.vals_to_increase_pbar[pb_name] = set([a for a in range(1, num_lines_to_process)])
+                self.vals_to_increase_pbar[pb_name] = [1, 0]
         self.progress_bar_queue.put((self.obszar, pb_name, 'max', num_lines_to_process))
-        self.nltp = num_lines_to_process
+        self.nltp[pb_name] = num_lines_to_process
         return
 
     def set_done(self, pb_name):
         if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.obszar, pb_name, 'done', self.nltp))
+            self.progress_bar_queue.put((self.obszar, pb_name, 'done', self.nltp[pb_name]))
         return
 
 
