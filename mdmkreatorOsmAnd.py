@@ -6,7 +6,7 @@ import subprocess
 import threading
 import mdmMp2xml
 import os.path
-from multiprocessing import Queue as mp_queue
+from multiprocessing import Queue, Process
 
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
@@ -46,7 +46,9 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             if len(self.obszary) == 1:
                 self.progress_bar_queue = queue.Queue()
             else:
-                self.progress_bar_queue = mp_queue()
+                print(self.obszary)
+                # self.progress_bar_queue = None
+                self.progress_bar_queue = Queue()
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -205,7 +207,17 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             thread.start()
 
         elif self.kolejnyetap == 'mp2osm':
-            thread = threading.Thread(target=self.mp2osm)
+            args = self.args
+            if len(self.obszary) > 1:
+                args.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
+            args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
+            args.threadnum = 3
+            args.progress_bar_queue = self.progress_bar_queue
+            args.stdoutqueue = None
+            args.stderrqueue = None
+            # thread = threading.Thread(target=self.mp2osm, args=(self.logerrqueue, self.args))
+            thread = Process(target=mp2osm, args=(self.logerrqueue, self.kolejka_komunikacyjna, self.args,
+                                                  self.Zmienne.KatalogRoboczy, self.obszary))
             thread.start()
 
         elif self.kolejnyetap == 'kompilowanie':
@@ -280,23 +292,28 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'mp2osm'))
         self.kolejka_komunikacyjna.put(('montowanie', ''))
 
-    def mp2osm(self):
-        self.logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
-        args = self.args
-        if len(self.obszary) > 1:
-            args.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
-        args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
-        args.threadnum = 3
-        args.progress_bar_queue = self.progress_bar_queue
+    def mp2osm(self, logerrqueue, args):
+        logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
         mdmMp2xml.main(args, [os.path.join(self.Zmienne.KatalogRoboczy, obszar + '_wynik.mp')
                               for obszar in self.obszary])
         if os.path.exists(args.outputfile):
-            self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
+            logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
         else:
-            self.logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % args.outputfile)
+            logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % args.outputfile)
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'kompilowanie'))
         self.kolejka_komunikacyjna.put(('mp2OSM', ''))
 
+def mp2osm(logerrqueue, kolejka_komunikacyjna, args, katalog_roboczy, obszary):
+    args.stderrqueue = Queue()
+    args.sterrqueue = Queue()
+    logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
+    mdmMp2xml.main(args, [os.path.join(katalog_roboczy, obszar + '_wynik.mp') for obszar in obszary])
+    if os.path.exists(args.outputfile):
+        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
+    else:
+        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % args.outputfile)
+    kolejka_komunikacyjna.put(('kolejnyetap', 'kompilowanie'))
+    kolejka_komunikacyjna.put(('mp2OSM', ''))
 
 
 class Klasy2EndLevelCreator(tkinter.Toplevel):
