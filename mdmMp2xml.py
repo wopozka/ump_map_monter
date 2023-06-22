@@ -2059,15 +2059,20 @@ def parse_txt(infile, options, filename='', progress_bar=None):
 
 def create_node_ways_relation(all_ways):
     tmp_node_ways_rel = defaultdict(set)
+    tmp_node_ways_rel_multipolygon = defaultdict(set)
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
         if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
             for node in way["_nodes"]:
                 tmp_node_ways_rel[node].add(way_no)
+        elif '_innernodes' in way:
+            for node in way["_nodes"]:
+                tmp_node_ways_rel_multipolygon[node].add(way_no)
     # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
     # comprehension
-    return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}
+    return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}, \
+           {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
 
 
 def nodes_to_way_id(a, b, node_ways_relation=None):
@@ -2105,6 +2110,20 @@ def nodes_to_way(a, b, node_ways_relation=None):
     return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation)]
 
 
+def way_to_way_id(way, node_ways_relation=None):
+    if node_ways_relation is None:
+        return None
+    way_id_set = set()
+    for num, node in enumerate(way['_nodes']):
+        if num == 0:
+            way_id_set = node_ways_relation[node]
+        else:
+            way_id_set.intersection(node_ways_relation[node])
+        if len(way_id_set) == 1:
+            return tuple(way_id_set)[0]
+    return None
+
+
 def distKM(lat0, lon0, lat1, lon1):
     degtokm = math.pi * 12742 / 360
     latcorr = math.cos(math.radians(float(lat1)))
@@ -2139,8 +2158,11 @@ def split_way(way=None, splitting_point=None, node_ways_relation=None):
     i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
         return
-    # let's remove the roadid from node_ways_relation we will put it back later
-    way_id = ways.index(way)
+    # tu mozna by jesze przyspieszyc bo index dla listy jest wolny, ale z drugiej strony zakazow nie jest az tak duzo
+    # trzeba by pomyslec ewentualnie
+    way_id = way_to_way_id(way, node_ways_relation)
+    if way_id is None:
+        way_id = ways.index(way)
     for way_node in way['_nodes']:
         node_ways_relation[way_node].discard(way_id)
     newway = way.copy()
@@ -2228,14 +2250,21 @@ def make_restriction_fromviato(rel, node_ways_relation=None):
     return nodes
 
 
-def make_multipolygon(outer, holes):
+def make_multipolygon(outer, holes, node_ways_relation=None):
+    if node_ways_relation is None:
+        outer_index = ways.index(outer)
+    else:
+        outer_index = way_to_way_id(outer, node_ways_relation)
+    if outer_index is None:
+        outer_index = ways.index(outer)
     rel = {
         '_timestamp': filestamp,
         'type':     'multipolygon',
         'note':     'FIXME: fix roles manually',
         '_c':       outer['_c'],
         '_members': {
-            'outer': ('way', [ways.index(outer)]),
+            # 'outer': ('way', [ways.index(outer)]),
+            'outer': ('way', [outer_index]),
             'inner': ('way', []),
         },
     }
@@ -2450,7 +2479,7 @@ def post_load_processing(options, filename='', progress_bar = None):
         ways[way_id] = None
         rel['_timestamp'] = filestamp
 
-    node_ways_relation = create_node_ways_relation(ways)
+    node_ways_relation, node_multipolygon_relation = create_node_ways_relation(ways)
 
     # move start and end nodes of restriction to the next/before node to via
     for way_id, rel in relations.items():
@@ -2507,7 +2536,8 @@ def post_load_processing(options, filename='', progress_bar = None):
                     subway['_nodes'] = segment
                     ways.append(subway)
             else:
-                relations.append(make_multipolygon(way, way.pop('_innernodes')))
+                relations.append(make_multipolygon(way, way.pop('_innernodes'),
+                                                   node_ways_relation=node_multipolygon_relation))
 
     # for each relation/restriction split ways at via points as the "from" and "to" members must start/end at the
     # Role via node or the Role via way(s)
@@ -2654,6 +2684,8 @@ def output_navit(prefix, num):
         print_point(point, index, out)
 
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         newway = way.copy()
         if ('natural' in newway) and (newway['natural'] == 'coastline'):
             newway['natural'] = 'water'
@@ -2710,6 +2742,8 @@ def output_index(prefix, num, options):
 
     # dla ulic bez nazwy (wyciete {}) uzupelniamy z loc_name lub podobnych
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         if (not ('is_in' in way)): 
             continue
 
@@ -2769,7 +2803,7 @@ def output_nominatim(prefix, num, options):
     #
     #    zbieramy info o wszytskich miastach
     for point in points:
-        index=points.index(point)
+        index = points.index(point)
         if 'place' in pointattrs[index] and 'name' in pointattrs[index] :
             n = pointattrs[index]['name']
             p = pointattrs[index]['place']
@@ -2792,6 +2826,8 @@ def output_nominatim(prefix, num, options):
     printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
     # teraz skan wszystkich ulic
     for way in ways:
+        if way is None:
+            continue
         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
             if way['highway' ] == 'trunk' or way['highway'] == 'primary' or way['highway'] == 'secondary' or \
                     way['highway'] == 'motorway':
@@ -2821,6 +2857,8 @@ def output_nominatim(prefix, num, options):
                 # else:
                 #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
     for way in ways:
+        if way is None:
+            continue
         if 'is_in' in way and 'name' in way and 'highway' in way:
             try:
                 towns = way['is_in'].split(";")
@@ -2875,6 +2913,8 @@ def output_nominatim(prefix, num, options):
     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
     # jesli zostaje pusta nazwa, podmien
     for way in ways:
+        if way is None:
+            continue
         p = re.compile( '\{.*\}')                        # dowolny string otoczony klamrami
         if 'alt_name' in way:
             tmpname = way['alt_name']
@@ -2914,6 +2954,8 @@ def output_nominatim(prefix, num, options):
         print_point(point, index, out)
 
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         # pomijamy szlaki dla nominatima ("ref" nie wystepuje dla zwyklych tras rowerowych czy chodnikow)
         if ('ref' in way) and ('highway' in way):
             if (way['highway'] == 'cycleway' ) or (way['highway'] == 'path') or (way['highway'] == 'footway'):
