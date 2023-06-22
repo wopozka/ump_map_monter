@@ -2063,10 +2063,11 @@ def create_node_ways_relation(all_ways):
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
-        if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+        if 'ump:type' in way and int(way['ump:type'], 16) <= 0x16 and int(way['ump:type'], 0) in pline_types and \
+                pline_types[int(way['ump:type'], 0)][0] in way:
             for node in way["_nodes"]:
                 tmp_node_ways_rel[node].add(way_no)
-        elif '_innernodes' in way:
+        if '_innernodes' in way and '_join' not in way:
             for node in way["_nodes"]:
                 tmp_node_ways_rel_multipolygon[node].add(way_no)
     # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
