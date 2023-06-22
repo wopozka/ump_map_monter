@@ -41,6 +41,7 @@ from optparse import OptionParser
 from collections import defaultdict, OrderedDict
 import os.path
 from functools import partial
+import copy
 
 class MylistB(object):
     """
@@ -138,18 +139,23 @@ class ParsingError(Exception):
 
 
 class ProgressBar(object):
-    def __init__(self, options, obszar=None):
+    def __init__(self, options, obszar=None, glob_progress_bar_queue=None):
         self.progress_bar_queue = None
         self.obszar = None
         if obszar:
             self.obszar = os.path.basename(obszar).split('_')[0]
-        if hasattr(options, 'progress_bar_queue'):
+        if glob_progress_bar_queue is not None:
+            self.progress_bar_queue = glob_progress_bar_queue
+        elif hasattr(options, 'progress_bar_queue'):
             self.progress_bar_queue = options.progress_bar_queue
         # [ num_lines % 100, num_lines % 100 *1, 2, 3 itd, 100% value]
         self.pbar_params = {'mp': [0, 0, 0], 'drp': [0, 0, 0]}
 
     def set_val(self, _line_num, pb_name):
-        if self.progress_bar_queue is not None and _line_num == self.pbar_params[pb_name][1]:
+        if self.progress_bar_queue is None:
+            return
+        if _line_num == self.pbar_params[pb_name][1]:
+            print('progressbar', self.obszar, pb_name, _line_num, file=sys.stderr)
             self.pbar_params[pb_name][1] += self.pbar_params[pb_name][0]
             self.progress_bar_queue.put((self.obszar, pb_name, 'curr', _line_num))
         return
@@ -157,13 +163,12 @@ class ProgressBar(object):
     def start(self, num_lines_to_process, pb_name):
         if self.progress_bar_queue is None:
             return
-        if self.pbar_params[pb_name] is None:
-            if num_lines_to_process > 100:
-                self.pbar_params[pb_name][0] = num_lines_to_process % 100
-                self.pbar_params[pb_name][1] = self.pbar_params[pb_name][0]
-            else:
-                self.pbar_params[pb_name][0] = 1
-                self.pbar_params[pb_name][1] = self.pbar_params[pb_name][0]
+        if num_lines_to_process > 100:
+            self.pbar_params[pb_name][0] = int(num_lines_to_process / 100)
+            self.pbar_params[pb_name][1] = int(num_lines_to_process / 100)
+        else:
+            self.pbar_params[pb_name][0] = 1
+            self.pbar_params[pb_name][1] = 1
         self.progress_bar_queue.put((self.obszar, pb_name, 'max', num_lines_to_process))
         self.pbar_params[pb_name][2] = num_lines_to_process
         return
@@ -1185,6 +1190,8 @@ streets_counter = {}
 extra_tags = " version='1' changeset='1' "
 idpfx = ""
 maxid = 0
+
+glob_progress_bar_queue = None
 
 def printdebug(string, options):
     global working_thread
@@ -2949,6 +2956,7 @@ def worker(task, options):
     global filestamp
     global maxid
     global idpfx
+    global glob_progress_bar_queue
     
     pointattrs = defaultdict(dict)
     ways = list()
@@ -2985,7 +2993,7 @@ def worker(task, options):
     except:
         filestamp = runstamp
 
-    progress_bar = ProgressBar(options, obszar=task['file'])
+    progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
     parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
     progress_bar.set_done('mp')
@@ -3031,9 +3039,15 @@ def main(options, args):
     if len(args) < 1:
         parser.print_help()
         sys.exit()
-
+    global glob_progress_bar_queue
     global runstamp
     global borderstamp
+    if hasattr(options, 'progress_bar_queue'):
+        glob_progress_bar_queue = options.progress_bar_queue
+    else:
+        glob_progress_bar_queue = None
+        print(glob_progress_bar_queue)
+
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
@@ -3117,10 +3131,18 @@ def main(options, args):
             for workelem in worklist:                
                 result = worker(workelem, options)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
-        else:   
-            pool = Pool(processes=options.threadnum)
+        else:
+            copy_options = copy.copy(options)
+            if hasattr(copy_options, 'stdoutqueue'):
+                copy_options.stdoutqueue = None
+            if hasattr(copy_options, 'stderrqueue'):
+                copy_options.stderrqueue = None
+            if hasattr(copy_options, 'progress_bar_queue'):
+                copy_options.progress_bar_queue = None
+            # print(vars(copy_options)
+            pool = Pool(processes=copy_options.threadnum)
             # result = pool.map(worker, worklist, options)
-            result = pool.map(partial(worker, options=options), worklist)
+            result = pool.map(partial(worker, options=copy_options), worklist)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]

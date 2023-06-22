@@ -6,7 +6,11 @@ import subprocess
 import threading
 import mdmMp2xml
 import os.path
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, Manager
+import copy
+
+glob_progress_bar_queue = Queue()
+glob_logerrqueue = Queue()
 
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
@@ -43,12 +47,8 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.kolejka_komunikacyjna = queue.Queue()
             # format: [obszar][mp/drp] = referencja do progressbara
             self.progress_bar = dict(dict())
-            if len(self.obszary) == 1:
-                self.progress_bar_queue = queue.Queue()
-            else:
-                print(self.obszary)
-                # self.progress_bar_queue = None
-                self.progress_bar_queue = Queue()
+            #  dla progress_bar_queue uzywamy zmiennej globalnej, znacznie upraszcza obsluge komunikacji multiprocessing
+            self.progress_bar_queue = glob_progress_bar_queue
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -56,7 +56,6 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
 
             # ramka z aktualnymi czynnosciami
             # odległość pomiędzy Labelami
-            sfd = 10
             # kolor nieaktywnej czynnosci
             self.nal = 'grey'
             # kolor aktywnej czynnosci
@@ -87,6 +86,19 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             space6 = tkinter.Frame(statusFrame, width=sfd)
             space6.pack(side='left')
 
+            opcje_frame_dist = tkinter.Frame(body, height='10')
+            opcje_frame_dist.pack(fill='x')
+
+            opcje_frame = tkinter.ttk.LabelFrame(body, text=u'Różne opcje przetwarzania')
+            opcje_frame.pack(fill='x')
+            watki_label = tkinter.Label(opcje_frame, text=u'Ilość wątków')
+            watki_label.pack(side='left')
+            self.watki_entry_var = tkinter.StringVar()
+            self.watki_entry = tkinter.Entry(opcje_frame, textvariable=self.watki_entry_var)
+            self.watki_entry.pack(side='left')
+            # dodajemy walidator dla liczby watkow
+            self.watki_entry.bind('<KeyRelease>', self.watki_entry_validate)
+
             buttonDistanceFrame = tkinter.Frame(body, height='10')
             buttonDistanceFrame.pack(fill='x')
 
@@ -104,7 +116,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             textDistanceFrame = tkinter.Frame(body, height='10')
             textDistanceFrame.pack(fill='x')
 
-            progress_bar_lframe = tkinter.LabelFrame(body, text=u'Postęp przetwarzania plików mp')
+            progress_bar_lframe = tkinter.ttk.LabelFrame(body, text=u'Postęp przetwarzania plików mp')
             progress_bar_lframe.pack(fill='both', expand=1, anchor='n')
             self.progress_bar_canv_frame = tkinter.Frame(progress_bar_lframe)
             self.progress_bar_canv_frame.pack(fill='both', side='left', expand=1)
@@ -144,6 +156,20 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.update_width_after_resize()
             self.focus_set()
             self.wait_window(self)
+
+    # walidatory
+    def watki_entry_validate(self, event):
+        entry_val = self.watki_entry.get().strip()
+        if not entry_val:
+            self.watki_entry.config(bg='white')
+        elif not all(a.isdigit() for a in entry_val):
+            self.watki_entry.config(bg='red')
+        else:
+            try:
+                int(entry_val)
+                self.watki_entry.config(bg='white')
+            except ValueError:
+                self.watki_entry.config(bg='red')
 
     def stworz_paski_postepu(self):
         progress_bars_frame = tkinter.ttk.LabelFrame(self.progress_bar_canv)
@@ -197,28 +223,34 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         self.after(100, self.update_me)
 
     def next(self):
+        global glob_progress_bar_queue
+        global glob_logerrqueue
         self.buttonNext.config(state='disabled')
         if self.kolejnyetap == 'uaktualnianie':
+            self.logerrqueue = queue.Queue()
             thread = threading.Thread(target=self.cvsup)
             thread.start()
 
         elif self.kolejnyetap == 'montowanie':
+            # self.logerrqueue = queue.Queue()
             thread = threading.Thread(target=self.montuj_pliki, args=(self.args,))
             thread.start()
 
         elif self.kolejnyetap == 'mp2osm':
-            args = self.args
+            options = copy.copy(self.args)
             if len(self.obszary) > 1:
-                args.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
-            args.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
-            args.threadnum = 3
-            args.progress_bar_queue = self.progress_bar_queue
-            args.stdoutqueue = None
-            args.stderrqueue = None
+                options.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
+            options.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
+            options.threadnum = 1
             # thread = threading.Thread(target=self.mp2osm, args=(self.logerrqueue, self.args))
-            thread = Process(target=mp2osm, args=(self.logerrqueue, self.kolejka_komunikacyjna, self.args,
-                                                  self.Zmienne.KatalogRoboczy, self.obszary))
-            thread.start()
+            options.progress_bar_queue = glob_progress_bar_queue
+            print(options.progress_bar_queue)
+            self.logerrqueue = glob_logerrqueue
+            options.stdoutqueue = glob_logerrqueue
+            options.stderrqueue = glob_logerrqueue
+            _subprocess = Process(target=mp2osm, args=(self.logerrqueue, self.kolejka_komunikacyjna, options,
+                                                       self.Zmienne.KatalogRoboczy, self.obszary))
+            _subprocess.start()
 
         elif self.kolejnyetap == 'kompilowanie':
             pass
@@ -303,15 +335,13 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         self.kolejka_komunikacyjna.put(('kolejnyetap', 'kompilowanie'))
         self.kolejka_komunikacyjna.put(('mp2OSM', ''))
 
-def mp2osm(logerrqueue, kolejka_komunikacyjna, args, katalog_roboczy, obszary):
-    args.stderrqueue = Queue()
-    args.sterrqueue = Queue()
+def mp2osm(logerrqueue, kolejka_komunikacyjna, options, katalog_roboczy, obszary):
     logerrqueue.put(u'Rozpoczynam przetwarzanie mp->xml\n')
-    mdmMp2xml.main(args, [os.path.join(katalog_roboczy, obszar + '_wynik.mp') for obszar in obszary])
-    if os.path.exists(args.outputfile):
-        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % args.outputfile)
+    mdmMp2xml.main(options, [os.path.join(katalog_roboczy, obszar + '_wynik.mp') for obszar in obszary])
+    if os.path.exists(options.outputfile):
+        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone sukcesem. Utworzono plik %s' % options.outputfile)
     else:
-        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % args.outputfile)
+        logerrqueue.put(u'Przetwawrzanie mp->xml zakonczone błędem. Nie utworzono pliku %s' % options.outputfile)
     kolejka_komunikacyjna.put(('kolejnyetap', 'kompilowanie'))
     kolejka_komunikacyjna.put(('mp2OSM', ''))
 
