@@ -314,7 +314,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         args.nocity = 0
         args.noszlaki = 1
         # self.args.nopnt=self.nopnt.get()
-        args.nopnt = 1
+        args.nopnt = 0
         # self.args.hash=self.monthash.get()
         args.monthash = 1
         # self.args.extratypes=self.extratypes.get()
