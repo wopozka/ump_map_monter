@@ -155,7 +155,6 @@ class ProgressBar(object):
         if self.progress_bar_queue is None:
             return
         if _line_num == self.pbar_params[pb_name][1]:
-            print('progressbar', self.obszar, pb_name, _line_num, file=sys.stderr)
             self.pbar_params[pb_name][1] += self.pbar_params[pb_name][0]
             self.progress_bar_queue.put((self.obszar, pb_name, 'curr', _line_num))
         return
