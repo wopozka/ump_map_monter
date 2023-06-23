@@ -3079,13 +3079,11 @@ def worker(task, options):
 
 
 def write_output_files(dest_filename='', headerf='', file2_core='', normalize_ids=False, worklist=[]):
-    if not dest_filename:
-        destination = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
-    else:
-        destination = open(dest_filename, 'w', encoding="utf-8")
+    elapsed = datetime.now().replace(microsecond=0)
+    destination = open(dest_filename, 'w', encoding="utf-8")
     shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
     for workelem in worklist:
-        file2 = 'UMP-PL.' + file2_core + '.', str(workelem['idx']) + ".osm"
+        file2 = 'UMP-PL.' + file2_core + '.' + str(workelem['idx']) + ".osm"
         if normalize_ids:
             parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
                       - idperarea * workelem['idx'])
@@ -3094,11 +3092,9 @@ def write_output_files(dest_filename='', headerf='', file2_core='', normalize_id
         os.remove(file2)
     destination.write("</osm>\n")
     destination.close()
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
     sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
-    if hasattr(destination, 'name'):
-        return destination.name
-    else:
-        return ''
+    return
 
 def main(options, args):
     if len(args) < 1:
@@ -3248,49 +3244,19 @@ def main(options, args):
 
         if options.nominatim_file != None:
             printinfo_nlf("Nominatim output... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                # write_output_files(dest_filename=options.nominatim_file, headerf=headerf, file2_core="nominatim",
-                #                    normalize_ids=options.normalize_ids, worklist=worklist)
-                destination = open(options.nominatim_file, 'w', encoding="utf-8")
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.nominatim." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
-                    os.remove(file2)
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.nominatim_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.nominatim_file, headerf=headerf, file2_core="nominatim",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
                 sys.exit()            
 
         if options.navit_file != None:
             printinfo_nlf("Navit output... ")
-            elapsed = datetime.now().replace(microsecond=0)
+            # elapsed = datetime.now().replace(microsecond=0)
             try:
-                # write_output_files(dest_filename=options.navit_file, headerf=headerf, file2_core="navit",
-                #                    normalize_ids=options.normalize_ids, worklist=worklist)
-                destination = open(options.navit_file, 'w', encoding="utf-8")
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.navit." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.navit_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.navit_file, headerf=headerf, file2_core="navit",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Navit output failed!\n")
                 sys.exit()
@@ -3298,25 +3264,9 @@ def main(options, args):
         
         if options.index_file != None:
             printinfo_nlf("OsmAnd index... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                # write_output_files(dest_filename=options.index_file, headerf=headerf, file2_core="index",
-                #                    normalize_ids=options.normalize_ids, worklist=worklist)
-                destination = open(options.index_file, 'w', encoding="utf-8")
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.index." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.index_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.index_file, headerf=headerf, file2_core="index",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Index output failed!\n")
                 sys.exit()                        
@@ -3324,66 +3274,27 @@ def main(options, args):
         
         if options.nonumber_file != None:
             printinfo_nlf("NoNumber output... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                # write_output_files(dest_filename=options.nonumber_file, headerf=headerf, file2_core="nonumbers",
-                #                    normalize_ids=options.normalize_ids, worklist=worklist)
-                destination = open(options.nonumber_file, 'w', encoding="utf-8")
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.nonumbers."+str(workelem['idx'])+".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
-                                  - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.nonumber_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.nonumber_file, headerf=headerf, file2_core="nonumbers",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
                 sys.exit()
 
         printinfo_nlf("Normal output... ")
-        elapsed = datetime.now().replace(microsecond=0)
         try:
-            temp_file_name = write_output_files(dest_filename=options.outputfile, headerf=headerf,
-                                                file2_core="normal", normalize_ids=options.normalize_ids,
-                                                worklist=worklist)
-            if options.outputfile:
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"),
-                                   open(options.outputfile, 'w', encoding="utf-8"))
+            temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+            temp_file.close()
+            write_output_files(dest_filename=temp_file.name, headerf=headerf, file2_core="normal",
+                               normalize_ids=options.normalize_ids, worklist=worklist)
+            printinfo_nlf("Normal output copying to stdout or destination file ")
+            elapsed = datetime.now().replace(microsecond=0)
+            if options.outputfile is None:
+                shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
             else:
-                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), sys.stdout)
-            for workelem in worklist:
-                file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
-                if options.normalize_ids:
-                    if options.outputfile:
-                        dest_ = open(options.outputfile, 'a', encoding="utf-8")
-                    else:
-                        dest_ = sys.stdout
-                    parsecopy(open(file2, 'r', encoding="utf-8"), dest_, workelem['idx'],
-                              workelem['baseid'] - idperarea*workelem['idx'])
-                    if options.outputfile:
-                        dest_.close()
-                else:
-                    if options.outputfile:
-                        dest_ = open(options.outputfile, 'a', encoding="utf-8")
-                    else:
-                        dest_ = sys.stdout
-                    shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), dest_)
-                    if options.outputfile:
-                        dest_.close()
-                os.remove(file2)
-            if options.outputfile:
-                dest_ = open(options.outputfile, 'a', encoding="utf-8")
-                dest_.write('</osm>\n')
-                dest_.close()
-            else:
-                print("</osm>")
+                with open(options.outputfile, 'a', encoding="utf-8") as _dest:
+                    shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), _dest)
+            os.remove(temp_file.name)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
