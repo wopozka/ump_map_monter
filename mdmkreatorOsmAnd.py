@@ -241,7 +241,14 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             if len(self.obszary) > 1:
                 options.borders_file = os.path.join(os.path.join(self.Zmienne.KatalogzUMP, 'narzedzia'), 'granice.txt')
             options.outputfile = os.path.join(self.Zmienne.KatalogRoboczy, 'MapaOSMAnd.osm')
-            options.threadnum = int(self.watki_entry_var.get())
+            try:
+                threadnum = int(self.watki_entry_var.get())
+            except ValueError:
+                threadnum = 1
+            if threadnum <= 0:
+                options.threadnum = 1
+            else:
+                options.threadnum = threadnum
             # thread = threading.Thread(target=self.mp2osm, args=(self.logerrqueue, self.args))
             options.progress_bar_queue = glob_progress_bar_queue
             print(options.progress_bar_queue)
