@@ -42,6 +42,7 @@ from collections import defaultdict, OrderedDict
 import os.path
 from functools import partial
 import copy
+import tempfile
 
 class MylistB(object):
     """
@@ -3077,6 +3078,28 @@ def worker(task, options):
     return task['ids']
 
 
+def write_output_files(dest_filename='', headerf='', file2_core='', normalize_ids=False, worklist=[]):
+    if not dest_filename:
+        destination = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+    else:
+        destination = open(dest_filename, 'w', encoding="utf-8")
+    shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
+    for workelem in worklist:
+        file2 = 'UMP-PL.' + file2_core + '.', str(workelem['idx']) + ".osm"
+        if normalize_ids:
+            parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
+                      - idperarea * workelem['idx'])
+        else:
+            shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
+        os.remove(file2)
+    destination.write("</osm>\n")
+    destination.close()
+    sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
+    if hasattr(destination, 'name'):
+        return destination.name
+    else:
+        return ''
+
 def main(options, args):
     if len(args) < 1:
         parser.print_help()
@@ -3227,6 +3250,8 @@ def main(options, args):
             printinfo_nlf("Nominatim output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
+                # write_output_files(dest_filename=options.nominatim_file, headerf=headerf, file2_core="nominatim",
+                #                    normalize_ids=options.normalize_ids, worklist=worklist)
                 destination = open(options.nominatim_file, 'w', encoding="utf-8")
                 shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
@@ -3249,6 +3274,8 @@ def main(options, args):
             printinfo_nlf("Navit output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
+                # write_output_files(dest_filename=options.navit_file, headerf=headerf, file2_core="navit",
+                #                    normalize_ids=options.normalize_ids, worklist=worklist)
                 destination = open(options.navit_file, 'w', encoding="utf-8")
                 shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
@@ -3273,6 +3300,8 @@ def main(options, args):
             printinfo_nlf("OsmAnd index... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
+                # write_output_files(dest_filename=options.index_file, headerf=headerf, file2_core="index",
+                #                    normalize_ids=options.normalize_ids, worklist=worklist)
                 destination = open(options.index_file, 'w', encoding="utf-8")
                 shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
@@ -3297,6 +3326,8 @@ def main(options, args):
             printinfo_nlf("NoNumber output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
+                # write_output_files(dest_filename=options.nonumber_file, headerf=headerf, file2_core="nonumbers",
+                #                    normalize_ids=options.normalize_ids, worklist=worklist)
                 destination = open(options.nonumber_file, 'w', encoding="utf-8")
                 shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
@@ -3319,6 +3350,9 @@ def main(options, args):
         printinfo_nlf("Normal output... ")
         elapsed = datetime.now().replace(microsecond=0)
         try:
+            temp_file_name = write_output_files(dest_filename=options.outputfile, headerf=headerf,
+                                                file2_core="normal", normalize_ids=options.normalize_ids,
+                                                worklist=worklist)
             if options.outputfile:
                 shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"),
                                    open(options.outputfile, 'w', encoding="utf-8"))
