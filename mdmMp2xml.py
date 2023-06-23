@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-# vim: set fileencoding=utf-8 encoding=utf-8 et :
+# vim: set fileencoding=utf-8 et :
 # or :e ++enc=utf-8
 # txt2osm, an UnofficialMapProject .txt to OpenStreetMap .osm converter.
 # Copyright (C) 2008  Mariusz Adamski, rhn
@@ -12,7 +12,7 @@
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,wa
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -2619,7 +2619,7 @@ def output_normal(prefix, num, options):
 
     try:
         f = prefix + ".normal." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
@@ -2646,7 +2646,7 @@ def output_nonumbers(prefix, num):
 
     try:
         f = prefix + ".nonumbers." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open nonumbers output file " + f + "!\n")
         sys.exit()
@@ -2674,7 +2674,7 @@ def output_navit(prefix, num):
 
     try:
         f = prefix + ".navit." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open Navit output file " + f + "!\n")
         sys.exit()
@@ -2703,7 +2703,7 @@ def output_index(prefix, num, options):
 
     try:
         f = prefix + ".index." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open index output file " + f + "!\n")
         sys.exit()
@@ -2944,7 +2944,7 @@ def output_nominatim(prefix, num, options):
 
     try:
         f=prefix+".nominatim."+str(num)+".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open nominatim output file " + f + "!\n")
         sys.exit()
@@ -3088,8 +3088,8 @@ def main(options, args):
         glob_progress_bar_queue = options.progress_bar_queue
     else:
         glob_progress_bar_queue = None
-        print(glob_progress_bar_queue)
 
+    sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
@@ -3205,7 +3205,7 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0)
         headerf = "UMP-PL.header.osm"
         try:
-            out = open(headerf, "w")
+            out = open(headerf, "w", encoding="utf-8")
         except IOError:
             printerror("\nCan't create header file " + headerf + "!")
             sys.exit()
@@ -3227,15 +3227,15 @@ def main(options, args):
             printinfo_nlf("Nominatim output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.nominatim_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
+                destination = open(options.nominatim_file, 'w', encoding="utf-8")
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
                     file2 = "UMP-PL.nominatim." + str(workelem['idx']) + ".osm"
                     if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
+                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
                                   workelem['baseid'] - idperarea*workelem['idx'])
                     else:
-                        shutil.copyfileobj(open(file2, 'r'), destination)
+                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
                     os.remove(file2)
                 destination.write("</osm>\n")
                 destination.close()
@@ -3249,15 +3249,15 @@ def main(options, args):
             printinfo_nlf("Navit output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.navit_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
+                destination = open(options.navit_file, 'w', encoding="utf-8")
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
                     file2 = "UMP-PL.navit." + str(workelem['idx']) + ".osm"
                     if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
+                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
                                   workelem['baseid'] - idperarea*workelem['idx'])
                     else:
-                        shutil.copyfileobj(open(file2, 'r'), destination)
+                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
                     os.remove(file2)
                 # print >>destination,("</osm>")
                 destination.write("</osm>\n")
@@ -3273,15 +3273,15 @@ def main(options, args):
             printinfo_nlf("OsmAnd index... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.index_file,'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
+                destination = open(options.index_file, 'w', encoding="utf-8")
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
                     file2 = "UMP-PL.index." + str(workelem['idx']) + ".osm"
                     if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
+                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'],
                                   workelem['baseid'] - idperarea*workelem['idx'])
                     else:
-                        shutil.copyfileobj(open(file2,'r'), destination)
+                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
                     os.remove(file2)
                 # print >>destination,("</osm>")
                 destination.write("</osm>\n")
@@ -3297,15 +3297,15 @@ def main(options, args):
             printinfo_nlf("NoNumber output... ")
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.nonumber_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
+                destination = open(options.nonumber_file, 'w', encoding="utf-8")
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
                 for workelem in worklist:
-                    file2="UMP-PL.nonumbers."+str(workelem['idx'])+".osm"
+                    file2 = "UMP-PL.nonumbers."+str(workelem['idx'])+".osm"
                     if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'], workelem['baseid'] -
-                                  idperarea*workelem['idx'])
+                        parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
+                                  - idperarea*workelem['idx'])
                     else:
-                        shutil.copyfileobj(open(file2,'r'), destination)
+                        shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
                     os.remove(file2)
                 # print >>destination,("</osm>")
                 destination.write("</osm>\n")
@@ -3320,31 +3320,32 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0)
         try:
             if options.outputfile:
-                shutil.copyfileobj(open(headerf, 'r'), open(options.outputfile, 'w'))
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"),
+                                   open(options.outputfile, 'w', encoding="utf-8"))
             else:
-                shutil.copyfileobj(open(headerf, 'r'), sys.stdout)
+                shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), sys.stdout)
             for workelem in worklist:
                 file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
                 if options.normalize_ids:
                     if options.outputfile:
-                        dest_ = open(options.outputfile, 'a')
+                        dest_ = open(options.outputfile, 'a', encoding="utf-8")
                     else:
                         dest_ = sys.stdout
-                    parsecopy(open(file2, 'r'), dest_, workelem['idx'],
+                    parsecopy(open(file2, 'r', encoding="utf-8"), dest_, workelem['idx'],
                               workelem['baseid'] - idperarea*workelem['idx'])
                     if options.outputfile:
                         dest_.close()
                 else:
                     if options.outputfile:
-                        dest_ = open(options.outputfile, 'a')
+                        dest_ = open(options.outputfile, 'a', encoding="utf-8")
                     else:
                         dest_ = sys.stdout
-                    shutil.copyfileobj(open(file2, 'r'), dest_)
+                    shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), dest_)
                     if options.outputfile:
                         dest_.close()
                 os.remove(file2)
             if options.outputfile:
-                dest_ = open(options.outputfile, 'a')
+                dest_ = open(options.outputfile, 'a', encoding="utf-8")
                 dest_.write('</osm>\n')
                 dest_.close()
             else:
