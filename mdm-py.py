@@ -38,7 +38,7 @@ import subprocess
 import time
 import urllib.request
 import urllib.error
-import collections
+from collections import defaultdict
 
 
 def sprawdz_czy_cvs_obecny():
@@ -51,22 +51,39 @@ def sprawdz_czy_cvs_obecny():
         return 'Nie odnalazłem programu cvs. Zainstaluj go.'
 
 
-def cvs_sprawdz_czy_nie_ma_konfliktow(pliki_do_sprawdzenia, zmienne):
+def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzenia, zmienne):
     """
-    funkcja sprawdza czy w plikach zaznaczonych do commitu nie ma konfliktow jesli sa to zwraca ich nazwy
-    w postaci tupli, jesli nie ma zwraca pusta tuple
+    funkcja sprawdza czy w plikach zaznaczonych do commitu sa tylko dozwolone klucze, jesli sa niedozwolone
+    to zwraca ich nazwy w postaci tupli, jesli nie ma zwraca pusta tuple
+    dodatkowo sprawddzamy obecnosc konfliktow
+    :param pliki_do_sprawdzenia = nazwy plikow do sprawdzenia, zmienne = inicjowane zmienne
+    :return (pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami)
     """
-    pliki_z_bledami = list()
+    pliki_z_niepoprawnymi_kluczami = defaultdict(lambda: set())
+    pliki_z_konfliktami = {}
     for n_pliku in pliki_do_sprawdzenia:
         nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
         with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
             for zawartosc in plik_w_cvs.readlines():
+                if zawartosc.startswith(';'):
+                    continue
                 if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
                         or zawartosc.startswith(">>>>>>>"):
-                    pliki_z_bledami.append(nazwa_pliku)
-                    break
-    return tuple(pliki_z_bledami)
-
+                    pliki_z_konfliktami.add(n_pliku)
+                if n_pliku.endswith('.txt') and '=' in zawartosc:
+                    klucz, wartosc = zawartosc.split('=', 1)
+                    if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
+                            klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE:
+                        continue
+                    else:
+                        klucz_z_numerem_znaleziony = False
+                        for k_z_numerem in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_Z_NUMEREM:
+                            if klucz.startswith(k_z_numerem):
+                                klucz_z_numerem_znaleziony = True
+                                break
+                        if not klucz_z_numerem_znaleziony:
+                            pliki_z_niepoprawnymi_kluczami[n_pliku].add(klucz)
+    return pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami
 
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
 
@@ -195,7 +212,7 @@ class ModulCVS(object):
                           'ESTONIA': ['UMP-EE-Tallin', 'UMP-EE-Tartu'],
                           'EUROPA': ['BALKANY', 'NIEMCY', 'SKANDYNAWIA', 'BRYTANIA', 'UMP-Andora', 'AUSTRIA',
                                      'UMP-Belgia', 'UMP-Bialorus', 'UMP-Cypr', 'CZECHY', 'ESTONIA', 'FRANCJA',
-                                     'HISZPANIA', 'HOLANDIA', 'UMP-Irlandia', 'UMP-RU-Kaliningrad', 'UMP-Lichtenstein',
+                                     'HISZPANIA', 'HOLANDIA', 'UMP-Irlandia', 'UMP-RU-Krolewiec', 'UMP-Lichtenstein',
                                      'UMP-Litwa', 'UMP-Lotwa', 'UMP-Luksemburg', 'UMP-Malta', 'PORTUGALIA', 'ROSJA',
                                      'UMP-Slowacja', 'UMP-Szwajcaria', 'UMP-Ukraina', 'UMP-Wegry', 'WLOCHY'],
                           'FINLANDIA': ['UMP-FI-Helsinki', 'UMP-FI-Oulu', 'UMP-FI-Tampere', 'UMP-FI-Vaasa'],
@@ -225,7 +242,7 @@ class ModulCVS(object):
                                      'UMP-PL-Torun', 'UMP-PL-Wloclawek', 'UMP-PL-Wroclaw', 'UMP-PL-Zamosc',
                                      'UMP-radary'],
                           'PORTUGALIA': ['UMP-PT-Lisbona', 'UMP-PT-Azory', 'UMP-PT-Madera'],
-                          'ROSJA': ['UMP-RU-Moskwa', 'UMP-RU-Kaliningrad'],
+                          'ROSJA': ['UMP-RU-Moskwa', 'UMP-RU-Krolewiec'],
                           'RUMUNIA': ['UMP-RO-Bucuresti', 'UMP-RO-Timisoara'],
                           'SKANDYNAWIA': ['DANIA', 'SZWECJA', 'FINLANDIA', 'NORWEGIA', 'UMP-Islandia'],
                           'SZWECJA': ['UMP-SE-Goteborg', 'UMP-SE-Linkoping', 'UMP-SE-Malmo', 'UMP-SE-Norrkoping',
@@ -610,6 +627,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.ump_mdm_mode = tkinter.IntVar()
         self.umpcvsusername = tkinter.StringVar()
         self.umpPatchProgramPath = tkinter.StringVar()
+        self.mkgmmap_jar_path = tkinter.StringVar()
 
         self.umpSourceValue.set(self.Konfiguracja.KatalogzUMP)
         self.umpRoboczyValue.set(self.Konfiguracja.KatalogRoboczy)
@@ -617,6 +635,7 @@ class ConfigWindow(tkinter.Toplevel):
         self.umpMapedit2Path.set(self.Konfiguracja.MapEdit2Exe)
         self.umpNetGenPath.set(self.Konfiguracja.NetGen)
         self.umpcvsusername.set(self.Konfiguracja.CvsUserName)
+        self.mkgmmap_jar_path.set(self.Konfiguracja.mkgmap_jar_path)
         if self.Konfiguracja.mdm_mode == 'edytor':
             self.ump_mdm_mode.set(1)
         else:
@@ -662,6 +681,7 @@ class ConfigWindow(tkinter.Toplevel):
                                                       command=self.OnButtonClickMapedit2)
         umpmapedit2WybierzButton.grid(row=0, column=1, sticky='e')
 
+        # sciezka do programu netgen
         umpnetgenLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Ścieżka do programu netgen.exe')
         umpnetgenLabelFrame.grid(row=4, column=0, sticky='we', columnspan=2)
         umpnetgen = tkinter.Label(umpnetgenLabelFrame, textvariable=self.umpNetGenPath)
@@ -671,17 +691,27 @@ class ConfigWindow(tkinter.Toplevel):
                                                     command=self.OnButtonClickNetgen)
         umpnetgenWybierzButton.grid(row=0, column=1, sticky='e')
 
+        # sciezka do mkgmap
+        mkgmap_jar_path_frame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Ścieżka do programu mkgmap.jar')
+        mkgmap_jar_path_frame.grid(row=5, column=0, columnspan=2, sticky='we')
+        mkgmap_jar_path_label = tkinter.Label(mkgmap_jar_path_frame, textvariable=self.mkgmmap_jar_path)
+        mkgmap_jar_path_label.grid(row=0, column=0, sticky='w')
+        mkgmap_jar_path_frame.grid_columnconfigure(0, weight=1)
+        mkgmap_jar_path_label_button = tkinter.ttk.Button(mkgmap_jar_path_frame, text='Wybierz',
+                                                          command=self.OnButtonClickMkgmapJarPath)
+        mkgmap_jar_path_label_button.grid(row=0, column=1, sticky='e')
+
         # login dla cvs
         umpcvsloginLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame,
                                                        text=u'Login do CVS, jeśli nie masz pozostaw guest')
-        umpcvsloginLabelFrame.grid(row=5, column=0, sticky='we', columnspan=2)
+        umpcvsloginLabelFrame.grid(row=6, column=0, sticky='we', columnspan=2)
         umpcvsloginLabelFrame.grid_columnconfigure(0, weight=1)
         umpcvsEntry = tkinter.Entry(umpcvsloginLabelFrame, textvariable=self.umpcvsusername)
         umpcvsEntry.grid(row=0, column=0, sticky='ew')
 
         # tryb pracy gui
         umpmdmmodeLabelFrame = tkinter.ttk.LabelFrame(umpConfigFrame, text=u'Tryb pracy mdm')
-        umpmdmmodeLabelFrame.grid(row=6, column=0, columnspan=2, sticky='we')
+        umpmdmmodeLabelFrame.grid(row=7, column=0, columnspan=2, sticky='we')
         umpmdmmodeRadio1 = tkinter.ttk.Radiobutton(umpmdmmodeLabelFrame, text='Edytor', value=1,
                                                    variable=self.ump_mdm_mode)
         umpmdmmodeRadio1.grid(row=0, column=0)
@@ -738,6 +768,9 @@ class ConfigWindow(tkinter.Toplevel):
                 configfile.write('MDMMODE=wrzucacz')
             configfile.write('\n')
             configfile.write('CVSUSERNAME=' + self.umpcvsusername.get())
+            configfile.write('\n')
+            configfile.write('MKGMAPJARPATH=' + self.mkgmmap_jar_path.get())
+            configfile.write('\n')
 
             command = self.destroy()
 
@@ -771,6 +804,11 @@ class ConfigWindow(tkinter.Toplevel):
             self.umpRoboczyValue.set(aaa)
             self.Konfiguracja.KatalogRoboczy = aaa
 
+    def OnButtonClickMkgmapJarPath(self):
+        aaa = os.path.normcase(tkinter.filedialog.askopenfilename(title=u'Ścieżka do pliku mkgmap.jar'))
+        if aaa:
+            self.mkgmmap_jar_path.set(aaa)
+            self.Konfiguracja.mkgmap_jar_path = aaa
 
 class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało
@@ -782,10 +820,20 @@ class mdmConfig(object):
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
                              'standaryzuj_komentarz': False, 'usun_puste_numery': False}
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
+        self.kompiluj_typ_opcje = {'mkgmap_path': '', 'maksymalna_pamiec': '1G', 'family_id': '6324',
+                                   'uwzglednij_warstwice': False, 'code_page': 'cp1250', 'nazwa_typ': 'domyslny'}
+        self.kompiluj_mape_opcje = {'uwzglednij_warstwice': False, 'format_mapy': 'gmapsupp',
+                                    'dodaj_routing': False, 'index': False, 'max_jobs': '0', 'wlasne_typy': '',
+                                    'dodaj_adresy': False, 'uruchom_wojka': True, 'podnies_poziom': True}
         self.stworz_zmienne_mont_demont(self.mont_opcje)
         self.stworz_zmienne_mont_demont(self.demont_opcje)
         self.stworz_zmienne_mont_demont(self.mont_demont_opcje)
+        self.stworz_zmienne_mont_demont(self.kompiluj_typ_opcje)
+        self.stworz_zmienne_mont_demont(self.kompiluj_mape_opcje)
         self.readConfig()
+
+    def zwroc_zmienna_opcji(self, nazwa_opcji):
+        return self.montDemontOptions[nazwa_opcji]
 
     def stworz_zmienne_mont_demont(self, zmienne):
         for key in zmienne:
@@ -794,32 +842,69 @@ class mdmConfig(object):
             else:
                 self.montDemontOptions[key] = tkinter.StringVar(value=zmienne[key])
 
+    def zwroc_args_do_kompiluj_typ(self):
+        args = self.zwroc_args(self.kompiluj_typ_opcje)
+        return args
+
+    def zwroc_args_do_montuj_mkgmap(self):
+        options = {}
+        for key in self.kompiluj_mape_opcje:
+            options[key] = self.kompiluj_mape_opcje[key]
+        for key in self.kompiluj_typ_opcje:
+            options[key] = self.kompiluj_typ_opcje[key]
+        args = self.zwroc_args(options)
+        setattr(args, 'trybosmand', False)
+        return args
+
+
     def zwroc_args_do_mont(self):
         args = self.zwroc_args(self.mont_opcje)
+        args = self.zwroc_args(self.mont_demont_opcje, args)
         args.plikmp = 'wynik.mp'
         return args
 
 
     def zwroc_args_do_demont(self):
         args = self.zwroc_args(self.demont_opcje)
+        args = self.zwroc_args(self.mont_demont_opcje, args)
         args.katrob = None
         return args
 
-    def zwroc_args(self, argumenty):
+    def zwroc_args_do_kompilacji_osmand(self):
         args = Argumenty()
+        args.borders_file = None
+        args.threadnum = 1
+        args.index_file = None
+        args.nominatim_file = None
+        args.navit_file = None
+        args.nonumber_file = None
+        args.verbose = False
+        args.skip_housenumbers = False
+        args.positive_ids = False
+        args.normalize_ids = False
+        args.ignore_errors = False
+        args.regions = False
+        return args
+
+    def zwroc_args_dla_rozdzialu_klas(self):
+        return Argumenty()
+
+
+    def zwroc_args(self, argumenty, args_=None):
+        if args_ is None:
+            args = Argumenty()
+        else:
+            args = args_
         for atrybut in argumenty:
-            setattr(args, atrybut, self.montDemontOptions[atrybut].get())
-        for atrybut in self.mont_demont_opcje:
             setattr(args, atrybut, self.montDemontOptions[atrybut].get())
         return args
 
     def saveConfig(self):
         with open(os.path.join(os.path.expanduser('~'), '.mdm_config'), 'w') as configfile:
             for key in self.montDemontOptions:
-                if key in ('format_indeksow',):
-                    value = self.montDemontOptions[key].get()
-                else:
-                    value = str(int(self.montDemontOptions[key].get()))
+                value = self.montDemontOptions[key].get()
+                if isinstance(value, bool):
+                    value = str(int(value))
                 linia = key + '=' + value + '\n'
                 configfile.write(linia)
 
@@ -835,15 +920,10 @@ class mdmConfig(object):
                 if klucz not in self.montDemontOptions:
                     pass
                 else:
-                    if klucz not in ('X', 'format_indeksow'):
+                    if isinstance(self.montDemontOptions[klucz], tkinter.BooleanVar):
                         self.montDemontOptions[klucz].set(int(wartosc))
-                    elif klucz == 'X':
-                        if wartosc in ('0', '5', '6'):
-                            self.montDemontOptions[klucz].set(wartosc)
-                    if klucz in ('format_indeksow',):
-                        self.montDemontOptions[klucz].set(wartosc)
                     else:
-                        pass
+                        self.montDemontOptions[klucz].set(wartosc)
         except FileNotFoundError:
             pass
 
@@ -1125,7 +1205,7 @@ class cvsDialog(tkinter.Toplevel):
 
         tkinter.Toplevel.__init__(self, parent)
         self.transient(parent)
-        self.pliki = pliki[:]
+        self.pliki = pliki
         self.iftocommit = 'nie'
         self.last_cvs_log = []
         self.mdm_cvs_last_log_file = os.path.join(os.path.expanduser('~'), '.mdm_cvs_last_log')
@@ -1259,8 +1339,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.transient(parent)
         self.stopthreadqueue = queue.Queue()
         self.progreststartstopqueue = queue.Queue()
-        self.uncommitedfiles = []
-        self.commitedfiles = []
+        self.uncommitedfiles = set()
+        self.commitedfiles = set()
 
         if title:
             self.title(title)
@@ -1435,7 +1515,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     self.outputwindow.inputqueue.put(u'>Wskazówka. Ktoś inny zatwierdził w repozytorium nowszą wersję pliku lub plików, dla których\n')
                     self.outputwindow.inputqueue.put(u'>próbujesz wykonac operację commit. Musisz wykonać polecenie update,\n')
                     self.outputwindow.inputqueue.put(u'>a następnie commit.\n\n')
-                    self.uncommitedfiles.append(a)
+                    self.uncommitedfiles.add(a)
                 else:
                     for line in stderr:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
@@ -1445,7 +1525,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
                         if line.decode(Zmienne.Kodowanie).find('<--  ' + os.path.basename(a)) >= 0:
-                            self.commitedfiles.append(a)
+                            self.commitedfiles.add(a)
                     if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
                         self.outputwindow.inputqueue.put('Gotowe\n')
@@ -1453,12 +1533,11 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     else:
                         pass
                 else:
-                    self.commitedfiles.append(a)
+                    self.commitedfiles.add(a)
 
         for a in obszary:
             if os.path.dirname(a).endswith('src') and (a not in self.commitedfiles):
-                self.uncommitedfiles.append(a)
-        self.uncommitedfiles = list(set(self.uncommitedfiles))
+                self.uncommitedfiles.add(a)
         if self.uncommitedfiles:
             self.outputwindow.inputqueue.put(u'\nObszary których nie udało się przesłać:\n')
             for a in self.uncommitedfiles:
@@ -1906,11 +1985,36 @@ class mdm_gui_py(tkinter.Tk):
 
     def kreatorMapaOSMAnd(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.OSMAndKreator(self, obszary)
+        if obszary:
+            aaa = mdmkreatorOsmAnd.KreatorKompilacjiOSMAnd(self, self.mdmMontDemontOptions, obszary)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
     def kreatorKlasDrog(self):
         obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
-        aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, obszary)
+        if obszary:
+            aaa = mdmkreatorOsmAnd.Klasy2EndLevelCreator(self, self.mdmMontDemontOptions, obszary)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
+
+    def kreator_stworz_plik_typ(self):
+        if shutil.which('java') is not None:
+            aaa = mdmkreatorOsmAnd.KreatorKompilacjiTyp(self, self.mdmMontDemontOptions)
+        else:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska java. Zainstaluj!')
+
+    def kreator_skompiluj_mape(self):
+        if shutil.which('java') is None:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska java. Zainstaluj!')
+        elif shutil.which('perl') is None:
+            tkinter.messagebox.showwarning(message=u'Nie masz zainstalowanego środowiska perl. Zainstaluj!')
+        else:
+            obszary = [a for a in self.regionVariableDictionary if self.regionVariableDictionary[a].get()]
+            if obszary:
+                aaa = mdmkreatorOsmAnd.KreatorKompilacjiMdmmap(self, self.mdmMontDemontOptions, obszary)
+            else:
+                tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
+
 
     def cvs_co(self, obszar):
         cvs_status = sprawdz_czy_cvs_obecny()
@@ -1926,7 +2030,7 @@ class mdm_gui_py(tkinter.Tk):
         self.mdmMontDemontOptions = mdmConfig()
 
         # pliki zmienione, do wysłania na cvs
-        self.plikiDoCVS = []
+        self.plikiDoCVS = set()
         self.uncommitedfilesqueue = queue.Queue()
         self.grid()
 
@@ -1942,6 +2046,8 @@ class mdm_gui_py(tkinter.Tk):
         menuKreatory = tkinter.Menu(menubar, tearoff=0)
         menuKreatory.add_command(label=u'Mapa dla OSMAnda', command=self.kreatorMapaOSMAnd)
         menuKreatory.add_command(label=u'Mapa z podziałem dróg na klasy', command=self.kreatorKlasDrog)
+        menuKreatory.add_command(label=u'Stworz i skompiluj plik typ.', command=self.kreator_stworz_plik_typ)
+        menuKreatory.add_command(label=u'Skompiluj mape przy pomocy mkgmap.', command=self.kreator_skompiluj_mape)
         menubar.add_cascade(label=u'Kreatory', menu=menuKreatory)
 
         # menu CVS
@@ -1976,29 +2082,27 @@ class mdm_gui_py(tkinter.Tk):
         menu_montuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje montażu', menu=menu_montuj_opcje)
         menu_montuj_opcje.add_checkbutton(label=u'Otwarte i EntryPoint w extras',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['entry_otwarte_do_extras'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('entry_otwarte_do_extras'))
         menu_montuj_opcje.add_checkbutton(label=u'Sprytne EntryPoints',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['sprytne_entrypoints'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('sprytne_entrypoints'))
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                          variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
-                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
-                                                        'format_indeksow'])
+                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityname',
-                                                    variable=self.mdmMontDemontOptions.montDemontOptions[
-                                                        'format_indeksow'])
+                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
         menu_montuj_opcje.add_cascade(label=u'Format indeksu miast', menu=menu_montuj_format_indeksow)
         menu_demontuj_opcje = tkinter.Menu(menu_opcje, tearoff=0)
         menu_opcje.add_cascade(label=u'Opcje demontażu', menu=menu_demontuj_opcje)
         menu_demontuj_opcje.add_checkbutton(label=u'Usuń pustą numeracją',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['usun_puste_numery'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('usun_puste_numery'))
         menu_demontuj_opcje.add_checkbutton(label=u'Standaryzuj komentarze',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['standaryzuj_komentarz'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('standaryzuj_komentarz'))
         menu_demontuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['savememory'])
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
         menu_demontuj_opcje.add_checkbutton(label=u'Automatyczny rozkład obszarów i linii',
-                                            variable=self.mdmMontDemontOptions.montDemontOptions['autopolypoly'],
+                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('autopolypoly'),
                                             command=lambda: self.selectUnselect_aol(None))
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
@@ -2103,7 +2207,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.cityidx= tkinter.BooleanVar()
         # self.cityidx.set(False)
         self.montOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Obsługa indeksu miast',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('cityidx'),
                                                                 onvalue=True, offvalue=False)
         self.montOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
@@ -2111,7 +2215,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.adrfile = tkinter.BooleanVar()
         # self.adrfile.set(False)
         self.montOptionAdrCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij adresy',
-                                                            variable=self.mdmMontDemontOptions.montDemontOptions['adrfile'],
+                                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('adrfile'),
                                                             onvalue=True, offvalue=False)
         self.montOptionAdrCheckbutton.grid(column=1, row=0, sticky='W')
 
@@ -2119,7 +2223,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.noszlaki = tkinter.BooleanVar()
         # self.noszlaki.set(False)
         self.montOptionNoszlakiCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij szlaki',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['noszlaki'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('noszlaki'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNoszlakiCheckbutton.grid(column=0, row=1, sticky='W')
 
@@ -2127,7 +2231,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.nocity = tkinter.BooleanVar()
         # self.nocity.set(False)
         self.montOptionNocityCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij miasta',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['nocity'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('nocity'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNocityCheckbutton.grid(column=1, row=1, sticky='W')
 
@@ -2135,7 +2239,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.nopnt = tkinter.BooleanVar()
         # self.nopnt.set(False)
         self.montOptionNopntCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Uwzględnij punkty',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['nopnt'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('nopnt'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNopntCheckbutton.grid(column=0, row=2, sticky='W')
 
@@ -2143,7 +2247,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.monthash= tkinter.BooleanVar()
         # self.monthash.set(False)
         self.montOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Generuj sumy kontrolne',
-                                                                variable=self.mdmMontDemontOptions.montDemontOptions['monthash'],
+                                                                variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('monthash'),
                                                                 onvalue=False, offvalue=True)
         self.montOptionNohashCheckbutton.grid(column=1, row=2, sticky='W')
 
@@ -2152,7 +2256,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.extratypes.set(False)
         self.montOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.montFrame,
                                                                        text=u'Specjalne traktowanie typów',
-                                                                       variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                       variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('extratypes'),
                                                                        onvalue=True, offvalue=False)
         self.montOptionExtratypesCheckbutton.grid(column=0, row=3, sticky='W')
 
@@ -2160,7 +2264,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.graniceczesciowe=tkinter.BooleanVar()
         # self.graniceczesciowe.set(False)
         self.montOptionGraniceCzescioweCheckbutton = tkinter.ttk.Checkbutton(self.montFrame, text=u'Granice częściowe',
-                                                                             variable=self.mdmMontDemontOptions.montDemontOptions['graniceczesciowe'],
+                                                                             variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('graniceczesciowe'),
                                                                              onvalue=True, offvalue=False)
         self.montOptionGraniceCzescioweCheckbutton.grid(column=1, row=3, sticky='W')
 
@@ -2184,7 +2288,7 @@ class mdm_gui_py(tkinter.Tk):
 
         # obsługa indeksu miast
         self.demontOptionCityIdxCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Obsługa indeksu miast',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['cityidx'],
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('cityidx'),
                                                                     onvalue=True, offvalue=False)
         self.demontOptionCityIdxCheckbutton.grid(column=0, row=0, sticky='W')
 
@@ -2192,7 +2296,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.demonthash= tkinter.BooleanVar()
         # self.demonthash.set(False)
         self.demontOptionNohashCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Sprawdzaj sumy kontrolne',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['demonthash'],
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('demonthash'),
                                                                     onvalue=False, offvalue=True)
         self.demontOptionNohashCheckbutton.grid(column=0, row=1, sticky='W')
 
@@ -2200,7 +2304,7 @@ class mdm_gui_py(tkinter.Tk):
         # self.autopoi = tkinter.BooleanVar()
         # self.autopoi.set(False)
         self.demontOptionAutopoiLabel = tkinter.ttk.Checkbutton(self.demontFrame, text=u'Automatyczny rozkład poi',
-                                                            variable=self.mdmMontDemontOptions.montDemontOptions['autopoi'],
+                                                            variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('autopoi'),
                                                             onvalue=True, offvalue=False)
         self.demontOptionAutopoiLabel.grid(column=0, row=2, sticky='W')
 
@@ -2208,19 +2312,19 @@ class mdm_gui_py(tkinter.Tk):
         # self.X = tkinter.StringVar()
         # self.X.set('0')
         self.demontOptionZaokraglanieRadio0 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Nie zaokrąglaj',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='0')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='0')
         self.demontOptionZaokraglanieRadio0.grid(column=1, row=0, sticky='W')
         self.demontOptionZaokraglanieRadio5 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Zaokrąglij do 5 cyfr',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='5')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='5')
         self.demontOptionZaokraglanieRadio5.grid(column=1, row=1, sticky='W')
         self.demontOptionZaokraglanieRadio6 = tkinter.ttk.Radiobutton(self.demontFrame, text=u'Zaokrąglij do 6 cyfr',
-                                                                    variable=self.mdmMontDemontOptions.montDemontOptions['X'], value='6')
+                                                                    variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('X'), value='6')
         self.demontOptionZaokraglanieRadio6.grid(column=1, row=2, sticky='W')
 
         # extratypes
         self.demontOptionExtratypesCheckbutton = tkinter.ttk.Checkbutton(self.demontFrame,
                                                                          text=u'Specjalne traktowanie typów',
-                                                                         variable=self.mdmMontDemontOptions.montDemontOptions['extratypes'],
+                                                                         variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('extratypes'),
                                                                          onvalue=True, offvalue=False)
         self.demontOptionExtratypesCheckbutton.grid(columnspan=2, row=3, sticky='W')
 
@@ -2532,8 +2636,7 @@ class mdm_gui_py(tkinter.Tk):
                                 shutil.copy(kopiuj_co, kopiuj_na_co)
                                 self.stdoutqueue.put('%s-->%s\n' % (a.replace(os.sep, '-'), kopiuj_na_co))
                                 print('%s-->%s' % (a.replace(os.sep, '-'), kopiuj_na_co))
-                                if a not in self.plikiDoCVS:
-                                    self.plikiDoCVS.append(a)
+                                self.plikiDoCVS.add(a)
                             else:
                                 plikzip.write(os.path.join(self.Zmienne.KatalogRoboczy, a.replace(os.sep, '-'))
                                               + '.diff', a.replace(os.sep, '-') + '.diff')
@@ -2662,7 +2765,15 @@ class mdm_gui_py(tkinter.Tk):
 
     def OnButtonClickCvsCommit(self):
         if self.plikiDoCVS:
-            pliki_z_konfliktami = cvs_sprawdz_czy_nie_ma_konfliktow(self.plikiDoCVS, self.Zmienne)
+            pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami = \
+                cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(self.plikiDoCVS, self.Zmienne)
+            if pliki_z_niepoprawnymi_kluczami:
+                l_plik = '\n'.join([n_pliku + ': ' + ', '.join(pliki_z_niepoprawnymi_kluczami[n_pliku]) for
+                                          n_pliku in pliki_z_niepoprawnymi_kluczami])
+                informacja = u'Uwaga. W następujacych plikach w cvs są niepoprawne klucze. ' \
+                             u'Czy na pewno kontynuować?\n\n' + l_plik
+                if not tkinter.messagebox.askyesno('Niepoprawne klucze w plikach!', message=informacja):
+                    return
             if pliki_z_konfliktami:
                 informacja = u'Uwaga. W następujacych plikach w cvs są konflikty. Usuń je przed kontynuacją.\n' + \
                              '\n'.join(pliki_z_konfliktami)
@@ -2675,7 +2786,7 @@ class mdm_gui_py(tkinter.Tk):
                         tkinter.messagebox.showwarning(message=cvs_status)
                     else:
                         doCVS = cvsOutputReceaver(self, self.plikiDoCVS, oknodialogowe.message, 'ci')
-                        self.plikiDoCVS = doCVS.uncommitedfiles[:]
+                        self.plikiDoCVS = doCVS.uncommitedfiles
         else:
             tkinter.messagebox.showwarning('Brak plików do wysłania', message='Nie mam żadnych plików do wysłania.')
 

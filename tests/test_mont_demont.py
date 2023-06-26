@@ -137,9 +137,9 @@ TEST_ZWROC_REKORD_PLIKU_MP = (
 def test_zwroc_rekord_pliku_mp(target, answer):
     zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     args = Args()
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabela_konwersji_typow = mont_demont.tabelaKonwersjiTypow(zmienne, stderr_stdout_writer)
-    assert mont_demont.plikMP1(zmienne, args, tabela_konwersji_typow, Montuj=0).zwroc_rekord_pliku_mp(target) == answer
+    assert mont_demont.PlikMP1(zmienne, args, tabela_konwersji_typow, stderr_stdout_writer, Montuj=0).zwroc_rekord_pliku_mp(target) == answer
 
 
 TEST_ADR_TO_MP = (
@@ -241,12 +241,12 @@ def test_plik_pnt_procesuj(target, answer):
     args = Args()
     args.cityidx = False
     args.entry_otwarte_do_extras = True
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     globalneIndeksy = mont_demont.IndeksyMiast()
-    punkt_z_adr = mont_demont.Adr('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args)
-    przetwarzanyPlik = mont_demont.plikPNT('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', args, punkt_z_adr)
+    punkt_z_adr = mont_demont.Poi('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+    przetwarzanyPlik = mont_demont.plikPNT('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', stderr_stdout_writer, punkt_z_adr)
     zawartoscPlikuADR = target
     assert przetwarzanyPlik.procesuj(zawartoscPlikuADR) == answer
 
@@ -258,7 +258,7 @@ TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ = (
 
 @pytest.mark.parametrize('target, answer', TEST_ENTRYPOINT_OTWARTE_NA_KOMENTARZ)
 def test_entrypoint_otwarte_na_komentarz(target, answer):
-    assert mont_demont.plikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == OrderedDict(answer)
+    assert mont_demont.PlikMP1.przenies_otwarte_i_entrypoint_do_komentarza(OrderedDict(target)) == OrderedDict(answer)
 
 TEST_MODYFIKUJ_PLIK_DLA_POI = (
     ({'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}, {'POIPOLY': '[POI]', 'Label': 'label', 'Plik': 'UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', 'Type': '0x2f06'}),
@@ -276,9 +276,9 @@ TEST_MODYFIKUJ_PLIK_DLA_POI = (
 def test_modyfikuj_plik_dla_poi(target, answer):
     args = Args()
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, 0)
     plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.bankomaty.pnt': [], 'UMP-PL-Lodz/src/cities-Lodz.pnt': []}
     plikMp.zwaliduj_sciezki_do_plikow()
     assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target)) == OrderedDict(answer)
@@ -302,18 +302,18 @@ def test_modyfikuj_plik_dla_polygon_polyline(target, answer):
     args = Args()
     args.autopolypoly = target[1]
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, 0)
     plikMp.obszary = mont_demont.Obszary(['Lodz'], Zmienne)
     plikMp.plikizMp = {'UMP-PL-Lodz/src/LODZ.obszary.txt': [], 'UMP-PL-Lodz/src/LODZ.budynki.txt': [],
                        'UMP-PL-Lodz/src/LODZ.kolej.txt': [], 'UMP-PL-Lodz/src/LODZ.zakazy.txt': []}
     plikMp.zwaliduj_sciezki_do_plikow()
-    plikMp.autoobszary.wypelnijObszarPlikWspolrzedne(['UMP-PL-Lodz/src/LODZ.obszary.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.budynki.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.kolej.txt',
-                                                      'UMP-PL-Lodz/src/LODZ.zakazy.txt'
-                                                      ])
+    plikMp.autoobszary.wypelnij_obszar_plik_wspolrzedne(['UMP-PL-Lodz/src/LODZ.obszary.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.budynki.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.kolej.txt',
+                                                        'UMP-PL-Lodz/src/LODZ.zakazy.txt'
+                                                        ])
     assert plikMp.modyfikuj_plik_dla_rekordu_mp(OrderedDict(target[0])) == answer
 
 TEST_STWORZ_MISC_INFO = (
@@ -336,9 +336,9 @@ TEST_STWORZ_MISC_INFO = (
 def test_stworz_misc_info(target, answer):
     args = Args()
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, 0)
     assert plikMp.stworz_misc_info(OrderedDict(target)) == answer
 
 TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
@@ -347,7 +347,7 @@ TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
 )
 @pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
 def test_czy_plik_jest_wykluczony(target, answer):
-    assert mont_demont.autoPlikDlaPoi().czy_plik_jest_wykluczony(target) == answer
+    assert mont_demont.AutoPlikDlaPoi().czy_plik_jest_wykluczony(target) == answer
 
 TEST_PLIK_TYP_DANE = (
     {'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'Typ': 'ATMBANK', 'Type': '0x2f06'},
@@ -380,49 +380,12 @@ TEST_AUTO_PLIK_POI_WYKLUCZENIE = (
 )
 @pytest.mark.parametrize('target, answer', TEST_AUTO_PLIK_POI_WYKLUCZENIE)
 def test_zwroc_plik_dla_typu(target, answer):
-    auto_plik = mont_demont.autoPlikDlaPoi()
+    auto_plik = mont_demont.AutoPlikDlaPoi()
     for dane_do_zapisu in TEST_PLIK_TYP_DANE:
         auto_plik.dodaj_plik_dla_poi(dane_do_zapisu)
     assert auto_plik.zwroc_plik_dla_typu(target[0], target[1]) == answer
 
-TEST_POPRAWNOSC_DANYCH = (
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'brak_DirIndicator',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-GB-Leszno/src/LESZNO.ulice.txt'}, 'ODWROTNE',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
-      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'NIE_WIEM',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1',),
-    ({'POIPOLY': '[POLYGON]', 'Type': '0x14', 'EndLevel': '2',
-      'Data0': '(51.38958,19.39735),(51.38938,19.39714),(51.38924,19.39739),(51.38725,19.39673),(51.38714,19.39623),(51.38715,19.39556),(51.38725,19.39513),(51.38730,19.39456),(51.38735,19.39364),(51.38893,19.39361),(51.38906,19.39422),(51.38799,19.39428),(51.38799,19.39512),(51.38938,19.39531),(51.38991,19.39733)',
-      'Data1': '(51.38851,19.39563),(51.38838,19.39544),(51.38810,19.39537),(51.38797,19.39557),(51.38810,19.39585),(51.38836,19.39585)',
-      'Data2': '(51.38768,19.39593),(51.38768,19.39580),(51.38756,19.39583),(51.38743,19.39570),(51.38726,19.39573),(51.38717,19.39603),(51.38719,19.39632),(51.38725,19.39656),(51.38751,19.39660),(51.38757,19.39622),(51.38760,19.39598)',
-      'Plik': 'UMP-PL-Lodz/src/BELCHATOW.zielone.txt'}, '',),
-    ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
-    'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
-    'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1'),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '{rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
-    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX {rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
-      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
-      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+TEST_POPRAWNOSC_DANYCH_LABEL_POI = (
     ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'Bank Spoldzielczy', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
     'Data0': '(51.82457,17.57944)', 'Miasto': 'Wyki',
     'Plik': 'UMP-PL-Leszno/src/POI-Leszno.bankomaty.pnt', 'KodPoczt': '63-708', 'Typ': 'ATMBANK'}, ''),
@@ -448,15 +411,78 @@ TEST_POPRAWNOSC_DANYCH = (
     ({'POIPOLY': '[POI]', 'Type': '0xe00', 'City': 'Y', 'Data0': '(51.60143,17.51641)',
       'Miasto': 'Golkowo', 'Plik': 'UMP-PL-Leszno/src/cities-Leszno.pnt', 'Rozmiar': '0'}, 'brak_nazwy_miasta'),
 )
-@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH)
-def test_testy_poprawnosci_danych(target, answer):
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_LABEL_POI)
+def test_testy_poprawnosci_danych_label_poi(target, answer):
     args = Args()
-    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
-    # Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    # stderr_stdout_writer = mont_demont.errOutWriter(args)
-    # tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    # plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
-    assert tester_poprawnosci_danych.testy_poprawnosci_danych_txt(target) == answer
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
+    assert tester_poprawnosci_danych.sprawdz_label_dla_poi(target) == answer
+
+TEST_POPRAWNOSCI_DANYCH_MIASTO_LABEL_POLY = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '{rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'miasto potrzebne',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': '~XXX {rondo Solidarnosci}', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSCI_DANYCH_MIASTO_LABEL_POLY)
+def test_testy_poprawnosci_danych_label_miasto(target, answer):
+    args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
+    assert tester_poprawnosci_danych.sprawdz_label_dla_poly(target) == answer
+
+TEST_POPRAWNOSC_DANYCH_DATA_0_ONLY = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1_POLY',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data1': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'Data1_POLY',),
+    ({'POIPOLY': '[POLYGON]', 'Type': '0x14', 'EndLevel': '2',
+      'Data0': '(51.38958,19.39735),(51.38938,19.39714),(51.38924,19.39739),(51.38725,19.39673),(51.38714,19.39623),(51.38715,19.39556),(51.38725,19.39513),(51.38730,19.39456),(51.38735,19.39364),(51.38893,19.39361),(51.38906,19.39422),(51.38799,19.39428),(51.38799,19.39512),(51.38938,19.39531),(51.38991,19.39733)',
+      'Data1': '(51.38851,19.39563),(51.38838,19.39544),(51.38810,19.39537),(51.38797,19.39557),(51.38810,19.39585),(51.38836,19.39585)',
+      'Data2': '(51.38768,19.39593),(51.38768,19.39580),(51.38756,19.39583),(51.38743,19.39570),(51.38726,19.39573),(51.38717,19.39603),(51.38719,19.39632),(51.38725,19.39656),(51.38751,19.39660),(51.38757,19.39622),(51.38760,19.39598)',
+      'Plik': 'UMP-PL-Lodz/src/BELCHATOW.zielone.txt'}, '',),
+    ({'POIPOLY': '[POI]', 'Type': '0x2800', 'Label': '43', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
+    'Data0': '(51.82457,17.57944)', 'Data1': '(51.82457,17.57944)', 'Miasto': 'Wyki',
+    'Plik': 'UMP-PL-Leszno/src/gRozdrazew_2017i.adr', 'KodPoczt': '63-708', 'Typ': 'ADR'}, 'Data1_POI'),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_DATA_0_ONLY)
+def test_testy_poprawnosci_danych_tylko_data0_dla_drog(target, answer):
+    args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
+    assert tester_poprawnosci_danych.sprawdzData0Only(target) == answer
+
+# testujemy poprawne rondo
+TEST_POPRAWNOSC_DANYCH_RONDO = (
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, '',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'brak_DirIndicator',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2', 'DirIndicator': '1',
+      'Data0': '(51.84588,16.58070),(51.84595,16.58066),(51.84599,16.58058),(51.84600,16.58044),(51.84596,16.58034),(51.84590,16.58029),(51.84583,16.58030)',
+      'Miasto': 'Leszno', 'Plik': 'UMP-GB-Leszno/src/LESZNO.ulice.txt'}, 'ODWROTNE',),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0xc', 'Label': 'rondo Solidarnosci', 'EndLevel': '2',
+      'DirIndicator': '1', 'Data0': '(51.84588,16.58070),(51.84595,16.58066)', 'Miasto': 'Leszno', 'Plik': 'UMP-PL-Leszno/src/LESZNO.ulice.txt'}, 'NIE_WIEM',),
+)
+@pytest.mark.parametrize('target, answer', TEST_POPRAWNOSC_DANYCH_RONDO)
+def test_testy_poprawnosci_danych_kierukowosc_ronda(target, answer):
+    args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
+    assert tester_poprawnosci_danych.testuj_kierunkowosc_ronda(target) == answer
+
 
 TEST_DATA_0_ONLY = (
 ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
@@ -469,11 +495,11 @@ TEST_DATA_0_ONLY = (
 @pytest.mark.parametrize('target, answer', TEST_DATA_0_ONLY)
 def test_testuj_wielokrotne_data(target, answer):
     args = Args()
-    testy_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(args)
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    testy_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    stderr_stdout_writer = mont_demont.errOutWriter(args)
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
-    plikMp = mont_demont.plikMP1(Zmienne, args, tabKonw, 0)
+    plikMp = mont_demont.PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, 0)
     assert plikMp.testuj_wielokrotne_data(target, testy_poprawnosci_danych) == answer
 
 TEST_ZAOKRAGLIJ = (
@@ -486,7 +512,7 @@ TEST_ZAOKRAGLIJ = (
 @pytest.mark.parametrize('target, answer', TEST_ZAOKRAGLIJ)
 def test_testuj_wielokrotne_data(target, answer):
     data, dokladnosc = target
-    assert mont_demont.plikMP1.zaokraglij(data, dokladnosc) == answer
+    assert mont_demont.PlikMP1.zaokraglij(data, dokladnosc) == answer
 
 TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
     (([';EntryPoint:(55.55555,22.22222)\n;;Otwarte:Pn-Nie\nala ma kota'],
@@ -534,11 +560,12 @@ TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT = (
 @pytest.mark.parametrize('target, answer', TEST_KOMENTARZ_NA_OTWARTE_I_ENTRYPOINT)
 def test_testuj_wielokrotne_data(target, answer):
     args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
     args.cityidx = False
     args.entry_otwarte_to_extras = True
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
-    tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, None)
-    obiekt_na_mapie = mont_demont.ObiektNaMapie('jakis_plik', [], tabKonw, args)
+    tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
+    obiekt_na_mapie = mont_demont.ObiektNaMapie('jakis_plik', [], tabKonw, args, stderr_stdout_writer)
     obiekt_na_mapie.Dane1 = target[1]
     obiekt_na_mapie.Komentarz = target[0]
     obiekt_na_mapie.komentarz_na_entrypoint_i_otwarte()
@@ -561,6 +588,7 @@ TEST_PACZOWANIE_GRANIC_CZESCIOWYCH = (
     ('granice_6.diff', 'granice_6_OK.diff',),
     ('granice_7.diff', 'granice_7_OK.diff',),
     ('granice_8.diff', 'granice_8_OK.diff',),
+    ('granice_9.diff', 'granice_9_OK.diff',),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH)
@@ -573,6 +601,17 @@ def testuj_konwertuj_latke(target, answer):
         granice_test_answer = granice_test_answer_file.readlines()
     assert paczer_granic.konwertujLatke(granice_test_target) == granice_test_answer
 
+TEST_PACZOWANIE_GRANIC_CZESCIOWYCH_PODZIAL_NA_REKORDY = (
+    ('granice_9.diff', 'granice_9_malpki.diff',),
+)
+@pytest.mark.parametrize('target, answer', TEST_PACZOWANIE_GRANIC_CZESCIOWYCH_PODZIAL_NA_REKORDY)
+def testuj_konwertuj_latke(target, answer):
+    with open(target, 'r') as granice_test_file:
+        granice_test_target = granice_test_file.readlines()
+    with open(answer, 'r') as granice_test_answer_file:
+        granice_test_answer = granice_test_answer_file.readlines()
+    assert mont_demont.PaczerGranicCzesciowych.zamien_komentarz_na_malpki(granice_test_target) == granice_test_answer
+
 TEST_USUN_PUSTA_NUMERACJE = (
     (OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}), OrderedDict({'Numbers1': '2,B,10,10,N,-1,-1,97-330,-1,-1,-1', 'Numbers2': '3,N,-1,-1,N,-1,-1'}),),
     (OrderedDict({'Numbers21': '23,N,-1,-1,N,-1,-1'}), OrderedDict({},),),
@@ -580,4 +619,23 @@ TEST_USUN_PUSTA_NUMERACJE = (
 
 @pytest.mark.parametrize('target, answer', TEST_USUN_PUSTA_NUMERACJE)
 def testuj_usun_pusta_numeracje(target, answer):
-    assert mont_demont.plikMP1.usun_pusta_numeracje(target) == answer
+    assert mont_demont.PlikMP1.usun_pusta_numeracje(target) == answer
+
+TEST_ZWROC_TYP_KOMENTARZ = (
+    ('UMP-PL-Lodz/src/LODZ.ulice.txt', ('txt', '....[TXT] %s')),
+    ('UMP-PL-Lodz/src/POI-Lodz.bankomaty.pnt', ('pnt', '....[PNT] %s')),
+    ('UMP-PL-Lodz/src/cities-Lodz.pnt', ('cities', '....[CITY] %s')),
+    ('UMP-PL-Lodz/src/m-106301-Skierniewice.adr', ('adr', '....[ADR] %s')),
+)
+@pytest.mark.parametrize('target, answer', TEST_ZWROC_TYP_KOMENTARZ)
+def testuj_zwroc_typ_komentarz(target, answer):
+    assert mont_demont.zwroc_typ_komentarz(target) == answer
+
+TEST_WLASNE_ALIASY = (
+    (('{"Alias": "AAA", "Type": "0x0", "Prefix": "", "Suffix": ""}',), {'AAA': {'Type': '0x0', 'Prefix': '', 'Suffix': ''}}),
+    (('{"Alias": "AAA", "Type": "0x1", "Prefix": "", "Suffix": ""}', '{"Alias": "BBB", "Type": "0x2", "Prefix": "", "Suffix": ""}'), {'AAA': {'Type': '0x1', 'Prefix': '', 'Suffix': ''}, 'BBB': {'Type': '0x2', 'Prefix': '', 'Suffix': ''}}),
+    (('{"Alias": "AAA", "Type": "0x1", "Prefix": "", "Suffix": ""}', '{"Type": "0x2", "Prefix": "", "Suffix": ""}'), {'AAA': {'Type': '0x1', 'Prefix': '', 'Suffix': ''}}),
+)
+@pytest.mark.parametrize('target, answer', TEST_WLASNE_ALIASY)
+def testuj_zbuduj_defnicje_wlasne_defnicje_aliasow(target, answer):
+    assert mont_demont.zwroc_wlasne_definicje_aliasow(target) == answer
