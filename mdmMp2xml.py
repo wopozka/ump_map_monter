@@ -183,8 +183,9 @@ class ProgressBar(object):
 
 
 class NodeGeneralizator(object):
-    def __init__(self):
-        self.border_point_id = list()
+    def __init__(self, test_mode=False):
+        self.test_mode = test_mode
+        self.border_point_ids = list()
         self.point_offset = list()
         self.point_max_val = 0
         self.way_offset = list()
@@ -196,39 +197,62 @@ class NodeGeneralizator(object):
         for _no, w_ofset in enumerate(self.way_offset):
             if _no == 0:
                 self.way_offset[_no]['start'] = self.point_offset[-1]['end'] + 1
-                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end']
+                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end'] - 1
             else:
                 self.way_offset[_no]['start'] = self.way_offset[_no - 1]['end'] + 1
-                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end']
+                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end'] - 1
 
-    def calculate_relations_ofset(self, _relation):
-        for _no, r_ofset in enumerate(relation_offset):
+    def calculate_relations_ofset(self):
+        for _no, r_ofset in enumerate(self.relation_offset):
             if _no == 0:
                 self.relation_offset[_no]['start'] = self.way_offset[-1]['end'] + 1
                 self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
             else:
-                self.relation_offset['start'] = self.relation_offset_no - 1]['end'] + 1
+                self.relation_offset[_no]['start'] = self.relation_offset[_no - 1]['end'] + 1
                 self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
 
     def set_ofsets(self, pickled_d):
         # pickled_d, pojedyczny spiklowany obiekt: punkty, drogi, relacje
         _nodes, _ways, _relations = pickled_d
-        self.point_offset.append({'start': min(_nodes.points_numbers()), 'end': max(_nodes.points_numbers())})
-        self.way_offset.append({'start': 0, 'end': len(_ways)})
-        self.relation_offset.append({'start': 0, 'end': len(_relations))
+        if self.test_mode:
+            self.point_offset.append({'start': min(_nodes), 'end': max(_nodes), 'offset': 0, 'start_orig': min(_nodes)})
+        else:
+            self.point_offset.append({'start': min(_nodes.points_numbers()),
+                                      'end': max(_nodes.points_numbers()),
+                                      'start_orig': min(_nodes.points_numbers())})
+        self.way_offset.append({'start': 0, 'end': len(_ways), 'orig_start': 0})
+        self.relation_offset.append({'start': 0, 'end': len(_relations), 'orig_start': 0})
 
     def calculate_nodes_ofset(self):
         for _no, p_ofset in enumerate(self.point_offset):
+            num_of_elem = p_ofset['end'] - p_ofset['start']
             if _no == 0:
-                p_ofset[_no]['start'] = 0
+                p_ofset['start'] = max(a for a in self.border_point_ids) + 1
+                p_ofset['end'] = p_ofset['start'] + num_of_elem
+                p_ofset['offset'] = max(self.border_point_ids)
             else:
-                p_ofset[_no]['start'] = p_ofset[_no - 1]['end'] + 1
-                p_ofset[_no]['end'] = p_ofset[_no]['start'] + p_ofset[_no]['end']
+                p_ofset['start'] = self.point_offset[_no - 1]['end'] + 1
+                p_ofset['end'] = p_ofset['start'] + num_of_elem
+                p_ofset['offset'] = self.point_offset[_no - 1]['end']
 
-    def calculate_ofsets(self):
+    def initialize_ofsets(self):
         self.calculate_nodes_ofset()
         self.calculate_ways_offset()
         self.calculate_relations_ofset()
+
+    def get_node_id(self, group_id, orig_id):
+        if orig_id in self.border_point_ids:
+            return orig_id
+        else:
+            aaa = orig_id - self.point_offset[group_id-1]['start_orig'] + self.point_offset[group_id - 1]['offset']
+            return aaa + 1
+
+    def get_way_id(self, group_id, orig_id):
+        return orig_id + self.way_offset[group_id]['start']
+
+    def get_relation_id(self, group_id, orig_id):
+        return orig_id + self.relation_offset[group_id]['start']
+
 
 
 
@@ -2676,7 +2700,7 @@ def post_load_processing(options, filename='', progress_bar = None):
 def output_pickle(prefix, num):
     try:
         with open(prefix + ".normal." + str(num) + ".pickle", 'wb') as pickle_f:
-            pickle.dump([points, ways, relations], pickle_f])
+            pickle.dump([points, ways, relations], pickle_f)
     except IOError:
         sys.stderr.write("\tERROR: Can't write pickle files \n")
         sys.exit()
