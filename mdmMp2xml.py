@@ -130,7 +130,7 @@ class Mylist(object):
         # return self.v.__iter__() #
         return self.k.__iter__()
 
-    def valuess(self):
+    def points_numbers(self):
         return [self.k[a] for a in self.k]
 
 
@@ -180,6 +180,48 @@ class ProgressBar(object):
         if self.progress_bar_queue is not None:
             self.progress_bar_queue.put((self.obszar, pb_name, 'done', self.pbar_params[pb_name][2]))
         return
+
+
+class NodeGeneralizator(object):
+    def __init__(self):
+        self.border_point_id = list()
+        self.point_offset = list()
+        self.point_max_val = 0
+        self.way_offset = list()
+        self.way_max_val = 0
+        self.relation_offset = list()
+        self.relation_max_val = 0
+
+    def set_way_offset_and_max(self, _ways):
+        for task_id in range(len(_ways)):
+            if task_id == 0:
+                self.way_offset[0] = self.point_max_val
+            else:
+                self.way_offset[task_id] += self.way_offset[task_id-1] + len(_ways)
+        self.way_max_val = self.way_offset[-1]
+
+    def set_relation_offset_and_max(self, _relation):
+        for task_id in range(len(_relation)):
+            if task_id == 0:
+                self.relation_offset[0] = self.way_max_val
+            else:
+                self.relation_offset[task_id] += self.relation_offset[task_id - 1] + len(_relation)
+        self.relation_max_val = self.relation_offset[-1]
+
+    def set_ofsets(self, pickled_d):
+        # pickled_d, pojedyczny spiklowany obiekt: punkty, drogi, relacje
+        self.way_ofset.append(0)
+        self.relation_offset.append(0)
+        _nodes, _ways, _relastions = pickled_d
+        if self.point_offset:
+            self.point_offset.append(self.point_max_val + len(_nodes))
+            self.point_max_val += len(_nodes)
+
+        else:
+            self.point_offset.append(min(_nodes.points_numbers()))
+            self.point_max_val += len(_nodes)
+        self.set_way_offset_and_max(_ways)
+        self.set_relation_offset_and_max(_relations)
 
 
 class NodesToWayNotFound(ValueError):
@@ -2625,12 +2667,8 @@ def post_load_processing(options, filename='', progress_bar = None):
 
 def output_pickle(prefix, num):
     try:
-        with open(prefix + ".normal." + str(num) + ".points.pickle", 'wb') as pickle_f:
-            pickle.dump(points, pickle_f)
-        with open(prefix + ".normal." + str(num) + ".ways.pickle", 'wb') as pickle_f:
-            pickle.dump(ways, pickle_f)
-        with open(prefix + ".normal." + str(num) + ".relations.pickle", 'wb') as pickle_f:
-            pickle.dump(relations, pickle_f)
+        with open(prefix + ".normal." + str(num) + ".pickle", 'wb') as pickle_f:
+            pickle.dump([points, ways, relations], pickle_f])
     except IOError:
         sys.stderr.write("\tERROR: Can't write pickle files \n")
         sys.exit()
@@ -3073,44 +3111,16 @@ def worker(task, options):
     # print "relations="+str(len(relations))
     # print "maxtypes="+str(len(maxtypes))
 
-    # lets build normalized index table, in case normalize_ids option is used. Helps to speed up
-    # file writing. Memory consumption will increase though
-
-    normalization_matrix = {}
-    current_id = 0
-
-    last_point_id = 0
-    for point_id in points.valuess():
-        normalization_matrix[point_id] = current_id
-        current_id += 1
-        last_point_id = point_id
-
-    # print(last_point_id, file=sys.stderr)
-    print('normalization matrix len: ', len(normalization_matrix), file=sys.stderr)
-    print(last_point_id, file=sys.stderr)
-    first_way_id = last_point_id + 1
-    print(first_way_id, file=sys.stderr)
-    for way_id in range(len(ways) - 1):
-        normalization_matrix[way_id + first_way_id] = current_id
-        current_id += 1
-
-    first_rel_id = first_way_id + len(ways)
-    print(first_rel_id, file=sys.stderr)
-    for rel_id in range(len(relations) - 1):
-        normalization_matrix[first_rel_id + rel_id] = current_id
-        current_id += 1
-
-    print('tabela konwersji dlugosc: ', len(normalization_matrix), len(points) + len(ways) + len(relations), file=sys.stderr)
-
-    output_normal("UMP-PL", task['idx'], options)
-    if options.navit_file != None:
-        output_navit("UMP-PL", task['idx'])	 # no data change
-    if options.nonumber_file != None:
-        output_nonumbers("UMP-PL", task['idx'])	 # no data change
-    if options.index_file != None:
-        output_index("UMP-PL", task['idx'], options)  # no data change
-    if options.nominatim_file != None:
-        output_nominatim("UMP-PL", task['idx'], options)  # data is changed
+    # output_normal("UMP-PL", task['idx'], options)
+    # if options.navit_file != None:
+    #     output_navit("UMP-PL", task['idx'])	 # no data change
+    # if options.nonumber_file != None:
+    #     output_nonumbers("UMP-PL", task['idx'])	 # no data change
+    # if options.index_file != None:
+    #     output_index("UMP-PL", task['idx'], options)  # no data change
+    # if options.nominatim_file != None:
+    #     output_nominatim("UMP-PL", task['idx'], options)  # data is changed
+    output_pickle("UMP-PL", task['idx'])
 
 # ilosc id w obszarze. brak ostrzegania przy normalizacji
     maxid = maxid - idperarea * task['idx']
@@ -3268,6 +3278,16 @@ def main(options, args):
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
+
+        # wczytaj pliki piklowane
+        node_generalizator = NodeGeneralizator
+        pickled_data = OrderedDict()
+        for work_no, workelem in enumerate(worklist):
+            pickled_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".pickle"
+            with open(pickled_filename, 'rb') as pickled_f:
+                pickled_data[work_no] = pickle.load(pickled_f)
+                node_generalizator.set_ofsets_(pickled_data[work_no])
+
 
         # naglowek osm i punkty granic
         printinfo_nlf("Working on header... ")
