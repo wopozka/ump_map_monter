@@ -1176,7 +1176,8 @@ turn_lanes = {
 # v zawiera tablice { [lat,lon], [lat,lon],....}  mapowanie id->(lat,lon)
 bpoints = MylistB()
 
-points = list()
+# later will be initialized as Mylist instance, lets leave it None for now.
+points = None
 # pointattrs = {}
 pointattrs = defaultdict(dict)
 ways = []
