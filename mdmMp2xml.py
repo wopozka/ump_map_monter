@@ -130,6 +130,9 @@ class Mylist(object):
         # return self.v.__iter__() #
         return self.k.__iter__()
 
+    def valuess(self):
+        return [self.k[a] for a in self.k]
+
 
 class Features(object):  # fake enum
     poi, polyline, polygon, ignore = range(4)
@@ -1519,7 +1522,7 @@ def points_append(node, attrs):
     pointattrs[points.index(node)] = attrs
 
             
-def prepare_line(nodes_str, closed):
+def prepare_line(nodes_str, closed=False):
     """Appends new nodes to the points list"""
     nodes = []
     for element in nodes_str.split(','):
@@ -1617,14 +1620,14 @@ def convert_tag(way, key, value, feat, options):
             way['oneway'] = value
     elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
         num = int(key[4:])
-        count, way['_nodes'] = prepare_line(value, feat == Features.polygon)
+        count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon)
         if '_c' in way:
             way['_c'] += count
         else:
             way['_c'] = count
         # way['layer'] = num ??
     elif key.startswith('_Inner'):
-        count, nodes = prepare_line(value, feat == Features.polygon)
+        count, nodes = prepare_line(value, closed=feat == Features.polygon)
         if '_innernodes' not in way:
             way['_innernodes'] = []
             if feat != Features.polygon:
@@ -2644,6 +2647,13 @@ def output_normal(prefix, num, options):
     for index, rel in enumerate(relations):
         print_relation(rel, index, out)
 
+    with open(prefix + ".normal." + str(num) + ".pointpickle", 'wb') as pickle_f:
+        pickle.dump(points, pickle_f)
+    with open(prefix + ".normal." + str(num) + ".wayspickle", 'wb') as pickle_f:
+        pickle.dump(ways, pickle_f)
+    with open(prefix + ".normal." + str(num) + ".relspickle", 'wb') as pickle_f:
+        pickle.dump(relations, pickle_f)
+
     out.close()
 
 
@@ -3056,8 +3066,36 @@ def worker(task, options):
     # print "pointattrs="+str(len(pointattrs))
     # print "relations="+str(len(relations))
     # print "maxtypes="+str(len(maxtypes))
-    
-    
+
+    # lets build normalized index table, in case normalize_ids option is used. Helps to speed up
+    # file writing. Memory consumption will increase though
+
+    normalization_matrix = {}
+    current_id = 0
+
+    last_point_id = 0
+    for point_id in points.valuess():
+        normalization_matrix[point_id] = current_id
+        current_id += 1
+        last_point_id = point_id
+
+    # print(last_point_id, file=sys.stderr)
+    print('normalization matrix len: ', len(normalization_matrix), file=sys.stderr)
+    print(last_point_id, file=sys.stderr)
+    first_way_id = last_point_id + 1
+    print(first_way_id, file=sys.stderr)
+    for way_id in range(len(ways) - 1):
+        normalization_matrix[way_id + first_way_id] = current_id
+        current_id += 1
+
+    first_rel_id = first_way_id + len(ways)
+    print(first_rel_id, file=sys.stderr)
+    for rel_id in range(len(relations) - 1):
+        normalization_matrix[first_rel_id + rel_id] = current_id
+        current_id += 1
+
+    print('tabela konwersji dlugosc: ', len(normalization_matrix), len(points) + len(ways) + len(relations), file=sys.stderr)
+
     output_normal("UMP-PL", task['idx'], options)
     if options.navit_file != None:
         output_navit("UMP-PL", task['idx'])	 # no data change
