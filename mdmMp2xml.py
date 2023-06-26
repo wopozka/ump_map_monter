@@ -192,36 +192,44 @@ class NodeGeneralizator(object):
         self.relation_offset = list()
         self.relation_max_val = 0
 
-    def set_way_offset_and_max(self, _ways):
-        for task_id in range(len(_ways)):
-            if task_id == 0:
-                self.way_offset[0] = self.point_max_val
+    def calculate_ways_offset(self):
+        for _no, w_ofset in enumerate(self.way_offset):
+            if _no == 0:
+                self.way_offset[_no]['start'] = self.point_offset[-1]['end'] + 1
+                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end']
             else:
-                self.way_offset[task_id] += self.way_offset[task_id-1] + len(_ways)
-        self.way_max_val = self.way_offset[-1]
+                self.way_offset[_no]['start'] = self.way_offset[_no - 1]['end'] + 1
+                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end']
 
-    def set_relation_offset_and_max(self, _relation):
-        for task_id in range(len(_relation)):
-            if task_id == 0:
-                self.relation_offset[0] = self.way_max_val
+    def calculate_relations_ofset(self, _relation):
+        for _no, r_ofset in enumerate(relation_offset):
+            if _no == 0:
+                self.relation_offset[_no]['start'] = self.way_offset[-1]['end'] + 1
+                self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
             else:
-                self.relation_offset[task_id] += self.relation_offset[task_id - 1] + len(_relation)
-        self.relation_max_val = self.relation_offset[-1]
+                self.relation_offset['start'] = self.relation_offset_no - 1]['end'] + 1
+                self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
 
     def set_ofsets(self, pickled_d):
         # pickled_d, pojedyczny spiklowany obiekt: punkty, drogi, relacje
-        self.way_ofset.append(0)
-        self.relation_offset.append(0)
-        _nodes, _ways, _relastions = pickled_d
-        if self.point_offset:
-            self.point_offset.append(self.point_max_val + len(_nodes))
-            self.point_max_val += len(_nodes)
+        _nodes, _ways, _relations = pickled_d
+        self.point_offset.append({'start': min(_nodes.points_numbers()), 'end': max(_nodes.points_numbers())})
+        self.way_offset.append({'start': 0, 'end': len(_ways)})
+        self.relation_offset.append({'start': 0, 'end': len(_relations))
 
-        else:
-            self.point_offset.append(min(_nodes.points_numbers()))
-            self.point_max_val += len(_nodes)
-        self.set_way_offset_and_max(_ways)
-        self.set_relation_offset_and_max(_relations)
+    def calculate_nodes_ofset(self):
+        for _no, p_ofset in enumerate(self.point_offset):
+            if _no == 0:
+                p_ofset[_no]['start'] = 0
+            else:
+                p_ofset[_no]['start'] = p_ofset[_no - 1]['end'] + 1
+                p_ofset[_no]['end'] = p_ofset[_no]['start'] + p_ofset[_no]['end']
+
+    def calculate_ofsets(self):
+        self.calculate_nodes_ofset()
+        self.calculate_ways_offset()
+        self.calculate_relations_ofset()
+
 
 
 class NodesToWayNotFound(ValueError):
