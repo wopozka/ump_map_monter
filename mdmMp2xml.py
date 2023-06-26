@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-# vim: set fileencoding=utf-8 encoding=utf-8 et :
+# vim: set fileencoding=utf-8 et :
 # or :e ++enc=utf-8
 # txt2osm, an UnofficialMapProject .txt to OpenStreetMap .osm converter.
 # Copyright (C) 2008  Mariusz Adamski, rhn
@@ -23,7 +23,6 @@
 # MA 02110-1301, USA.
 
 import sys
-import time
 import math
 import re
 import pprint
@@ -39,9 +38,160 @@ import time
 # import pdb
 from xml.sax import saxutils
 from optparse import OptionParser
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import os.path
+from functools import partial
+import copy
+import tempfile
 
+class MylistB(object):
+    """
+    The class for storage of borders file data points
+    """
+    def __init__(self):
+        # dictionary containing key: value pairs. key is an integer number seperate for each point
+        # value is actuall reference to node data (see below for self.v)
+        self.k = {}
+        # a list of nodes data, node is in a form of dict eg: dictionary eg.
+        # {id: '1600019', timestamp: '2023-06-16T16:02:23Z', visible: 'true',  version: '1', changeset: '1',
+        # lat: '50.157630', lon: '19.332180}
+        self.v = []
+
+    def __len__(self):
+        return len(self.k)
+
+    def __getitem__(self, key):
+        return self.v[key] #
+        for k in self.k:
+            if self.k[k] == key:
+                return k
+
+    def index(self, value):
+        return self.k[value]
+
+    def __setitem__(self, key, value): #
+        if key in self.v: #
+            del self.k[self.v[key]] #
+        self.k[value] = key #
+        self.v[key] = value #
+
+    def __contains__(self, value):
+        return value in self.k
+
+    def append(self, value):
+        self.v.append(value) #
+        self.k[value] = len(self.k)
+
+    def __iter__(self):
+        return self.v.__iter__() #
+        return self.k.__iter__()
+
+
+class Mylist(object):
+    """
+    The modified list bultin type, that support faster return of element index
+    """
+    def __init__(self, borders, base):
+        self.k = {}
+        self.v = []
+        self.b = base
+        self.borders = borders
+
+    def __len__(self):  # OK
+        return len(self.v) + self.b
+
+    def __getitem__(self, key):  # OK
+        if key < len(self.borders):
+            return self.borders[key]
+        return self.v[key - self.b]
+
+    def index(self, value):          # OK
+        if value in self.borders:
+            return self.borders.index(value)
+        return self.k[value]
+
+    def __setitem__(self, key, value):  #
+        raise ParsingError('Hej hej')
+        if key in v:  #
+            del self.k[self.v[key]]  #
+        self.k[value] = key  #
+        self.v[key] = value  #
+
+    def __contains__(self, value):    # OK
+        if value in self.borders:
+            return True
+        return value in self.k
+
+    def append(self, value):          # OK
+        self.v.append(value)
+        self.k[value] = len(self.v)+self.b-1
+
+    def __iter__(self):               # OK
+        # return self.v.__iter__() #
+        return self.k.__iter__()
+
+
+class Features(object):  # fake enum
+    poi, polyline, polygon, ignore = range(4)
+
+
+class ParsingError(Exception):
+    pass
+
+
+class ProgressBar(object):
+    def __init__(self, options, obszar=None, glob_progress_bar_queue=None):
+        self.progress_bar_queue = None
+        self.obszar = None
+        if obszar:
+            self.obszar = os.path.basename(obszar).split('_')[0]
+        if glob_progress_bar_queue is not None:
+            self.progress_bar_queue = glob_progress_bar_queue
+        elif hasattr(options, 'progress_bar_queue'):
+            self.progress_bar_queue = options.progress_bar_queue
+        # [ num_lines % 100, num_lines % 100 *1, 2, 3 itd, 100% value]
+        self.pbar_params = {'mp': [0, 0, 0], 'drp': [0, 0, 0]}
+
+    def set_val(self, _line_num, pb_name):
+        if self.progress_bar_queue is None:
+            return
+        if _line_num == self.pbar_params[pb_name][1]:
+            self.pbar_params[pb_name][1] += self.pbar_params[pb_name][0]
+            self.progress_bar_queue.put((self.obszar, pb_name, 'curr', _line_num))
+        return
+
+    def start(self, num_lines_to_process, pb_name):
+        if self.progress_bar_queue is None:
+            return
+        if num_lines_to_process > 100:
+            self.pbar_params[pb_name][0] = int(num_lines_to_process / 100)
+            self.pbar_params[pb_name][1] = int(num_lines_to_process / 100)
+        else:
+            self.pbar_params[pb_name][0] = 1
+            self.pbar_params[pb_name][1] = 1
+        self.progress_bar_queue.put((self.obszar, pb_name, 'max', num_lines_to_process))
+        self.pbar_params[pb_name][2] = num_lines_to_process
+        return
+
+    def set_done(self, pb_name):
+        if self.progress_bar_queue is not None:
+            self.progress_bar_queue.put((self.obszar, pb_name, 'done', self.pbar_params[pb_name][2]))
+        return
+
+
+class NodesToWayNotFound(ValueError):
+    """
+    Raised when way of two nodes can not be found
+    """
+    def __init__(self, node_a, node_b):
+        self.node_a = node_a
+        self.node_b = node_b
+
+    def __str__(self):
+        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
+
+__version__ = '0.8.1'
 
 # Kwadrat dla Polski.
 # 54.85628,13.97873
@@ -57,8 +207,6 @@ maxE = 50.00000
 # zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
 # sobie wyznaczaja/obliczaja/zapamietuja etc (przyklad: nominatim)
 idperarea = 1600000
-
-__version__ = '0.8.1'
 
 # 0.5.1 changes
 # - 'addr:city' with ';' instead of '@'
@@ -325,7 +473,7 @@ pline_types = {
     0x6707: ["highway", "path", "ref", "Niebieski szlak", "bicycle", "yes", "marked_trail_blue", "yes", "access", "no"],
     0x10e00: ["highway", "footway", "ref", "Czerwony szlak", "marked_trail_red", "yes", "osmc", "yes", "osmc_color",
               "red", "route", "hiking", "access", "no"],
-    0x10e01: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes" , "osmc", "yes", "osmc_color",
+    0x10e01: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes", "osmc", "yes", "osmc_color",
               "yellow", "route", "hiking", "access", "no"],
     0x10e02: ["highway", "footway", "ref", "Zielony szlak",
              "marked_trail_green", "yes", "osmc", "yes", "osmc_color", "green", "route", "hiking", "access", "no"],
@@ -334,9 +482,9 @@ pline_types = {
     0x10e04: ["highway", "footway", "ref", "Czarny szlak",
               "marked_trail_black", "yes", "osmc", "yes", "osmc_color", "black", "route", "hiking", "access", "no"],
     0x10e07: ["highway", "footway", "ref", "Szlak", "note", "FIXME",
-              "marked_trail_multi", "yes" , "osmc", "yes", "osmc_color", "multi", "route", "hiking", "access", "no"],
+              "marked_trail_multi", "yes", "osmc", "yes", "osmc_color", "multi", "route", "hiking", "access", "no"],
     0x10e08: ["highway", "cycleway", "ref", "Czerwony szlak",
-              "marked_trail_red", "yes", "osmc", "yes", "osmc_color", "red", "route" , "bicycle", "access", "no"],
+              "marked_trail_red", "yes", "osmc", "yes", "osmc_color", "red", "route", "bicycle", "access", "no"],
     0x10e09: ["highway", "cycleway", "ref", "Żółty szlak", "marked_trail_yellow",
               "yes", "osmc", "yes", "osmc_color", "yellow", "route", "bicycle", "access", "no"],
     0x10e0a: ["highway", "cycleway", "ref", "Zielony szlak",
@@ -447,6 +595,10 @@ umppoi_types = {
                 'PRZEDSZKOLE': 0x2c056,
                 'ZLOBEK': 0x2c057,
 
+                'BENZYNA': 0x2f01,
+                'PALIWO': 0x2f01,
+                'PRAD': 0x2f011,
+
                 'RENT_A_BIKE': 0x2f021,
                 'ROWERY': 0x2f021,
                 'RENTACAR': 0x2f022,
@@ -540,11 +692,11 @@ poi_types = {
     0x1615: ["man_made", "beacon", "mark_type", "blue"],
     0x1616: ["man_made", "beacon", "mark_type", "multicolored"],
     0x1708: ["note",     "deadend"],
-    0x1709: ["note",   "flyover"],
+    0x1709: ["bridge",   "yes"],
     0x170b: ["note",     "verify!"],
-    0x170f: ["man_made", "beacon", "mark_type", "white" ],
+    0x170f: ["man_made", "beacon", "mark_type", "white"],
     0x1710: ["barrier",  "gate"],
-    0x17105:["highway",  "stop"],
+    0x17105: ["highway",  "stop"],
     0x1711: ["note",     "FIXME"],
     0x1712: ["landuse",  "construction"],
     0x170a: ["note",     "FIXME: verify"],
@@ -626,13 +778,13 @@ poi_types = {
     0x2a00: ["amenity",  "restaurant"],
     0x2a01: ["amenity",  "restaurant", "cuisine", "american"],
     0x2a02: ["amenity",  "restaurant", "cuisine", "asian"],
-    0x2a025:["amenity",  "restaurant", "cuisine", "sushi"],
+    0x2a025: ["amenity",  "restaurant", "cuisine", "sushi"],
     0x2a03: ["amenity",  "restaurant", "cuisine", "barbecue"],
-    0x2a030:["amenity",  "restaurant", "cuisine", "barbecue"],
-    0x2a031:["amenity",  "restaurant", "cuisine", "grill"],
-    0x2a032:["amenity",  "restaurant", "cuisine", "kebab"],
+    0x2a030: ["amenity",  "restaurant", "cuisine", "barbecue"],
+    0x2a031: ["amenity",  "restaurant", "cuisine", "grill"],
+    0x2a032: ["amenity",  "restaurant", "cuisine", "kebab"],
     0x2a04: ["amenity",  "restaurant", "cuisine", "chinese"],
-    0x2a041:["amenity",  "restaurant", "cuisine", "thai"],
+    0x2a041: ["amenity",  "restaurant", "cuisine", "thai"],
     0x2a05: ["shop",     "bakery"],
     0x2a06: ["amenity",  "restaurant", "cuisine", "international"],
     0x2a07: ["amenity",  "fast_food",  "cuisine", "burger"],
@@ -717,6 +869,7 @@ poi_types = {
     0x2e0c: ["shop",     "pets"],
     0x2f00: ["amenity",  "miscellaneous"],
     0x2f01: ["amenity",  "fuel"],
+    0x2f011: ["amenity", "charging_station"],
     0x2f02: ["amenity",  "car_rental"],
     0x2f021: ["amenity",  "bicycle_rental"],
     0x2f022: ["amenity",  "car_rental"],
@@ -834,7 +987,7 @@ poi_types = {
     0x5f00: ["natural",  "scree"],
     0x5e00: ["highway", "elevator"],
     0x6100: ["military", "bunker", "building", "bunker", "amenity", "shelter"],
-    0x6101: ["building", "industrial"],
+    0x6101: ["historic", "ruins"],
     0x6200: ["depth",    "_name"],
     0x6300: ["ele",      "_name"],
     0x6400: ["historic", "monument", "note", "FIXME"],
@@ -864,7 +1017,7 @@ poi_types = {
     0x6413: ["tunnel",   "yes", "layer", "-1"],
     0x64135: ["natural",  "cave_entrance"],
     0x6414: ["amenity",  "drinking_water"],
-    0x6415: ["historic", "ruins", "building", "fortress"],
+    0x6415: ["historic", "fort", "building", "fortress"],
     0x64155: ["historic", "ruins", "building", "bunker"],
     0x6416: ["tourism",  "hotel"],
     0x6500: ["waterway", "other"],
@@ -1015,89 +1168,12 @@ turn_lanes = {
 }
 
 
-class MylistB(object):
 
-    def __init__(self):
-        self.k = {}
-        self.v = [] #
-
-    def __len__(self):
-        return len(self.k)
-
-    def __getitem__(self, key):
-        return self.v[key] #
-        for k in self.k:
-            if self.k[k] == key:
-                return k
-
-    def index(self, value):
-        return self.k[value]
-
-    def __setitem__(self, key, value): #
-        if key in self.v: #
-            del self.k[self.v[key]] #
-        self.k[value] = key #
-        self.v[key] = value #
-
-    def __contains__(self, value):
-        return value in self.k
-
-    def append(self, value):
-        self.v.append(value) #
-        self.k[value] = len(self.k)
-
-    def __iter__(self):
-        return self.v.__iter__() #
-        return self.k.__iter__()
-
-
-class Mylist(object):
-
-    def __init__(self, borders, base):
-        self.k = {}
-        self.v = []
-        self.b = base
-        self.borders = borders
-
-    def __len__(self):  # OK
-        return len(self.v) + self.b 
-
-    def __getitem__(self, key):  # OK
-        if key < len(self.borders):
-            return self.borders[key]
-        return self.v[key - self.b]
-
-    def index(self, value):          # OK
-        if value in self.borders:
-            return self.borders.index(value)
-        return self.k[value]
-
-    def __setitem__(self, key, value):  #
-        raise ParsingError('Hej hej')
-        if key in v:  #
-            del self.k[self.v[key]]  #
-        self.k[value] = key  #
-        self.v[key] = value  #
-
-    def __contains__(self, value):    # OK
-        if value in self.borders:
-            return  True
-        return value in self.k
-
-    def append(self, value):          # OK
-        self.v.append(value)
-        self.k[value] = len(self.v)+self.b-1
-
-    def __iter__(self):               # OK
-        # return self.v.__iter__() #
-        return self.k.__iter__()
         
 # Lines with a # above can be removed to save half of the memory used
 # (but some look-ups will be slower)
 # k zawiera slownik {[lat,lon]->poz,....} ; mapowanie (lat,lon)->id
 # v zawiera tablice { [lat,lon], [lat,lon],....}  mapowanie id->(lat,lon)
-
-
 bpoints = MylistB()
 
 points = list()
@@ -1117,41 +1193,10 @@ streets_counter = {}
 # borders_resize = 1
 # nominatim_build = 0
 extra_tags = " version='1' changeset='1' "
+idpfx = ""
+maxid = 0
 
-
-class Features(object):  # fake enum
-    poi, polyline, polygon, ignore = range(4)
-
-
-class ParsingError(Exception):
-    pass
-
-
-class ProgressBar(object):
-    def __init__(self, options, pb_name, num_lines_to_process):
-        self.nltp = num_lines_to_process
-        self.pb_name = pb_name
-        self.progress_bar_queue = None
-        if hasattr(options, 'progress_bar_queue'):
-            self.progress_bar_queue = options.progress_bar_queue
-        self.vals_to_increase_pbar = set([a for a in range(1, num_lines_to_process)
-                                          if a % int(num_lines_to_process/100) == 0])
-
-    def set_val(self, _line_num):
-        if self.progress_bar_queue is not None and _line_num in self.vals_to_increase_pbar:
-            self.progress_bar_queue.put((self.pb_name, 'curr', _line_num))
-        return
-
-    def start(self):
-        if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'max', self.nltp))
-        return
-
-    def set_done(self):
-        if self.progress_bar_queue is not None:
-            self.progress_bar_queue.put((self.pb_name, 'done', self.nltp))
-        return
-
+glob_progress_bar_queue = None
 
 def printdebug(string, options):
     global working_thread
@@ -1480,14 +1525,14 @@ def prepare_line(nodes_str, closed):
         element = element.strip('()')
         nodes.append(element)
 
-#  lats = nodes[::2]
-#  longs = nodes[1::2]
+    #  lats = nodes[::2]
+    #  longs = nodes[1::2]
 
     lats = []
     longs = []
 
     for la in nodes[::2]:
-        l=len(la)
+        l = len(la)
         if l < 9:
             la += '0' * (9 - l)
         lats.append(la)
@@ -1665,7 +1710,7 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError('HLevel0 used on a polygon')
         curlevel = 0
         curnode = 0
-        list = []
+        level_list = []
         for level in value.split(')'):
             if level == "":
                 break
@@ -1673,11 +1718,11 @@ def convert_tag(way, key, value, feat, options):
             start = int(pair[0], 0)
             level = int(pair[1], 0)
             if start > curnode and level != curlevel:
-                list.append((curnode, start, curlevel))
+                level_list.append((curnode, start, curlevel))
                 curnode = start
             curlevel = level
-        list.append((curnode, -1, curlevel))
-        way['_levels'] = list
+        level_list.append((curnode, -1, curlevel))
+        way['_levels'] = level_list
     elif key == 'Szlak':
         ref = []
         for colour in value.split(','):
@@ -1811,7 +1856,8 @@ def convert_tag(way, key, value, feat, options):
     elif key.startswith('Nod'):
         # lets omit routing params for maps with routing data
         pass
-    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):  # WebPage jest tagiem dla budynkow, ignorujemy na chwile obecna
+    # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
+    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
         pass
     else:
         if options.ignore_errors:
@@ -1822,16 +1868,14 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_txt(infile, options, num_lines_to_process=0):
-    progress_bar = ProgressBar(options, 'mp', num_lines_to_process)
-    progress_bar.start()
+def parse_txt(infile, options, filename='', progress_bar=None):
     polyline = None
     feat = None
     comment = None
     linenum = 0
     for line in infile:
         linenum += 1
-        progress_bar.set_val(linenum)
+        progress_bar.set_val(linenum, 'mp')
         line = line.strip()
         if line == "[POLYLINE]":
             polyline = {}
@@ -1907,12 +1951,10 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 elif 'alt_name' in way and cut_prefix(way['alt_name']) != way['alt_name']:
                     way['short_name'] = cut_prefix(way['alt_name'])
 
-
                 # nie pchajmy rowerow przez '{schody}'
                 if 'ump:type' in way and (way['ump:type'] == "0x16") and ('name' in way) and \
                         (way['name'].find('schody') > -1):
                     way['highway'] = "steps"
-
 
             if comment is not None:
                 # way['note'] = comment
@@ -1987,8 +2029,8 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 if not way.pop('_c'):
                     way['_out'] = 1
             else:
-                # way['_in_ways_position'] = len(ways)
                 ways.append(way)
+
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
             # rule picks up something interesting, e.g. a polyline
@@ -2018,46 +2060,74 @@ def parse_txt(infile, options, num_lines_to_process=0):
                 comment = strn
         elif line != '':
             raise ParsingError('Unhandled line ' + line)
-    progress_bar.set_done()
 
 
-class NodesToWayNotFound(ValueError):
-    """
-    Raised when way of two nodes can not be found
-    """
-    def __init__(self, node_a, node_b):
-        self.node_a = node_a
-        self.node_b = node_b
+def create_node_ways_relation(all_ways):
+    tmp_node_ways_rel = defaultdict(set)
+    tmp_node_ways_rel_multipolygon = defaultdict(set)
+    for way_no, way in enumerate(all_ways):
+        if way is None:
+            continue
+        if 'ump:type' in way and int(way['ump:type'], 16) <= 0x16 and int(way['ump:type'], 0) in pline_types and \
+                pline_types[int(way['ump:type'], 0)][0] in way:
+            for node in way["_nodes"]:
+                tmp_node_ways_rel[node].add(way_no)
+        if '_innernodes' in way and '_join' not in way:
+            for node in way["_nodes"]:
+                tmp_node_ways_rel_multipolygon[node].add(way_no)
+    # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
+    # comprehension
+    return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}, \
+           {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
 
-    def __str__(self):
-        return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
+def nodes_to_way_id(a, b, node_ways_relation=None):
+    if a not in node_ways_relation or b not in node_ways_relation:
+        raise NodesToWayNotFound(a, b)
+    ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
+    ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
+    way_ids = ways_a.intersection(ways_b)
+    if len(way_ids) == 1:
+        return tuple(way_ids)[0]
+    elif len(way_ids) > 1:
+        printerror("DEBUG: multiple roads found for restriction. Using only one")
+        for way_id in way_ids:
+            printerror(str(ways[way_id]))
+            printerror(str([points[node] for node in ways[way_id]['_nodes']]))
+        return tuple(way_ids)[0]
+    else:
+        printerror("DEBUG: no roads found for restriction.")
+        printerror(','.join(points[a]) + ' ' + ','.join(points[b]))
+        printerror(str(node_ways_relation[a]))
+        printerror(str(node_ways_relation[b]))
+        for way in ways:
+            if way is None:
+                continue
+            way_nodes = way['_nodes']
+            if a in way_nodes:
+                printerror("DEBUG: node a: %r found in way: %r" % (a, way))
+            if b in way_nodes:
+                printerror("DEBUG: node b: %r found in way: %r" % (b, way))
+        raise NodesToWayNotFound(a, b)
+    return None
 
 
-def nodes_to_way(a, b):
-    for way in ways:
-        # print("DEBUG: way['_nodes']: %r" % (way['_nodes'],)
-        if a in way['_nodes'] and b in way['_nodes']:
-            if 'ump:type' in way:
-                if int(way['ump:type'], 16) <= 0x16:
-                    # Szukamy tylko wsrod drog
-                    # Hopefully there's only one
-                    return way
-#                else:
-#                    printerror("DEBUG: nodes_to_way: %r\n" % (way,))
-#            else:
-#                printerror("DEBUG: nodes_to_way: %r\n" % (way,))
+def nodes_to_way(a, b, node_ways_relation=None):
+    return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation)]
 
-    raise NodesToWayNotFound(a, b)
 
-    for way in ways:
-        way_nodes = way['_nodes']
-        if a in way_nodes:
-            printerror("DEBUG: node a: %r found in way: %r" % (a, way))
-        if b in way_nodes:
-            printerror("DEBUG: node b: %r found in way: %r" % (b, way))
-
-    # print "DEBUG: no way nodes: a: %r b: %r" % (a, b)
-    raise NodesToWayNotFound(a, b)
+def way_to_way_id(way, node_ways_relation=None):
+    if node_ways_relation is None:
+        return None
+    way_id_set = set()
+    for num, node in enumerate(way['_nodes']):
+        if num == 0:
+            way_id_set = node_ways_relation[node]
+        else:
+            way_id_set.intersection(node_ways_relation[node])
+        if len(way_id_set) == 1:
+            return tuple(way_id_set)[0]
+    return None
 
 
 def distKM(lat0, lon0, lat1, lon1):
@@ -2075,21 +2145,43 @@ def signbit(x):
         return -1
 
 
-def next_node(pivot, dir):
-    way = nodes_to_way(dir, pivot)['_nodes']
-    pivotidx = way.index(pivot)
-    return way[pivotidx + signbit(way.index(dir) - pivotidx)]
+def next_node(pivot=None, direction=None, node_ways_relation=None):
+    """
+    return either next or previous node relative to the pivot point. In some cases does not do anythnig as the next
+    point is the only one
+    :param pivot: the node that is our reference
+    :param direction: in which direction we are looking, according or against nodes order
+    :return: one node of given road
+    """
+    way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation)['_nodes']
+    pivotidx = way_nodes.index(pivot)
+    return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
-def split_way(way, node):
+def split_way(way=None, splitting_point=None, node_ways_relation=None):
+    global ways
     l = len(way['_nodes'])
-    i = way['_nodes'].index(node)
+    i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
         return
+    # tu mozna by jesze przyspieszyc bo index dla listy jest wolny, ale z drugiej strony zakazow nie jest az tak duzo
+    # trzeba by pomyslec ewentualnie
+    way_id = way_to_way_id(way, node_ways_relation)
+    if way_id is None:
+        way_id = ways.index(way)
+    for way_node in way['_nodes']:
+        node_ways_relation[way_node].discard(way_id)
     newway = way.copy()
-    ways.append(newway)
     newway['_nodes'] = way['_nodes'][:i + 1]
     way['_nodes'] = way['_nodes'][i:]
+    # lets add way nodes to the node_ways_relation
+    for way_node in way['_nodes']:
+        node_ways_relation[way_node].add(way_id)
+    ways.append(newway)
+    newway_id = len(ways) - 1
+    # lets add newway nodes to the node_ways_relation
+    for way_node in newway['_nodes']:
+        node_ways_relation[way_node].add(newway_id)
 
 
 def name_turn_restriction(rel, nodes):
@@ -2114,26 +2206,46 @@ def name_turn_restriction(rel, nodes):
         rel['restriction'] = 'no_u_turn'    
     
 
-def preprepare_restriction(rel):
-    rel['_nodes'][0] = next_node(rel['_nodes'][1], rel['_nodes'][0])
-    rel['_nodes'][-1] = next_node(rel['_nodes'][-2], rel['_nodes'][-1])
-            
+def preprepare_restriction(rel, node_ways_relation=None):
+    """
+    modification of relation nodes so, that it starts and ends one node after and one node before central point
+    called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
+    :param rel: relaton
+    :return: None, id modifies nodes by reference
+    """
+    new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
+                                   node_ways_relation=node_ways_relation)
+    new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1],
+                                  node_ways_relation=node_ways_relation)
+    rel['_nodes'][0] = new_rel_node_first
+    rel['_nodes'][-1] = new_rel_node_last
 
-def prepare_restriction(rel):
+
+def prepare_restriction(rel, node_ways_relation=None):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
-    split_way(nodes_to_way(fromnode, fromvia), fromvia)
-    split_way(nodes_to_way(tonode, tovia), tovia)
+    # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
+    split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation), splitting_point=fromvia,
+              node_ways_relation=node_ways_relation)
+    split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation), splitting_point=tovia,
+              node_ways_relation=node_ways_relation)
 
 
-def make_restriction_fromviato(rel):
+def return_roadid_in_ways(way, road_to_road_id=None):
+    return road_to_road_id[id(way)]
+
+def make_restriction_fromviato(rel, node_ways_relation=None):
     nodes = rel.pop('_nodes')
+    # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
+    # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
+    from_way_index = nodes_to_way_id(nodes[0], nodes[1], node_ways_relation=node_ways_relation)
+    to_way_index = nodes_to_way_id(nodes[-2], nodes[-1], node_ways_relation=node_ways_relation)
     rel['_members'] = {
-        'from': ('way', [ways.index(nodes_to_way(nodes[0], nodes[1]))]),
+        'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
-        'to':   ('way', [ways.index(nodes_to_way(nodes[-2], nodes[-1]))]),
+        'to':   ('way', [to_way_index]),
     }
 
     rel['_c'] = ways[rel['_members']['from'][1][0]]['_c'] + ways[rel['_members']['to'][1][0]]['_c']
@@ -2144,14 +2256,21 @@ def make_restriction_fromviato(rel):
     return nodes
 
 
-def make_multipolygon(outer, holes):
+def make_multipolygon(outer, holes, node_ways_relation=None):
+    if node_ways_relation is None:
+        outer_index = ways.index(outer)
+    else:
+        outer_index = way_to_way_id(outer, node_ways_relation)
+    if outer_index is None:
+        outer_index = ways.index(outer)
     rel = {
         '_timestamp': filestamp,
         'type':     'multipolygon',
         'note':     'FIXME: fix roles manually',
         '_c':       outer['_c'],
         '_members': {
-            'outer': ('way', [ways.index(outer)]),
+            # 'outer': ('way', [ways.index(outer)]),
+            'outer': ('way', [outer_index]),
             'inner': ('way', []),
         },
     }
@@ -2163,7 +2282,8 @@ def make_multipolygon(outer, holes):
             '_nodes': inner,
         }
         ways.append(way)
-        rel['_members']['inner'][1].append(ways.index(way))
+        # rel['_members']['inner'][1].append(ways.index(way))
+        rel['_members']['inner'][1].append(len(ways) - 1)
         polygon_make_ccw(way)
 
         # Assume that the polygon with most nodes is the outer shape and
@@ -2232,6 +2352,8 @@ def print_point(point, index, ostr):
     ostr.write("</node>\n")
 
 def print_way(way, index, ostr):
+    if way is None:
+        return
     global maxid
     global idpfx
 
@@ -2314,24 +2436,31 @@ def print_relation(rel, index, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options):
+def post_load_processing(options, filename='', progress_bar = None):
     global relations
     global maxtypes
+    global ways
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
-    pb_name = 'drp'
-    relations = [rel for rel in ways if '_rel' in rel]
-    levelledways = [way for way in ways if '_levels' in way]
+    # relations = [rel for rel in ways if '_rel' in rel]
+    # relations = OrderedDict({rel_no: ways[rel_no] for rel_no in range(len(ways)) if '_rel' in ways[rel_no]})
+    # levelledways = [way for way in ways if '_levels' in way]
+    relations = OrderedDict()
+    levelledways = OrderedDict()
+    for way_no, way in enumerate(ways):
+        if '_rel' in way:
+            relations[way_no] = way
+        elif '_levels' in ways[way_no]:
+            levelledways[way_no] = way
+
     num_lines_to_process = 4 * len(ways) + 4 * len(relations) + len(pointattrs) + len(levelledways)
     _line_num = 0
-    progress_bar = ProgressBar(options, 'drp', num_lines_to_process)
-    progress_bar.start()
-    start = time.time()
-    print('przetwarzanie rond')
+    progress_bar.start(num_lines_to_process, 'drp')
+    # processing roundabouts
     for way in ways:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if 'junction' in way and way['junction'] == 'roundabout':
             maxtype = 0x7  # service
             for i in way['_nodes']:
@@ -2341,7 +2470,6 @@ def post_load_processing(options):
             if 'oneway' in way:
                 del way['oneway']
             # TODO make sure nodes are ordered counter-clockwise
-    print('przetwarzanie rond koniec', _line_num, num_lines_to_process, str(time.time() - start))
 
     # Relations:
     # find them, remove from /ways/ and move to /relations/
@@ -2350,40 +2478,38 @@ def post_load_processing(options):
     # at the "via" node as required by
     # http://wiki.openstreetmap.org/wiki/Relation:restriction
 
-    start = time.time()
-    print('Przetwarzanie relacji usuwanie _rel - ilosc %s' % str(len(relations)))
-    for rel in relations:
+    for way_id, rel in relations.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         rel['type'] = rel.pop('_rel')
-        ways.remove(rel)
+        ways[way_id] = None
         rel['_timestamp'] = filestamp
-    print('Przetwarzanie relacji usuwanie _rel koniec', _line_num, num_lines_to_process, str(time.time() - start))
-    start = time.time()
-    print('Przetwarzanie relacji: przygotowanie restrykcji')
-    for rel in relations:
+
+    node_ways_relation, node_multipolygon_relation = create_node_ways_relation(ways)
+
+    # move start and end nodes of restriction to the next/before node to via
+    for way_id, rel in relations.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                preprepare_restriction(rel)
+                preprepare_restriction(rel, node_ways_relation=node_ways_relation)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-    print('Przetwarzanie relacji: przygotowanie restrykcji koniec', _line_num, num_lines_to_process, str(time.time() - start))
-
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
-    start = time.time()
-    print('Przygotowanie levelledways')
-    for way in levelledways:
+    for way_id, way in levelledways.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
-        ways.remove(way)
+        progress_bar.set_val(_line_num, 'drp')
         if '_levels' in way:
+            ways[way_id] = None
+            if 'highway' in way and 'ump:type' in way and int(way['ump:type'], 16) <= 0x16:
+                for node in way['_nodes']:
+                    node_ways_relation[node].discard(way_id)
             nodes = way['_nodes']
-            levels = way.pop('_levels')
-            for segment in levels:
+            # levels = way.pop('_levels')
+            for segment in way.pop('_levels'):
                 subway = way.copy()
                 if segment[1] == -1:
                     subway['_nodes'] = nodes[segment[0]:]
@@ -2396,12 +2522,18 @@ def post_load_processing(options):
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
                 ways.append(subway)
-    print('Przygotowanie levelledways koniec', _line_num, num_lines_to_process, str(time.time() - start))
-    start = time.time()
-    print('innernodes')
+                if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
+                    new_way_id = len(ways) - 1
+                    for node in ways[-1]['_nodes']:
+                        node_ways_relation[node].add(new_way_id)
+
+    # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
+    relations = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        if way is None:
+            continue
+        progress_bar.set_val(_line_num, 'drp')
         if '_innernodes' in way:
             if '_join' in way:
                 del way['_join']
@@ -2410,51 +2542,50 @@ def post_load_processing(options):
                     subway['_nodes'] = segment
                     ways.append(subway)
             else:
-                relations.append(make_multipolygon(way, way.pop('_innernodes')))
-    print('innernodes koniec', _line_num, num_lines_to_process, time.time() - start)
-    start = time.time()
-    print('prepare restriction')
+                relations.append(make_multipolygon(way, way.pop('_innernodes'),
+                                                   node_ways_relation=node_multipolygon_relation))
+
+    # for each relation/restriction split ways at via points as the "from" and "to" members must start/end at the
+    # Role via node or the Role via way(s)
     for rel in relations:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                prepare_restriction(rel)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-    print('prepare restriction koniec', _line_num, num_lines_to_process, str(time.time() - start))
-    start = time.time()
-    print('make_restriction_fromviato')
+
+    # theoretically here we could do
+    # ways = [a for a in ways if a is not None]
     for rel in relations:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                rnodes = make_restriction_fromviato(rel)
-
+                rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation)
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to " +
                             "preprepare restriction from rel: %r\n" % (rel,))
-    print('make_restriction_fromviatokoniec', _line_num, num_lines_to_process, str(time.time()- start))
+
+
     # Quirks, but do not overwrite specific values
-    start = time.time()
-    print('maxspeed dla motorway i highway')
     for way in ways:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        if way is None:
+            continue
+        progress_bar.set_val(_line_num, 'drp')
         if 'highway' in way and 'maxspeed' not in way:
             if way['highway'] == 'motorway':
                 way['maxspeed'] = '140'
             if way['highway'] == 'trunk':
                 way['maxspeed'] = '120'
-    print('maxspeed dla motorway i highway koniec', _line_num, num_lines_to_process, str(time.time() - start))
-    start = time.time()
-    print('pointattrs')
+
     for index, point in pointattrs.items():
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        progress_bar.set_val(_line_num, 'drp')
         if 'shop' in point and point['shop'] == 'fixme':
             for way in ways:
                 if index in way['_nodes'] and 'highway' in way:
@@ -2477,27 +2608,24 @@ def post_load_processing(options):
                     point['maxspeed'] = spd.strip()
                     point['newname'] = n1.strip()
 
-    print('pointattrs koniec', _line_num, num_lines_to_process, str(time.time()- start))
-    start = time.time()
-    print('usuwanie _out z pointattrs')
     for way in ways:
         _line_num += 1
-        progress_bar.set_val(_line_num)
+        if way is None:
+            continue
+        progress_bar.set_val(_line_num, 'drp')
         if way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
-    print('usuwanie _out z pointattrs', _line_num, num_lines_to_process, str(time.time() - start))
-    progress_bar.set_done()
 
-            
+
 def output_normal(prefix, num, options):
     global maxid
     global idpfx
 
     try:
         f = prefix + ".normal." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
@@ -2524,7 +2652,7 @@ def output_nonumbers(prefix, num):
 
     try:
         f = prefix + ".nonumbers." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open nonumbers output file " + f + "!\n")
         sys.exit()
@@ -2552,7 +2680,7 @@ def output_navit(prefix, num):
 
     try:
         f = prefix + ".navit." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open Navit output file " + f + "!\n")
         sys.exit()
@@ -2562,6 +2690,8 @@ def output_navit(prefix, num):
         print_point(point, index, out)
 
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         newway = way.copy()
         if ('natural' in newway) and (newway['natural'] == 'coastline'):
             newway['natural'] = 'water'
@@ -2579,7 +2709,7 @@ def output_index(prefix, num, options):
 
     try:
         f = prefix + ".index." + str(num) + ".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open index output file " + f + "!\n")
         sys.exit()
@@ -2618,6 +2748,8 @@ def output_index(prefix, num, options):
 
     # dla ulic bez nazwy (wyciete {}) uzupelniamy z loc_name lub podobnych
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         if (not ('is_in' in way)): 
             continue
 
@@ -2677,7 +2809,7 @@ def output_nominatim(prefix, num, options):
     #
     #    zbieramy info o wszytskich miastach
     for point in points:
-        index=points.index(point)
+        index = points.index(point)
         if 'place' in pointattrs[index] and 'name' in pointattrs[index] :
             n = pointattrs[index]['name']
             p = pointattrs[index]['place']
@@ -2700,6 +2832,8 @@ def output_nominatim(prefix, num, options):
     printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
     # teraz skan wszystkich ulic
     for way in ways:
+        if way is None:
+            continue
         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
             if way['highway' ] == 'trunk' or way['highway'] == 'primary' or way['highway'] == 'secondary' or \
                     way['highway'] == 'motorway':
@@ -2729,6 +2863,8 @@ def output_nominatim(prefix, num, options):
                 # else:
                 #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
     for way in ways:
+        if way is None:
+            continue
         if 'is_in' in way and 'name' in way and 'highway' in way:
             try:
                 towns = way['is_in'].split(";")
@@ -2783,6 +2919,8 @@ def output_nominatim(prefix, num, options):
     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
     # jesli zostaje pusta nazwa, podmien
     for way in ways:
+        if way is None:
+            continue
         p = re.compile( '\{.*\}')                        # dowolny string otoczony klamrami
         if 'alt_name' in way:
             tmpname = way['alt_name']
@@ -2812,7 +2950,7 @@ def output_nominatim(prefix, num, options):
 
     try:
         f=prefix+".nominatim."+str(num)+".osm"
-        out = open(f, "w")
+        out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open nominatim output file " + f + "!\n")
         sys.exit()
@@ -2822,6 +2960,8 @@ def output_nominatim(prefix, num, options):
         print_point(point, index, out)
 
     for index, way in enumerate(ways):
+        if way is None:
+            continue
         # pomijamy szlaki dla nominatima ("ref" nie wystepuje dla zwyklych tras rowerowych czy chodnikow)
         if ('ref' in way) and ('highway' in way):
             if (way['highway'] == 'cycleway' ) or (way['highway'] == 'path') or (way['highway'] == 'footway'):
@@ -2864,6 +3004,7 @@ def worker(task, options):
     global filestamp
     global maxid
     global idpfx
+    global glob_progress_bar_queue
     
     pointattrs = defaultdict(dict)
     ways = list()
@@ -2878,13 +3019,17 @@ def worker(task, options):
     working_thread = str(os.getpid())
     workid = task['idx']
     maxid = 0
+    num_lines_to_process = 0
         
     try:
         if sys.platform.startswith('linux'):
-            file_encoding = 'latin2'
+            file_encoding = 'cp1250'
         else:
             file_encoding = 'cp1250'
         infile = open(task['file'], "r", encoding=file_encoding)
+        num_lines_to_process = len(infile.readlines())
+        infile.seek(0)
+
     except IOError:
         printerror("Can't open file " + task['file'])
         sys.exit()
@@ -2896,9 +3041,13 @@ def worker(task, options):
     except:
         filestamp = runstamp
 
-    parse_txt(infile, options, num_lines_to_process=task['num_lines_to_process'])
+    progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
+    progress_bar.start(num_lines_to_process, 'mp')
+    parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
+    progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(options)
+    post_load_processing(options, task['file'], progress_bar=progress_bar)
+    progress_bar.set_done('drp')
     
     # print "bpoints="+str(len(bpoints))
     # print "points="+str(len(points)-idperarea*task['idx'])
@@ -2934,17 +3083,41 @@ def worker(task, options):
     return task['ids']
 
 
+def write_output_files(dest_filename='', headerf='', file2_core='', normalize_ids=False, worklist=[]):
+    elapsed = datetime.now().replace(microsecond=0)
+    destination = open(dest_filename, 'w', encoding="utf-8")
+    shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
+    for workelem in worklist:
+        file2 = 'UMP-PL.' + file2_core + '.' + str(workelem['idx']) + ".osm"
+        if normalize_ids:
+            parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
+                      - idperarea * workelem['idx'])
+        else:
+            shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
+        os.remove(file2)
+    destination.write("</osm>\n")
+    destination.close()
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
+    sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
+    return
+
 def main(options, args):
     if len(args) < 1:
         parser.print_help()
         sys.exit()
-
+    global glob_progress_bar_queue
     global runstamp
     global borderstamp
+    if hasattr(options, 'progress_bar_queue'):
+        glob_progress_bar_queue = options.progress_bar_queue
+    else:
+        glob_progress_bar_queue = None
+
+    sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
-    sys.stderr.write("INFO: txt2osmMP.py ver:" + __version__ +" ran at " + runstamp + "\n")
+    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ +" ran at " + runstamp + "\n")
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -2970,19 +3143,22 @@ def main(options, args):
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
 
 
-        
     if options.borders_file != None or len(args) == 1:
 
         if options.borders_file != None:
 
             #  parsowanie po nowemu. Najpierw plik granic a potem pliki po kolei.
+            if options.borders_file.startswith('~'):
+                border_filename = os.path.expanduser(options.borders_file)
+            else:
+                border_filename = os.path.abspath(options.borders_file)
             elapsed = datetime.now().replace(microsecond=0)
             try:
-                borderf = open(options.borders_file, "r")
+                borderf = open(border_filename, "r", encoding='cp1250')
             except IOError:
-                sys.stderr.write("\tERROR: Can't open border input file " + options.borders_file + "!\n")
+                sys.stderr.write("\tERROR: Can't open border input file " + border_filename + "!\n")
                 sys.exit()
-            borderstamp = datetime.fromtimestamp(os.path.getmtime(options.borders_file)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
             try:
                 borderstamp
             except:
@@ -3003,7 +3179,6 @@ def main(options, args):
 
         worklist=[]
         elapsed = datetime.now().replace(microsecond=0)
-        num_lines_to_process = 0
         for n, f in enumerate(args):
             try:
                 if sys.platform.startswith('linux'):
@@ -3011,23 +3186,29 @@ def main(options, args):
                 else:
                     file_encoding = 'cp1250'
                 infile = open(f, "r", encoding=file_encoding)
-                num_lines_to_process += len(infile.readlines())
             except IOError:
                 sys.stderr.write("\tERROR: Can't open file " + f + "!\n")
                 sys.exit()
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
-            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'num_lines_to_process': num_lines_to_process}
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
             worklist.append(workelem)
-            if hasattr(options, 'progress_bar_queue'):
-                options.progress_bar_queue.put(('mp', 'max', num_lines_to_process))
         if options.threadnum == 1:
             for workelem in worklist:                
                 result = worker(workelem, options)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
-        else:   
-            pool = Pool(processes=options.threadnum)
-            result = pool.map(worker, worklist, options)
+        else:
+            copy_options = copy.copy(options)
+            if hasattr(copy_options, 'stdoutqueue'):
+                copy_options.stdoutqueue = None
+            if hasattr(copy_options, 'stderrqueue'):
+                copy_options.stderrqueue = None
+            if hasattr(copy_options, 'progress_bar_queue'):
+                copy_options.progress_bar_queue = None
+            # print(vars(copy_options)
+            pool = Pool(processes=copy_options.threadnum)
+            # result = pool.map(worker, worklist, options)
+            result = pool.map(partial(worker, options=copy_options), worklist)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
@@ -3048,12 +3229,12 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0)
         headerf = "UMP-PL.header.osm"
         try:
-            out = open(headerf, "w")
+            out = open(headerf, "w", encoding="utf-8")
         except IOError:
             printerror("\nCan't create header file " + headerf + "!")
             sys.exit()
         out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
-        out.write("<osm version='0.6' generator='txt2osm %s converter for UMP-PL'>\n" % __version__)
+        out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
         maxid = 0
         idpfx = ""
         if options.borders_file != None:
@@ -3068,45 +3249,19 @@ def main(options, args):
 
         if options.nominatim_file != None:
             printinfo_nlf("Nominatim output... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.nominatim_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.nominatim." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r'), destination)
-                    os.remove(file2)
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.nominatim_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.nominatim_file, headerf=headerf, file2_core="nominatim",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
                 sys.exit()            
 
         if options.navit_file != None:
             printinfo_nlf("Navit output... ")
-            elapsed = datetime.now().replace(microsecond=0)
+            # elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.navit_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.navit." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2, 'r'), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.navit_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.navit_file, headerf=headerf, file2_core="navit",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Navit output failed!\n")
                 sys.exit()
@@ -3114,23 +3269,9 @@ def main(options, args):
         
         if options.index_file != None:
             printinfo_nlf("OsmAnd index... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.index_file,'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
-                for workelem in worklist:
-                    file2 = "UMP-PL.index." + str(workelem['idx']) + ".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'],
-                                  workelem['baseid'] - idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2,'r'), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.index_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.index_file, headerf=headerf, file2_core="index",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: Index output failed!\n")
                 sys.exit()                        
@@ -3138,64 +3279,31 @@ def main(options, args):
         
         if options.nonumber_file != None:
             printinfo_nlf("NoNumber output... ")
-            elapsed = datetime.now().replace(microsecond=0)
             try:
-                destination = open(options.nonumber_file, 'w')
-                shutil.copyfileobj(open(headerf, 'r'), destination)
-                for workelem in worklist:
-                    file2="UMP-PL.nonumbers."+str(workelem['idx'])+".osm"
-                    if options.normalize_ids:
-                        parsecopy(open(file2, 'r'), destination, workelem['idx'], workelem['baseid'] -
-                                  idperarea*workelem['idx'])
-                    else:
-                        shutil.copyfileobj(open(file2,'r'), destination)
-                    os.remove(file2)
-                # print >>destination,("</osm>")
-                destination.write("</osm>\n")
-                destination.close()
-                elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write(options.nonumber_file+" ready (took " + str(elapsed) + ").\n")
+                write_output_files(dest_filename=options.nonumber_file, headerf=headerf, file2_core="nonumbers",
+                                   normalize_ids=options.normalize_ids, worklist=worklist)
             except IOError:
                 sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
                 sys.exit()
 
         printinfo_nlf("Normal output... ")
-        elapsed = datetime.now().replace(microsecond=0)
         try:
-            if options.outputfile:
-                shutil.copyfileobj(open(headerf, 'r'), open(options.outputfile, 'w'))
+            temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+            temp_file.close()
+            write_output_files(dest_filename=temp_file.name, headerf=headerf, file2_core="normal",
+                               normalize_ids=options.normalize_ids, worklist=worklist)
+            printinfo_nlf("Normal output copying to stdout or destination file ")
+            elapsed = datetime.now().replace(microsecond=0)
+            if options.outputfile is None:
+                shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
             else:
-                shutil.copyfileobj(open(headerf, 'r'), sys.stdout)
-            for workelem in worklist:
-                file2 = "UMP-PL.normal." + str(workelem['idx']) + ".osm"
-                if options.normalize_ids:
-                    if options.outputfile:
-                        dest_ = open(options.outputfile, 'a')
-                    else:
-                        dest_ = sys.stdout
-                    parsecopy(open(file2, 'r'), dest_, workelem['idx'],
-                              workelem['baseid'] - idperarea*workelem['idx'])
-                    if options.outputfile:
-                        dest_.close()
-                else:
-                    if options.outputfile:
-                        dest_ = open(options.outputfile, 'a')
-                    else:
-                        dest_ = sys.stdout
-                    shutil.copyfileobj(open(file2, 'r'), dest_)
-                    if options.outputfile:
-                        dest_.close()
-                os.remove(file2)
-            if options.outputfile:
-                dest_ = open(options.outputfile, 'a')
-                dest_.write('</osm>\n')
-                dest_.close()
-            else:
-                print("</osm>")
+                with open(options.outputfile, 'a', encoding="utf-8") as _dest:
+                    shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), _dest)
+            os.remove(temp_file.name)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
-            printinfo("txt2osmMP.py finished after " + str(elapsed) + ".\n")
+            printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
         except IOError:
             sys.stderr.write("\n\tERROR: Normal output failed!\n")
             sys.exit()

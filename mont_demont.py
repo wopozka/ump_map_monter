@@ -149,6 +149,8 @@ class TestyPoprawnosciDanych(object):
             '0xb',  # highway connector
             '0xc',  # roundabout
             '0xd',  # droga dla rowerow
+            '0xe',  # tunel
+            '0xf',  # 4x4
             '0x16',  # walkway]
             # '0x1a',  # ferry
             # '0x1b'  # water or rail ferry
