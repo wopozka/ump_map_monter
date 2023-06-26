@@ -2623,6 +2623,19 @@ def post_load_processing(options, filename='', progress_bar = None):
                     del pointattrs[node]['_out']
 
 
+def output_pickle(prefix, num):
+    try:
+        with open(prefix + ".normal." + str(num) + ".points.pickle", 'wb') as pickle_f:
+            pickle.dump(points, pickle_f)
+        with open(prefix + ".normal." + str(num) + ".ways.pickle", 'wb') as pickle_f:
+            pickle.dump(ways, pickle_f)
+        with open(prefix + ".normal." + str(num) + ".relations.pickle", 'wb') as pickle_f:
+            pickle.dump(relations, pickle_f)
+    except IOError:
+        sys.stderr.write("\tERROR: Can't write pickle files \n")
+        sys.exit()
+
+
 def output_normal(prefix, num, options):
     global maxid
     global idpfx
@@ -2646,13 +2659,6 @@ def output_normal(prefix, num, options):
 
     for index, rel in enumerate(relations):
         print_relation(rel, index, out)
-
-    with open(prefix + ".normal." + str(num) + ".pointpickle", 'wb') as pickle_f:
-        pickle.dump(points, pickle_f)
-    with open(prefix + ".normal." + str(num) + ".wayspickle", 'wb') as pickle_f:
-        pickle.dump(ways, pickle_f)
-    with open(prefix + ".normal." + str(num) + ".relspickle", 'wb') as pickle_f:
-        pickle.dump(relations, pickle_f)
 
     out.close()
 
