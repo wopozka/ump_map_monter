@@ -183,16 +183,18 @@ class ProgressBar(object):
 
 
 class NodeGeneralizator(object):
-    def __init__(self, test_mode=False):
+    def __init__(self):
         self.borders_point_last_id = 0
         self.points_las_id = 0
         self.ways_last_id = 0
+        self.border_points = list()
         self.t_table_nodes = list()
         self.t_table_ways = list()
         self.t_table_relations = list()
         self.last_val = 0
 
     def insert_borders(self, borders):
+        self.border_points = borders
         self.borders_point_last_id = len(borders) - 1
 
     def insert_node(self, node_val):
@@ -207,6 +209,8 @@ class NodeGeneralizator(object):
         self.t_table_relations.append(len(way_val))
 
     def get_node_id(self, task_id, orig_id):
+        if orig_id in self.border_points:
+            return orig_id
         new_id = 1
         for a in range(task_id - 1):
             new_id += self.t_table_nodes[a]
@@ -2398,6 +2402,38 @@ def print_point(point, index, ostr):
             sys.stderr.write("converting key " + key + ": " + str(pointattrs[index][key]) + " failed\n")
     ostr.write("</node>\n")
 
+
+def print_point_pickled(point_pointattrs, task_id, orig_id, node_generalizator, ostr):
+    point = point_pointattrs[0]
+    pointattrs = point_pointattrs[1]
+    if '_out' in pointattrs:
+        return
+    if '_timestamp' in pointattrs:
+        timestamp = pointattrs['_timestamp']
+    else:
+        sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs[index])
+        timestamp = runstamp
+    currid = node_generalizator.get_node_id(task_id, orig_id)
+    idstring = str(currid)
+    head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
+                    "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
+    # print >>ostr, (head)
+    ostr.write(head)
+    if '_src' in pointattrs:
+        src = pointattrs.pop('_src')
+    for key in pointattrs:
+        if key.startswith('_'):
+            continue
+        if len(str(pointattrs[key])) > 255:
+            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattrs[key]) + "\n")
+            continue
+        try:
+            ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattrs[key]))))
+        except:
+            sys.stderr.write("converting key " + key + ": " + str(pointattrs[key]) + " failed\n")
+    ostr.write("</node>\n")
+
+
 def print_way(way, index, ostr):
     if way is None:
         return
@@ -2422,6 +2458,36 @@ def print_way(way, index, ostr):
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
     for nindex in way['_nodes']:
         refstring = idpfx + str(index_to_nodeid(nindex))
+        ostr.write("\t<nd ref='%s' />\n" % refstring)
+
+    if '_src' in way:
+        src = way.pop('_src')
+    for key in way:
+        if key.startswith('_'):
+            continue
+        if len(str(way[key])) > 255:
+            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(way[key]) + "\n")
+            continue
+        ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
+    ostr.write("</way>\n")
+
+def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
+    if way is None:
+        return
+    if '_c' in way:
+        if way['_c'] <= 0:
+            return
+        way.pop('_c')
+    if '_timestamp' in way:
+        timestamp = way['_timestamp']
+    else:
+        sys.stderr.write("warning: no timestamp in way %r\n" % way)
+        timestamp = runstamp
+    currid = node_generalizator.get_way_id(task_id, orig_id)
+    idstring = str(currid)
+    ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
+    for nindex in way['_nodes']:
+        refstring = node_generalizator.get_node_id(task_id, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
     if '_src' in way:
@@ -2480,6 +2546,44 @@ def print_relation(rel, index, ostr):
         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
         # print >>ostr,("\t<tag k='source' v='%s' />" % (source))
     # print >>ostr,("</relation>")
+    ostr.write("</relation>\n")
+
+
+def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
+    """Prints a relation given by rel together with its ID to stdout as XML"""
+    if '_c' in rel:
+        if rel['_c'] <= 0:
+            return
+        rel.pop('_c')
+    if "_members" not in rel:
+        sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
+        return
+
+    if '_timestamp' in rel:
+        timestamp = rel['_timestamp']
+    else:
+        sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
+        timestamp = runstamp
+    currid = node_generalizator.get_relation_id(task_id, orig_id)
+    idstring = str(currid)
+    ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
+    for role, (type, members) in rel['_members'].items():
+        for member in members:
+            if type == "node":
+                id = node_generalizator.get_node_id(task_id, member)
+            elif type == "way":
+                id = node_generalizator.get_way_id(task_id, member)
+            else:
+                id = node_generalizator.get_relation_id(task_id, member)
+            refstring = str(id)
+            ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (type, refstring, role))
+
+    if '_src' in rel:
+        src = rel.pop('_src')
+    for key in rel:
+        if key.startswith('_'):
+            continue
+        ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
     ostr.write("</relation>\n")
 
 
@@ -2668,8 +2772,12 @@ def post_load_processing(options, filename='', progress_bar = None):
 
 def output_pickle(prefix, num):
     try:
-        with open(prefix + ".normal." + str(num) + ".pickle", 'wb') as pickle_f:
-            pickle.dump([points, ways, relations], pickle_f)
+        with open(prefix + ".normal." + str(num) + ".points_pickle", 'wb') as pickle_f:
+            pickle.dump([points, pointattrs], pickle_f)
+        with open(prefix + ".normal." + str(num) + ".ways_pickle", 'wb') as pickle_f:
+            pickle.dump(ways, pickle_f)
+        with open(prefix + ".normal." + str(num) + ".relations_pickle", 'wb') as pickle_f:
+            pickle.dump(relations, pickle_f)
     except IOError:
         sys.stderr.write("\tERROR: Can't write pickle files \n")
         sys.exit()
@@ -2698,6 +2806,20 @@ def output_normal(prefix, num, options):
 
     for index, rel in enumerate(relations):
         print_relation(rel, index, out)
+
+    out.close()
+
+def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
+    try:
+        f = prefix + ".normal." + str(num) + ".osm"
+        out = open(f, "w", encoding="utf-8")
+    except IOError:
+        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+        sys.exit()
+    for task_id, pickled_point in enumerate(pickled_filenames['points']):
+        with open(pickled_point, 'rb') as p_file:
+            for orig_id, _point in enumerate(pickle.load(p_file)):
+                print_point_pickled(_point, task_id, orig_id, node_generalizator, out)
 
     out.close()
 
@@ -3124,15 +3246,15 @@ def worker(task, options):
     output_pickle("UMP-PL", task['idx'])
 
 # ilosc id w obszarze. brak ostrzegania przy normalizacji
-    maxid = maxid - idperarea * task['idx']
-    warn = ""
-    if not options.normalize_ids:
-        if maxid > idperarea:
-            warn = " ERROR"
-        elif maxid >= 0.9 * idperarea:
-            warn = " WARNING"
-        else:
-            warn = ""
+#     maxid = maxid - idperarea * task['idx']
+#     warn = ""
+#     if not options.normalize_ids:
+#         if maxid > idperarea:
+#             warn = " ERROR"
+#         elif maxid >= 0.9 * idperarea:
+#             warn = " WARNING"
+#         else:
+#             warn = ""
     
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
     task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
@@ -3169,6 +3291,7 @@ def main(options, args):
     else:
         glob_progress_bar_queue = None
 
+    node_generalizator = NodeGeneralizator()
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
@@ -3222,6 +3345,7 @@ def main(options, args):
 
             parse_borders(borderf, options)
             borderf.close()
+            node_generalizator.insert_borders(bpoints)
             globalid = len(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("\tINFO: " + str(globalid) + " ids of border points (took " + str(elapsed) + ").\n")
@@ -3280,14 +3404,26 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
 
-        # wczytaj pliki piklowane
-        node_generalizator = NodeGeneralizator
-        pickled_data = OrderedDict()
+        # wczytaj pliki piklowane i stwórz poprawny node_generalizator
+        pickled_filenames = {'points': [], 'ways': [], 'relations': []}
         for work_no, workelem in enumerate(worklist):
-            pickled_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".pickle"
-            with open(pickled_filename, 'rb') as pickled_f:
-                pickled_data[work_no] = pickle.load(pickled_f)
-                node_generalizator.set_ofsets_(pickled_data[work_no])
+            pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
+            pickled_filenames['point'].append(pickled_nodes_filename)
+            pickled_ways_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".ways_pickle"
+            pickled_filenames['ways'].append(pickled_ways_filename )
+            pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
+            pickled_filenames['relations'].append(pickled_relations_filename)
+            with open(pickled_nodes_filename, 'rb') as pickled_f:
+                pickled_data = pickle.load(pickled_f)
+                node_generalizator.insert_node(pickled_data)
+            with open(pickled_ways_filename, 'rb') as pickled_f:
+                pickled_data = pickle.load(pickled_f)
+                node_generalizator.insert_way(pickled_data)
+            with open(pickled_relations_filename, 'rb') as pickled_f:
+                pickled_data = pickle.load(pickled_f)
+                node_generalizator.insert_relation(pickled_data)
+
+        # zapisywanie pikli w normalnym trybie
 
 
         # naglowek osm i punkty granic
