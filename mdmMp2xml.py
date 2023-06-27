@@ -2813,12 +2813,12 @@ def output_normal(prefix, num, options):
 
     out.close()
 
-def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
+
+def output_normal_pickled(pickled_filenames=None, node_generalizator=None, no_numbers=False, file_type='.normal.'):
     try:
-        prefix='UMP_PL-'
+        prefix = 'UMP_PL'
         num = 1
-        f = prefix + ".normal." + str(num) + ".osm"
-        print(f, file=sys.stderr)
+        f = prefix + file_type + str(num) + ".osm"
         out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
@@ -2830,6 +2830,8 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
             orig_id = -1
             for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
                 orig_id += 1
+                if no_numbers and 'NumberX' in _points_attr:
+                    continue
                 print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_way in enumerate(pickled_filenames['ways']):
@@ -2837,6 +2839,8 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
             orig_id = -1
             for _way in pickle.load(p_file):
                 orig_id += 1
+                if no_numbers and 'NumberX' in _way:
+                    continue
                 print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_relation in enumerate(pickled_filenames['relations']):
@@ -2849,32 +2853,9 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
     out.close()
 
 
-def output_nonumbers(prefix, num):
-    global maxid
-    global idpfx
-
-    try:
-        f = prefix + ".nonumbers." + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open nonumbers output file " + f + "!\n")
-        sys.exit()
-    
-    for point in points:
-        index = points.index(point)
-        if 'NumberX' in pointattrs[index]:
-            continue
-        print_point(point, index, out)
-
-    for index, way in enumerate(ways):
-        if ('NumberX' in way):
-            continue
-        print_way(way, index, out)
-
-    for index, rel in enumerate(relations):
-        print_relation(rel, index, out)
-    
-    out.close()
+def output_nonumbers_pickled(pickled_filenames=None, node_generalizator=None):
+    output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator, no_numbers=True,
+                          file_type='.nonumbers.')
 
 
 def output_navit(prefix, num):
@@ -2905,6 +2886,90 @@ def output_navit(prefix, num):
 
     out.close()
 
+
+def output_index_pickled(options, pickled_filenames=None, node_generalizator=None):
+    try:
+        prefix = 'UMP_PL'
+        num = 1
+        f = prefix + ".index." + str(num) + ".osm"
+        out = open(f, "w", encoding="utf-8")
+    except IOError:
+        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+        sys.exit()
+    for header_line in get_header():
+        out.write(header_line)
+    for task_id, pickled_point in enumerate(pickled_filenames['points']):
+        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
+            orig_id = -1
+            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
+                orig_id += 1
+                _pac = _points_attr.copy()
+                if options.regions and 'is_in:state' in _pac:
+                    if 'place' in _pac and _pac['place'] in {'city', 'town', 'village'}:
+                        _pac['name'] = ''.join((_pac['name'], " (", _pac['is_in:state'], ")"))
+                    if 'addr:city' in _pac:
+                        region = ''.join((" (", _pac['is_in:state'], ")"))
+                        cities = _pac['addr:city'].split(';')
+                        _pac['addr:city'] = cities.pop(0) + region
+                        for city in cities:
+                            _pac['addr:city'] += ";" + city + region
+                    if 'is_in' in _pac:
+                        region = ''.join((" (", _pac['is_in:state'], ")"))
+                        cities = _pac['is_in'].split(';')
+                        _pac['is_in'] = cities.pop(0) + region
+                        for city in cities:
+                            __pac['is_in'] += ";" + city + region
+
+                # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
+                if 'amenity' in _pac and _pac['amenity'] == 'atm':
+                    _pac['amenity_atm'] = 'atm'
+                print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
+
+        for task_id, pickled_way in enumerate(pickled_filenames['ways']):
+            with open(pickled_way, 'rb') as p_file:
+                orig_id = -1
+                for _way in pickle.load(p_file):
+                    orig_id += 1
+                    if _way is None or 'is_in' not in _way:
+                        continue
+                    newway = _way.copy()
+                    p = re.compile('\{.*\}')
+                    if 'alt_name' in newway:
+                        tmpname = newway['alt_name']
+                        if 'name' in newway:  # przechowanie nazwy z Label
+                            nname = p.sub("", newway['name'])
+                            newway['alt_name'] = str.strip(nname)
+                        else:
+                            newway.pop('alt_name')
+                        newway['name'] = tmpname
+                    else:
+                        if 'name' in newway:
+                            nname = p.sub("", newway['name'])
+                            newway['name'] = str.strip(nname)
+                            if not newway['name']:  # zastepowanie pustych name
+                                if 'loc_name' in newway:
+                                    newway['name'] = newway['loc_name']
+                                    newway.pop('loc_name')
+                                elif 'short_name' in newway:
+                                    newway['name'] = newway['short_name']
+
+                    if options.regions and 'is_in:state' in newway:
+                        if 'addr:city' in newway:
+                            region = ''.join((" (", newway['is_in:state'], ")"))
+                            cities = newway['addr:city'].split(';')
+                            newway['addr:city'] = cities.pop(0) + region
+                            for city in cities:
+                                newway['addr:city'] += ";" + city + region
+                        if 'is_in' in newway:
+                            region = ''.join((" (", newway['is_in:state'], ")"))
+                            cities = newway['is_in'].split(';')
+                            newway['is_in'] = cities.pop(0) + region
+                            for city in cities:
+                                newway['is_in'] += ";" + city + region
+
+                    print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+    out.write("</osm>\n")
+    out.close()
 
 def output_index(prefix, num, options):
     global maxid
@@ -3399,7 +3464,8 @@ def main(options, args):
                 node_generalizator.insert_relation(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
-        output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator)
+        output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator,
+                              no_numbers=False, file_type='.normal.')
 
 
         # naglowek osm i punkty granic
