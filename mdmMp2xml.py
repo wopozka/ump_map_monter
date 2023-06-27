@@ -3065,6 +3065,10 @@ def output_index(prefix, num, options):
     out.close()
 
 
+def output_nominatim_pickled(options, pickled_filenames=None, node_generalizator=None):
+    streets_counter = {}
+    printdebug("City=>Streets scan start: " + str(datetime.now()), options)
+
 def output_nominatim(prefix, num, options):
     global streets_counter
     global maxid
