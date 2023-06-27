@@ -2839,6 +2839,8 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None, no_nu
             orig_id = -1
             for _way in pickle.load(p_file):
                 orig_id += 1
+                if _way is None:
+                    continue
                 if no_numbers and 'NumberX' in _way:
                     continue
                 print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
@@ -3066,8 +3068,74 @@ def output_index(prefix, num, options):
 
 
 def output_nominatim_pickled(options, pickled_filenames=None, node_generalizator=None):
-    streets_counter = {}
+    streets_counter = defaultdict(list)
+    l_ways = list()
     printdebug("City=>Streets scan start: " + str(datetime.now()), options)
+
+    for task_id, pickled_point in enumerate(pickled_filenames['points']):
+        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
+            orig_id = -1
+            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
+                orig_id += 1
+                if 'place' in _points_attr and 'name' in _points_attr:
+                    n = _points_attr['name']
+                    p = _points_attr['place']
+                    lat = _point[0]
+                    lon = _point[1]
+                    radius = 0
+                    if p == 'city':
+                        radius = 25
+                    if p == 'town':
+                        radius = 10
+                    if p == 'village':
+                        radius = 5
+                    m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0}
+                    streets_counter[n].append(m)
+                    # if n in streets_counter:
+                    #     streets_counter[n].append(m)
+                    # else:
+                    #     streets_counter[n] = [l]
+                    #     # l = []
+                    #     # l.append(m)
+                    #     # streets_counter[n] = l
+            printdebug("City=>Streets scan part1: " + str(datetime.now()), options)
+
+        for task_id, pickled_way in enumerate(pickled_filenames['ways']):
+            with open(pickled_way, 'rb') as p_file:
+                orig_id = -1
+                for _way in pickle.load(p_file):
+                    orig_id += 1
+                    if _way is None:
+                        continue
+                    if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
+                        if _way['highway'] in ('trunk', 'primary', 'secondary', 'motorway'):
+                            pcnt = len(_way['_nodes'])
+                            # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
+                            start = 0
+                            lenKM = 0
+                            waydivided = False
+                            for i in range(0, pcnt):
+                                # printerror("A="+str(i))
+                                if i == start:
+                                    lenKM = 0
+                                else:
+                                    # tutaj poprawic, bo points nie bedzie zmienna globalna
+                                    lenKM += distKM(points[_way['_nodes'][i]][0], points[_way['_nodes'][i]][1],
+                                                    points[_way['_nodes'][i - 1]][0], points[_way['_nodes'][i - 1]][1])
+                                if lenKM > 3:
+                                    newway = _way.copy()
+                                    newway['_nodes'] = _way['_nodes'][start:i + 1]
+                                    newway['split'] = str(start) + ":" + str(i) + " KM:" + str(lenKM)
+                                    l_ways.append(newway)
+                                    start = i
+                                    lenKM = 0
+                                    waydivided = True
+                            if waydivided:
+                                _way['_nodes'] = _way['_nodes'][start:]
+                                _way['split'] = 'last'
+                            # else:
+                            #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
+
 
 def output_nominatim(prefix, num, options):
     global streets_counter
