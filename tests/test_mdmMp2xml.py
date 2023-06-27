@@ -17,7 +17,6 @@ TEST_NORMALIZATION = (
         ('1_relation0', '1_relation0'),
         ('2_relation2', '2_relation2'),
         ('3_relation9', '3_relation9'),
-
 )
 
 @pytest.mark.parametrize('target, answer', TEST_NORMALIZATION)

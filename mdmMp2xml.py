@@ -225,8 +225,6 @@ class NodeGeneralizator(object):
         return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.ways_last_id
 
 
-
-
 class NodesToWayNotFound(ValueError):
     """
     Raised when way of two nodes can not be found
