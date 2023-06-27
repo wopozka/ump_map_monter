@@ -184,68 +184,25 @@ class ProgressBar(object):
 
 class NodeGeneralizator(object):
     def __init__(self, test_mode=False):
-        self.test_mode = test_mode
-        self.border_point_ids = list()
-        self.point_offset = list()
-        self.point_max_val = 0
-        self.way_offset = list()
-        self.way_max_val = 0
-        self.relation_offset = list()
-        self.relation_max_val = 0
+        self.translation_table = {}
+        self.last_val = 0
 
-    def calculate_ways_offset(self):
-        for _no, w_ofset in enumerate(self.way_offset):
-            if _no == 0:
-                self.way_offset[_no]['start'] = self.point_offset[-1]['end'] + 1
-                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end'] - 1
-            else:
-                self.way_offset[_no]['start'] = self.way_offset[_no - 1]['end'] + 1
-                self.way_offset[_no]['end'] = self.way_offset[_no]['start'] + self.way_offset[_no]['end'] - 1
+    def insert_node(self, node_val):
+        if node_val not in self.translation_table:
+            self.last_val += 1
+            self.translation_table[node_val] = self.last_val
 
-    def calculate_relations_ofset(self):
-        for _no, r_ofset in enumerate(self.relation_offset):
-            if _no == 0:
-                self.relation_offset[_no]['start'] = self.way_offset[-1]['end'] + 1
-                self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
-            else:
-                self.relation_offset[_no]['start'] = self.relation_offset[_no - 1]['end'] + 1
-                self.relation_offset[_no]['end'] = self.relation_offset[_no]['start'] + self.relation_offset[_no]['end']
+    def insert_way(self, file_no, way_val):
+        rid = str(file_no) + str(way_val)
+        if rid not in self.translation_table:
+            self.last_val += 1
+            self.translation_table[rid] = self.last_val
 
-    def set_ofsets(self, pickled_d):
-        # pickled_d, pojedyczny spiklowany obiekt: punkty, drogi, relacje
-        _nodes, _ways, _relations = pickled_d
-        if self.test_mode:
-            self.point_offset.append({'start': min(_nodes), 'end': max(_nodes), 'offset': 0, 'start_orig': min(_nodes)})
-        else:
-            self.point_offset.append({'start': min(_nodes.points_numbers()),
-                                      'end': max(_nodes.points_numbers()),
-                                      'start_orig': min(_nodes.points_numbers())})
-        self.way_offset.append({'start': 0, 'end': len(_ways), 'orig_start': 0})
-        self.relation_offset.append({'start': 0, 'end': len(_relations), 'orig_start': 0})
+    def insert_relation(self, file_no, way_val):
+        self.insert_way(file_no, way_val)
 
-    def calculate_nodes_ofset(self):
-        for _no, p_ofset in enumerate(self.point_offset):
-            num_of_elem = p_ofset['end'] - p_ofset['start']
-            if _no == 0:
-                p_ofset['start'] = max(a for a in self.border_point_ids) + 1
-                p_ofset['end'] = p_ofset['start'] + num_of_elem
-                p_ofset['offset'] = max(self.border_point_ids)
-            else:
-                p_ofset['start'] = self.point_offset[_no - 1]['end'] + 1
-                p_ofset['end'] = p_ofset['start'] + num_of_elem
-                p_ofset['offset'] = self.point_offset[_no - 1]['end']
-
-    def initialize_ofsets(self):
-        self.calculate_nodes_ofset()
-        self.calculate_ways_offset()
-        self.calculate_relations_ofset()
-
-    def get_node_id(self, group_id, orig_id):
-        if orig_id in self.border_point_ids:
-            return orig_id
-        else:
-            aaa = orig_id - self.point_offset[group_id-1]['start_orig'] + self.point_offset[group_id - 1]['offset']
-            return aaa + 1
+    def get_node_id(self, orig_id):
+        return self.translation_table[orig_id]
 
     def get_way_id(self, group_id, orig_id):
         return orig_id + self.way_offset[group_id]['start']
