@@ -256,7 +256,7 @@ maxE = 50.00000
 # Krok zwiekszania osm_id per obszar. Istotny gdy nie ma normalize_ids
 # zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
 # sobie wyznaczaja/obliczaja/zapamietuja etc (przyklad: nominatim)
-idperarea = 1600000
+idperarea = 0
 
 # 0.5.1 changes
 # - 'addr:city' with ';' instead of '@'
@@ -1919,6 +1919,10 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
+def get_header():
+    return ["<?xml version='1.0' encoding='UTF-8'?>\n",
+            "<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__]
+
 def parse_txt(infile, options, filename='', progress_bar=None):
     polyline = None
     feat = None
@@ -2403,15 +2407,13 @@ def print_point(point, index, ostr):
     ostr.write("</node>\n")
 
 
-def print_point_pickled(point_pointattrs, task_id, orig_id, node_generalizator, ostr):
-    point = point_pointattrs[0]
-    pointattrs = point_pointattrs[1]
+def print_point_pickled(point, pointattrs, task_id, orig_id, node_generalizator, ostr):
     if '_out' in pointattrs:
         return
     if '_timestamp' in pointattrs:
         timestamp = pointattrs['_timestamp']
     else:
-        sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs[index])
+        sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs)
         timestamp = runstamp
     currid = node_generalizator.get_node_id(task_id, orig_id)
     idstring = str(currid)
@@ -2773,7 +2775,9 @@ def post_load_processing(options, filename='', progress_bar = None):
 def output_pickle(prefix, num):
     try:
         with open(prefix + ".normal." + str(num) + ".points_pickle", 'wb') as pickle_f:
-            pickle.dump([points, pointattrs], pickle_f)
+            pickle.dump(points, pickle_f)
+        with open(prefix + ".normal." + str(num) + ".pointsattrs_pickle", 'wb') as pickle_f:
+            pickle.dump(pointattrs, pickle_f)
         with open(prefix + ".normal." + str(num) + ".ways_pickle", 'wb') as pickle_f:
             pickle.dump(ways, pickle_f)
         with open(prefix + ".normal." + str(num) + ".relations_pickle", 'wb') as pickle_f:
@@ -2811,16 +2815,37 @@ def output_normal(prefix, num, options):
 
 def output_normal_pickled(pickled_filenames=None, node_generalizator=None):
     try:
+        prefix='UMP_PL-'
+        num = 1
         f = prefix + ".normal." + str(num) + ".osm"
+        print(f, file=sys.stderr)
         out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
+    for header_line in get_header():
+        out.write(header_line)
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file:
-            for orig_id, _point in enumerate(pickle.load(p_file)):
-                print_point_pickled(_point, task_id, orig_id, node_generalizator, out)
+        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
+            orig_id = -1
+            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
+                orig_id += 1
+                print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
 
+    for task_id, pickled_way in enumerate(pickled_filenames['ways']):
+        with open(pickled_way, 'rb') as p_file:
+            orig_id = -1
+            for _way in pickle.load(p_file):
+                orig_id += 1
+                print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+
+    for task_id, pickled_relation in enumerate(pickled_filenames['relations']):
+        with open(pickled_relation, 'rb') as p_file:
+            orig_id = -1
+            for _relation in pickle.load(p_file):
+                orig_id += 1
+                print_relation_pickled(_relation, task_id, orig_id, node_generalizator, out)
+    out.write("</osm>\n")
     out.close()
 
 
@@ -3255,7 +3280,7 @@ def worker(task, options):
 #             warn = " WARNING"
 #         else:
 #             warn = ""
-    
+    warn = ''
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
     task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
@@ -3405,14 +3430,15 @@ def main(options, args):
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
 
         # wczytaj pliki piklowane i stwórz poprawny node_generalizator
-        pickled_filenames = {'points': [], 'ways': [], 'relations': []}
+        pickled_filenames = {'points': [], 'pointsattrs': [], 'ways': [], 'relations': []}
         for work_no, workelem in enumerate(worklist):
             pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
-            pickled_filenames['point'].append(pickled_nodes_filename)
+            pickled_filenames['points'].append(pickled_nodes_filename)
             pickled_ways_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".ways_pickle"
             pickled_filenames['ways'].append(pickled_ways_filename )
             pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
             pickled_filenames['relations'].append(pickled_relations_filename)
+            pickled_filenames['pointsattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointsattrs_pickle")
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_node(pickled_data)
@@ -3424,6 +3450,7 @@ def main(options, args):
                 node_generalizator.insert_relation(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
+        output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator)
 
 
         # naglowek osm i punkty granic
