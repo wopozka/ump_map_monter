@@ -131,7 +131,7 @@ class Mylist(object):
         return self.k.__iter__()
 
     def points_numbers(self):
-        return [self.k[a] for a in self.k]
+        return [self.k[a] + self.b for a in self.k]
 
 
 class Features(object):  # fake enum
@@ -3173,27 +3173,6 @@ def output_nominatim(prefix, num, options):
         
     out.close()
 
-
-# zamiast shutil.copyfileobj - kopiowanie z parsowaniem
-# w liniach poszukiwane jest ":id:" + str(workelem['idx']) + ":"
-# docelowy numer id to: workelem['baseid'] + x - idperarea*task['idx']
-# wywo?ywane z 'elemnr' oraz 'elembase': (workelem['baseid'] - idperarea*task['idx'])
-# pozostaje dodać numer id do elembase, poza węzłami granic
-
-def parsecopy(source, destination, elemnr, elembase):
-    fileout = ""
-    for line in source:
-        idregex = r"(id|ref)=\':id:" + str(elemnr) + r":([0-9]*)\'"
-        idmatch = re.search(idregex, line)
-        if idmatch:
-            idval = int(idmatch.group(2))
-            if idval > idperarea:				# nie zmieniamy dla granic
-                idval += elembase
-            newid = idmatch.group(1) + r"='" + str(idval) + r"'"
-            line = re.sub(idregex, newid, line, 1)
-        fileout += line
-    destination.write(fileout)
-
 def worker(task, options):
     # workelem={'idx':n+1,'file':f}
     global points
@@ -3252,14 +3231,7 @@ def worker(task, options):
     post_load_processing(options, task['file'], progress_bar=progress_bar)
     progress_bar.set_done('drp')
     
-    # print "bpoints="+str(len(bpoints))
-    # print "points="+str(len(points)-idperarea*task['idx'])
-    # print "ways="+str(len(ways))
-    # print "pointattrs="+str(len(pointattrs))
-    # print "relations="+str(len(relations))
-    # print "maxtypes="+str(len(maxtypes))
-
-    # output_normal("UMP-PL", task['idx'], options)
+      # output_normal("UMP-PL", task['idx'], options)
     # if options.navit_file != None:
     #     output_navit("UMP-PL", task['idx'])	 # no data change
     # if options.nonumber_file != None:
@@ -3270,16 +3242,6 @@ def worker(task, options):
     #     output_nominatim("UMP-PL", task['idx'], options)  # data is changed
     output_pickle("UMP-PL", task['idx'])
 
-# ilosc id w obszarze. brak ostrzegania przy normalizacji
-#     maxid = maxid - idperarea * task['idx']
-#     warn = ""
-#     if not options.normalize_ids:
-#         if maxid > idperarea:
-#             warn = " ERROR"
-#         elif maxid >= 0.9 * idperarea:
-#             warn = " WARNING"
-#         else:
-#             warn = ""
     warn = ''
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
     task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
@@ -3371,15 +3333,10 @@ def main(options, args):
             parse_borders(borderf, options)
             borderf.close()
             node_generalizator.insert_borders(bpoints)
-            globalid = len(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
-            sys.stderr.write("\tINFO: " + str(globalid) + " ids of border points (took " + str(elapsed) + ").\n")
-            if globalid > idperarea:
-                sys.stderr.write("\tWARNING: Too low idperarea (" + str(idperarea) +
-                                 "), expect overlapped ids and cross-area issues.\n")
+            sys.stderr.write("\tINFO: " + str(len(bpoints)) + " ids of border points (took " + str(elapsed) + ").\n")
         else:
             borderstamp = runstamp
-            globalid = 0
             sys.stderr.write("\tINFO: Running without border file.\n")
 
         worklist=[]
@@ -3417,14 +3374,6 @@ def main(options, args):
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
-
-        if options.normalize_ids:
-            for workelem in worklist:   # zakladamy, ze idzie zawsze w tej samej kolejnosci
-                # sys.stderr.write("\tDEBUG: Workelem " + str(workelem['idx']) + ", " + str(workelem['ids']) +
-                #                  " ids, base is " + str(globalid) + ".\n")
-                workelem['baseid'] = globalid
-                globalid += int(workelem['ids'])
-            sys.stderr.write("\tINFO: Total number of ids: " + str(globalid) + ".\n")
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
