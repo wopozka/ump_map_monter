@@ -184,31 +184,45 @@ class ProgressBar(object):
 
 class NodeGeneralizator(object):
     def __init__(self, test_mode=False):
-        self.translation_table = {}
+        self.borders_point_last_id = 0
+        self.points_las_id = 0
+        self.ways_last_id = 0
+        self.t_table_nodes = list()
+        self.t_table_ways = list()
+        self.t_table_relations = list()
         self.last_val = 0
 
+    def insert_borders(self, borders):
+        self.borders_point_last_id = len(borders) - 1
+
     def insert_node(self, node_val):
-        if node_val not in self.translation_table:
-            self.last_val += 1
-            self.translation_table[node_val] = self.last_val
+        self.t_table_nodes.append(len(node_val))
+        self.points_las_id += len(node_val)
 
-    def insert_way(self, file_no, way_val):
-        rid = str(file_no) + str(way_val)
-        if rid not in self.translation_table:
-            self.last_val += 1
-            self.translation_table[rid] = self.last_val
+    def insert_way(self, way_val):
+        self.t_table_ways.append(len(way_val))
+        self.ways_last_id += len(way_val)
 
-    def insert_relation(self, file_no, way_val):
-        self.insert_way(file_no, way_val)
+    def insert_relation(self, way_val):
+        self.t_table_relations.append(len(way_val))
 
-    def get_node_id(self, orig_id):
-        return self.translation_table[orig_id]
+    def get_node_id(self, task_id, orig_id):
+        new_id = 1
+        for a in range(task_id - 1):
+            new_id += self.t_table_nodes[a]
+        return orig_id + new_id + self.borders_point_last_id
 
-    def get_way_id(self, group_id, orig_id):
-        return orig_id + self.way_offset[group_id]['start']
+    def get_way_id(self, task_id, orig_id):
+        new_id = 1
+        for a in range(task_id - 1):
+            new_id += self.t_table_relations[a]
+        return orig_id + new_id + self.points_las_id + self.borders_point_last_id
 
-    def get_relation_id(self, group_id, orig_id):
-        return orig_id + self.relation_offset[group_id]['start']
+    def get_relation_id(self, task_id, orig_id):
+        new_id = 1
+        for a in range(task_id - 1):
+            new_id += self.t_table_ways[a]
+        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.ways_last_id
 
 
 
