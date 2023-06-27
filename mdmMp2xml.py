@@ -2772,7 +2772,7 @@ def post_load_processing(options, filename='', progress_bar = None):
                     del pointattrs[node]['_out']
 
 
-def output_pickle(prefix, num):
+def save_pickled_data(prefix, num):
     try:
         with open(prefix + ".normal." + str(num) + ".points_pickle", 'wb') as pickle_f:
             pickle.dump(points, pickle_f)
@@ -3240,7 +3240,7 @@ def worker(task, options):
     #     output_index("UMP-PL", task['idx'], options)  # no data change
     # if options.nominatim_file != None:
     #     output_nominatim("UMP-PL", task['idx'], options)  # data is changed
-    output_pickle("UMP-PL", task['idx'])
+    save_pickled_data("UMP-PL", task['idx'])
 
     warn = ''
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
