@@ -2787,6 +2787,71 @@ def save_pickled_data(prefix, num):
         sys.exit()
 
 
+def remove_label_braces(local_way):
+    new_way = local_way.copy()
+    p = re.compile('\{.*\}')  # dowolny string otoczony klamrami
+    if 'alt_name' in new_way:
+        tmpname = new_way['alt_name']
+        if 'name' in new_way:  # przechowanie nazwy z Label
+            nname = p.sub("", new_way['name'])
+            new_way['alt_name'] = str.strip(nname)
+        else:
+            new_way.pop('alt_name')
+        new_way['name'] = tmpname  # alt_name z Label3 to glowna nazwa do indeksowania
+
+    else:
+        if 'name' in new_way:
+            nname = p.sub("", new_way['name'])
+            new_way['name'] = str.strip(nname)
+
+            if (new_way['name'] == ""):  # zastepowanie pustych name
+                if ('loc_name' in new_way):
+                    new_way['name'] = new_way['loc_name']
+                    new_way.pop('loc_name')
+                elif ('short_name' in new_way):
+                    new_way['name'] = new_way['short_name']
+    return new_way
+
+def add_city_region_atm_to_pointsattr(l_pointsattr):
+    _pac = l_pointsattr.copy()
+    if options.regions and 'is_in:state' in _pac:
+        if 'place' in _pac and _pac['place'] in {'city', 'town', 'village'}:
+            _pac['name'] = ''.join((_pac['name'], " (", _pac['is_in:state'], ")"))
+        if 'addr:city' in _pac:
+            region = ''.join((" (", _pac['is_in:state'], ")"))
+            cities = _pac['addr:city'].split(';')
+            _pac['addr:city'] = cities.pop(0) + region
+            for city in cities:
+                _pac['addr:city'] += ";" + city + region
+        if 'is_in' in _pac:
+            region = ''.join((" (", _pac['is_in:state'], ")"))
+            cities = _pac['is_in'].split(';')
+            _pac['is_in'] = cities.pop(0) + region
+            for city in cities:
+                __pac['is_in'] += ";" + city + region
+
+    # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
+    if 'amenity' in _pac and _pac['amenity'] == 'atm':
+        _pac['amenity_atm'] = 'atm'
+    return _pac
+
+def add_city_region_to_way(l_way):
+    newway = l_way.copy()
+    if 'addr:city' in newway:
+        region = ''.join((" (", newway['is_in:state'], ")"))
+        cities = newway['addr:city'].split(';')
+        newway['addr:city'] = cities.pop(0) + region
+        for city in cities:
+            newway['addr:city'] += ";" + city + region
+    if 'is_in' in newway:
+        region = ''.join((" (", newway['is_in:state'], ")"))
+        cities = newway['is_in'].split(';')
+        newway['is_in'] = cities.pop(0) + region
+        for city in cities:
+            newway['is_in'] += ";" + city + region
+    return newway
+
+
 def output_normal(prefix, num, options):
     global maxid
     global idpfx
@@ -2905,26 +2970,7 @@ def output_index_pickled(options, pickled_filenames=None, node_generalizator=Non
             orig_id = -1
             for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
                 orig_id += 1
-                _pac = _points_attr.copy()
-                if options.regions and 'is_in:state' in _pac:
-                    if 'place' in _pac and _pac['place'] in {'city', 'town', 'village'}:
-                        _pac['name'] = ''.join((_pac['name'], " (", _pac['is_in:state'], ")"))
-                    if 'addr:city' in _pac:
-                        region = ''.join((" (", _pac['is_in:state'], ")"))
-                        cities = _pac['addr:city'].split(';')
-                        _pac['addr:city'] = cities.pop(0) + region
-                        for city in cities:
-                            _pac['addr:city'] += ";" + city + region
-                    if 'is_in' in _pac:
-                        region = ''.join((" (", _pac['is_in:state'], ")"))
-                        cities = _pac['is_in'].split(';')
-                        _pac['is_in'] = cities.pop(0) + region
-                        for city in cities:
-                            __pac['is_in'] += ";" + city + region
-
-                # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
-                if 'amenity' in _pac and _pac['amenity'] == 'atm':
-                    _pac['amenity_atm'] = 'atm'
+                _pac = add_city_region_atm_to_pointsattr(_points_attr)
                 print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
 
         for task_id, pickled_way in enumerate(pickled_filenames['ways']):
@@ -2934,40 +2980,9 @@ def output_index_pickled(options, pickled_filenames=None, node_generalizator=Non
                     orig_id += 1
                     if _way is None or 'is_in' not in _way:
                         continue
-                    newway = _way.copy()
-                    p = re.compile('\{.*\}')
-                    if 'alt_name' in newway:
-                        tmpname = newway['alt_name']
-                        if 'name' in newway:  # przechowanie nazwy z Label
-                            nname = p.sub("", newway['name'])
-                            newway['alt_name'] = str.strip(nname)
-                        else:
-                            newway.pop('alt_name')
-                        newway['name'] = tmpname
-                    else:
-                        if 'name' in newway:
-                            nname = p.sub("", newway['name'])
-                            newway['name'] = str.strip(nname)
-                            if not newway['name']:  # zastepowanie pustych name
-                                if 'loc_name' in newway:
-                                    newway['name'] = newway['loc_name']
-                                    newway.pop('loc_name')
-                                elif 'short_name' in newway:
-                                    newway['name'] = newway['short_name']
-
+                    newway = remove_label_braces(_way)
                     if options.regions and 'is_in:state' in newway:
-                        if 'addr:city' in newway:
-                            region = ''.join((" (", newway['is_in:state'], ")"))
-                            cities = newway['addr:city'].split(';')
-                            newway['addr:city'] = cities.pop(0) + region
-                            for city in cities:
-                                newway['addr:city'] += ";" + city + region
-                        if 'is_in' in newway:
-                            region = ''.join((" (", newway['is_in:state'], ")"))
-                            cities = newway['is_in'].split(';')
-                            newway['is_in'] = cities.pop(0) + region
-                            for city in cities:
-                                newway['is_in'] += ";" + city + region
+                        newway = add_city_region_to_way(newway)
 
                     print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
     out.write("</osm>\n")
@@ -3067,75 +3082,188 @@ def output_index(prefix, num, options):
     out.close()
 
 
-def output_nominatim_pickled(options, pickled_filenames=None, node_generalizator=None):
+def output_nominatim_pickled(options, pickled_filenames=None):
     streets_counter = defaultdict(list)
     l_ways = list()
+
+    # ponieważ tutaj mamy sporo iterowania z dodawaniem nowych drog, dlatego wczytujemy calosc
+    # danych i je osobno obrabiamy. Tworzymy też nowy obiekt node_generalizator
+    # relacji wczytywac nie musimy bo z nimi nic nie robimy
+    # wczytujemy wszystkie punktu
+    local_points = OrderedDict()
+    for task_id, pickled in enumerate(pickled_filenames['points']):
+        with open(pickled, 'rb') as p_file:
+            local_points[task_id] = pickle.load(p_file)
+
+    # wczytujemy wszystkie pointsattrs
+    local_pointattrs = OrderedDict()
+    for task_id, pickled in enumerate(pickled_filenames['pointsattrs']):
+        with open(pickled, 'rb') as p_file:
+            local_pointattrs[task_id] = pickle.load(p_file)
+
+    # wczytujemy wszystkie drogi
+    local_ways = OrderedDict()
+    for task_id, pickled in enumerate(pickled_filenames['ways']):
+        with open(pickled, 'rb') as p_file:
+            local_ways[task_id] = pickle.load(p_file)
+
+
     printdebug("City=>Streets scan start: " + str(datetime.now()), options)
 
-    for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
-            orig_id = -1
-            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
-                orig_id += 1
-                if 'place' in _points_attr and 'name' in _points_attr:
-                    n = _points_attr['name']
-                    p = _points_attr['place']
-                    lat = _point[0]
-                    lon = _point[1]
-                    radius = 0
-                    if p == 'city':
-                        radius = 25
-                    if p == 'town':
-                        radius = 10
-                    if p == 'village':
-                        radius = 5
-                    m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0}
-                    streets_counter[n].append(m)
-                    # if n in streets_counter:
-                    #     streets_counter[n].append(m)
-                    # else:
-                    #     streets_counter[n] = [l]
-                    #     # l = []
-                    #     # l.append(m)
-                    #     # streets_counter[n] = l
-            printdebug("City=>Streets scan part1: " + str(datetime.now()), options)
-
-        for task_id, pickled_way in enumerate(pickled_filenames['ways']):
-            with open(pickled_way, 'rb') as p_file:
-                orig_id = -1
-                for _way in pickle.load(p_file):
-                    orig_id += 1
-                    if _way is None:
-                        continue
-                    if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
-                        if _way['highway'] in ('trunk', 'primary', 'secondary', 'motorway'):
-                            pcnt = len(_way['_nodes'])
-                            # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
-                            start = 0
+    #  fragment dodajacy krotkie odcinki drog dla wsi ktore nie posiadaja ulic
+    #  zbieramy info o wszytskich miastach
+    for task_id in local_points:
+        for _point, _points_attr in zip(local_points[task_id], local_pointattrs[task_id].values()):
+            if 'place' in _points_attr and 'name' in _points_attr:
+                n = _points_attr['name']
+                p = _points_attr['place']
+                lat = _point[0]
+                lon = _point[1]
+                radius = 0
+                if p == 'city':
+                    radius = 25
+                if p == 'town':
+                    radius = 10
+                if p == 'village':
+                    radius = 5
+                m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0, 'task_id': task_id}
+                streets_counter[n].append(m)
+                # if n in streets_counter:
+                #     streets_counter[n].append(m)
+                # else:
+                #     streets_counter[n] = [l]
+                #     # l = []
+                #     # l.append(m)
+                #     # streets_counter[n] = l
+    printdebug("City=>Streets scan part1: " + str(datetime.now()), options)
+    # teraz skan wszystkich ulic
+    for task_id in local_ways:
+        for _way, _points in zip(local_ways[task_id], local_points[task_id]):
+            if _way is None:
+                continue
+            if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
+                if _way['highway'] in ('trunk', 'primary', 'secondary', 'motorway'):
+                    pcnt = len(_way['_nodes'])
+                    # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
+                    start = 0
+                    lenKM = 0
+                    waydivided = False
+                    for i in range(0, pcnt):
+                        # printerror("A="+str(i))
+                        if i == start:
                             lenKM = 0
-                            waydivided = False
-                            for i in range(0, pcnt):
-                                # printerror("A="+str(i))
-                                if i == start:
-                                    lenKM = 0
-                                else:
-                                    # tutaj poprawic, bo points nie bedzie zmienna globalna
-                                    lenKM += distKM(points[_way['_nodes'][i]][0], points[_way['_nodes'][i]][1],
-                                                    points[_way['_nodes'][i - 1]][0], points[_way['_nodes'][i - 1]][1])
-                                if lenKM > 3:
-                                    newway = _way.copy()
-                                    newway['_nodes'] = _way['_nodes'][start:i + 1]
-                                    newway['split'] = str(start) + ":" + str(i) + " KM:" + str(lenKM)
-                                    l_ways.append(newway)
-                                    start = i
-                                    lenKM = 0
-                                    waydivided = True
-                            if waydivided:
-                                _way['_nodes'] = _way['_nodes'][start:]
-                                _way['split'] = 'last'
-                            # else:
-                            #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
+                        else:
+                            # tutaj poprawic, bo points nie bedzie zmienna globalna
+                            lenKM += distKM(_points[_way['_nodes'][i]][0], _points[_way['_nodes'][i]][1],
+                                            _points[_way['_nodes'][i - 1]][0], _points[_way['_nodes'][i - 1]][1])
+                        if lenKM > 3:
+                            newway = _way.copy()
+                            newway['_nodes'] = _way['_nodes'][start:i + 1]
+                            newway['split'] = str(start) + ":" + str(i) + " KM:" + str(lenKM)
+                            l_ways.append({'task_id': task_id, 'newway': newway})
+                            start = i
+                            lenKM = 0
+                            waydivided = True
+                    if waydivided:
+                        _way['_nodes'] = _way['_nodes'][start:]
+                        _way['split'] = 'last'
+                    # else:
+                    #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
 
+    # dodajemy nowe drogi do wszystkich drog
+    for way in newway:
+        local_ways[way['task_id']].append(way['newway'])
+
+    for task_id in local_ways:
+        for _way, _points in zip(local_ways[task_id], local_points[task_id]):
+            if _way is None:
+                continue
+            if 'is_in' in _way and 'name' in _way and 'highway' in _way:
+                try:
+                    towns = _way['is_in'].split(";")
+                    waylat = _points[_way['_nodes'][0]][0]
+                    waylon = _points[_way['_nodes'][0]][1]
+                    for town in towns:
+                        if town in streets_counter:
+                            found = 0
+                            for l in streets_counter[town]:
+                                if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
+                                    l['cnt'] += 1
+                                    found = 1
+                                    break
+                            if found == 0:
+                                printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + _way['name'] +
+                                           " (" + str(waylat) + "," + str(waylon) + ")", options)
+                        else:
+                            printdebug("Brak Miasta: " + town + " ul.: " + _way['name'] + " (" + str(waylat) +
+                                       "," + str(waylon) + ")", options)
+                except IndexError:
+                    pprint.pprint(_way, sys.stderr)
+    printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
+    # i dodawanie krotkich ulic
+
+    for miasto in streets_counter:
+        for k in streets_counter[miasto]:
+            task_id = k['task_id']
+            if k['cnt'] != 0:
+                printdebug("Ulice: " + miasto + "\tszt. " + str(k['cnt']), options)
+            else:
+                printdebug("Short way added:" + miasto, options)
+                pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
+                pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
+                pind0 = len(local_points[task_id])
+                local_points[task_id].append(pt0)
+                local_pointattrs[task_id].append({'_timestamp': filestamp})
+                pind1 = len(local_points[task_id])
+                local_points[task_id].append(pt1)
+                local_pointattrs[task_id].append({'_timestamp': filestamp})
+                way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
+                    'name': miasto, 'addr:city': miasto, 'highway': "residental"}
+                local_ways[task_id].append(way)
+    printdebug("City=>Streets scan stop: " + str(datetime.now()), options)
+
+    for task_id in local_ways:
+        for way_id, _way in enumerate(local_ways[task_id]):
+            _n_way = remove_label_braces(_way)
+            if 'name' in _n_way and not _way['name'] and 'addr:city' in _n_way and _n_way['addr:city']:
+                _n_way['name'] = _n_way['addr:city']
+            local_ways[task_id][way_id] = _n_way
+    try:
+        prefix = 'UMP_PL'
+        num = 1
+        f = prefix + ".nominatim." + str(num) + ".osm"
+        out = open(f, "w", encoding="utf-8")
+    except IOError:
+        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+        sys.exit()
+    for header_line in get_header():
+        out.write(header_line)
+
+    node_generalizator = NodeGeneralizator()
+
+    for task_id in local_points:
+        node_generalizator.insert_node(local_points[task_id])
+        node_generalizator.insert_way(local_ways[task_id])
+
+    for task_id in local_points:
+        orig_id = -1
+        for _point, _points_attr in zip(local_points[task_id], local_pointattrs[task_id].values()):
+            orig_id += 1
+            print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
+
+    for task_id in local_ways:
+        orig_id = -1
+        for _way in local_ways[task_id]:
+            orig_id += 1
+            if _way is None:
+                continue
+            if 'ref' in _way and 'highway' in _way:
+                if _way['highway'] in {'cycleway', 'path','footway'}:
+                    continue
+            print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+
+    out.write("</osm>\n")
+    out.close()
 
 def output_nominatim(prefix, num, options):
     global streets_counter
