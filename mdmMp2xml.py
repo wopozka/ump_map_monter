@@ -1919,10 +1919,6 @@ def convert_tag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def get_header():
-    return ["<?xml version='1.0' encoding='UTF-8'?>\n",
-            "<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__]
-
 def parse_txt(infile, options, filename='', progress_bar=None):
     polyline = None
     feat = None
@@ -2879,18 +2875,15 @@ def output_normal(prefix, num, options):
     out.close()
 
 
-def output_normal_pickled(pickled_filenames=None, node_generalizator=None, options=None):
-    output_files = {'UMP_PL.normal.osm': None, 'UMP_PL.index.osm': None, 'UMP_PL.normal.osm': None,
-                    'UMP_PL.no_numbers.osm': None, 'UMP_PL.navit.osm': None}
+def output_normal_pickled(options, pickled_filenames=None, node_generalizator=None):
     try:
-        for filename in output_files:
-            output_files[filename] = open(filename, "w", encoding="utf-8")
+        output_files = {'normal': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
+                        'index': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
+                        'no_numbers': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
+                        'navit': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)}
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + filename + "!\n")
         sys.exit()
-    for header_line in get_header():
-        for out in output_files.values():
-            out.write(header_line)
 
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
@@ -2941,13 +2934,9 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None, optio
                 print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
                                        output_files['UMP_PL.navit.osm'])
     for out in output_files.values():
-        out.write("</osm>\n")
+        # out.write("</osm>\n")
         out.close()
-
-
-def output_nonumbers_pickled(pickled_filenames=None, node_generalizator=None):
-    output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator, no_numbers=True,
-                          file_type='.nonumbers.')
+    return {a: a.name for a in output_files}
 
 
 def output_navit(prefix, num):
@@ -2988,8 +2977,6 @@ def output_index_pickled(options, pickled_filenames=None, node_generalizator=Non
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
-    for header_line in get_header():
-        out.write(header_line)
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
             orig_id = -1
@@ -3255,14 +3242,12 @@ def output_nominatim_pickled(options, pickled_filenames=None):
             local_ways[task_id][way_id] = _n_way
     try:
         prefix = 'UMP_PL'
-        num = 1
-        f = prefix + ".nominatim." + str(num) + ".osm"
+
+        f = 'UMP_PL.nominatim.osm"
         out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
-    for header_line in get_header():
-        out.write(header_line)
 
     node_generalizator = NodeGeneralizator()
 
@@ -3287,8 +3272,9 @@ def output_nominatim_pickled(options, pickled_filenames=None):
                     continue
             print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
 
-    out.write("</osm>\n")
+    # out.write("</osm>\n")
     out.close()
+    return f
 
 def output_nominatim(prefix, num, options):
     global streets_counter
@@ -3463,6 +3449,17 @@ def output_nominatim(prefix, num, options):
         
     out.close()
 
+def write_output_files(in_file='', dest_filename='', headerf=''):
+    elapsed = datetime.now().replace(microsecond=0)
+    destination = open(dest_filename, 'w', encoding="utf-8")
+    shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
+    shutil.copyfileobj(open(in_file, 'r', encoding="utf-8"), destination)
+    destination.write("</osm>\n")
+    destination.close()
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
+    sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
+    return
+
 def worker(task, options):
     # workelem={'idx':n+1,'file':f}
     global points
@@ -3537,24 +3534,6 @@ def worker(task, options):
     task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
 
-
-def write_output_files(dest_filename='', headerf='', file2_core='', normalize_ids=False, worklist=[]):
-    elapsed = datetime.now().replace(microsecond=0)
-    destination = open(dest_filename, 'w', encoding="utf-8")
-    shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-    for workelem in worklist:
-        file2 = 'UMP-PL.' + file2_core + '.' + str(workelem['idx']) + ".osm"
-        if normalize_ids:
-            parsecopy(open(file2, 'r', encoding="utf-8"), destination, workelem['idx'], workelem['baseid']
-                      - idperarea * workelem['idx'])
-        else:
-            shutil.copyfileobj(open(file2, 'r', encoding="utf-8"), destination)
-        os.remove(file2)
-    destination.write("</osm>\n")
-    destination.close()
-    elapsed = datetime.now().replace(microsecond=0) - elapsed
-    sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
-    return
 
 def main(options, args):
     if len(args) < 1:
@@ -3689,9 +3668,9 @@ def main(options, args):
                 node_generalizator.insert_relation(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
-        output_normal_pickled(pickled_filenames=pickled_filenames, node_generalizator=node_generalizator,
-                              no_numbers=False, file_type='.normal.')
-
+        generated_output_filenames = output_normal_pickled(options, pickled_filenames=pickled_filenames, node_generalizator=node_generalizator)
+        if options.nominatim_file is not None:
+            generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames)
 
         # naglowek osm i punkty granic
         printinfo_nlf("Working on header... ")
@@ -3706,7 +3685,7 @@ def main(options, args):
         out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
         maxid = 0
         idpfx = ""
-        if options.borders_file != None:
+        if options.borders_file is not None:
             sys.stderr.write("and border points... ")
             for point in bpoints:
                 index = bpoints.index(point)
@@ -3716,41 +3695,45 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
-        if options.nominatim_file != None:
+        if options.nominatim_file is not None:
             printinfo_nlf("Nominatim output... ")
             try:
-                write_output_files(dest_filename=options.nominatim_file, headerf=headerf, file2_core="nominatim",
-                                   normalize_ids=options.normalize_ids, worklist=worklist)
+                write_output_files(in_file=generated_nominatim_filename, dest_filename=options.nominatim_file,
+                                   headerf=headerf)
+                os.remove(generated_nominatim_filename)
             except IOError:
                 sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
                 sys.exit()            
 
-        if options.navit_file != None:
+        if options.navit_file is not None:
             printinfo_nlf("Navit output... ")
             # elapsed = datetime.now().replace(microsecond=0)
             try:
-                write_output_files(dest_filename=options.navit_file, headerf=headerf, file2_core="navit",
-                                   normalize_ids=options.normalize_ids, worklist=worklist)
+                write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
+                                   headerf=headerf)
+                os.remove(generated_output_filenames['navit'])
             except IOError:
                 sys.stderr.write("\n\tERROR: Navit output failed!\n")
                 sys.exit()
 
         
-        if options.index_file != None:
+        if options.index_file is not None:
             printinfo_nlf("OsmAnd index... ")
             try:
-                write_output_files(dest_filename=options.index_file, headerf=headerf, file2_core="index",
-                                   normalize_ids=options.normalize_ids, worklist=worklist)
+                write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
+                                   headerf=headerf)
+                os.remove(generated_output_filenames['index'])
             except IOError:
                 sys.stderr.write("\n\tERROR: Index output failed!\n")
                 sys.exit()                        
 
         
-        if options.nonumber_file != None:
+        if options.nonumber_file is not None:
             printinfo_nlf("NoNumber output... ")
             try:
-                write_output_files(dest_filename=options.nonumber_file, headerf=headerf, file2_core="nonumbers",
-                                   normalize_ids=options.normalize_ids, worklist=worklist)
+                write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
+                                   headerf=headerf)
+                os.remove(generated_output_filenames['no_number'])
             except IOError:
                 sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
                 sys.exit()
@@ -3759,9 +3742,10 @@ def main(options, args):
         try:
             temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
             temp_file.close()
-            write_output_files(dest_filename=temp_file.name, headerf=headerf, file2_core="normal",
-                               normalize_ids=options.normalize_ids, worklist=worklist)
+            write_output_files(in_file=generated_output_filenames['normal'], dest_filename=temp_file.name,
+                               headerf=headerf, file2_core="normal")
             printinfo_nlf("Normal output copying to stdout or destination file ")
+            os.remove(generated_output_filenames['normal'])
             elapsed = datetime.now().replace(microsecond=0)
             if options.outputfile is None:
                 shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
