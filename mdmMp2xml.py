@@ -2875,12 +2875,10 @@ def output_normal(prefix, num, options):
     out.close()
 
 
-def output_normal_pickled(options, pickled_filenames=None, node_generalizator=None):
+def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None):
+    output_files = dict()
     try:
-        output_files = {'normal': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
-                        'index': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
-                        'no_numbers': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False),
-                        'navit': tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)}
+        output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + filename + "!\n")
         sys.exit()
@@ -2929,13 +2927,12 @@ def output_normal_pickled(options, pickled_filenames=None, node_generalizator=No
             orig_id = -1
             for _relation in pickle.load(p_file):
                 orig_id += 1
-                print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
-                                       output_files['normal'])
-                print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
-                                       output_files['navit'])
+                print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['normal'])
+                if 'navit' in output_files:
+                    print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['navit'])
     for out in output_files.values():
         out.close()
-    return {a: a.name for a in output_files.values()}
+    return {a: b.name for a, b in output_files.items()}
 
 
 def output_navit(prefix, num):
@@ -3665,7 +3662,17 @@ def main(options, args):
                 node_generalizator.insert_relation(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
-        generated_output_filenames = output_normal_pickled(options, pickled_filenames=pickled_filenames, node_generalizator=node_generalizator)
+        output_files_to_generate = ['normal']
+        if options.navit_file is not None:
+            output_files_to_generate.append('navit')
+        if options.index_file is not None:
+            output_files_to_generate.append('index')
+        if options.nonumber_file is not None:
+            output_files_to_generate.append('no_number')
+
+        generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
+                                                           pickled_filenames=pickled_filenames,
+                                                           node_generalizator=node_generalizator)
         if options.nominatim_file is not None:
             generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames)
 
@@ -3737,7 +3744,7 @@ def main(options, args):
             temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
             temp_file.close()
             write_output_files(in_file=generated_output_filenames['normal'], dest_filename=temp_file.name,
-                               headerf=headerf, file2_core="normal")
+                               headerf=headerf)
             printinfo_nlf("Normal output copying to stdout or destination file ")
             elapsed = datetime.now().replace(microsecond=0)
             if options.outputfile is None:
@@ -3755,7 +3762,7 @@ def main(options, args):
             sys.exit()
 
         os.remove(headerf)
-        for _filename in generated_nominatim_filename.values():
+        for _filename in generated_output_filenames.values():
             os.remove(_filename)
     else:
         sys.stderr.write("\tINFO: Border file required when more than one area given: --border \n")
