@@ -3241,9 +3241,7 @@ def output_nominatim_pickled(options, pickled_filenames=None):
                 _n_way['name'] = _n_way['addr:city']
             local_ways[task_id][way_id] = _n_way
     try:
-        prefix = 'UMP_PL'
-
-        f = 'UMP_PL.nominatim.osm"
+        f = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
         out = open(f, "w", encoding="utf-8")
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
@@ -3274,7 +3272,7 @@ def output_nominatim_pickled(options, pickled_filenames=None):
 
     # out.write("</osm>\n")
     out.close()
-    return f
+    return f.name
 
 def output_nominatim(prefix, num, options):
     global streets_counter
