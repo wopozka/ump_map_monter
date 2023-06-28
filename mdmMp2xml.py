@@ -2879,25 +2879,33 @@ def output_normal(prefix, num, options):
     out.close()
 
 
-def output_normal_pickled(pickled_filenames=None, node_generalizator=None, no_numbers=False, file_type='.normal.'):
+def output_normal_pickled(pickled_filenames=None, node_generalizator=None, options=None):
+    output_files = {'UMP_PL.normal.osm': None, 'UMP_PL.index.osm': None, 'UMP_PL.normal.osm': None,
+                    'UMP_PL.no_numbers.osm': None, 'UMP_PL.navit.osm': None}
     try:
-        prefix = 'UMP_PL'
-        num = 1
-        f = prefix + file_type + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
+        for filename in output_files:
+            output_files[filename] = open(filename, "w", encoding="utf-8")
     except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+        sys.stderr.write("\tERROR: Can't open normal output file " + filename + "!\n")
         sys.exit()
     for header_line in get_header():
-        out.write(header_line)
+        for out in output_files.values():
+            out.write(header_line)
+
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
             orig_id = -1
             for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
                 orig_id += 1
-                if no_numbers and 'NumberX' in _points_attr:
-                    continue
-                print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
+                for filename in output_files:
+                    out = output_files[filename]
+                    if '.normal.' in filename or '.navit.' in filename:
+                        print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
+                    elif '.no_numbers.' in filename and 'NumberX' not in _points_attr:
+                        print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
+                    elif '.index.' in filename:
+                        _pac = add_city_region_atm_to_pointsattr(_points_attr)
+                        print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_way in enumerate(pickled_filenames['ways']):
         with open(pickled_way, 'rb') as p_file:
@@ -2906,18 +2914,35 @@ def output_normal_pickled(pickled_filenames=None, node_generalizator=None, no_nu
                 orig_id += 1
                 if _way is None:
                     continue
-                if no_numbers and 'NumberX' in _way:
-                    continue
-                print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+                for filename in output_files:
+                    out = output_files[filename]
+                    if '.normal.' in filename:
+                        print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+                    elif '.navit.' in filename:
+                        newway = _way.copy()
+                        if 'natural' in newway and newway['natural'] == 'coastline':
+                            newway['natural'] = 'water'
+                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                    elif '.no_numbers.' in filename and 'NumberX' not in _way:
+                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                    elif '.index.' in filename and 'is_in' in _way:
+                        newway = remove_label_braces(_way)
+                        if options.regions and 'is_in:state' in newway:
+                            newway = add_city_region_to_way(newway)
+                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_relation in enumerate(pickled_filenames['relations']):
         with open(pickled_relation, 'rb') as p_file:
             orig_id = -1
             for _relation in pickle.load(p_file):
                 orig_id += 1
-                print_relation_pickled(_relation, task_id, orig_id, node_generalizator, out)
-    out.write("</osm>\n")
-    out.close()
+                print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
+                                       output_files['UMP_PL.normal.osm'])
+                print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
+                                       output_files['UMP_PL.navit.osm'])
+    for out in output_files.values():
+        out.write("</osm>\n")
+        out.close()
 
 
 def output_nonumbers_pickled(pickled_filenames=None, node_generalizator=None):
