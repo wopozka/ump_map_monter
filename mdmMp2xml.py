@@ -2892,11 +2892,11 @@ def output_normal_pickled(options, pickled_filenames=None, node_generalizator=No
                 orig_id += 1
                 for filename in output_files:
                     out = output_files[filename]
-                    if '.normal.' in filename or '.navit.' in filename:
+                    if filename in {'normal', 'navit'}:
                         print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
-                    elif '.no_numbers.' in filename and 'NumberX' not in _points_attr:
+                    elif filename == 'no_numbers' and 'NumberX' not in _points_attr:
                         print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
-                    elif '.index.' in filename:
+                    elif filename == 'index':
                         _pac = add_city_region_atm_to_pointsattr(_points_attr)
                         print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
 
@@ -2909,16 +2909,16 @@ def output_normal_pickled(options, pickled_filenames=None, node_generalizator=No
                     continue
                 for filename in output_files:
                     out = output_files[filename]
-                    if '.normal.' in filename:
+                    if filename == 'normal':
                         print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
-                    elif '.navit.' in filename:
+                    elif filename == 'navit':
                         newway = _way.copy()
                         if 'natural' in newway and newway['natural'] == 'coastline':
                             newway['natural'] = 'water'
                         print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
-                    elif '.no_numbers.' in filename and 'NumberX' not in _way:
+                    elif filename == 'no_numbers' and 'NumberX' not in _way:
                         print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
-                    elif '.index.' in filename and 'is_in' in _way:
+                    elif filename == 'index' and 'is_in' in _way:
                         newway = remove_label_braces(_way)
                         if options.regions and 'is_in:state' in newway:
                             newway = add_city_region_to_way(newway)
@@ -2930,13 +2930,12 @@ def output_normal_pickled(options, pickled_filenames=None, node_generalizator=No
             for _relation in pickle.load(p_file):
                 orig_id += 1
                 print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
-                                       output_files['UMP_PL.normal.osm'])
+                                       output_files['normal'])
                 print_relation_pickled(_relation, task_id, orig_id, node_generalizator,
-                                       output_files['UMP_PL.navit.osm'])
+                                       output_files['navit'])
     for out in output_files.values():
-        # out.write("</osm>\n")
         out.close()
-    return {a: a.name for a in output_files}
+    return {a: a.name for a in output_files.values()}
 
 
 def output_navit(prefix, num):
@@ -3709,7 +3708,6 @@ def main(options, args):
             try:
                 write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
                                    headerf=headerf)
-                os.remove(generated_output_filenames['navit'])
             except IOError:
                 sys.stderr.write("\n\tERROR: Navit output failed!\n")
                 sys.exit()
@@ -3720,7 +3718,6 @@ def main(options, args):
             try:
                 write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
                                    headerf=headerf)
-                os.remove(generated_output_filenames['index'])
             except IOError:
                 sys.stderr.write("\n\tERROR: Index output failed!\n")
                 sys.exit()                        
@@ -3731,7 +3728,6 @@ def main(options, args):
             try:
                 write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
                                    headerf=headerf)
-                os.remove(generated_output_filenames['no_number'])
             except IOError:
                 sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
                 sys.exit()
@@ -3743,7 +3739,6 @@ def main(options, args):
             write_output_files(in_file=generated_output_filenames['normal'], dest_filename=temp_file.name,
                                headerf=headerf, file2_core="normal")
             printinfo_nlf("Normal output copying to stdout or destination file ")
-            os.remove(generated_output_filenames['normal'])
             elapsed = datetime.now().replace(microsecond=0)
             if options.outputfile is None:
                 shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
@@ -3760,6 +3755,8 @@ def main(options, args):
             sys.exit()
 
         os.remove(headerf)
+        for _filename in generated_nominatim_filename.values():
+            os.remove(_filename)
     else:
         sys.stderr.write("\tINFO: Border file required when more than one area given: --border \n")
 
