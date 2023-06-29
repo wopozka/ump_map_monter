@@ -243,15 +243,7 @@ class NodesToWayNotFound(ValueError):
 
 __version__ = '0.8.1'
 
-# Kwadrat dla Polski.
-# 54.85628,13.97873
-# 48.95703,24.23996
-# Ekspansja, niech pamieta granice dla z grubsza calej Europy kontynentalnej
 
-maxN = 72.00000
-maxW = -12.00000
-maxS = 34.00000
-maxE = 50.00000
 
 # Krok zwiekszania osm_id per obszar. Istotny gdy nie ma normalize_ids
 # zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
@@ -999,6 +991,14 @@ def bpoints_append(node):
 
 def add_bline(nodes_str):
     """Appends new nodes to the points list"""
+    # Kwadrat dla Polski.
+    # 54.85628,13.97873
+    # 48.95703,24.23996
+    # Ekspansja, niech pamieta granice dla z grubsza calej Europy kontynentalnej
+    maxN = 72.00000
+    maxW = -12.00000
+    maxS = 34.00000
+    maxE = 50.00000
     nodes = []
     for element in nodes_str.split(','):
         element = element.strip('()')
@@ -2561,7 +2561,7 @@ def add_city_region_atm_to_pointsattr(l_pointsattr):
             cities = _pac['is_in'].split(';')
             _pac['is_in'] = cities.pop(0) + region
             for city in cities:
-                __pac['is_in'] += ";" + city + region
+                _pac['is_in'] += ";" + city + region
 
     # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
     if 'amenity' in _pac and _pac['amenity'] == 'atm':
@@ -2616,8 +2616,8 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
     output_files = dict()
     try:
         output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + filename + "!\n")
+    except IOError as ioerror:
+        sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
 
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
