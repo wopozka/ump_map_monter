@@ -932,13 +932,13 @@ poi_types = {
 # (but some look-ups will be slower)
 # k zawiera slownik {[lat,lon]->poz,....} ; mapowanie (lat,lon)->id
 # v zawiera tablice { [lat,lon], [lat,lon],....}  mapowanie id->(lat,lon)
-bpoints = MylistB()
+# bpoints = MylistB()
 
 # later will be initialized as Mylist instance, lets leave it None for now.
-points = None
-# pointattrs = {}
-pointattrs = defaultdict(dict)
-ways = []
+# points = None
+# # pointattrs = {}
+# pointattrs = defaultdict(dict)
+# ways = []
 relations = []
 
 maxtypes = {}
@@ -985,11 +985,12 @@ def recode(line):
         return line
 
 
-def bpoints_append(node):
-    bpoints.append(node)
+def bpoints_append(node, bpoints):
+    if node not in bpoints:
+        bpoints.append(node)
         
 
-def add_bline(nodes_str):
+def nodes_from_bline(nodes_str):
     """Appends new nodes to the points list"""
     # Kwadrat dla Polski.
     # 54.85628,13.97873
@@ -1019,12 +1020,11 @@ def add_bline(nodes_str):
             lo += '0' * (9 - l)
         longs.append(lo)
     
-    nodes = list(zip(lats, longs))
-        
-    for node in nodes:
-        if node not in bpoints:
-            if maxN > float(node[0]) > maxS and maxW < float(node[1]) < maxE:
-                bpoints_append(node) 
+    nodes = []
+    for node in list(zip(lats, longs)):
+        if maxN > float(node[0]) > maxS and maxW < float(node[1]) < maxE:
+            nodes.append(node)
+    return nodes
     
         
 # TxF: ucinanie przedrostkow
@@ -1036,11 +1036,12 @@ def cut_prefix(string):
     return string
 
 
-def convert_btag(way, key, value, feat, options):
+def convert_btag(way, key, value, feat, options, bpoints):
     if key.lower() in ('label',):
         pass
     elif key in ('Data0',):
-        add_bline(value)
+        for _tmpnode in nodes_from_bline(value):
+            bpoints_append(_tmpnode, bpoints)
     elif key == 'Type':
         if int(value, 0) == 0x4b:
             pass
@@ -1059,7 +1060,8 @@ def convert_btag(way, key, value, feat, options):
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
 
-def parse_borders(infile, options):
+def parse_borders_return_bpoints(infile, options, border_stamp):
+    bpoints = MylistB()
     polyline = None
     feat = None
     comment = None
@@ -1081,10 +1083,10 @@ def parse_borders(infile, options):
             polyline = {}
             feat = Features.polyline
         elif line == '[END]':
-            way = {'_timestamp': borderstamp}
+            way = {'_timestamp': border_stamp}
             for key in polyline:
                 if polyline[key] != '':
-                    convert_btag(way, key, polyline[key], feat, options)
+                    convert_btag(way, key, polyline[key], feat, options, bpoints)
             polyline = None
         elif feat == Features.ignore:
             pass
@@ -1098,6 +1100,7 @@ def parse_borders(infile, options):
             polyline[key] = recode(value).strip()
         elif line != '':
             raise ParsingError('Unhandled line ' + str(linenum) + ":" + line)
+    return bpoints
 
 
 # Mercator
@@ -1126,7 +1129,7 @@ def tag(way, pairs):
         way[key] = value
 
 
-def polygon_make_ccw(shape):
+def polygon_make_ccw(shape, c_points):
     nodes = shape['_nodes']
     num = len(nodes) - 1
     if num < 3:
@@ -1141,12 +1144,12 @@ def polygon_make_ccw(shape):
             b = (i + 1)
             c = (i + 2) % num
             # No projection needed
-            alat = float(points[nodes[a]][0])
-            alon = float(points[nodes[a]][1])
-            blat = float(points[nodes[b]][0])
-            blon = float(points[nodes[b]][1])
-            clat = float(points[nodes[c]][0])
-            clon = float(points[nodes[c]][1])
+            alat = float(c_points[nodes[a]][0])
+            alon = float(c_points[nodes[a]][1])
+            blat = float(c_points[nodes[b]][0])
+            blon = float(c_points[nodes[b]][1])
+            clat = float(c_points[nodes[c]][0])
+            clon = float(c_points[nodes[c]][1])
             ablen = math.hypot(blat - alat, blon - alon)
             bclen = math.hypot(clat - blat, clon - blon)
             # Vector cross product (?)
@@ -1276,14 +1279,19 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count):
             prev_house = "xx"
         
 
-def points_append(node, attrs):
+def points_append(node, attrs, map_elements_props=None):
+    if map_elements_props is None:
+        return
+    _points = map_elements_props['points']
+    _pointattrs = map_elements_props['pointattrs']
+    if node not in map_elements_props['points']:
     # attrs['_src'] = srcidx
-    attrs['_timestamp'] = filestamp
-    points.append(node)
-    pointattrs[points.index(node)] = attrs
+        attrs['_timestamp'] = filestamp
+        _points.append(node)
+        _pointattrs[_points.index(node)] = attrs
 
             
-def prepare_line(nodes_str, closed=False):
+def prepare_line(nodes_str, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
     nodes = []
     for element in nodes_str.split(','):
@@ -1310,24 +1318,23 @@ def prepare_line(nodes_str, closed=False):
 
     nodes = list(zip(lats, longs))
     for node in nodes:
-        if node not in points:
-            points_append(node, {})
+        points_append(node, {}, map_elements_props=map_elements_props)
     try:
-        node_indices = list(map(points.index, nodes))
+        node_indices = list(map(map_elements_props['points'].index, nodes))
     except:
-        print(points)
+        print(map_elements_props['points'])
         print(node)
         raise ParsingError('Can\'t map node indices')
     pts = 0
     for node in node_indices:
-        if '_out' not in pointattrs[node]:
+        if '_out' not in map_elements_props['pointattrs'][node]:
             pts += 1
     if closed:
         node_indices.append(node_indices[0])
     return pts, node_indices
 
             
-def convert_tags_return_way(mp_record, feat, ignore_errors):
+def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None):
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
@@ -1406,7 +1413,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors):
                 way['oneway'] = value
         elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
             num = int(key[4:])
-            count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon)
+            count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon,
+                                                map_elements_props=map_elements_props)
             if '_c' in way:
                 way['_c'] += count
             else:
@@ -1659,10 +1667,14 @@ def convert_tags_return_way(mp_record, feat, ignore_errors):
     return way
 
 
-def parse_txt(infile, options, filename='', progress_bar=None):
+def parse_txt(infile, options, filename='', progress_bar=None, bpoints=None):
+    if bpoints is None:
+        bpoints = []
     otwarteDict = {"([Pp]n|pon\.)": "Mo", "([Ww]t|wt\.)": "Tu", "([Ss]r|śr|Śr|śr\.)": "We", "([Cc]z|czw\.)": "Th",
                    "([Pp]t|piąt\.|pt\.)": "Fr", "([Ss]o|[Ss]b|sob\.)": "Sa", "([Nn]d|ni|niedz\.)": "Su"}
     maxtypes = {}
+    map_elements_props = {'points': Mylist(bpoints, 0), 'pointattrs': defaultdict(dict),
+                          'ways': list(), 'relations': list()}
     polyline = None
     feat = None
     comment = None
@@ -1684,7 +1696,7 @@ def parse_txt(infile, options, filename='', progress_bar=None):
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
-            way = convert_tags_return_way(polyline, feat, options.ignore_errors)
+            way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props)
             if feat == Features.polygon:
                 if 'ump:typ' in way:
                     utyp = way['ump:typ']
@@ -1810,15 +1822,15 @@ def parse_txt(infile, options, filename='', progress_bar=None):
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
                 way['depth'] = way.pop('name').replace(',', '.')
             if feat == Features.polygon:
-                polygon_make_ccw(way)
+                polygon_make_ccw(way, map_elements_props['points'])
 
             if feat == Features.poi:
                 # execution order shouldn't matter here, unlike in C
-                pointattrs[way.pop('_nodes')[0]] = way
+                map_elements_props['pointattrs'][way.pop('_nodes')[0]] = way
                 if not way.pop('_c'):
                     way['_out'] = 1
             else:
-                ways.append(way)
+                map_elements_props['ways'].append(way)
 
         elif feat == Features.ignore:
             # Ignore everything within e.g. [IMG ID] until some other
@@ -1871,7 +1883,9 @@ def create_node_ways_relation(all_ways):
            {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
 
 
-def nodes_to_way_id(a, b, node_ways_relation=None):
+def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None):
+    points = map_elements_props['points']
+    ways = map_elements_props['ways']
     if a not in node_ways_relation or b not in node_ways_relation:
         raise NodesToWayNotFound(a, b)
     ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
@@ -1902,8 +1916,8 @@ def nodes_to_way_id(a, b, node_ways_relation=None):
     return None
 
 
-def nodes_to_way(a, b, node_ways_relation=None):
-    return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation)]
+def nodes_to_way(a, b, node_ways_relation=None, map_elements_props=None):
+    return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)]
 
 
 def way_to_way_id(way, node_ways_relation=None):
@@ -1974,7 +1988,7 @@ def split_way(way=None, splitting_point=None, node_ways_relation=None):
         node_ways_relation[way_node].add(newway_id)
 
 
-def name_turn_restriction(rel, nodes):
+def name_turn_restriction(rel, nodes, points):
 
     # Multiple via nodes are not approved by OSM anyway
     if 'restriction' not in rel and len(nodes) == 3:
@@ -2026,12 +2040,14 @@ def prepare_restriction(rel, node_ways_relation=None):
 def return_roadid_in_ways(way, road_to_road_id=None):
     return road_to_road_id[id(way)]
 
-def make_restriction_fromviato(rel, node_ways_relation=None):
+def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None):
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
-    from_way_index = nodes_to_way_id(nodes[0], nodes[1], node_ways_relation=node_ways_relation)
-    to_way_index = nodes_to_way_id(nodes[-2], nodes[-1], node_ways_relation=node_ways_relation)
+    from_way_index = nodes_to_way_id(nodes[0], nodes[1], node_ways_relation=node_ways_relation,
+                                     map_elements_props=map_elements_props)
+    to_way_index = nodes_to_way_id(nodes[-2], nodes[-1], node_ways_relation=node_ways_relation,
+                                   map_elements_props=map_elements_props)
     rel['_members'] = {
         'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
@@ -2046,7 +2062,7 @@ def make_restriction_fromviato(rel, node_ways_relation=None):
     return nodes
 
 
-def make_multipolygon(outer, holes, node_ways_relation=None):
+def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=None):
     if node_ways_relation is None:
         outer_index = ways.index(outer)
     else:
@@ -2071,10 +2087,10 @@ def make_multipolygon(outer, holes, node_ways_relation=None):
             '_c':     outer['_c'],
             '_nodes': inner,
         }
-        ways.append(way)
+        map_elements_props['ways'].append(way)
         # rel['_members']['inner'][1].append(ways.index(way))
         rel['_members']['inner'][1].append(len(ways) - 1)
-        polygon_make_ccw(way)
+        polygon_make_ccw(way, map_elements_props['points'])
 
         # Assume that the polygon with most nodes is the outer shape and
         # all other polygons are the holes.
@@ -2095,51 +2111,51 @@ def index_to_nodeid(index):
     return index + 1
 
 
-def index_to_wayid(index):
+def index_to_wayid(index, points):
     return index_to_nodeid(len(points) + index)
 
 
-def index_to_relationid(index):
-    return index_to_wayid(len(ways) + index)
+def index_to_relationid(index, points):
+    return index_to_wayid(len(ways) + index, points)
 
 
 def xmlize(str):
     return saxutils.escape(str, {'\'': '&apos;'})
 
 
-def print_point(point, index, ostr):
-    global maxid
-    global idpfx
-
-    """Prints a pair of coordinates and their ID as XML"""
-    if '_out' in pointattrs[index]:
-        return
-    if '_timestamp' in pointattrs[index]:
-        timestamp = pointattrs[index]['_timestamp']
-    else:
-        sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs[index])
-        timestamp = runstamp
-    currid = index_to_nodeid(index)
-    if currid > maxid:
-        maxid = currid
-    idstring = idpfx + str(currid)
-    head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
-                    "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
-    # print >>ostr, (head)
-    ostr.write(head)
-    if '_src' in pointattrs[index]:
-        src = pointattrs[index].pop('_src')
-    for key in pointattrs[index]:
-        if key.startswith('_'):
-            continue
-        if len(str(pointattrs[index][key])) > 255:
-            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattrs[index][key]) + "\n")
-            continue
-        try:
-            ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattrs[index][key]))))
-        except:
-            sys.stderr.write("converting key " + key + ": " + str(pointattrs[index][key]) + " failed\n")
-    ostr.write("</node>\n")
+# def print_point(point, index, ostr):
+#     global maxid
+#     global idpfx
+#
+#     """Prints a pair of coordinates and their ID as XML"""
+#     if '_out' in pointattrs[index]:
+#         return
+#     if '_timestamp' in pointattrs[index]:
+#         timestamp = pointattrs[index]['_timestamp']
+#     else:
+#         sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs[index])
+#         timestamp = runstamp
+#     currid = index_to_nodeid(index)
+#     if currid > maxid:
+#         maxid = currid
+#     idstring = idpfx + str(currid)
+#     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
+#                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
+#     # print >>ostr, (head)
+#     ostr.write(head)
+#     if '_src' in pointattrs[index]:
+#         src = pointattrs[index].pop('_src')
+#     for key in pointattrs[index]:
+#         if key.startswith('_'):
+#             continue
+#         if len(str(pointattrs[index][key])) > 255:
+#             sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattrs[index][key]) + "\n")
+#             continue
+#         try:
+#             ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattrs[index][key]))))
+#         except:
+#             sys.stderr.write("converting key " + key + ": " + str(pointattrs[index][key]) + " failed\n")
+#     ostr.write("</node>\n")
 
 
 def print_point_pickled(point, pointattrs, task_id, orig_id, node_generalizator, ostr):
@@ -2324,11 +2340,11 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options, filename='', maxtypes=None, progress_bar=None):
+def post_load_processing(options, filename='', maxtypes=None, progress_bar=None, map_elements_props=None):
     if maxtypes is None:
         maxtypes = {}
-    global relations
-    global ways
+    ways = map_elements_props['ways']
+    pointattrs = map_elements_props['pointattrs']
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
     # that meets the roundabout.
@@ -2336,6 +2352,7 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None)
     # relations = OrderedDict({rel_no: ways[rel_no] for rel_no in range(len(ways)) if '_rel' in ways[rel_no]})
     # levelledways = [way for way in ways if '_levels' in way]
     relations = OrderedDict()
+    map_elements_props['relations'] = relations
     levelledways = OrderedDict()
     for way_no, way in enumerate(ways):
         if '_rel' in way:
@@ -2382,7 +2399,8 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None)
         progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                preprepare_restriction(rel, node_ways_relation=node_ways_relation)
+                preprepare_restriction(rel, node_ways_relation=node_ways_relation,
+                                       map_elements_props=map_elements_props)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
@@ -2431,8 +2449,9 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None)
                     subway['_nodes'] = segment
                     ways.append(subway)
             else:
-                relations.append(make_multipolygon(way, way.pop('_innernodes'),
-                                                   node_ways_relation=node_multipolygon_relation))
+                map_elements_props['relations'].append(make_multipolygon(way, way.pop('_innernodes'),
+                                                                         node_ways_relation=node_multipolygon_relation,
+                                                                         map_elements_props=map_elements_props))
 
     # for each relation/restriction split ways at via points as the "from" and "to" members must start/end at the
     # Role via node or the Role via way(s)
@@ -2452,9 +2471,10 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None)
         progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation)
+                rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
+                                                    map_elements_props=map_elements_props)
                 if rel['type'] == 'restriction':
-                    name_turn_restriction(rel, rnodes)
+                    name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to " +
                             "preprepare restriction from rel: %r\n" % (rel,))
@@ -2508,16 +2528,16 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None)
                     del pointattrs[node]['_out']
 
 
-def save_pickled_data(prefix, num):
+def save_pickled_data(prefix, num, map_elements_props=None):
     try:
         with open(prefix + ".normal." + str(num) + ".points_pickle", 'wb') as pickle_f:
-            pickle.dump(points, pickle_f)
-        with open(prefix + ".normal." + str(num) + ".pointsattrs_pickle", 'wb') as pickle_f:
-            pickle.dump(pointattrs, pickle_f)
+            pickle.dump(map_elements_props['points'], pickle_f)
+        with open(prefix + ".normal." + str(num) + ".pointattrs_pickle", 'wb') as pickle_f:
+            pickle.dump(map_elements_props['pointattrs'], pickle_f)
         with open(prefix + ".normal." + str(num) + ".ways_pickle", 'wb') as pickle_f:
-            pickle.dump(ways, pickle_f)
+            pickle.dump(map_elements_props['ways'], pickle_f)
         with open(prefix + ".normal." + str(num) + ".relations_pickle", 'wb') as pickle_f:
-            pickle.dump(relations, pickle_f)
+            pickle.dump(map_elements_props['relations'], pickle_f)
     except IOError:
         sys.stderr.write("\tERROR: Can't write pickle files \n")
         sys.exit()
@@ -2588,31 +2608,31 @@ def add_city_region_to_way(l_way):
     return newway
 
 
-def output_normal(prefix, num, options):
-    global maxid
-    global idpfx
-
-    try:
-        f = prefix + ".normal." + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
-        sys.exit()
-        
-    for point in points:
-        index = points.index(point)
-        if options.skip_housenumbers:
-            if ('note' in pointattrs[index]) and (pointattrs[index]['note'] == 'housenumber'):
-                continue
-        print_point(point, index, out)
-
-    for index, way in enumerate(ways):
-        print_way(way, index, out)
-
-    for index, rel in enumerate(relations):
-        print_relation(rel, index, out)
-
-    out.close()
+# def output_normal(prefix, num, options):
+#     global maxid
+#     global idpfx
+#
+#     try:
+#         f = prefix + ".normal." + str(num) + ".osm"
+#         out = open(f, "w", encoding="utf-8")
+#     except IOError:
+#         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+#         sys.exit()
+#
+#     for point in points:
+#         index = points.index(point)
+#         if options.skip_housenumbers:
+#             if ('note' in pointattrs[index]) and (pointattrs[index]['note'] == 'housenumber'):
+#                 continue
+#         print_point(point, index, out)
+#
+#     for index, way in enumerate(ways):
+#         print_way(way, index, out)
+#
+#     for index, rel in enumerate(relations):
+#         print_relation(rel, index, out)
+#
+#     out.close()
 
 
 def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None):
@@ -2623,7 +2643,7 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
         sys.exit()
 
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
+        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
             orig_id = -1
             for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
                 orig_id += 1
@@ -2674,33 +2694,33 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
     return {a: b.name for a, b in output_files.items()}
 
 
-def output_navit(prefix, num):
-    global maxid
-    global idpfx
-
-    try:
-        f = prefix + ".navit." + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open Navit output file " + f + "!\n")
-        sys.exit()
-
-    for point in points:
-        index = points.index(point)
-        print_point(point, index, out)
-
-    for index, way in enumerate(ways):
-        if way is None:
-            continue
-        newway = way.copy()
-        if ('natural' in newway) and (newway['natural'] == 'coastline'):
-            newway['natural'] = 'water'
-        print_way(newway, index, out)
-
-    for index, rel in enumerate(relations):
-        print_relation(rel, index, out)
-
-    out.close()
+# def output_navit(prefix, num):
+#     global maxid
+#     global idpfx
+#
+#     try:
+#         f = prefix + ".navit." + str(num) + ".osm"
+#         out = open(f, "w", encoding="utf-8")
+#     except IOError:
+#         sys.stderr.write("\tERROR: Can't open Navit output file " + f + "!\n")
+#         sys.exit()
+#
+#     for point in points:
+#         index = points.index(point)
+#         print_point(point, index, out)
+#
+#     for index, way in enumerate(ways):
+#         if way is None:
+#             continue
+#         newway = way.copy()
+#         if ('natural' in newway) and (newway['natural'] == 'coastline'):
+#             newway['natural'] = 'water'
+#         print_way(newway, index, out)
+#
+#     for index, rel in enumerate(relations):
+#         print_relation(rel, index, out)
+#
+#     out.close()
 
 
 def output_index_pickled(options, pickled_filenames=None, node_generalizator=None):
@@ -2713,7 +2733,7 @@ def output_index_pickled(options, pickled_filenames=None, node_generalizator=Non
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointsattrs'][task_id], 'rb') as pattrs_file:
+        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
             orig_id = -1
             for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
                 orig_id += 1
@@ -2735,98 +2755,98 @@ def output_index_pickled(options, pickled_filenames=None, node_generalizator=Non
     out.write("</osm>\n")
     out.close()
 
-def output_index(prefix, num, options):
-    global maxid
-    global idpfx
-
-    try:
-        f = prefix + ".index." + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open index output file " + f + "!\n")
-        sys.exit()
-    
-    for point in points:
-        index = points.index(point)
-        attrs = pointattrs[index].copy()  # store them here
-
-        if options.regions and 'is_in:state' in pointattrs[index]:
-            if 'place' in pointattrs[index] and (pointattrs[index]['place'] == 'city' or
-                                                 pointattrs[index]['place'] == 'town' or
-                                                 pointattrs[index]['place'] == 'village'):
-                pointattrs[index]['name'] = ''.join((pointattrs[index]['name'], " (", pointattrs[index]['is_in:state'],
-                                                     ")"))
-
-            if 'addr:city' in pointattrs[index]:
-                region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
-                cities = pointattrs[index]['addr:city'].split(';')
-                pointattrs[index]['addr:city'] = cities.pop(0) + region
-                for city in cities:
-                    pointattrs[index]['addr:city'] += ";" + city + region
-
-            if 'is_in' in pointattrs[index]:
-                region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
-                cities = pointattrs[index]['is_in'].split(';')
-                pointattrs[index]['is_in'] = cities.pop(0) + region
-                for city in cities:
-                    pointattrs[index]['is_in'] += ";" + city + region
-
-        # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
-        if 'amenity' in pointattrs[index] and (pointattrs[index]['amenity'] == 'atm'):
-            pointattrs[index]['amenity_atm'] = 'atm'
-
-        print_point(point, index, out)
-        pointattrs[index] = attrs.copy()	# restore
-
-    # dla ulic bez nazwy (wyciete {}) uzupelniamy z loc_name lub podobnych
-    for index, way in enumerate(ways):
-        if way is None:
-            continue
-        if (not ('is_in' in way)): 
-            continue
-
-        newway = way.copy()
-        p = re.compile('\{.*\}')                        # dowolny string otoczony klamrami
-        if 'alt_name' in newway:
-            tmpname = newway['alt_name']
-            if 'name' in newway:			# przechowanie nazwy z Label
-                nname = p.sub( "", newway['name'])
-                newway['alt_name'] = str.strip(nname)
-            else:
-                newway.pop('alt_name')
-            newway['name'] = tmpname			# alt_name z Label3 to glowna nazwa do indeksowania
-            
-        else:
-            if 'name' in newway:
-                nname = p.sub( "", newway['name'])
-                newway['name'] = str.strip(nname)
-
-                if (newway['name']==""):                     # zastepowanie pustych name
-                    if ('loc_name' in newway):
-                        newway['name'] = newway['loc_name']
-                        newway.pop('loc_name')
-                    elif ('short_name' in newway):
-                        newway['name'] = newway['short_name']
-
-
-        if options.regions and 'is_in:state' in newway:
-            if 'addr:city' in newway:
-                region = ''.join((" (", newway['is_in:state'], ")"))
-                cities = newway['addr:city'].split(';')
-                newway['addr:city'] = cities.pop(0) + region
-                for city in cities:
-                    newway['addr:city'] += ";" + city + region
-
-            if 'is_in' in newway:
-                region = ''.join((" (", newway['is_in:state'], ")"))
-                cities = newway['is_in'].split(';')
-                newway['is_in'] = cities.pop(0) + region
-                for city in cities:
-                    newway['is_in'] += ";" + city + region
-
-        print_way(newway, index, out)
-
-    out.close()
+# def output_index(prefix, num, options):
+#     global maxid
+#     global idpfx
+#
+#     try:
+#         f = prefix + ".index." + str(num) + ".osm"
+#         out = open(f, "w", encoding="utf-8")
+#     except IOError:
+#         sys.stderr.write("\tERROR: Can't open index output file " + f + "!\n")
+#         sys.exit()
+#
+#     for point in points:
+#         index = points.index(point)
+#         attrs = pointattrs[index].copy()  # store them here
+#
+#         if options.regions and 'is_in:state' in pointattrs[index]:
+#             if 'place' in pointattrs[index] and (pointattrs[index]['place'] == 'city' or
+#                                                  pointattrs[index]['place'] == 'town' or
+#                                                  pointattrs[index]['place'] == 'village'):
+#                 pointattrs[index]['name'] = ''.join((pointattrs[index]['name'], " (", pointattrs[index]['is_in:state'],
+#                                                      ")"))
+#
+#             if 'addr:city' in pointattrs[index]:
+#                 region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
+#                 cities = pointattrs[index]['addr:city'].split(';')
+#                 pointattrs[index]['addr:city'] = cities.pop(0) + region
+#                 for city in cities:
+#                     pointattrs[index]['addr:city'] += ";" + city + region
+#
+#             if 'is_in' in pointattrs[index]:
+#                 region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
+#                 cities = pointattrs[index]['is_in'].split(';')
+#                 pointattrs[index]['is_in'] = cities.pop(0) + region
+#                 for city in cities:
+#                     pointattrs[index]['is_in'] += ";" + city + region
+#
+#         # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
+#         if 'amenity' in pointattrs[index] and (pointattrs[index]['amenity'] == 'atm'):
+#             pointattrs[index]['amenity_atm'] = 'atm'
+#
+#         print_point(point, index, out)
+#         pointattrs[index] = attrs.copy()	# restore
+#
+#     # dla ulic bez nazwy (wyciete {}) uzupelniamy z loc_name lub podobnych
+#     for index, way in enumerate(ways):
+#         if way is None:
+#             continue
+#         if (not ('is_in' in way)):
+#             continue
+#
+#         newway = way.copy()
+#         p = re.compile('\{.*\}')                        # dowolny string otoczony klamrami
+#         if 'alt_name' in newway:
+#             tmpname = newway['alt_name']
+#             if 'name' in newway:			# przechowanie nazwy z Label
+#                 nname = p.sub( "", newway['name'])
+#                 newway['alt_name'] = str.strip(nname)
+#             else:
+#                 newway.pop('alt_name')
+#             newway['name'] = tmpname			# alt_name z Label3 to glowna nazwa do indeksowania
+#
+#         else:
+#             if 'name' in newway:
+#                 nname = p.sub( "", newway['name'])
+#                 newway['name'] = str.strip(nname)
+#
+#                 if (newway['name']==""):                     # zastepowanie pustych name
+#                     if ('loc_name' in newway):
+#                         newway['name'] = newway['loc_name']
+#                         newway.pop('loc_name')
+#                     elif ('short_name' in newway):
+#                         newway['name'] = newway['short_name']
+#
+#
+#         if options.regions and 'is_in:state' in newway:
+#             if 'addr:city' in newway:
+#                 region = ''.join((" (", newway['is_in:state'], ")"))
+#                 cities = newway['addr:city'].split(';')
+#                 newway['addr:city'] = cities.pop(0) + region
+#                 for city in cities:
+#                     newway['addr:city'] += ";" + city + region
+#
+#             if 'is_in' in newway:
+#                 region = ''.join((" (", newway['is_in:state'], ")"))
+#                 cities = newway['is_in'].split(';')
+#                 newway['is_in'] = cities.pop(0) + region
+#                 for city in cities:
+#                     newway['is_in'] += ";" + city + region
+#
+#         print_way(newway, index, out)
+#
+#     out.close()
 
 
 def output_nominatim_pickled(options, pickled_filenames=None):
@@ -2842,9 +2862,9 @@ def output_nominatim_pickled(options, pickled_filenames=None):
         with open(pickled, 'rb') as p_file:
             local_points[task_id] = pickle.load(p_file)
 
-    # wczytujemy wszystkie pointsattrs
+    # wczytujemy wszystkie pointattrs
     local_pointattrs = OrderedDict()
-    for task_id, pickled in enumerate(pickled_filenames['pointsattrs']):
+    for task_id, pickled in enumerate(pickled_filenames['pointattrs']):
         with open(pickled, 'rb') as p_file:
             local_pointattrs[task_id] = pickle.load(p_file)
 
@@ -3009,178 +3029,178 @@ def output_nominatim_pickled(options, pickled_filenames=None):
     out.close()
     return f.name
 
-def output_nominatim(prefix, num, options):
-    global streets_counter
-    global maxid
-    global idpfx
-
-    printdebug("City=>Streets scan start: "+str(datetime.now()), options)
-    #
-    #  fragment dodajacy krotkie odcinki drog dla wsi
-    #  ktore nie posiadaja ulic
-    #
-    #    zbieramy info o wszytskich miastach
-    for point in points:
-        index = points.index(point)
-        if 'place' in pointattrs[index] and 'name' in pointattrs[index] :
-            n = pointattrs[index]['name']
-            p = pointattrs[index]['place']
-            lat = point[0]
-            lon = point[1]
-            radius = 0 
-            if p == 'city':
-                radius = 25
-            if p == 'town':
-                radius = 10
-            if p == 'village':
-                radius = 5
-            m={'radius':radius,'lat':lat,'lon':lon,'cnt':0}
-            if n in streets_counter:
-                streets_counter[n].append(m)
-            else:
-                l=[]
-                l.append(m)
-                streets_counter[n]=l
-    printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
-    # teraz skan wszystkich ulic
-    for way in ways:
-        if way is None:
-            continue
-        if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
-            if way['highway' ] == 'trunk' or way['highway'] == 'primary' or way['highway'] == 'secondary' or \
-                    way['highway'] == 'motorway':
-                pcnt = len(way['_nodes'])
-                # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
-                start = 0
-                lenKM = 0
-                waydivided = False
-                for i in range(0, pcnt):
-                # printerror("A="+str(i))
-                    if i == start:
-                        lenKM = 0
-                    else:
-                        lenKM += distKM(points[way['_nodes'][i]][0], points[way['_nodes'][i]][1],
-                        points[way['_nodes'][i-1]][0], points[way['_nodes'][i-1]][1])
-                    if lenKM > 3:
-                        newway=way.copy()
-                        newway['_nodes'] = way['_nodes'][start:i+1]
-                        newway['split'] = str(start)+":"+str(i)+" KM:"+str(lenKM)
-                        ways.append(newway)
-                        start = i
-                        lenKM = 0
-                        waydivided = True
-                if waydivided:
-                    way['_nodes'] = way['_nodes'][start:]
-                    way['split'] ='last'
-                # else:
-                #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
-    for way in ways:
-        if way is None:
-            continue
-        if 'is_in' in way and 'name' in way and 'highway' in way:
-            try:
-                towns = way['is_in'].split(";")
-                waylat = points[way['_nodes'][0]][0]
-                waylon = points[way['_nodes'][0]][1]
-                for town in towns:
-                    if town in streets_counter:
-                        found = 0
-                        for l in streets_counter[town]:
-                            if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
-                                l['cnt'] += 1
-                                found = 1
-                                break
-                        if found == 0:
-                            printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) +
-                                       "," + str(waylon) + ")", options)
-                    else:
-                        printdebug("Brak Miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) + "," +
-                                   str(waylon) + ")", options)
-            except IndexError:
-                pprint.pprint(way, sys.stderr)
-                
-    printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
-    # i dodawanie krotkich ulic
-    for m in streets_counter:
-        for k in streets_counter[m]:
-            if k['cnt'] != 0:
-                printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']), options)
-            else:
-                printdebug("Short way added:" + m, options)
-                pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
-                pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
-                attrs = {'_timestamp': filestamp}
-                pind0 = len(points)
-                points_append(pt0, attrs.copy())
-                pind1 = len(points)
-                points_append(pt1, attrs.copy())
-                way = {
-                    '_timestamp': filestamp,
-                    '_nodes': [pind0, pind1],
-                    '_c': 2,
-##                    '_src': srcidx,
-                    'is_in': m,
-                    'name': m,
-                    'addr:city':m,
-                    'highway': "residental"
-                }
-                ways.append(way)
-    printdebug("City=>Streets scan stop: "+str(datetime.now()), options)
-
-
-    # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
-    # jesli zostaje pusta nazwa, podmien
-    for way in ways:
-        if way is None:
-            continue
-        p = re.compile( '\{.*\}')                        # dowolny string otoczony klamrami
-        if 'alt_name' in way:
-            tmpname = way['alt_name']
-            if 'name' in way:                        # przechowanie nazwy z Label
-                nname = p.sub( "", way['name'])
-                way['alt_name'] = str.strip(nname)
-            else:
-                way.pop('alt_name')
-            way['name'] = tmpname                    # alt_name z Label3 to glowna nazwa do indeksowania
-
-        else:
-            if 'name' in way:
-                nname = p.sub( "", way['name'])
-                way['name'] = str.strip(nname)
-
-                if (way['name']==""):                     # zastepowanie pustych name
-                    if ('loc_name' in way):
-                        way['name'] = way['loc_name']
-                        way.pop('loc_name')
-                    elif ('short_name' in way):
-                        way['name'] = way['short_name']
-
-        # empty name? put in city name - workaround for no near named road
-        if (('name' in way) and (way['name']=="") and ('addr:city' in way) and(way['addr:city']!="")):
-            way['name'] = way['addr:city']
-
-
-    try:
-        f=prefix+".nominatim."+str(num)+".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open nominatim output file " + f + "!\n")
-        sys.exit()
-               
-    for point in points:
-        index=points.index(point)
-        print_point(point, index, out)
-
-    for index, way in enumerate(ways):
-        if way is None:
-            continue
-        # pomijamy szlaki dla nominatima ("ref" nie wystepuje dla zwyklych tras rowerowych czy chodnikow)
-        if ('ref' in way) and ('highway' in way):
-            if (way['highway'] == 'cycleway' ) or (way['highway'] == 'path') or (way['highway'] == 'footway'):
-                continue
-        print_way(way, index, out)
-        
-    out.close()
+# def output_nominatim(prefix, num, options):
+#     streets_counter = defaultdict(list)
+#     global maxid
+#     global idpfx
+#
+#     printdebug("City=>Streets scan start: "+str(datetime.now()), options)
+#     #
+#     #  fragment dodajacy krotkie odcinki drog dla wsi
+#     #  ktore nie posiadaja ulic
+#     #
+#     #    zbieramy info o wszytskich miastach
+#     for point in points:
+#         index = points.index(point)
+#         if 'place' in pointattrs[index] and 'name' in pointattrs[index] :
+#             n = pointattrs[index]['name']
+#             p = pointattrs[index]['place']
+#             lat = point[0]
+#             lon = point[1]
+#             radius = 0
+#             if p == 'city':
+#                 radius = 25
+#             if p == 'town':
+#                 radius = 10
+#             if p == 'village':
+#                 radius = 5
+#             m={'radius':radius,'lat':lat,'lon':lon,'cnt':0}
+#             if n in streets_counter:
+#                 streets_counter[n].append(m)
+#             else:
+#                 l=[]
+#                 l.append(m)
+#                 streets_counter[n]=l
+#     printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
+#     # teraz skan wszystkich ulic
+#     for way in ways:
+#         if way is None:
+#             continue
+#         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
+#             if way['highway' ] == 'trunk' or way['highway'] == 'primary' or way['highway'] == 'secondary' or \
+#                     way['highway'] == 'motorway':
+#                 pcnt = len(way['_nodes'])
+#                 # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
+#                 start = 0
+#                 lenKM = 0
+#                 waydivided = False
+#                 for i in range(0, pcnt):
+#                 # printerror("A="+str(i))
+#                     if i == start:
+#                         lenKM = 0
+#                     else:
+#                         lenKM += distKM(points[way['_nodes'][i]][0], points[way['_nodes'][i]][1],
+#                         points[way['_nodes'][i-1]][0], points[way['_nodes'][i-1]][1])
+#                     if lenKM > 3:
+#                         newway=way.copy()
+#                         newway['_nodes'] = way['_nodes'][start:i+1]
+#                         newway['split'] = str(start)+":"+str(i)+" KM:"+str(lenKM)
+#                         ways.append(newway)
+#                         start = i
+#                         lenKM = 0
+#                         waydivided = True
+#                 if waydivided:
+#                     way['_nodes'] = way['_nodes'][start:]
+#                     way['split'] ='last'
+#                 # else:
+#                 #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
+#     for way in ways:
+#         if way is None:
+#             continue
+#         if 'is_in' in way and 'name' in way and 'highway' in way:
+#             try:
+#                 towns = way['is_in'].split(";")
+#                 waylat = points[way['_nodes'][0]][0]
+#                 waylon = points[way['_nodes'][0]][1]
+#                 for town in towns:
+#                     if town in streets_counter:
+#                         found = 0
+#                         for l in streets_counter[town]:
+#                             if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
+#                                 l['cnt'] += 1
+#                                 found = 1
+#                                 break
+#                         if found == 0:
+#                             printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) +
+#                                        "," + str(waylon) + ")", options)
+#                     else:
+#                         printdebug("Brak Miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) + "," +
+#                                    str(waylon) + ")", options)
+#             except IndexError:
+#                 pprint.pprint(way, sys.stderr)
+#
+#     printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
+#     # i dodawanie krotkich ulic
+#     for m in streets_counter:
+#         for k in streets_counter[m]:
+#             if k['cnt'] != 0:
+#                 printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']), options)
+#             else:
+#                 printdebug("Short way added:" + m, options)
+#                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
+#                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
+#                 attrs = {'_timestamp': filestamp}
+#                 pind0 = len(points)
+#                 points_append(pt0, attrs.copy())
+#                 pind1 = len(points)
+#                 points_append(pt1, attrs.copy())
+#                 way = {
+#                     '_timestamp': filestamp,
+#                     '_nodes': [pind0, pind1],
+#                     '_c': 2,
+# ##                    '_src': srcidx,
+#                     'is_in': m,
+#                     'name': m,
+#                     'addr:city':m,
+#                     'highway': "residental"
+#                 }
+#                 ways.append(way)
+#     printdebug("City=>Streets scan stop: "+str(datetime.now()), options)
+#
+#
+#     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
+#     # jesli zostaje pusta nazwa, podmien
+#     for way in ways:
+#         if way is None:
+#             continue
+#         p = re.compile( '\{.*\}')                        # dowolny string otoczony klamrami
+#         if 'alt_name' in way:
+#             tmpname = way['alt_name']
+#             if 'name' in way:                        # przechowanie nazwy z Label
+#                 nname = p.sub( "", way['name'])
+#                 way['alt_name'] = str.strip(nname)
+#             else:
+#                 way.pop('alt_name')
+#             way['name'] = tmpname                    # alt_name z Label3 to glowna nazwa do indeksowania
+#
+#         else:
+#             if 'name' in way:
+#                 nname = p.sub( "", way['name'])
+#                 way['name'] = str.strip(nname)
+#
+#                 if (way['name']==""):                     # zastepowanie pustych name
+#                     if ('loc_name' in way):
+#                         way['name'] = way['loc_name']
+#                         way.pop('loc_name')
+#                     elif ('short_name' in way):
+#                         way['name'] = way['short_name']
+#
+#         # empty name? put in city name - workaround for no near named road
+#         if (('name' in way) and (way['name']=="") and ('addr:city' in way) and(way['addr:city']!="")):
+#             way['name'] = way['addr:city']
+#
+#
+#     try:
+#         f=prefix+".nominatim."+str(num)+".osm"
+#         out = open(f, "w", encoding="utf-8")
+#     except IOError:
+#         sys.stderr.write("\tERROR: Can't open nominatim output file " + f + "!\n")
+#         sys.exit()
+#
+#     for point in points:
+#         index=points.index(point)
+#         print_point(point, index, out)
+#
+#     for index, way in enumerate(ways):
+#         if way is None:
+#             continue
+#         # pomijamy szlaki dla nominatima ("ref" nie wystepuje dla zwyklych tras rowerowych czy chodnikow)
+#         if ('ref' in way) and ('highway' in way):
+#             if (way['highway'] == 'cycleway' ) or (way['highway'] == 'path') or (way['highway'] == 'footway'):
+#                 continue
+#         print_way(way, index, out)
+#
+#     out.close()
 
 def write_output_files(in_file='', dest_filename='', headerf=''):
     elapsed = datetime.now().replace(microsecond=0)
@@ -3193,24 +3213,19 @@ def write_output_files(in_file='', dest_filename='', headerf=''):
     sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
     return
 
-def worker(task, options):
-    # workelem={'idx':n+1,'file':f}
-    global points
-    global pointattrs
-    global ways
-    global relations
-    global streets_counter
+def worker(task, options, bpoints=None):
+
     global working_thread
     global workid
     global filestamp
     global maxid
     global idpfx
     global glob_progress_bar_queue
-    
+    if bpoints is None:
+        bpoints = list()
     pointattrs = defaultdict(dict)
     ways = list()
     relations = list()
-    maxtypes = dict()
     points = Mylist(bpoints, idperarea*task['idx'])
     if options.normalize_ids:
         idpfx = ":id:" + str(task['idx']) + ":"
@@ -3243,10 +3258,12 @@ def worker(task, options):
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
-    maxtypes = parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
+    maxtypes, map_elements_props = parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar,
+                                             bpoints=bpoints)
     progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(options, task['file'], maxtypes=maxtypes, progress_bar=progress_bar)
+    post_load_processing(options, task['file'], maxtypes=maxtypes, map_elements_props=map_elements_props,
+                         progress_bar=progress_bar)
     progress_bar.set_done('drp')
     
       # output_normal("UMP-PL", task['idx'], options)
@@ -3272,7 +3289,6 @@ def main(options, args):
         sys.exit()
     global glob_progress_bar_queue
     global runstamp
-    global borderstamp
     if hasattr(options, 'progress_bar_queue'):
         glob_progress_bar_queue = options.progress_bar_queue
     else:
@@ -3330,7 +3346,7 @@ def main(options, args):
             except:
                 borderstamp = runstamp
 
-            parse_borders(borderf, options)
+            bpoints = parse_borders_return_bpoints(borderf, options, borderstamp)
             borderf.close()
             node_generalizator.insert_borders(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
@@ -3357,7 +3373,7 @@ def main(options, args):
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:                
-                result = worker(workelem, options)
+                result = worker(workelem, options, bpoints=None)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
         else:
             copy_options = copy.copy(options)
@@ -3370,7 +3386,7 @@ def main(options, args):
             # print(vars(copy_options)
             pool = Pool(processes=copy_options.threadnum)
             # result = pool.map(worker, worklist, options)
-            result = pool.map(partial(worker, options=copy_options), worklist)
+            result = pool.map(partial(worker, options=copy_options, bpoints=bpoints), worklist)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
@@ -3379,7 +3395,7 @@ def main(options, args):
         printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
 
         # wczytaj pliki piklowane i stwórz poprawny node_generalizator
-        pickled_filenames = {'points': [], 'pointsattrs': [], 'ways': [], 'relations': []}
+        pickled_filenames = {'points': [], 'pointattrs': [], 'ways': [], 'relations': []}
         for work_no, workelem in enumerate(worklist):
             pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
             pickled_filenames['points'].append(pickled_nodes_filename)
@@ -3387,7 +3403,7 @@ def main(options, args):
             pickled_filenames['ways'].append(pickled_ways_filename )
             pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
             pickled_filenames['relations'].append(pickled_relations_filename)
-            pickled_filenames['pointsattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointsattrs_pickle")
+            pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_node(pickled_data)
