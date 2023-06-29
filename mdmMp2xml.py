@@ -1662,6 +1662,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors):
 def parse_txt(infile, options, filename='', progress_bar=None):
     otwarteDict = {"([Pp]n|pon\.)": "Mo", "([Ww]t|wt\.)": "Tu", "([Ss]r|śr|Śr|śr\.)": "We", "([Cc]z|czw\.)": "Th",
                    "([Pp]t|piąt\.|pt\.)": "Fr", "([Ss]o|[Ss]b|sob\.)": "Sa", "([Nn]d|ni|niedz\.)": "Su"}
+    maxtypes = {}
     polyline = None
     feat = None
     comment = None
@@ -1848,6 +1849,7 @@ def parse_txt(infile, options, filename='', progress_bar=None):
                 comment = strn
         elif line != '':
             raise ParsingError('Unhandled line ' + line)
+    return maxtypes
 
 
 def create_node_ways_relation(all_ways):
@@ -2322,9 +2324,10 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options, filename='', progress_bar = None):
+def post_load_processing(options, filename='', maxtypes=None, progress_bar=None):
+    if maxtypes is None:
+        maxtypes = {}
     global relations
-    global maxtypes
     global ways
     # Roundabouts:
     # Use the road class of the most important (lowest numbered) road
@@ -3196,7 +3199,6 @@ def worker(task, options):
     global pointattrs
     global ways
     global relations
-    global maxtypes
     global streets_counter
     global working_thread
     global workid
@@ -3241,10 +3243,10 @@ def worker(task, options):
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
-    parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
+    maxtypes = parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar)
     progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(options, task['file'], progress_bar=progress_bar)
+    post_load_processing(options, task['file'], maxtypes=maxtypes, progress_bar=progress_bar)
     progress_bar.set_done('drp')
     
       # output_normal("UMP-PL", task['idx'], options)
@@ -3286,18 +3288,18 @@ def main(options, args):
         options.threadnum = 32
     if options.threadnum < 1:
         options.threadnum = 1
-    if options.borders_file != None:
+    if options.borders_file is not None:
         sys.stderr.write("\tINFO: Borders file: " + options.borders_file + "\n")
         sys.stderr.write("\tINFO: Using " + str(options.threadnum) + " working threads.\n")
     if options.verbose:
         sys.stderr.write("\tDEBUG: Extended debug.\n")
-    if options.nominatim_file != None:
+    if options.nominatim_file is not None:
         sys.stderr.write("\tINFO: Nominatim output will be written.\n")
-    if options.index_file != None:
+    if options.index_file is not None:
         sys.stderr.write("\tINFO: Index output will be written.\n")
-    if options.navit_file != None:
+    if options.navit_file is not None:
         sys.stderr.write("\tINFO: Navit output will be written.\n")
-    if options.nonumber_file != None:
+    if options.nonumber_file is not None:
         sys.stderr.write("\tINFO: NoNumberX output will be written.\n")
     if options.skip_housenumbers:    
         sys.stderr.write("\tINFO: Skiping housenumbers (Type=0x2800) in default output\n")
@@ -3307,9 +3309,9 @@ def main(options, args):
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
 
 
-    if options.borders_file != None or len(args) == 1:
+    if options.borders_file is not None or len(args) == 1:
 
-        if options.borders_file != None:
+        if options.borders_file is not None:
 
             #  parsowanie po nowemu. Najpierw plik granic a potem pliki po kolei.
             if options.borders_file.startswith('~'):
