@@ -101,12 +101,8 @@ class Mylist(object):
         return len(self.v) + self.b
 
     def __getitem__(self, key):  # OK
-        try:
-            if key < len(self.borders):
-                return self.borders[key]
-        except TypeError:
-            print(key, len(self.borders), file=sys.stderr)
-            raise TypeError
+        if key < len(self.borders):
+            return self.borders[key]
         return self.v[key - self.b]
 
     def index(self, value):          # OK
@@ -1282,10 +1278,9 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
             prev_house = "xx"
         
 
-def points_append(node, attrs, map_elements_props=None, func=None):
+def points_append(node, attrs, map_elements_props=None):
     if map_elements_props is None:
         return
-    print(func, node, file=sys.stderr)
     _points = map_elements_props['points']
     _pointattrs = map_elements_props['pointattrs']
     if node not in map_elements_props['points']:
@@ -1425,7 +1420,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['_c'] = count
             # way['layer'] = num ??
         elif key.startswith('_Inner'):
-            count, nodes = prepare_line(value, closed=feat == Features.polygon)
+            count, nodes = prepare_line(value, closed=feat == Features.polygon, map_elements_props=map_elements_props)
             if '_innernodes' not in way:
                 way['_innernodes'] = []
                 if feat != Features.polygon:
@@ -1819,8 +1814,8 @@ def parse_txt(infile, options, filename='', progress_bar=None, bpoints=None):
                 except:
                     region = ""
                     printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props['points'])
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props['points'])
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props)
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props)
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
@@ -2070,7 +2065,7 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
 
 
 def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=None):
-    ways =  map_elements_props['ways']
+    ways = map_elements_props['ways']
     if node_ways_relation is None:
         outer_index = ways.index(outer)
     else:
