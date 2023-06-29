@@ -988,16 +988,7 @@ def bpoints_append(node, bpoints):
         bpoints.append(node)
         
 
-def nodes_from_bline(nodes_str):
-    """Appends new nodes to the points list"""
-    # Kwadrat dla Polski.
-    # 54.85628,13.97873
-    # 48.95703,24.23996
-    # Ekspansja, niech pamieta granice dla z grubsza calej Europy kontynentalnej
-    maxN = 72.00000
-    maxW = -12.00000
-    maxS = 34.00000
-    maxE = 50.00000
+def lats_longs_from_line(nodes_str):
     nodes = []
     for element in nodes_str.split(','):
         element = element.strip('()')
@@ -1017,7 +1008,20 @@ def nodes_from_bline(nodes_str):
         if l < 9:
             lo += '0' * (9 - l)
         longs.append(lo)
-    
+    return lats, longs
+
+
+def nodes_from_bline(nodes_str):
+    """Appends new nodes to the points list"""
+    # Kwadrat dla Polski.
+    # 54.85628,13.97873
+    # 48.95703,24.23996
+    # Ekspansja, niech pamieta granice dla z grubsza calej Europy kontynentalnej
+    maxN = 72.00000
+    maxW = -12.00000
+    maxS = 34.00000
+    maxE = 50.00000
+    lats, longs = lats_longs_from_line(nodes_str)
     nodes = []
     for node in list(zip(lats, longs)):
         if maxN > float(node[0]) > maxS and maxW < float(node[1]) < maxE:
@@ -1292,29 +1296,7 @@ def points_append(node, attrs, map_elements_props=None):
             
 def prepare_line(nodes_str, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
-    nodes = []
-    for element in nodes_str.split(','):
-        element = element.strip('()')
-        nodes.append(element)
-
-    #  lats = nodes[::2]
-    #  longs = nodes[1::2]
-
-    lats = []
-    longs = []
-
-    for la in nodes[::2]:
-        l = len(la)
-        if l < 9:
-            la += '0' * (9 - l)
-        lats.append(la)
-
-    for lo in nodes[1::2]:
-        l = len(lo)
-        if l < 9:
-            lo += '0' * (9 - l)
-        longs.append(lo)
-
+    lats, longs = lats_longs_from_line(nodes_str)
     nodes = list(zip(lats, longs))
     for node in nodes:
         points_append(node, {}, map_elements_props=map_elements_props)
@@ -1666,7 +1648,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
     return way
 
 
-def parse_txt(infile, options, filename='', progress_bar=None, bpoints=None):
+def parse_txt(infile, options, progress_bar=None, bpoints=None):
     if bpoints is None:
         bpoints = []
     otwarteDict = {"([Pp]n|pon\.)": "Mo", "([Ww]t|wt\.)": "Tu", "([Ss]r|śr|Śr|śr\.)": "We", "([Cc]z|czw\.)": "Th",
@@ -1860,7 +1842,7 @@ def parse_txt(infile, options, filename='', progress_bar=None, bpoints=None):
                 comment = strn
         elif line != '':
             raise ParsingError('Unhandled line ' + line)
-    return maxtypes
+    return maxtypes, map_elements_props
 
 
 def create_node_ways_relation(all_ways):
@@ -1949,7 +1931,7 @@ def signbit(x):
         return -1
 
 
-def next_node(pivot=None, direction=None, node_ways_relation=None):
+def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None):
     """
     return either next or previous node relative to the pivot point. In some cases does not do anythnig as the next
     point is the only one
@@ -1958,13 +1940,14 @@ def next_node(pivot=None, direction=None, node_ways_relation=None):
     :param node_ways_relation: zbiorcze dane dla drog, relacji i punktow
     :return: one node of given road
     """
-    way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation)['_nodes']
+    way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
+                             map_elements_props=map_elements_props)['_nodes']
     pivotidx = way_nodes.index(pivot)
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
 def split_way(way=None, splitting_point=None, node_ways_relation=None, map_elements_props=None):
-    ways =  map_elements_props['ways']
+    ways = map_elements_props['ways']
     l = len(way['_nodes'])
     i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
@@ -2011,7 +1994,7 @@ def name_turn_restriction(rel, nodes, points):
         rel['restriction'] = 'no_u_turn'    
     
 
-def preprepare_restriction(rel, node_ways_relation=None):
+def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
     """
     modification of relation nodes so, that it starts and ends one node after and one node before central point
     called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
@@ -2019,9 +2002,9 @@ def preprepare_restriction(rel, node_ways_relation=None):
     :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
-                                   node_ways_relation=node_ways_relation)
+                                   node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
     new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1],
-                                  node_ways_relation=node_ways_relation)
+                                  node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
     rel['_nodes'][0] = new_rel_node_first
     rel['_nodes'][-1] = new_rel_node_last
 
@@ -2032,10 +2015,14 @@ def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
-    split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation), splitting_point=fromvia,
-              node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
-    split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation), splitting_point=tovia,
-              node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+    split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation,
+                               map_elements_props=map_elements_props),
+              splitting_point=fromvia, node_ways_relation=node_ways_relation,
+              map_elements_props=map_elements_props)
+    split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation,
+                               map_elements_props=map_elements_props),
+              splitting_point=tovia, node_ways_relation=node_ways_relation,
+              map_elements_props=map_elements_props)
 
 
 def return_roadid_in_ways(way, road_to_road_id=None):
@@ -2346,18 +2333,12 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
 
 
 def post_load_processing(options, filename='', maxtypes=None, progress_bar=None, map_elements_props=None):
+    # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
     if maxtypes is None:
         maxtypes = {}
     ways = map_elements_props['ways']
     pointattrs = map_elements_props['pointattrs']
-    # Roundabouts:
-    # Use the road class of the most important (lowest numbered) road
-    # that meets the roundabout.
-    # relations = [rel for rel in ways if '_rel' in rel]
-    # relations = OrderedDict({rel_no: ways[rel_no] for rel_no in range(len(ways)) if '_rel' in ways[rel_no]})
-    # levelledways = [way for way in ways if '_levels' in way]
     relations = OrderedDict()
-    map_elements_props['relations'] = relations
     levelledways = OrderedDict()
     for way_no, way in enumerate(ways):
         if '_rel' in way:
@@ -2440,7 +2421,7 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
                         node_ways_relation[node].add(new_way_id)
 
     # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
-    relations = [relations[road_id] for road_id in relations]
+    map_elements_props['relations'] = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
         if way is None:
@@ -2460,18 +2441,17 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
 
     # for each relation/restriction split ways at via points as the "from" and "to" members must start/end at the
     # Role via node or the Role via way(s)
-    for rel in relations:
+    for rel in map_elements_props['relations']:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                prepare_restriction(rel, node_ways_relation=node_ways_relation,  map_elements_props= map_elements_props)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
 
-    # theoretically here we could do
-    # ways = [a for a in ways if a is not None]
-    for rel in relations:
+
+    for rel in map_elements_props['relations']:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
@@ -2481,8 +2461,8 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to " +
-                            "preprepare restriction from rel: %r\n" % (rel,))
+                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+
 
 
     # Quirks, but do not overwrite specific values
@@ -3227,8 +3207,7 @@ def worker(task, options, bpoints=None):
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
-    maxtypes, map_elements_props = parse_txt(infile, options, filename=task['file'], progress_bar=progress_bar,
-                                             bpoints=bpoints)
+    maxtypes, map_elements_props = parse_txt(infile, options, progress_bar=progress_bar, bpoints=bpoints)
     progress_bar.set_done('mp')
     infile.close()
     post_load_processing(options, task['file'], maxtypes=maxtypes, map_elements_props=map_elements_props,
@@ -3244,7 +3223,7 @@ def worker(task, options, bpoints=None):
     #     output_index("UMP-PL", task['idx'], options)  # no data change
     # if options.nominatim_file != None:
     #     output_nominatim("UMP-PL", task['idx'], options)  # data is changed
-    save_pickled_data("UMP-PL", task['idx'])
+    save_pickled_data("UMP-PL", task['idx'], map_elements_props=map_elements_props)
 
     warn = ''
     printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
