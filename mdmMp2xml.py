@@ -1938,6 +1938,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_
     :param pivot: the node that is our reference
     :param direction: in which direction we are looking, according or against nodes order
     :param node_ways_relation: zbiorcze dane dla drog, relacji i punktow
+    :param map_elements_props: elementy mapy: points, pointattrs, ways, relatons
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
@@ -1999,6 +2000,8 @@ def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None
     modification of relation nodes so, that it starts and ends one node after and one node before central point
     called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
     :param rel: relaton
+    :param node_ways_relation: node numer: way ids reference
+    :param map_elements_props, properties of map points, pointattrs, ways, relations
     :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
@@ -2111,8 +2114,8 @@ def index_to_relationid(index,  map_elements_props):
     return index_to_wayid(len(ways) + index, points)
 
 
-def xmlize(str):
-    return saxutils.escape(str, {'\'': '&apos;'})
+def xmlize(xml_str):
+    return saxutils.escape(xml_str, {'\'': '&apos;'})
 
 
 # def print_point(point, index, ostr):
@@ -2449,7 +2452,6 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
                 prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-
 
     for rel in map_elements_props['relations']:
         _line_num += 1
@@ -2974,7 +2976,7 @@ def output_nominatim_pickled(options, pickled_filenames=None):
             if _way is None:
                 continue
             if 'ref' in _way and 'highway' in _way:
-                if _way['highway'] in {'cycleway', 'path','footway'}:
+                if _way['highway'] in {'cycleway', 'path', 'footway'}:
                     continue
             print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
 
@@ -3155,6 +3157,7 @@ def output_nominatim_pickled(options, pickled_filenames=None):
 #
 #     out.close()
 
+
 def write_output_files(in_file='', dest_filename='', headerf=''):
     elapsed = datetime.now().replace(microsecond=0)
     destination = open(dest_filename, 'w', encoding="utf-8")
@@ -3165,6 +3168,7 @@ def write_output_files(in_file='', dest_filename='', headerf=''):
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
     return
+
 
 def worker(task, options, bpoints=None):
 
@@ -3214,7 +3218,7 @@ def worker(task, options, bpoints=None):
                          progress_bar=progress_bar)
     progress_bar.set_done('drp')
     
-      # output_normal("UMP-PL", task['idx'], options)
+    # output_normal("UMP-PL", task['idx'], options)
     # if options.navit_file != None:
     #     output_navit("UMP-PL", task['idx'])	 # no data change
     # if options.nonumber_file != None:
@@ -3271,7 +3275,6 @@ def main(options, args):
         sys.stderr.write("\tINFO: The --positive-ids option is obsolete.\n")
     if options.ignore_errors:
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
-
 
     if options.borders_file is not None or len(args) == 1:
 
@@ -3348,7 +3351,7 @@ def main(options, args):
             pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
             pickled_filenames['points'].append(pickled_nodes_filename)
             pickled_ways_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".ways_pickle"
-            pickled_filenames['ways'].append(pickled_ways_filename )
+            pickled_filenames['ways'].append(pickled_ways_filename)
             pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
             pickled_filenames['relations'].append(pickled_relations_filename)
             pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
