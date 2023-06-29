@@ -258,198 +258,6 @@ maxE = 50.00000
 # sobie wyznaczaja/obliczaja/zapamietuja etc (przyklad: nominatim)
 idperarea = 0
 
-# 0.5.1 changes
-# - 'addr:city' with ';' instead of '@'
-# - 'loc_name' from Label2 or (if empty) Label3
-# - 'short_name' generation (if needed)
-# - OsmAnd index: NumberX allowed
-#
-# 0.5.2 changes
-# - '--regions': optional regions along with city names in the index file
-#
-# 0.5.3 changes:
-# - strip '-UMP~[0x1d]' etc from country names
-# - country names translated to English (except 'Polska')
-# - fixed 'is_in:country' and 'is_in:state' tag names
-# - this file character encding cleanup (pure utf8)
-#
-# 0.5.4 changes:
-# - timestamp based on source file modification time (or fallback to start time)
-# - all tags starting with '_' are considered internal and will not be printed out
-# - some POI/area changes to better reflect http://wiki.openstreetmap.org/wiki/Map_Features
-# - UMP 'LA' tag support - convertion to 'lanes'
-# - some new poi types, minor fixes/changes
-#
-# 0.5.5 changes:
-# - fixed osmand index output having influence on nominatim output
-# - small changes to better support mapsforge tag mapping+render theme
-# - new flavour: Navit output (might be removed if proves to be unnecessary)
-# - handling Garmin label prefixes for 8bit encodings
-# - minor fixes/changes
-#
-# 0.5.6 changes:
-# - NumberX in nominatim output
-# - fixed handling of misplaced 'Miasto' and 'CityName'
-# - oneway=yes instead of oneway=1
-#
-# 0.5.7 changes:
-# - minor type/tag mapping changes
-# - Label2 is always loc_name, Label3 is always alt_name
-# - if present, alt_name becomes the addr:street name and (in the index output) the way index name
-#
-# 0.5.8 changes:
-# - alt_name as the way name in nominatim output as well
-# - some minor type/tag mapping changes
-#
-# 0.5.9 changes:
-# - coloured trails
-# - minor changes
-#
-# 0.6.0 changes:
-# - types etc
-# - temp files are removed right after use
-#
-# 0.6.1 changes:
-# - osm_id multiplier lowered down
-# - printing number of ids used per area
-#
-# 0.6.2 changes:
-# - SignLabel (by Ar't)
-# - 'opening_hours' for POIs
-# - minor changes
-#
-# 0.6.3 changes:
-# - normalize_ids added (avoid gaps in id numbering, better id space usage)
-#
-# 0.6.4 changes:
-# - normalized nominatim output fix
-# - better reporting when generating outputs
-# - removing 'normal' temporary files again (0.6.3 issue)
-# - border file not necessary when processing just one area
-# - calculating time of doing major tasks (wall clock)
-#
-# 0.6.5 changes:
-# - change for better output writing performace
-# - "b" - fixes for not checking if 'name' tag is present
-# - "c" - allowed up to 32 threads instead of just 8
-#
-# 0.6.6 changes:
-# - 0x6100 BUNKIER from amenity/shelter to military/bunker
-# - "b" - added historic/building to the bunker
-# - "c" - added url and Transit tags 
-# - "d" - changed historic/building to historic/ruins for bunkers
-# - "e" - bunkers go as military/bunker, building/bunker and amenity/shelter
-#
-# 0.6.7 changes:
-# - 0x6403 KIRKUT handling
-#
-# 0.6.7c changes:
-# - osmand_amenity=atm for ATMs
-#
-# 0.6.7d changes:
-# - osmand_amenity=atm for ATMs: only in index output
-#
-# 0.6.7e changes:
-# - repeated key is ignored instead of stopping conversion
-#
-# 0.6.8 changes:
-# - Nominatim output: unnamed ways get city name
-#
-# 0.6.8b changes:
-# - avoid keys without values (ignore ^Key=$ lines in source) 
-#
-# 0.6.8c changes:
-# - street names with {.*} are invalid for doing interpolation now
-#   (previusly only these starting with '{' were ignored)
-#
-# 0.6.8d changes;
-# - 0x0d00 is converted to place/village now (was town)
-#
-# 0.6.8e changes:
-# - check for value length (255 is the limit)
-# - fix misjoining multiple comment lines for opening_hours - introducing ^ as newline in joined comments
-#
-# 0.6.8f changes:
-# - adding access/foot for aerialway/gondola
-#
-# 0.6.8g changes:
-# - added simple checking of MiscInfo validity
-#
-# 0.6.8h changes:
-# - 0x3003 is amenity/townhall now, not public_building 
-# - 0x2f11 is office/company now, not public_building
-#
-# 0.6.8i changes:
-# - 0x2f15 is office/company too
-#
-# 0.6.8j changes:
-# - 0x5a01 is boundary/marker, 0x5e00 is highway/elevator
-# - 0x58.. are seamark:calling-in_point:traffic_flow/..
-# - 0x10f1c for underwater (power) cables
-# - ignore DontDisplayAdr and DontFind keys
-# - additional info for street names not valid for addressing
-#
-# 0.6.9 changes:
-# - slight optimization
-# - 0x16 '.*schody.*' is highway/pedestrian instead of highway/path now
-#
-# 0.6.9b changes:
-# - trails are translated to highway/footway instead of highway/path
-#
-# 0.6.9c changes:
-# - 0x16 '.*schody.*' is highway/steps now
-#
-# 0.7.0 changes:
-# - access=no for trails (we don't want to use them for routing)
-# - fixed WC (0x650f) and tourist information (0x2f0c) POIs
-#
-# 0.7.0b changes:
-# - POI 0x6412 becomes highway/trailhead instead of highway/marked_trail
-#
-# 0.7.0c changes:
-# - POIs 0x6701 through 0x670b (marked trail start) without access=no
-#
-# 0.7.1 changes:
-# -  ramps assigments change (0x8 - trunk_link, 0x9 - motorway_link) 
-#
-# CVS 1.89-1.92:
-# - maxweight, maxheight, maxwidth
-# - do not overwrite maxspeed for 0x1/0x2 if Speed= was present
-# - translate Oplata= to k=charge  (acceptable: v="10 PLN", "0.50 PLN/km", "7.30 EUR", etc.)
-#
-# 0.7.2 changes (CVS 1.98):
-# - amenity_atm=atm instead of osmand_amenity=atm for ATMs (still just for OsmAnd index) 
-#
-# 0.7.3 changes (CVS 1.99):
-# - Added 0x64001:historic=building
-#
-# 0.7.4 changes (CVS 1.100):
-# - Added umppoi_types: PRZYCHODNIA, WETERYNARZ, DENTYSTA
-#
-# 0.7.5 changes (CVS 1.101):
-# - Added umppoi_types: SUSHI, GRILL, KEBAB, THAI, MLECZNY, LIBANSKA
-# - fixed restaurants mapping
-#
-# 0.7.6 changes (CVS 1.102):
-# - Added pline_types: 0xe (corrected 0xe - added tracktype=grade2)
-#
-# 0.7.7 changes (CVS 1.103):
-# - Corrected DENTYSTA -> amenity=dentist
-#
-# 0.7.8 changes (CVS 1.104):
-# - Corrected 0x2a0d -> shop=pastry
-#
-# 0.7.9 changes (CVS 1.105):
-# - Corrected METRO 0x2f082 -> railway=station station=subway
-#
-# 0.8.0 changes (CVS 1.106):
-# - Added 'name' in way check for ele and depth
-# - Fixed SyntaxWarning: "is" with a literal.
-#
-# 0.8.1 changes (CVS 1.108):
-# - Corrected assigments for radars, milestones, railway crossing, etc.
-#
-
 pline_types = {
     0x1:  ["highway",  "motorway"],
     0x2:  ["highway",  "trunk"],
@@ -1128,98 +936,6 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
-interp_types = {"o": "odd", "e": "even", "b": "all"}
-levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
-maxspeeds = {
-    '0':  '8', '1': '20', '2':  '40', '3':  '56',
-    '4': '72', '5': '93', '6': '108', '7': '128',
-}
-exceptions = [
-    'emergency',  # Found nothing better in Map_Features
-    'goods',
-    'motorcar',
-    'psv',
-    'taxi',  # Found nothing better in Map_Features
-    'foot',
-    'bicycle',
-    'hgv',
-]
-reftype = {
-    0x02: 'ref',
-    0x05: 'ref',
-    0x1d: 'loc_name',  # Abbrevations
-    0x1f: 'ele',
-    0x2a: 'int_ref',  # FIXME: should differentate the types
-    0x2b: 'int_ref',
-    0x2c: 'int_ref',
-    0x2d: 'ref',
-    0x2e: 'ref',
-    0x2f: 'ref',
-    0x1e: 'loc_name',
-    0x01: 'int_ref',
-    0x02: 'int_ref',
-    0x04: 'ref',
-    0x06: 'ref',
-}
-
-ump_countries = {
-    'Austria': "Austria",
-    'Białoruś': "Belarus",
-    'Czechy': "Czech Republic",
-    'Grecja': "Grecja",
-    'Litwa': "Lithuania",
-    'Łotwa': "Latvia",
-    'Niemcy': "Germany",
-    'Rosja': "Russia",
-    'Słowacja': "Slovakia",
-    'Ukraina': "Ukraine",
-    'Węgry': "Hungary",
-}
-
-otwarteDict = {
-    "([Pp]n|pon\.)": "Mo",
-    "([Ww]t|wt\.)": "Tu",
-    "([Ss]r|śr|Śr|śr\.)": "We",
-    "([Cc]z|czw\.)": "Th",
-    "([Pp]t|piąt\.|pt\.)": "Fr",
-    "([Ss]o|[Ss]b|sob\.)": "Sa",
-    "([Nn]d|ni|niedz\.)": "Su",
-}
-
-turn_lanes = {
-    "*": "none",
-    "S": "through",
-    "T": "through",
-    "Z": "reverse",
-    "P": "right",
-    "L": "left",
-    "osP": "sharp_right",
-    "osL": "sharp_left",
-    "leP": "slight_right",
-    "leL": "slight_left",
-    
-    "doP": "merge_to_right",
-    "doL": "merge_to_left",
-    
-    # 2 specjalne dla pasów tylko w jedną stronę ale wymagające kontynuacji na następnym odcinku 
-    "(P)": "right;through",
-    "(L)": "left;through",
-    
-    # Przy kontynuacji dla podwójnych skrzyżowań (stosować przed, a w środku już bez *, pamiętając o odjęciu lewoskrętów)
-    # w przeciwieństwie do 7ways gdzie jest none, w osmand można stosować prawidłowe oznaczenia gdyż ma to inną funkcję. 
-    "*S": "through",
-    "*T": "through",
-    "*Z": "reverse",
-    "*P": "right",
-    "*L": "left",
-    "+": ";",  # faster conversion
-    "|": "|",
-
-}
-
-
-
-        
 # Lines with a # above can be removed to save half of the memory used
 # (but some look-ups will be slower)
 # k zawiera slownik {[lat,lon]->poz,....} ; mapowanie (lat,lon)->id
@@ -1236,9 +952,6 @@ relations = []
 maxtypes = {}
 working_thread = os.getpid()
 workid = 0
-
-# City => Street_Cnt
-streets_counter = {}
 
 # borders = None
 # borders_resize = 1
@@ -1458,6 +1171,7 @@ def polygon_make_ccw(shape):
         
 
 def add_addrinfo(nodes, addrs, street, city, region, right, count):
+    interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
 
@@ -1613,313 +1327,341 @@ def prepare_line(nodes_str, closed=False):
     return pts, node_indices
 
             
-def convert_tag(way, key, value, feat, options):
-    if key.lower() in ('label',):
-        label = value
-        refpos = label.find("~[")
-        if refpos > -1:
-            try:
-                # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
-                label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
-                if len(label_split) == 2:
-                    refstr, right = label[refpos + 2:].split(' ', 1)
-                else:
-                    refstr = label_split[0]
-                    right = ""
+def convert_tags_return_way(mp_record, feat, ignore_errors):
+    maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
+    levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
+    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    reftype = {0x02: 'ref', 0x05: 'ref', 0x1d: 'loc_name',  # Abbrevations
+               0x1f: 'ele', 0x2a: 'int_ref',  #  Fixme should differentate the types
+               0x2b: 'int_ref', 0x2c: 'int_ref', 0x2d: 'ref', 0x2e: 'ref', 0x2f: 'ref', 0x1e: 'loc_name',
+               0x01: 'int_ref', 0x02: 'int_ref', 0x04: 'ref', 0x06: 'ref'}
+    ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
+                     'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
+                     'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
+    turn_lanes = {"*": "none", "S": "through", "T": "through", "Z": "reverse", "P": "right", "L": "left",
+                  "osP": "sharp_right", "osL": "sharp_left", "leP": "slight_right", "leL": "slight_left",
+                  "doP": "merge_to_right", "doL": "merge_to_left",
+                  # 2 specjalne dla pasów tylko w jedną stronę ale wymagające kontynuacji na następnym odcinku
+                  "(P)": "right;through", "(L)": "left;through",
+                  # Przy kontynuacji dla podwójnych skrzyżowań (stosować przed, a w środku już bez *, pamiętając o
+                  # odjęciu lewoskrętów) w przeciwieństwie do 7ways gdzie jest none, w osmand można stosować prawidłowe
+                  # oznaczenia gdyż ma to inną funkcję.
+                  "*S": "through", "*T": "through", "*Z": "reverse", "*P": "right", "*L": "left",
+                  "+": ";",  # faster conversion
+                  "|": "|"}
+    way = {'_timestamp': filestamp}
+    for key, value in mp_record.items():
+        if not value:
+            continue
+        if key.lower() in ('label',):
+            label = value
+            refpos = label.find("~[")
+            if refpos > -1:
+                try:
+                    # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
+                    label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
+                    if len(label_split) == 2:
+                        refstr, right = label[refpos + 2:].split(' ', 1)
+                    else:
+                        refstr = label_split[0]
+                        right = ""
 
-                code, ref = refstr.split(']')
-                label = (label[:refpos] + right).strip(' \t')
-                way[reftype[int(code, 0)]] = ref.replace("/", ";")
-            except:
-                if code.lower() == '0x06':
-                    label = ref + label
-                    pass
-                elif code.lower() == '0x1b':
-                    way['loc_name'] = right
-                    label = ref + label
-                elif code.lower() == '0x1c':
-                    way['loc_name'] = ref
-                    label = ref + label
-                elif code.lower() == '0x1c':
-                    label = value.replace('~[0x1c]', '')
-                    printerror("1C" + label)
-                elif code.lower() == '0x1e':
-                    label = value.replace('~[0x1e]', ' ')
-                    printerror("1E" + label)
-                else:
-                    raise ParsingError('Problem parsing label ' + value)
-        if 'name' not in way and label != "":
-            way['name'] = label.strip()
-    elif key.lower() in ('label2',):
-        way['loc_name'] = value
-    elif key.lower() in ('fulllabel',):
-        pass
-    elif key.lower() == 'label3':
-        way['alt_name'] = value
-    elif key.lower() == 'adrlabel':
-        way['alt_name'] = value
-    elif key.lower() == 'typ':
-        way['ump:typ'] = value
-    elif key == 'DirIndicator':
-        if value == '1':
-            way['oneway'] = 'yes'
-        else:
-            way['oneway'] = value
-    elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
-        num = int(key[4:])
-        count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon)
-        if '_c' in way:
-            way['_c'] += count
-        else:
-            way['_c'] = count
-        # way['layer'] = num ??
-    elif key.startswith('_Inner'):
-        count, nodes = prepare_line(value, closed=feat == Features.polygon)
-        if '_innernodes' not in way:
-            way['_innernodes'] = []
-            if feat != Features.polygon:
-                way['_join'] = 1
-        way['_innernodes'].append(nodes)
-        if '_c' in way:
-            way['_c'] += count
-        else:
-            way['_c'] = count
-    elif key == 'Type':
-        if feat == Features.polyline:
-            way['ump:type'] = value
-            if int(value, 0) in pline_types:
-                tag(way, pline_types[int(value, 0)])
-            else:
-                printerror("Unknown line type "+hex(int(value, 0)))
-        else:
-            way['ump:type'] = value
-    elif key in ('EndLevel', 'Level', 'Levels',):
-        # if 'highway' not in way:
-        #     way['highway'] = levels[int(value, 0)]
-        # way['layer'] = str(value) ??
-        pass
-    elif key.lower() == 'miasto':
-        way['addr:city'] = value.replace('@', ';')
-        way['is_in'] = value.replace('@', ';')
-    elif key.lower() == 'streetdesc':
-        way['addr:street'] = value
-    elif key.lower() == 'cityname':
-        way['addr:city'] = value.replace('@', ';')
-        way['is_in'] = value.replace('@', ';')
-    elif key == 'MiscInfo':
-        # wiki => "wikipedia=pl:" fb, url => "website="
-        if '=' in value:
-            misckey, miscvalue = value.split("=", 1)
-            if misckey == 'url':
-                if miscvalue.startswith('http') or miscvalue.find(':') > 0:
-                    way['website'] = miscvalue
-                else:
-                    way['website'] = r"http://"+miscvalue
-            elif misckey == 'wiki': 
-                if not miscvalue.startswith('http'):
-                    way['wikipedia'] = "pl:"+miscvalue
-                else:    
-                    way['website'] = miscvalue
-            elif misckey == 'fb':  # 'facebook' tag isn't widely used
-                if not miscvalue.startswith('http'):
-                    way['website'] = "https://facebook.com/" + miscvalue
-                else:
-                    way['website'] = miscvalue
+                    code, ref = refstr.split(']')
+                    label = (label[:refpos] + right).strip(' \t')
+                    way[reftype[int(code, 0)]] = ref.replace("/", ";")
+                except:
+                    if code.lower() == '0x06':
+                        label = ref + label
+                        pass
+                    elif code.lower() == '0x1b':
+                        way['loc_name'] = right
+                        label = ref + label
+                    elif code.lower() == '0x1c':
+                        way['loc_name'] = ref
+                        label = ref + label
+                    elif code.lower() == '0x1c':
+                        label = value.replace('~[0x1c]', '')
+                        printerror("1C" + label)
+                    elif code.lower() == '0x1e':
+                        label = value.replace('~[0x1e]', ' ')
+                        printerror("1E" + label)
+                    else:
+                        raise ParsingError('Problem parsing label ' + value)
+            if 'name' not in way and label != "":
+                way['name'] = label.strip()
+        elif key.lower() in ('label2',):
+            way['loc_name'] = value
+        elif key.lower() in ('fulllabel',):
             pass
-        else:
-            printerror("Niewlaciwy format MiscInfo: " + value)
-    elif key == 'Transit':  # "no thru traffic" / "local traffic only"
-        if value.lower().startswith('n'):
-            way['access'] = 'destination'
-    elif key == 'Moto':
-        if value.lower().startswith('y'):
-            way['motorcycle'] = 'yes'
-        else:
-            way['motorcycle'] = 'no'
-    elif key in ('RouteParam', 'Routeparam'):
-        params = value.split(',')
-        way['ump:speed_limit'] = params[0]
-        way['ump:route_class'] = params[1]
-        if params[0] != '0':
-            way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
-        if params[2] == '1':
-            way['oneway'] = 'yes'
-        if params[3] == '1':
-            way['toll'] = 'yes'
-        for i, val in enumerate(params[4:]):
-            if val == '1':
-                way[exceptions[i]] = 'no'
-    elif key == 'RestrParam':
-        params = value.split(',')
-        excpts = []
-        for i, val in enumerate(params[4:]):
-            if val == '1':
-                excpts.append(exceptions[i])
-        way['except'] = ','.join(excpts)
-    elif key == 'HLevel0':
-        if feat != Features.polyline:
-            raise ParsingError('HLevel0 used on a polygon')
-        curlevel = 0
-        curnode = 0
-        level_list = []
-        for level in value.split(')'):
-            if level == "":
-                break
-            pair = level.strip(', ()').split(',')
-            start = int(pair[0], 0)
-            level = int(pair[1], 0)
-            if start > curnode and level != curlevel:
-                level_list.append((curnode, start, curlevel))
-                curnode = start
-            curlevel = level
-        level_list.append((curnode, -1, curlevel))
-        way['_levels'] = level_list
-    elif key == 'Szlak':
-        ref = []
-        for colour in value.split(','):
-            if colour.lower() == 'zolty':
-                ref.append('Żółty szlak')
-                way['marked_trail_yellow'] = 'yes'
-            elif colour.lower() == 'zielony':
-                ref.append('Zielony szlak')
-                way['marked_trail_green'] = 'yes'
-            elif colour.lower() == 'czerwony':
-                ref.append('Czerwony szlak')
-                way['marked_trail_red'] = 'yes'
-            elif colour.lower() == 'niebieski':
-                ref.append('Niebieski szlak')
-                way['marked_trail_blue'] = 'yes'
+        elif key.lower() == 'label3':
+            way['alt_name'] = value
+        elif key.lower() == 'adrlabel':
+            way['alt_name'] = value
+        elif key.lower() == 'typ':
+            way['ump:typ'] = value
+        elif key == 'DirIndicator':
+            if value == '1':
+                way['oneway'] = 'yes'
             else:
-                ref.append(colour)
-                printerror("Unknown 'Szlak' colour: " + colour)
-        way['ref'] = ";".join(ref)
-    elif key.startswith('NumbersExt'):
-        printerror("warning: " + key + " tag discarded")
-    elif key.startswith('Numbers'):
-        unused = int(key[7:], 0)
-        value = value.split(',')
-        if len(value) < 7:
-            raise ParsingError("Bad address info specification")
-        if '_addr' not in way:
-            way['_addr'] = {}
-        way['_addr'][int(value[0], 0)] = value[1:]
-    elif key.lower() == 'rampa':
-        way['bridge'] = 'yes'
-    elif key == 'Highway':
-        way['ref'] = value
-    elif key.startswith('Exit'):
-        way[key.lower()] = value
-    elif key == 'OvernightParking':
-        way['overnight_parking'] = 'yes'
-    elif key == 'Phone':
-        way['phone'] = value
-    elif key == 'HouseNumber':
-        way['addr:housenumber'] = value
-    elif key == 'KodPoczt':
-        way['addr:postcode'] = value
-    elif key == 'ZIP':
-        way['addr:postcode'] = value
-    elif key == 'Zip':
-        pass
-    elif key == 'Time':
-        way['hour_on'] = value
-    elif key == 'Height_f':
-        way['wysokosc'] = value
-    elif key == 'Rozmiar':
-        way['Rozmiar'] = value
-    elif key == 'ForceSpeed':
-        fspeed = value  # Routing helper
-    elif key == 'ForceClass':
-        fclass = value  # Routing helper
-        # Ignore it for the moment, seems to be used mainly for temporary setups
-        # such as detours.
-    elif key == 'Speed':
-        way['maxspeed'] = value
-    elif key == 'Lanes':
-        way['lanes'] = value
-    elif key == 'LA':
-        # TODO: LA moze miec LA=|dane| lub LA=dane oraz LA=+|dane1|;-|dane2|
-        if ";" in value:
-            # lanes:forward=1 lanes:backward=2 i lanes=3   tak, sumujemy  
-            # turn:lanes:forward= turn:lanes:backward=
-            la = value.split(';')
+                way['oneway'] = value
+        elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
+            num = int(key[4:])
+            count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon)
+            if '_c' in way:
+                way['_c'] += count
+            else:
+                way['_c'] = count
+            # way['layer'] = num ??
+        elif key.startswith('_Inner'):
+            count, nodes = prepare_line(value, closed=feat == Features.polygon)
+            if '_innernodes' not in way:
+                way['_innernodes'] = []
+                if feat != Features.polygon:
+                    way['_join'] = 1
+            way['_innernodes'].append(nodes)
+            if '_c' in way:
+                way['_c'] += count
+            else:
+                way['_c'] = count
+        elif key == 'Type':
+            if feat == Features.polyline:
+                way['ump:type'] = value
+                if int(value, 0) in pline_types:
+                    tag(way, pline_types[int(value, 0)])
+                else:
+                    printerror("Unknown line type "+hex(int(value, 0)))
+            else:
+                way['ump:type'] = value
+        elif key in ('EndLevel', 'Level', 'Levels',):
+            # if 'highway' not in way:
+            #     way['highway'] = levels[int(value, 0)]
+            # way['layer'] = str(value) ??
             pass
-        else:
-            if value[0] == "|":  # można by użyć strip gdyby nie to że |||cośtam| jest poprawne (acz niezalecane)
-                value = value[1:]
-            if value[-1] == "|":
-                value = value[:-1]
-            way['turn:lanes'] = "".join([turn_lanes.get(op, op) for op in re.split('([|+])', value)])
-            way['lanes'] = str(value.count('|') + 1)
-    elif key == 'Floors':
-        way['building:levels'] = value
-    elif key == 'Height_m' or key == 'MaxHeight':
-        way['maxheight'] = value
-    elif key == 'MaxWidth':
-        way['maxwidth'] = value
-    elif key == 'MaxWeight' or key == 'Weight_t':
-        way['maxweight'] = value
-    elif key == 'Oplata:moto':
-        way['charge:motorcycle'] = value
-    elif key == 'Oplata':
-        way['charge'] = value
-    elif key == 'Czas':
-        way['duration'] = value
-    elif key in ('Plik', 'City',):
-        pass
-    elif key == 'RegionName':
-        way['is_in:state'] = value
-    elif key == 'CountryName':
-        way['is_in:country'] = re.sub('-UMP~.*$', '', value)
-        if way['is_in:country'] in ump_countries:
-            way['is_in:country'] = ump_countries[way['is_in:country']]
-    elif key == 'CountryCode':
-        way['is_in:country_code'] = value
-    elif key in ('Sign', 'SignPos', 'SignAngle',):
-        # TODO: znaki zakazu
-        pass
-    elif key in ('DontDisplayAddr', 'DontDisplayAdr',):
-        # TODO: obsluga adresacji
-        pass
-    elif key in ('DontFind',):
-        # TODO: obsluga adresacji
-        pass
-    elif key in ('SignLabel',):
-        # TODO: pomysl Art
-        signs = value.split(';')
-        for sign in signs:
-            if sign.strip() == "":  # puste pozycje ignorujemy
+        elif key.lower() == 'miasto':
+            way['addr:city'] = value.replace('@', ';')
+            way['is_in'] = value.replace('@', ';')
+        elif key.lower() == 'streetdesc':
+            way['addr:street'] = value
+        elif key.lower() == 'cityname':
+            way['addr:city'] = value.replace('@', ';')
+            way['is_in'] = value.replace('@', ';')
+        elif key == 'MiscInfo':
+            # wiki => "wikipedia=pl:" fb, url => "website="
+            if '=' in value:
+                misckey, miscvalue = value.split("=", 1)
+                if misckey == 'url':
+                    if miscvalue.startswith('http') or miscvalue.find(':') > 0:
+                        way['website'] = miscvalue
+                    else:
+                        way['website'] = r"http://"+miscvalue
+                elif misckey == 'wiki':
+                    if not miscvalue.startswith('http'):
+                        way['wikipedia'] = "pl:"+miscvalue
+                    else:
+                        way['website'] = miscvalue
+                elif misckey == 'fb':  # 'facebook' tag isn't widely used
+                    if not miscvalue.startswith('http'):
+                        way['website'] = "https://facebook.com/" + miscvalue
+                    else:
+                        way['website'] = miscvalue
                 pass
-            # wersja uproszczona bez dodatkowych liter E,T,O
-            elif sign[0] == '+':
-                if len(signs) == 1:
-                    way['destination'] = sign[1:].replace("\\", ";")
+            else:
+                printerror("Niewlaciwy format MiscInfo: " + value)
+        elif key == 'Transit':  # "no thru traffic" / "local traffic only"
+            if value.lower().startswith('n'):
+                way['access'] = 'destination'
+        elif key == 'Moto':
+            if value.lower().startswith('y'):
+                way['motorcycle'] = 'yes'
+            else:
+                way['motorcycle'] = 'no'
+        elif key in ('RouteParam', 'Routeparam'):
+            params = value.split(',')
+            way['ump:speed_limit'] = params[0]
+            way['ump:route_class'] = params[1]
+            if params[0] != '0':
+                way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+            if params[2] == '1':
+                way['oneway'] = 'yes'
+            if params[3] == '1':
+                way['toll'] = 'yes'
+            for i, val in enumerate(params[4:]):
+                if val == '1':
+                    way[exceptions[i]] = 'no'
+        elif key == 'RestrParam':
+            params = value.split(',')
+            excpts = []
+            for i, val in enumerate(params[4:]):
+                if val == '1':
+                    excpts.append(exceptions[i])
+            way['except'] = ','.join(excpts)
+        elif key == 'HLevel0':
+            if feat != Features.polyline:
+                raise ParsingError('HLevel0 used on a polygon')
+            curlevel = 0
+            curnode = 0
+            level_list = []
+            for level in value.split(')'):
+                if level == "":
+                    break
+                pair = level.strip(', ()').split(',')
+                start = int(pair[0], 0)
+                level = int(pair[1], 0)
+                if start > curnode and level != curlevel:
+                    level_list.append((curnode, start, curlevel))
+                    curnode = start
+                curlevel = level
+            level_list.append((curnode, -1, curlevel))
+            way['_levels'] = level_list
+        elif key == 'Szlak':
+            ref = []
+            for colour in value.split(','):
+                if colour.lower() == 'zolty':
+                    ref.append('Żółty szlak')
+                    way['marked_trail_yellow'] = 'yes'
+                elif colour.lower() == 'zielony':
+                    ref.append('Zielony szlak')
+                    way['marked_trail_green'] = 'yes'
+                elif colour.lower() == 'czerwony':
+                    ref.append('Czerwony szlak')
+                    way['marked_trail_red'] = 'yes'
+                elif colour.lower() == 'niebieski':
+                    ref.append('Niebieski szlak')
+                    way['marked_trail_blue'] = 'yes'
                 else:
-                    way['destination:forward'] = sign[1:].replace("\\", ";")
-            elif sign[0] == '-':
-                way['destination:backward'] = sign[1:].replace("\\", ";")
-    elif key in ('TLanes', 'Rodzaj', 'Weight_t',):
-        # experymenty Ar't
-        pass
-    elif key in ('RoadID',):
-        # lets omit routing params for maps with routing data
-        pass
-    elif key.startswith('Nod'):
-        # lets omit routing params for maps with routing data
-        pass
-    # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
-    elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
-        pass
-    else:
-        if options.ignore_errors:
-            printwarn("W: Unknown key: " + key)
-            printwarn("W: Value:       " + value)
-            pass 
+                    ref.append(colour)
+                    printerror("Unknown 'Szlak' colour: " + colour)
+            way['ref'] = ";".join(ref)
+        elif key.startswith('NumbersExt'):
+            printerror("warning: " + key + " tag discarded")
+        elif key.startswith('Numbers'):
+            unused = int(key[7:], 0)
+            value = value.split(',')
+            if len(value) < 7:
+                raise ParsingError("Bad address info specification")
+            if '_addr' not in way:
+                way['_addr'] = {}
+            way['_addr'][int(value[0], 0)] = value[1:]
+        elif key.lower() == 'rampa':
+            way['bridge'] = 'yes'
+        elif key == 'Highway':
+            way['ref'] = value
+        elif key.startswith('Exit'):
+            way[key.lower()] = value
+        elif key == 'OvernightParking':
+            way['overnight_parking'] = 'yes'
+        elif key == 'Phone':
+            way['phone'] = value
+        elif key == 'HouseNumber':
+            way['addr:housenumber'] = value
+        elif key == 'KodPoczt':
+            way['addr:postcode'] = value
+        elif key == 'ZIP':
+            way['addr:postcode'] = value
+        elif key == 'Zip':
+            pass
+        elif key == 'Time':
+            way['hour_on'] = value
+        elif key == 'Height_f':
+            way['wysokosc'] = value
+        elif key == 'Rozmiar':
+            way['Rozmiar'] = value
+        elif key == 'ForceSpeed':
+            fspeed = value  # Routing helper
+        elif key == 'ForceClass':
+            fclass = value  # Routing helper
+            # Ignore it for the moment, seems to be used mainly for temporary setups
+            # such as detours.
+        elif key == 'Speed':
+            way['maxspeed'] = value
+        elif key == 'Lanes':
+            way['lanes'] = value
+        elif key == 'LA':
+            # TODO: LA moze miec LA=|dane| lub LA=dane oraz LA=+|dane1|;-|dane2|
+            if ";" in value:
+                # lanes:forward=1 lanes:backward=2 i lanes=3   tak, sumujemy
+                # turn:lanes:forward= turn:lanes:backward=
+                la = value.split(';')
+                pass
+            else:
+                if value[0] == "|":  # można by użyć strip gdyby nie to że |||cośtam| jest poprawne (acz niezalecane)
+                    value = value[1:]
+                if value[-1] == "|":
+                    value = value[:-1]
+                way['turn:lanes'] = "".join([turn_lanes.get(op, op) for op in re.split('([|+])', value)])
+                way['lanes'] = str(value.count('|') + 1)
+        elif key == 'Floors':
+            way['building:levels'] = value
+        elif key == 'Height_m' or key == 'MaxHeight':
+            way['maxheight'] = value
+        elif key == 'MaxWidth':
+            way['maxwidth'] = value
+        elif key == 'MaxWeight' or key == 'Weight_t':
+            way['maxweight'] = value
+        elif key == 'Oplata:moto':
+            way['charge:motorcycle'] = value
+        elif key == 'Oplata':
+            way['charge'] = value
+        elif key == 'Czas':
+            way['duration'] = value
+        elif key in ('Plik', 'City',):
+            pass
+        elif key == 'RegionName':
+            way['is_in:state'] = value
+        elif key == 'CountryName':
+            way['is_in:country'] = re.sub('-UMP~.*$', '', value)
+            if way['is_in:country'] in ump_countries:
+                way['is_in:country'] = ump_countries[way['is_in:country']]
+        elif key == 'CountryCode':
+            way['is_in:country_code'] = value
+        elif key in ('Sign', 'SignPos', 'SignAngle',):
+            # TODO: znaki zakazu
+            pass
+        elif key in ('DontDisplayAddr', 'DontDisplayAdr',):
+            # TODO: obsluga adresacji
+            pass
+        elif key in ('DontFind',):
+            # TODO: obsluga adresacji
+            pass
+        elif key in ('SignLabel',):
+            # TODO: pomysl Art
+            signs = value.split(';')
+            for sign in signs:
+                if sign.strip() == "":  # puste pozycje ignorujemy
+                    pass
+                # wersja uproszczona bez dodatkowych liter E,T,O
+                elif sign[0] == '+':
+                    if len(signs) == 1:
+                        way['destination'] = sign[1:].replace("\\", ";")
+                    else:
+                        way['destination:forward'] = sign[1:].replace("\\", ";")
+                elif sign[0] == '-':
+                    way['destination:backward'] = sign[1:].replace("\\", ";")
+        elif key in ('TLanes', 'Rodzaj', 'Weight_t',):
+            # experymenty Ar't
+            pass
+        elif key in ('RoadID',):
+            # lets omit routing params for maps with routing data
+            pass
+        elif key.startswith('Nod'):
+            # lets omit routing params for maps with routing data
+            pass
+        # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
+        elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
+            pass
         else:
-            raise ParsingError("Unknown key " + key + " in polyline / polygon")
+            if ignore_errors:
+                printwarn("W: Unknown key: " + key)
+                printwarn("W: Value:       " + value)
+                pass
+            else:
+                raise ParsingError("Unknown key " + key + " in polyline / polygon")
+    return way
 
 
 def parse_txt(infile, options, filename='', progress_bar=None):
+    otwarteDict = {"([Pp]n|pon\.)": "Mo", "([Ww]t|wt\.)": "Tu", "([Ss]r|śr|Śr|śr\.)": "We", "([Cc]z|czw\.)": "Th",
+                   "([Pp]t|piąt\.|pt\.)": "Fr", "([Ss]o|[Ss]b|sob\.)": "Sa", "([Nn]d|ni|niedz\.)": "Su"}
     polyline = None
     feat = None
     comment = None
@@ -1941,12 +1683,7 @@ def parse_txt(infile, options, filename='', progress_bar=None):
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
-            # way = { '_src': srcidx }
-            way = {'_timestamp': filestamp}
-            for key in polyline:
-                if polyline[key] != '':
-                    convert_tag(way, key, polyline[key], feat, options)
-
+            way = convert_tags_return_way(polyline, feat, options.ignore_errors)
             if feat == Features.polygon:
                 if 'ump:typ' in way:
                     utyp = way['ump:typ']
@@ -3478,7 +3215,6 @@ def worker(task, options):
         idpfx = ":id:" + str(task['idx']) + ":"
     else:
         idpfx = ""
-    streets_counter = {}
     working_thread = str(os.getpid())
     workid = task['idx']
     maxid = 0
