@@ -61,7 +61,7 @@ class MylistB(object):
         return len(self.k)
 
     def __getitem__(self, key):
-        return self.v[key] #
+        return self.v[key]  #
         for k in self.k:
             if self.k[k] == key:
                 return k
@@ -69,11 +69,11 @@ class MylistB(object):
     def index(self, value):
         return self.k[value]
 
-    def __setitem__(self, key, value): #
-        if key in self.v: #
-            del self.k[self.v[key]] #
-        self.k[value] = key #
-        self.v[key] = value #
+    def __setitem__(self, key, value):
+        if key in self.v:
+            del self.k[self.v[key]]
+        self.k[value] = key
+        self.v[key] = value
 
     def __contains__(self, value):
         return value in self.k
@@ -83,7 +83,7 @@ class MylistB(object):
         self.k[value] = len(self.k)
 
     def __iter__(self):
-        return self.v.__iter__() #
+        return self.v.__iter__()
         return self.k.__iter__()
 
 
@@ -101,8 +101,12 @@ class Mylist(object):
         return len(self.v) + self.b
 
     def __getitem__(self, key):  # OK
-        if key < len(self.borders):
-            return self.borders[key]
+        try:
+            if key < len(self.borders):
+                return self.borders[key]
+        except TypeError:
+            print(key, len(self.borders), file=sys.stderr)
+            raise TypeError
         return self.v[key - self.b]
 
     def index(self, value):          # OK
@@ -242,8 +246,6 @@ class NodesToWayNotFound(ValueError):
 
 
 __version__ = '0.8.1'
-
-
 
 # Krok zwiekszania osm_id per obszar. Istotny gdy nie ma normalize_ids
 # zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
@@ -941,7 +943,6 @@ poi_types = {
 # ways = []
 relations = []
 
-maxtypes = {}
 working_thread = os.getpid()
 workid = 0
 
@@ -953,6 +954,7 @@ idpfx = ""
 maxid = 0
 
 glob_progress_bar_queue = None
+
 
 def printdebug(string, options):
     global working_thread
@@ -1173,11 +1175,12 @@ def polygon_make_ccw(shape, c_points):
         shape['fixme'] = "Weird shape"
         
 
-def add_addrinfo(nodes, addrs, street, city, region, right, count):
+def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_props):
     interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
-
+    points = map_elements_props['points']
+    pointattrs = map_elements_props['pointattrs']
     attrs = {'_timestamp': filestamp, 'addr:street': street}
     attrs['NumberX'] = 'yes'
     if region:
@@ -1229,18 +1232,18 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count):
             else:
                 pt0 = len(points)
                 low_node = unproj(lat + dlat + shortlat, lon + dlon + shortlon)
-                while low_node in points:
+                while low_node in map_elements_props['points']:
                     low_node = (low_node[0] + normlat / 10,
                                 low_node[1] + normlon / 10)
                 attrs['addr:housenumber'] = low
-                points_append(low_node, attrs.copy())
+                points_append(low_node, attrs.copy(), map_elements_props=map_elements_props)
 
             pt1 = len(points)
             hi_node = unproj(nlat + dlat - shortlat, nlon + dlon - shortlon)
             while hi_node in points:
                 hi_node = (hi_node[0] - normlat / 10, hi_node[1] - normlon / 10)
             attrs['addr:housenumber'] = hi
-            points_append(hi_node, attrs.copy())
+            points_append(hi_node, attrs.copy(), map_elements_props=map_elements_props)
 
             if len(addrs[n]) >= 8:
                 if addrs[n][6] != "-1":
@@ -1266,12 +1269,12 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count):
                 '_nodes': [pt0, pt1],
                 'addr:interpolation': type,
                 '_c': count,
-                ## '_src': srcidx,
+                # '_src': srcidx,
                 'is_in': city,
                 'NumberX': 'yes'
             }
             if low != hi:
-                ways.append(way)
+                map_elements_props['ways'].append(way)
 
             prev_house = hi
             prev_node = hi_node
@@ -1279,9 +1282,10 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count):
             prev_house = "xx"
         
 
-def points_append(node, attrs, map_elements_props=None):
+def points_append(node, attrs, map_elements_props=None, func=None):
     if map_elements_props is None:
         return
+    print(func, node, file=sys.stderr)
     _points = map_elements_props['points']
     _pointattrs = map_elements_props['pointattrs']
     if node not in map_elements_props['points']:
@@ -1815,8 +1819,8 @@ def parse_txt(infile, options, filename='', progress_bar=None, bpoints=None):
                 except:
                     region = ""
                     printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'])
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'])
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props['points'])
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props['points'])
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
@@ -1884,27 +1888,27 @@ def create_node_ways_relation(all_ways):
 
 
 def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None):
-    points = map_elements_props['points']
-    ways = map_elements_props['ways']
+    _points = map_elements_props['points']
+    _ways = map_elements_props['ways']
     if a not in node_ways_relation or b not in node_ways_relation:
         raise NodesToWayNotFound(a, b)
-    ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(ways) and ways[road_id] is not None])
-    ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(ways) and ways[road_id] is not None])
+    ways_a = set([road_id for road_id in node_ways_relation[a] if road_id < len(_ways) and _ways[road_id] is not None])
+    ways_b = set([road_id for road_id in node_ways_relation[b] if road_id < len(_ways) and _ways[road_id] is not None])
     way_ids = ways_a.intersection(ways_b)
     if len(way_ids) == 1:
         return tuple(way_ids)[0]
     elif len(way_ids) > 1:
         printerror("DEBUG: multiple roads found for restriction. Using only one")
         for way_id in way_ids:
-            printerror(str(ways[way_id]))
-            printerror(str([points[node] for node in ways[way_id]['_nodes']]))
+            printerror(str(_ways[way_id]))
+            printerror(str([_points[node] for node in _ways[way_id]['_nodes']]))
         return tuple(way_ids)[0]
     else:
         printerror("DEBUG: no roads found for restriction.")
-        printerror(','.join(points[a]) + ' ' + ','.join(points[b]))
+        printerror(','.join(_points[a]) + ' ' + ','.join(_points[b]))
         printerror(str(node_ways_relation[a]))
         printerror(str(node_ways_relation[b]))
-        for way in ways:
+        for way in _ways:
             if way is None:
                 continue
             way_nodes = way['_nodes']
@@ -1917,7 +1921,8 @@ def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None):
 
 
 def nodes_to_way(a, b, node_ways_relation=None, map_elements_props=None):
-    return ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)]
+    _ways = map_elements_props['ways']
+    return _ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)]
 
 
 def way_to_way_id(way, node_ways_relation=None):
@@ -1955,6 +1960,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None):
     point is the only one
     :param pivot: the node that is our reference
     :param direction: in which direction we are looking, according or against nodes order
+    :param node_ways_relation: zbiorcze dane dla drog, relacji i punktow
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation)['_nodes']
@@ -1962,8 +1968,8 @@ def next_node(pivot=None, direction=None, node_ways_relation=None):
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
 
-def split_way(way=None, splitting_point=None, node_ways_relation=None):
-    global ways
+def split_way(way=None, splitting_point=None, node_ways_relation=None, map_elements_props=None):
+    ways =  map_elements_props['ways']
     l = len(way['_nodes'])
     i = way['_nodes'].index(splitting_point)
     if i == 0 or i == l - 1:
@@ -2025,22 +2031,23 @@ def preprepare_restriction(rel, node_ways_relation=None):
     rel['_nodes'][-1] = new_rel_node_last
 
 
-def prepare_restriction(rel, node_ways_relation=None):
+def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
     split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation), splitting_point=fromvia,
-              node_ways_relation=node_ways_relation)
+              node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
     split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation), splitting_point=tovia,
-              node_ways_relation=node_ways_relation)
+              node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
 
 
 def return_roadid_in_ways(way, road_to_road_id=None):
     return road_to_road_id[id(way)]
 
 def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None):
+    ways =  map_elements_props['ways']
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
@@ -2063,6 +2070,7 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
 
 
 def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=None):
+    ways =  map_elements_props['ways']
     if node_ways_relation is None:
         outer_index = ways.index(outer)
     else:
@@ -2115,7 +2123,9 @@ def index_to_wayid(index, points):
     return index_to_nodeid(len(points) + index)
 
 
-def index_to_relationid(index, points):
+def index_to_relationid(index,  map_elements_props):
+    points =  map_elements_props['points']
+    ways =  map_elements_props['ways']
     return index_to_wayid(len(ways) + index, points)
 
 
@@ -2187,42 +2197,42 @@ def print_point_pickled(point, pointattrs, task_id, orig_id, node_generalizator,
     ostr.write("</node>\n")
 
 
-def print_way(way, index, ostr):
-    if way is None:
-        return
-    global maxid
-    global idpfx
-
-    """Prints a way given by way together with its ID to stdout as XML"""
-#    pdb.set_trace()
-    if '_c' in way:
-        if way['_c'] <= 0:
-            return
-        way.pop('_c')
-    if '_timestamp' in way:
-        timestamp = way['_timestamp']
-    else:
-        sys.stderr.write("warning: no timestamp in way %r\n" % way)
-        timestamp = runstamp
-    currid = index_to_wayid(index)
-    if currid > maxid:
-        maxid = currid
-    idstring = idpfx + str(currid)
-    ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
-    for nindex in way['_nodes']:
-        refstring = idpfx + str(index_to_nodeid(nindex))
-        ostr.write("\t<nd ref='%s' />\n" % refstring)
-
-    if '_src' in way:
-        src = way.pop('_src')
-    for key in way:
-        if key.startswith('_'):
-            continue
-        if len(str(way[key])) > 255:
-            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(way[key]) + "\n")
-            continue
-        ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
-    ostr.write("</way>\n")
+# def print_way(way, index, ostr):
+#     if way is None:
+#         return
+#     global maxid
+#     global idpfx
+#
+#     """Prints a way given by way together with its ID to stdout as XML"""
+# #    pdb.set_trace()
+#     if '_c' in way:
+#         if way['_c'] <= 0:
+#             return
+#         way.pop('_c')
+#     if '_timestamp' in way:
+#         timestamp = way['_timestamp']
+#     else:
+#         sys.stderr.write("warning: no timestamp in way %r\n" % way)
+#         timestamp = runstamp
+#     currid = index_to_wayid(index)
+#     if currid > maxid:
+#         maxid = currid
+#     idstring = idpfx + str(currid)
+#     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
+#     for nindex in way['_nodes']:
+#         refstring = idpfx + str(index_to_nodeid(nindex))
+#         ostr.write("\t<nd ref='%s' />\n" % refstring)
+#
+#     if '_src' in way:
+#         src = way.pop('_src')
+#     for key in way:
+#         if key.startswith('_'):
+#             continue
+#         if len(str(way[key])) > 255:
+#             sys.stderr.write("\tERROR: key value too long " + key + ": " + str(way[key]) + "\n")
+#             continue
+#         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
+#     ostr.write("</way>\n")
 
 def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     if way is None:
@@ -2255,51 +2265,51 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</way>\n")
 
 
-def print_relation(rel, index, ostr):
-    global maxid
-    global idpfx
-
-    """Prints a relation given by rel together with its ID to stdout as XML"""
-    if '_c' in rel:
-        if rel['_c'] <= 0:
-            return
-        rel.pop('_c')
-    if "_members" not in rel:
-        sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
-        return
-
-    if '_timestamp' in rel:
-        timestamp = rel['_timestamp']
-    else:
-        sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
-        timestamp = runstamp
-    currid = index_to_relationid(index)
-    if currid > maxid:
-        maxid = currid
-    idstring = idpfx + str(currid)
-    ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
-    for role, (type, members) in rel['_members'].items():
-        for member in members:
-            if type == "node":
-                id = index_to_nodeid(member)
-            elif type == "way":
-                id = index_to_wayid(member)
-            else:
-                id = index_to_relationid(member)
-            refstring = idpfx + str(id)
-            # print >>ostr,("\t<member type='%s' ref='%s' role='%s' />" % (type, refstring, role))
-            ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (type, refstring, role))
-
-    if '_src' in rel:
-        src = rel.pop('_src')
-    for key in rel:
-        if key.startswith('_'):
-            continue
-        # print >>ostr,("\t<tag k='%s' v='%s' />" % (key, xmlize(rel[key])))
-        ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
-        # print >>ostr,("\t<tag k='source' v='%s' />" % (source))
-    # print >>ostr,("</relation>")
-    ostr.write("</relation>\n")
+# def print_relation(rel, index, ostr):
+#     global maxid
+#     global idpfx
+#
+#     """Prints a relation given by rel together with its ID to stdout as XML"""
+#     if '_c' in rel:
+#         if rel['_c'] <= 0:
+#             return
+#         rel.pop('_c')
+#     if "_members" not in rel:
+#         sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
+#         return
+#
+#     if '_timestamp' in rel:
+#         timestamp = rel['_timestamp']
+#     else:
+#         sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
+#         timestamp = runstamp
+#     currid = index_to_relationid(index)
+#     if currid > maxid:
+#         maxid = currid
+#     idstring = idpfx + str(currid)
+#     ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
+#     for role, (type, members) in rel['_members'].items():
+#         for member in members:
+#             if type == "node":
+#                 id = index_to_nodeid(member)
+#             elif type == "way":
+#                 id = index_to_wayid(member)
+#             else:
+#                 id = index_to_relationid(member)
+#             refstring = idpfx + str(id)
+#             # print >>ostr,("\t<member type='%s' ref='%s' role='%s' />" % (type, refstring, role))
+#             ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (type, refstring, role))
+#
+#     if '_src' in rel:
+#         src = rel.pop('_src')
+#     for key in rel:
+#         if key.startswith('_'):
+#             continue
+#         # print >>ostr,("\t<tag k='%s' v='%s' />" % (key, xmlize(rel[key])))
+#         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
+#         # print >>ostr,("\t<tag k='source' v='%s' />" % (source))
+#     # print >>ostr,("</relation>")
+#     ostr.write("</relation>\n")
 
 
 def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
@@ -2320,16 +2330,16 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     currid = node_generalizator.get_relation_id(task_id, orig_id)
     idstring = str(currid)
     ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
-    for role, (type, members) in rel['_members'].items():
+    for role, (_type, members) in rel['_members'].items():
         for member in members:
-            if type == "node":
-                id = node_generalizator.get_node_id(task_id, member)
-            elif type == "way":
-                id = node_generalizator.get_way_id(task_id, member)
+            if _type == "node":
+                _id = node_generalizator.get_node_id(task_id, member)
+            elif _type == "way":
+                _id = node_generalizator.get_way_id(task_id, member)
             else:
-                id = node_generalizator.get_relation_id(task_id, member)
-            refstring = str(id)
-            ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (type, refstring, role))
+                _id = node_generalizator.get_relation_id(task_id, member)
+            refstring = str(_id)
+            ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (_type, refstring, role))
 
     if '_src' in rel:
         src = rel.pop('_src')
@@ -2460,7 +2470,7 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
         progress_bar.set_val(_line_num, 'drp')
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
-                prepare_restriction(rel, node_ways_relation=node_ways_relation)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation,  map_elements_props= map_elements_props)
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
 
@@ -2560,11 +2570,11 @@ def remove_label_braces(local_way):
             nname = p.sub("", new_way['name'])
             new_way['name'] = str.strip(nname)
 
-            if (new_way['name'] == ""):  # zastepowanie pustych name
-                if ('loc_name' in new_way):
+            if new_way['name'] == "":  # zastepowanie pustych name
+                if 'loc_name' in new_way:
                     new_way['name'] = new_way['loc_name']
                     new_way.pop('loc_name')
-                elif ('short_name' in new_way):
+                elif 'short_name' in new_way:
                     new_way['name'] = new_way['short_name']
     return new_way
 
@@ -2721,40 +2731,8 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
 #         print_relation(rel, index, out)
 #
 #     out.close()
-
-
-def output_index_pickled(options, pickled_filenames=None, node_generalizator=None):
-    try:
-        prefix = 'UMP_PL'
-        num = 1
-        f = prefix + ".index." + str(num) + ".osm"
-        out = open(f, "w", encoding="utf-8")
-    except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
-        sys.exit()
-    for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
-            orig_id = -1
-            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
-                orig_id += 1
-                _pac = add_city_region_atm_to_pointsattr(_points_attr)
-                print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
-
-        for task_id, pickled_way in enumerate(pickled_filenames['ways']):
-            with open(pickled_way, 'rb') as p_file:
-                orig_id = -1
-                for _way in pickle.load(p_file):
-                    orig_id += 1
-                    if _way is None or 'is_in' not in _way:
-                        continue
-                    newway = remove_label_braces(_way)
-                    if options.regions and 'is_in:state' in newway:
-                        newway = add_city_region_to_way(newway)
-
-                    print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
-    out.write("</osm>\n")
-    out.close()
-
+#
+#
 # def output_index(prefix, num, options):
 #     global maxid
 #     global idpfx
@@ -3223,10 +3201,6 @@ def worker(task, options, bpoints=None):
     global glob_progress_bar_queue
     if bpoints is None:
         bpoints = list()
-    pointattrs = defaultdict(dict)
-    ways = list()
-    relations = list()
-    points = Mylist(bpoints, idperarea*task['idx'])
     if options.normalize_ids:
         idpfx = ":id:" + str(task['idx']) + ":"
     else:
@@ -3299,7 +3273,7 @@ def main(options, args):
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     runtime = datetime.now().replace(microsecond=0)
 
-    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ +" ran at " + runstamp + "\n")
+    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + runstamp + "\n")
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -3355,7 +3329,7 @@ def main(options, args):
             borderstamp = runstamp
             sys.stderr.write("\tINFO: Running without border file.\n")
 
-        worklist=[]
+        worklist = []
         elapsed = datetime.now().replace(microsecond=0)
         for n, f in enumerate(args):
             try:
@@ -3472,7 +3446,6 @@ def main(options, args):
                 sys.stderr.write("\n\tERROR: Navit output failed!\n")
                 sys.exit()
 
-        
         if options.index_file is not None:
             printinfo_nlf("OsmAnd index... ")
             try:
@@ -3482,7 +3455,6 @@ def main(options, args):
                 sys.stderr.write("\n\tERROR: Index output failed!\n")
                 sys.exit()                        
 
-        
         if options.nonumber_file is not None:
             printinfo_nlf("NoNumber output... ")
             try:
