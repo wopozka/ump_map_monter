@@ -2613,7 +2613,6 @@ def output_normal(prefix, num, options):
 
 
 def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None):
-    output_files = dict()
     try:
         output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
     except IOError as ioerror:
