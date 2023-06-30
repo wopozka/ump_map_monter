@@ -192,6 +192,7 @@ class NodeGeneralizator(object):
         self.t_table_points = OrderedDict()
         self.t_table_ways = OrderedDict()
         self.t_table_relations = OrderedDict()
+        self.border_points_nodes = dict()
         self.last_val = 0
 
     def insert_borders(self, borders):
@@ -199,6 +200,12 @@ class NodeGeneralizator(object):
         self.borders_point_last_id = len(borders) - 1
 
     def insert_node(self, file_group_name, node_val):
+        for n_index, node in enumerate(node_val):
+            if node in self.border_points():
+                if file_group_name in self.border_points_nodes:
+                    self.border_points_nodes[file_group_name].add(n_index)
+                else:
+                    self.border_points_nodes[file_group_name] = {n_index,}
         self.t_table_points[file_group_name] = len(node_val)
         self.points_las_id += len(node_val)
 
@@ -209,8 +216,8 @@ class NodeGeneralizator(object):
     def insert_relation(self, file_group_name, way_val):
         self.t_table_relations[file_group_name] = len(way_val)
 
-    def get_node_id(self, file_group_name, point, orig_id):
-        if point in self.border_points:
+    def get_node_id(self, file_group_name, orig_id):
+        if orig_id in self.border_points_nodes[file_group_name]:
             return orig_id + self.first_point_index
         new_id = 1
         for a in self.t_table_points:
@@ -2158,7 +2165,7 @@ def xmlize(xml_str):
 #     ostr.write("</node>\n")
 
 
-def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
+def print_point_pickled(pointattr, task_id, orig_id, node_generalizator, ostr):
     """
     Funkcja drukuje punkt do postaci xmlowej
     Parameters
@@ -2180,7 +2187,7 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
     else:
         sys.stderr.write("warning: no timestamp for point %r\n" % pointattr)
         timestamp = runstamp
-    currid = node_generalizator.get_node_id(task_id, point, orig_id)
+    currid = node_generalizator.get_node_id(task_id, orig_id)
     idstring = str(currid)
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
@@ -2238,7 +2245,7 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
 #         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
 #     ostr.write("</way>\n")
 
-def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
+def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     print(way, file=sys.stderr)
     if way is None:
         return
@@ -2255,9 +2262,9 @@ def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
     idstring = str(currid)
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
     for nindex in way['_nodes']:
-        _node = _points[nindex]
+        # _node = _points[nindex]
         print(_node, file=sys.stderr)
-        refstring = node_generalizator.get_node_id(task_id, _node, nindex)
+        refstring = node_generalizator.get_node_id(task_id, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
     if '_src' in way:
@@ -2319,7 +2326,7 @@ def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
 #     ostr.write("</relation>\n")
 
 
-def print_relation_pickled(_points, rel, task_id, orig_id, node_generalizator, ostr):
+def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     """Prints a relation given by rel together with its ID to stdout as XML"""
     if '_c' in rel:
         if rel['_c'] <= 0:
@@ -2340,8 +2347,8 @@ def print_relation_pickled(_points, rel, task_id, orig_id, node_generalizator, o
     for role, (_type, members) in rel['_members'].items():
         for member in members:
             if _type == "node":
-                _nod = _points[member]
-                _id = node_generalizator.get_node_id(task_id, _nod, member)
+                # _nod = _points[member]
+                _id = node_generalizator.get_node_id(task_id, member)
             elif _type == "way":
                 _id = node_generalizator.get_way_id(task_id, member)
             else:
