@@ -184,49 +184,57 @@ class ProgressBar(object):
 
 class NodeGeneralizator(object):
     def __init__(self):
+        self.first_point_index = 1
         self.borders_point_last_id = 0
         self.points_las_id = 0
         self.ways_last_id = 0
         self.border_points = list()
-        self.t_table_nodes = list()
-        self.t_table_ways = list()
-        self.t_table_relations = list()
+        self.t_table_points = OrderedDict()
+        self.t_table_ways = OrderedDict()
+        self.t_table_relations = OrderedDict()
         self.last_val = 0
 
     def insert_borders(self, borders):
         self.border_points = borders
         self.borders_point_last_id = len(borders) - 1
 
-    def insert_node(self, node_val):
-        self.t_table_nodes.append(len(node_val))
+    def insert_node(self, file_group_name, node_val):
+        self.t_table_points[file_group_name] = len(node_val)
         self.points_las_id += len(node_val)
 
-    def insert_way(self, way_val):
-        self.t_table_ways.append(len(way_val))
+    def insert_way(self, file_group_name, way_val):
+        self.t_table_ways[file_group_name] =len(way_val)
         self.ways_last_id += len(way_val)
 
-    def insert_relation(self, way_val):
-        self.t_table_relations.append(len(way_val))
+    def insert_relation(self, file_group_name, way_val):
+        self.t_table_relations[file_group_name] = len(way_val)
 
-    def get_node_id(self, task_id, orig_id):
-        if orig_id in self.border_points:
-            return orig_id
+    def get_node_id(self, file_group_name, point, orig_id):
+        if point in self.border_points:
+            return orig_id + self.first_point_index
         new_id = 1
-        for a in range(task_id - 1):
-            new_id += self.t_table_nodes[a]
-        return orig_id + new_id + self.borders_point_last_id
+        for a in self.t_table_points:
+            if a == file_group_name:
+                break
+            new_id += self.t_table_points[a]
+        return orig_id + new_id + self.borders_point_last_id + self.first_point_index
 
-    def get_way_id(self, task_id, orig_id):
+    def get_way_id(self, file_group_name, orig_id):
         new_id = 1
-        for a in range(task_id - 1):
-            new_id += self.t_table_relations[a]
-        return orig_id + new_id + self.points_las_id + self.borders_point_last_id
-
-    def get_relation_id(self, task_id, orig_id):
-        new_id = 1
-        for a in range(task_id - 1):
+        for a in self.t_table_ways:
+            if a == file_group_name:
+                break
             new_id += self.t_table_ways[a]
-        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.ways_last_id
+        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.first_point_index
+
+    def get_relation_id(self, file_group_name, orig_id):
+        new_id = 1
+        for a in self.t_table_relations:
+            if a == file_group_name:
+                break
+            new_id += self.t_table_relations[a]
+        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.ways_last_id + \
+               self.first_point_index
 
 
 class NodesToWayNotFound(ValueError):
@@ -1034,7 +1042,7 @@ def cut_prefix(string):
     if string.startswith("aleja ") or string.startswith("Aleja ") or string.startswith("rondo ") or \
        string.startswith("Rondo ") or string.startswith("osiedle ") or string.startswith("Osiedle ") or \
        string.startswith("pasaż ") or string.startswith("Pasaż "):
-        string = re.sub("^\w+ ", "", string)
+        string = re.sub(r"^\w+ ", "", string)
     return string
 
 
@@ -1651,8 +1659,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
 def parse_txt(infile, options, progress_bar=None, bpoints=None):
     if bpoints is None:
         bpoints = []
-    otwarteDict = {"([Pp]n|pon\.)": "Mo", "([Ww]t|wt\.)": "Tu", "([Ss]r|śr|Śr|śr\.)": "We", "([Cc]z|czw\.)": "Th",
-                   "([Pp]t|piąt\.|pt\.)": "Fr", "([Ss]o|[Ss]b|sob\.)": "Sa", "([Nn]d|ni|niedz\.)": "Su"}
+    otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
+                   r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
     maxtypes = {}
     map_elements_props = {'points': Mylist(bpoints, 0), 'pointattrs': defaultdict(dict),
                           'ways': list(), 'relations': list()}
@@ -1746,7 +1754,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
                     match = p.search(comment)
                     if match is not None:
                         val = comment[match.end():].strip()
-                        p = re.compile('\^', re.IGNORECASE)	 # to moze byc wielolinijkowy komentarz
+                        p = re.compile(r'\^', re.IGNORECASE)	 # to moze byc wielolinijkowy komentarz
                         match = p.search(val)
                         if match is not None:
                             val = val[:match.start()]		# odciecie
@@ -1769,7 +1777,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
 
             if '_addr' in way:
                 addrinfo = way.pop('_addr')
-                p = re.compile('\{.*\}')                        # dowolny string otoczony klamrami
+                p = re.compile(r'\{.*\}')                        # dowolny string otoczony klamrami
                 if 'alt_name' in way:
                     street = way['alt_name']
                 # klamry w nazwie eliminuja wpis jako wlasciwa nazwe dla adresacji
@@ -2153,32 +2161,46 @@ def xmlize(xml_str):
 #     ostr.write("</node>\n")
 
 
-def print_point_pickled(point, pointattrs, task_id, orig_id, node_generalizator, ostr):
-    if '_out' in pointattrs:
+def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
+    """
+    Funkcja drukuje punkt do postaci xmlowej
+    Parameters
+    ----------
+    point: tuple w postaci (latitude, longitude)
+    pointattr: dict atrybutow punktow
+    task_id: aktualny numer przetwarzanego pliku - potrzebne do node generalizator
+    orig_id: oryginalna pozycja w przetwarzanym pliku
+    node_generalizator: klasa obslugujaca przeliczanie numerow pointow, way oraz relacji
+    ostr: plik wyjsciowy
+    Returns: None
+    -------
+
+    """
+    if '_out' in pointattr:
         return
-    if '_timestamp' in pointattrs:
-        timestamp = pointattrs['_timestamp']
+    if '_timestamp' in pointattr:
+        timestamp = pointattr['_timestamp']
     else:
-        sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs)
+        sys.stderr.write("warning: no timestamp for point %r\n" % pointattr)
         timestamp = runstamp
-    currid = node_generalizator.get_node_id(task_id, orig_id)
+    currid = node_generalizator.get_node_id(task_id, point, orig_id)
     idstring = str(currid)
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
     # print >>ostr, (head)
     ostr.write(head)
-    if '_src' in pointattrs:
-        src = pointattrs.pop('_src')
-    for key in pointattrs:
+    if '_src' in pointattr:
+        src = pointattr.pop('_src')
+    for key in pointattr:
         if key.startswith('_'):
             continue
-        if len(str(pointattrs[key])) > 255:
-            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattrs[key]) + "\n")
+        if len(str(pointattr[key])) > 255:
+            sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattr[key]) + "\n")
             continue
         try:
-            ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattrs[key]))))
+            ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattr[key]))))
         except:
-            sys.stderr.write("converting key " + key + ": " + str(pointattrs[key]) + " failed\n")
+            sys.stderr.write("converting key " + key + ": " + str(pointattr[key]) + " failed\n")
     ostr.write("</node>\n")
 
 
@@ -2219,7 +2241,7 @@ def print_point_pickled(point, pointattrs, task_id, orig_id, node_generalizator,
 #         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
 #     ostr.write("</way>\n")
 
-def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
+def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
     if way is None:
         return
     if '_c' in way:
@@ -2235,7 +2257,8 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     idstring = str(currid)
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
     for nindex in way['_nodes']:
-        refstring = node_generalizator.get_node_id(task_id, nindex)
+        _node = _points[nindex]
+        refstring = node_generalizator.get_node_id(task_id, _node, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
     if '_src' in way:
@@ -2297,7 +2320,7 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
 #     ostr.write("</relation>\n")
 
 
-def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
+def print_relation_pickled(_points, rel, task_id, orig_id, node_generalizator, ostr):
     """Prints a relation given by rel together with its ID to stdout as XML"""
     if '_c' in rel:
         if rel['_c'] <= 0:
@@ -2318,7 +2341,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     for role, (_type, members) in rel['_members'].items():
         for member in members:
             if _type == "node":
-                _id = node_generalizator.get_node_id(task_id, member)
+                _nod = _points[member]
+                _id = node_generalizator.get_node_id(task_id, _nod, member)
             elif _type == "way":
                 _id = node_generalizator.get_way_id(task_id, member)
             else:
@@ -2532,7 +2556,7 @@ def save_pickled_data(prefix, num, map_elements_props=None):
 
 def remove_label_braces(local_way):
     new_way = local_way.copy()
-    p = re.compile('\{.*\}')  # dowolny string otoczony klamrami
+    p = re.compile(r'\{.*\}')  # dowolny string otoczony klamrami
     if 'alt_name' in new_way:
         tmpname = new_way['alt_name']
         if 'name' in new_way:  # przechowanie nazwy z Label
@@ -2629,20 +2653,25 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
 
+    all_points = []
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
-        with open(pickled_point, 'rb') as p_file, open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
-            orig_id = -1
-            for _point, _points_attr in zip(pickle.load(p_file), pickle.load(pattrs_file).values()):
-                orig_id += 1
-                for filename in output_files:
-                    out = output_files[filename]
-                    if filename in {'normal', 'navit'}:
-                        print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
-                    elif filename == 'no_numbers' and 'NumberX' not in _points_attr:
-                        print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
-                    elif filename == 'index':
-                        _pac = add_city_region_atm_to_pointsattr(_points_attr)
-                        print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
+        with open(pickled_point, 'rb') as p_file:
+            task_id_points = pickle.load(p_file)
+            all_points += task_id_points
+        with open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
+            task_id_pointattrs = pickle.load(pattrs_file).values()
+        orig_id = -1
+        for _point, _points_attr in zip(task_id_points, task_id_pointattrs):
+            orig_id += 1
+            for filename in output_files:
+                out = output_files[filename]
+                if filename in {'normal', 'navit'}:
+                    print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
+                elif filename == 'no_numbers' and 'NumberX' not in _points_attr:
+                    print_point_pickled( _point, _points_attr, task_id, orig_id, node_generalizator, out)
+                elif filename == 'index':
+                    _pac = add_city_region_atm_to_pointsattr(_points_attr)
+                    print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_way in enumerate(pickled_filenames['ways']):
         with open(pickled_way, 'rb') as p_file:
@@ -2654,28 +2683,28 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
                 for filename in output_files:
                     out = output_files[filename]
                     if filename == 'normal':
-                        print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(all_points, _way, task_id, orig_id, node_generalizator, out)
                     elif filename == 'navit':
                         newway = _way.copy()
                         if 'natural' in newway and newway['natural'] == 'coastline':
                             newway['natural'] = 'water'
-                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'no_numbers' and 'NumberX' not in _way:
-                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'index' and 'is_in' in _way:
                         newway = remove_label_braces(_way)
                         if options.regions and 'is_in:state' in newway:
                             newway = add_city_region_to_way(newway)
-                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_relation in enumerate(pickled_filenames['relations']):
         with open(pickled_relation, 'rb') as p_file:
             orig_id = -1
             for _relation in pickle.load(p_file):
                 orig_id += 1
-                print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['normal'])
+                print_relation_pickled(all_points, _relation, task_id, orig_id, node_generalizator, output_files['normal'])
                 if 'navit' in output_files:
-                    print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['navit'])
+                    print_relation_pickled(all_points, _relation, task_id, orig_id, node_generalizator, output_files['navit'])
     for out in output_files.values():
         out.close()
     return {a: b.name for a, b in output_files.items()}
@@ -2978,7 +3007,7 @@ def output_nominatim_pickled(options, pickled_filenames=None):
             if 'ref' in _way and 'highway' in _way:
                 if _way['highway'] in {'cycleway', 'path', 'footway'}:
                     continue
-            print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+            print_way_pickled(local_points[task_id], _way, task_id, orig_id, node_generalizator, out)
 
     # out.write("</osm>\n")
     out.close()
@@ -3357,13 +3386,13 @@ def main(options, args):
             pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_node(pickled_data)
+                node_generalizator.insert_node(work_no, pickled_data)
             with open(pickled_ways_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_way(pickled_data)
+                node_generalizator.insert_way(work_no, pickled_data)
             with open(pickled_relations_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_relation(pickled_data)
+                node_generalizator.insert_relation(work_no, pickled_data)
 
         # zapisywanie pikli w normalnym trybie
         output_files_to_generate = ['normal']
@@ -3395,10 +3424,15 @@ def main(options, args):
         idpfx = ""
         if options.borders_file is not None:
             sys.stderr.write("and border points... ")
+            bpointattrs = dict()
+            for pickled_pointattrs in pickled_filenames['pointattrs']:
+                with open(pickled_pointattrs, 'rb') as pickled_f:
+                    for _bpoint, _bpointattr in pickle.load(pickled_f).items():
+                        bpointattrs[_bpoint] = _bpointattr
             for point in bpoints:
                 index = bpoints.index(point)
-                pointattrs[index]['_timestamp'] = borderstamp
-                print_point(point, index, out)                
+                bpointattrs[index]['_timestamp'] = borderstamp
+                print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
         out.close()
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         sys.stderr.write("written (took " + str(elapsed) + ").\n")
