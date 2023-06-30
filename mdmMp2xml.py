@@ -2036,9 +2036,6 @@ def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
               map_elements_props=map_elements_props)
 
 
-def return_roadid_in_ways(way, road_to_road_id=None):
-    return road_to_road_id[id(way)]
-
 def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None):
     ways =  map_elements_props['ways']
     nodes = rel.pop('_nodes')
@@ -2242,6 +2239,7 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
 #     ostr.write("</way>\n")
 
 def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
+    print(way, file=sys.stderr)
     if way is None:
         return
     if '_c' in way:
@@ -2258,6 +2256,7 @@ def print_way_pickled(_points, way, task_id, orig_id, node_generalizator, ostr):
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
     for nindex in way['_nodes']:
         _node = _points[nindex]
+        print(_node, file=sys.stderr)
         refstring = node_generalizator.get_node_id(task_id, _node, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
@@ -2653,11 +2652,11 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
 
-    all_points = []
+    points_for_task_id = OrderedDict()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
             task_id_points = pickle.load(p_file)
-            all_points += task_id_points
+            points_for_task_id[task_id] = task_id_points
         with open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
             task_id_pointattrs = pickle.load(pattrs_file).values()
         orig_id = -1
@@ -2668,7 +2667,7 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
                 if filename in {'normal', 'navit'}:
                     print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
                 elif filename == 'no_numbers' and 'NumberX' not in _points_attr:
-                    print_point_pickled( _point, _points_attr, task_id, orig_id, node_generalizator, out)
+                    print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
                 elif filename == 'index':
                     _pac = add_city_region_atm_to_pointsattr(_points_attr)
                     print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
@@ -2683,28 +2682,30 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
                 for filename in output_files:
                     out = output_files[filename]
                     if filename == 'normal':
-                        print_way_pickled(all_points, _way, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(points_for_task_id[task_id], _way, task_id, orig_id, node_generalizator, out)
                     elif filename == 'navit':
                         newway = _way.copy()
                         if 'natural' in newway and newway['natural'] == 'coastline':
                             newway['natural'] = 'water'
-                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(points_for_task_id[task_id], newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'no_numbers' and 'NumberX' not in _way:
-                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(points_for_task_id[task_id], newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'index' and 'is_in' in _way:
                         newway = remove_label_braces(_way)
                         if options.regions and 'is_in:state' in newway:
                             newway = add_city_region_to_way(newway)
-                        print_way_pickled(all_points, newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(points_for_task_id[task_id], newway, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_relation in enumerate(pickled_filenames['relations']):
         with open(pickled_relation, 'rb') as p_file:
             orig_id = -1
             for _relation in pickle.load(p_file):
                 orig_id += 1
-                print_relation_pickled(all_points, _relation, task_id, orig_id, node_generalizator, output_files['normal'])
+                print_relation_pickled(points_for_task_id[task_id], _relation, task_id, orig_id, node_generalizator,
+                                       output_files['normal'])
                 if 'navit' in output_files:
-                    print_relation_pickled(all_points, _relation, task_id, orig_id, node_generalizator, output_files['navit'])
+                    print_relation_pickled(points_for_task_id[task_id], _relation, task_id, orig_id, node_generalizator,
+                                           output_files['navit'])
     for out in output_files.values():
         out.close()
     return {a: b.name for a, b in output_files.items()}
@@ -3422,14 +3423,14 @@ def main(options, args):
         out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
         maxid = 0
         idpfx = ""
-        if options.borders_file is not None:
+        if False and options.borders_file is not None:
             sys.stderr.write("and border points... ")
             bpointattrs = dict()
             for pickled_pointattrs in pickled_filenames['pointattrs']:
                 with open(pickled_pointattrs, 'rb') as pickled_f:
                     for _bpoint, _bpointattr in pickle.load(pickled_f).items():
                         bpointattrs[_bpoint] = _bpointattr
-            for point in bpoints:
+            for point in border_points_used:
                 index = bpoints.index(point)
                 bpointattrs[index]['_timestamp'] = borderstamp
                 print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
