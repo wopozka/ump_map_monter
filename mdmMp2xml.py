@@ -2041,7 +2041,7 @@ def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
 
 
 def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None):
-    ways =  map_elements_props['ways']
+    ways = map_elements_props['ways']
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
@@ -3425,14 +3425,14 @@ def main(options, args):
         out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
         maxid = 0
         idpfx = ""
-        if False and options.borders_file is not None:
+        if options.borders_file is not None:
             sys.stderr.write("and border points... ")
             bpointattrs = dict()
             for pickled_pointattrs in pickled_filenames['pointattrs']:
                 with open(pickled_pointattrs, 'rb') as pickled_f:
                     for _bpoint, _bpointattr in pickle.load(pickled_f).items():
                         bpointattrs[_bpoint] = _bpointattr
-            for point in border_points_used:
+            for point in bpoints:
                 index = bpoints.index(point)
                 bpointattrs[index]['_timestamp'] = borderstamp
                 print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
