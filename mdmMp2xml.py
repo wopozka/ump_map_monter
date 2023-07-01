@@ -2474,7 +2474,7 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
             try:
                 prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+                sys.stderr.write("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
     for rel in map_elements_props['relations']:
         _line_num += 1
