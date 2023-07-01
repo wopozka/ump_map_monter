@@ -185,16 +185,13 @@ class ProgressBar(object):
 
 class NodeGeneralizator(object):
     def __init__(self):
-        self.first_point_index = 1
         self.borders_point_last_id = 0
         self.borders_point_len = 0
-        self.points_las_id = 0
-        self.ways_last_id = 0
         self.t_table_points = OrderedDict()
         self.t_table_ways = OrderedDict()
         self.t_table_relations = OrderedDict()
-        self.last_val = 0
         self.sum_points = -1
+        self.sum_ways = -1
 
     def insert_borders(self, borders):
         self.borders_point_len = len(borders)
@@ -202,46 +199,44 @@ class NodeGeneralizator(object):
     def insert_points(self, file_group_name, points):
         len_points = len(points) - self.borders_point_len
         self.t_table_points[file_group_name] = len_points
-        self.points_las_id += len_points
 
     def insert_ways(self, file_group_name, way_val):
         self.t_table_ways[file_group_name] = len(way_val)
-        self.ways_last_id += len(way_val)
 
     def insert_relations(self, file_group_name, way_val):
         self.t_table_relations[file_group_name] = len(way_val)
 
     def get_point_id(self, file_group_name, orig_id):
         if orig_id < self.borders_point_len:
-            return orig_id + self.first_point_index
-        new_id = 1
+            return orig_id + 1
+        new_id = orig_id + 1
         for a in self.t_table_points:
             if a == file_group_name:
                 break
             new_id += self.t_table_points[a]
-        _new_id = orig_id + new_id
-        return _new_id
+        return new_id
 
     def get_way_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
             self.sum_point = sum(self.t_table_points[a] for a in self.t_table_points)
-        new_id = 1
+        new_id = orig_id + self.sum_point + self.borders_point_len + 1
         for a in self.t_table_ways:
             if a == file_group_name:
                 break
             new_id += self.t_table_ways[a]
-        _new_id = orig_id + new_id + self.sum_point + self.borders_point_len
-        return _new_id
+        return new_id
 
     def get_relation_id(self, file_group_name, orig_id):
-        new_id = 1
+        if self.sum_points == -1:
+            self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
+        if self.sum_ways == -1:
+            self.sum_ways = sum(self.t_table_ways[a] for a in self.t_table_ways)
+        new_id = orig_id + self.sum_ways + self.sum_points + self.borders_point_len + 1
         for a in self.t_table_relations:
             if a == file_group_name:
                 break
             new_id += self.t_table_relations[a]
-        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.ways_last_id + \
-               self.first_point_index
-
+        return new_id
 
 class NodesToWayNotFound(ValueError):
     """
@@ -1670,6 +1665,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
     maxtypes = {}
     map_elements_props = {'points': Mylist(bpoints, 0), 'pointattrs': defaultdict(dict),
                           'ways': list(), 'relations': list()}
+    print(len(bpoints), len(map_elements_props['points']), file=sys.stderr)
     polyline = None
     feat = None
     comment = None
@@ -2186,11 +2182,10 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
     else:
         sys.stderr.write("warning: no timestamp for point %r\n" % pointattr)
         timestamp = runstamp
-    currid = node_generalizator.get_node_id(task_id, orig_id)
+    currid = node_generalizator.get_point_id(task_id, orig_id)
     idstring = str(currid)
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
-    # print >>ostr, (head)
     ostr.write(head)
     if '_src' in pointattr:
         src = pointattr.pop('_src')
@@ -2260,7 +2255,7 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     idstring = str(currid)
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
     for nindex in way['_nodes']:
-        refstring = node_generalizator.get_node_id(task_id, nindex)
+        refstring = node_generalizator.get_point_id(task_id, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
     if '_src' in way:
@@ -2344,7 +2339,7 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
         for member in members:
             if _type == "node":
                 # _nod = _points[member]
-                _id = node_generalizator.get_node_id(task_id, member)
+                _id = node_generalizator.get_point_id(task_id, member)
             elif _type == "way":
                 _id = node_generalizator.get_way_id(task_id, member)
             else:
@@ -2655,16 +2650,20 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
 
+    printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
             task_id_points = pickle.load(p_file)
         with open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
-            task_id_pointattrs = pickle.load(pattrs_file).values()
-        orig_id = -1
-        for _point, _points_attr in zip(task_id_points, task_id_pointattrs):
-            orig_id += 1
-            if orig_id == 0:
-                print(task_id_points.index(_point), task_id_points.b, len(task_id_points.borders) ,file=sys.stderr)
+            task_id_pointattrs = pickle.load(pattrs_file)
+        # orig_id = -1
+        for _point in task_id_points:
+            _points_attr = task_id_pointattrs[_point]
+            orig_id = task_id_points.index(_point)
+            if _point in printed_points:
+                continue
+            else:
+                printed_points.add(_point)
             for filename in output_files:
                 out = output_files[filename]
                 if filename in {'normal', 'navit'}:
@@ -2991,8 +2990,8 @@ def output_nominatim_pickled(options, pickled_filenames=None):
     node_generalizator = NodeGeneralizator()
 
     for task_id in local_points:
-        node_generalizator.insert_node(local_points[task_id])
-        node_generalizator.insert_way(local_ways[task_id])
+        node_generalizator.insert_points(local_points[task_id])
+        node_generalizator.insert_ways(local_ways[task_id])
 
     for task_id in local_points:
         orig_id = -1
@@ -3389,13 +3388,13 @@ def main(options, args):
             pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_node(work_no, pickled_data)
+                node_generalizator.insert_points(work_no, pickled_data)
             with open(pickled_ways_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_way(work_no, pickled_data)
+                node_generalizator.insert_ways(work_no, pickled_data)
             with open(pickled_relations_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
-                node_generalizator.insert_relation(work_no, pickled_data)
+                node_generalizator.insert_relations(work_no, pickled_data)
 
         # zapisywanie pikli w normalnym trybie
         output_files_to_generate = ['normal']

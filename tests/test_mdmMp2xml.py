@@ -24,9 +24,9 @@ TEST_NORMALIZATION = (
         (('way', 'filename2', '2_way9',), '2_way9'),
         (('way', 'filename3', '3_way0',), '3_way0'),
         (('way', 'filename3', '3_way9',), '3_way9'),
-        # (('relation', 'filename=1', '1_relation0',), '1_relation0'),
-        # (('relation', 'filename=2', '2_relation2',), '2_relation2'),
-        # (('relation', 'filename=3', '3_relation9',), '3_relation9'),
+        (('relation', 'filename1', '1_relation0',), '1_relation0'),
+        (('relation', 'filename2', '2_relation2',), '2_relation2'),
+        (('relation', 'filename3', '3_relation9',), '3_relation9'),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_NORMALIZATION)
@@ -72,18 +72,29 @@ def test_normalization_ids(target, answer):
         file_group_name = target[1]
         target_index = points_list[file_group_name].index(target[2])
         assert ids_normalizer.get_point_id(file_group_name, target_index) == points_list_sum.index(answer) + 1
+
     if 'node' == target[0]:
         file_group_name = target[1]
         target_index = points_list[file_group_name].index(target[2])
         assert ids_normalizer.get_point_id(file_group_name, target_index) == points_list_sum.index(answer) + 1
+
     elif 'way' == target[0]:
         file_group_name = target[1]
         target_index = ways_list[file_group_name].index(target[2])
         sum_way = []
         for filename in ('filename1', 'filename2', 'filename3'):
             sum_way += ways_list[filename]
-        assert ids_normalizer.get_way_id(file_group_name, target_index) == len(points_list_sum) + sum_way.index(answer) + 1
+        assert ids_normalizer.get_way_id(file_group_name, target_index) == len(points_list_sum) + \
+               sum_way.index(answer) + 1
+
     elif 'relation' == target[0]:
-        file_group_name = target[1].split('=')[1]
+        file_group_name = target[1]
         target_index = relations_list[file_group_name].index(target[2])
-        assert ids_normalizer.get_relation_id(file_group_name, target_index) == all_points.index(answer) + 1
+        sum_way = []
+        for filename in ('filename1', 'filename2', 'filename3'):
+            sum_way += ways_list[filename]
+        sum_rels = []
+        for filename in ('filename1', 'filename2', 'filename3'):
+            sum_rels += relations_list[filename]
+        assert ids_normalizer.get_relation_id(file_group_name, target_index) == len(points_list_sum) + \
+               len(sum_way) + sum_rels.index(answer) + 1
