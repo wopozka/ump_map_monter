@@ -187,12 +187,14 @@ class NodeGeneralizator(object):
     def __init__(self):
         self.first_point_index = 1
         self.borders_point_last_id = 0
+        self.borders_point_len = 0
         self.points_las_id = 0
         self.ways_last_id = 0
         self.t_table_points = OrderedDict()
         self.t_table_ways = OrderedDict()
         self.t_table_relations = OrderedDict()
         self.last_val = 0
+        self.sum_points = -1
 
     def insert_borders(self, borders):
         self.borders_point_len = len(borders)
@@ -221,12 +223,15 @@ class NodeGeneralizator(object):
         return _new_id
 
     def get_way_id(self, file_group_name, orig_id):
+        if self.sum_points == -1:
+            self.sum_point = sum(self.t_table_points[a] for a in self.t_table_points)
         new_id = 1
         for a in self.t_table_ways:
             if a == file_group_name:
                 break
             new_id += self.t_table_ways[a]
-        return orig_id + new_id + self.points_las_id + self.borders_point_last_id + self.first_point_index
+        _new_id = orig_id + new_id + self.sum_point + self.borders_point_len
+        return _new_id
 
     def get_relation_id(self, file_group_name, orig_id):
         new_id = 1

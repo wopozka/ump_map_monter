@@ -11,14 +11,14 @@ TEST_NORMALIZATION = (
         (('border', 'filename1', (0, 1),), (0, 1)),
         (('border', 'filename2', (0, 2),), (0, 2)),
         (('border', 'filename3', (0, 3),), (0, 3)),
-        # (('node', 'filename1', (1, 0),), (1, 0)),
-        # (('node', 'filename1', (1, 1),), (1, 1)),
-        # (('node', 'filename=1', '1_node9',), '1_node9'),
-        # (('node', 'filename=2', '2_node0',), '2_node0'),
-        # (('node', 'filename=2', '2_node1',), '2_node1'),
-        # (('node', 'filename=2', '2_node9',), '2_node9'),
-        # (('node', 'filename=3', '3_node3',), '3_node3'),
-        # (('way', 'filename=1', '1_way0',), '1_way0'),
+        (('node', 'filename1', (1, 0),), (1, 0)),
+        (('node', 'filename1', (1, 1),), (1, 1)),
+        (('node', 'filename1', (1, 9),), (1, 9)),
+        (('node', 'filename2', (2, 0),), (2, 0)),
+        (('node', 'filename2', (2, 1),), (2, 1)),
+        (('node', 'filename2', (2, 9),), (2, 9)),
+        (('node', 'filename3', (3, 3),), (3, 3)),
+        # (('way', 'filename1', '1_way0',), '1_way0'),
         # (('way', 'filename=3', '3_way9',), '3_way9'),
         # (('relation', 'filename=1', '1_relation0',), '1_relation0'),
         # (('relation', 'filename=2', '2_relation2',), '2_relation2'),
@@ -64,9 +64,6 @@ def test_normalization_ids(target, answer):
         ids_normalizer.insert_ways(fname, ways_list[fname])
         ids_normalizer.insert_relations(fname, relations_list[fname])
 
-    # all_points = nodes_list_border + nodes_list['1'] + nodes_list['2'] + nodes_list['3'] + ways_list['1'] + \
-    #              ways_list['2'] + ways_list['3'] + relations_list['1'] + relations_list['2'] + relations_list['3']
-
     if 'border' == target[0]:
         file_group_name = target[1]
         target_index = points_list[file_group_name].index(target[2])
@@ -76,9 +73,12 @@ def test_normalization_ids(target, answer):
         target_index = points_list[file_group_name].index(target[2])
         assert ids_normalizer.get_point_id(file_group_name, target_index) == points_list_sum.index(answer) + 1
     elif 'way' == target[0]:
-        file_group_name = target[1].split('=')[1]
+        file_group_name = target[1]
         target_index = ways_list[file_group_name].index(target[2])
-        assert ids_normalizer.get_way_id(file_group_name, target_index) == all_points.index(answer) + 1
+        sum_way = []
+        for filename in ('filename1', 'filename2', 'filename3'):
+            sum_way += ways_list[filename]
+        assert ids_normalizer.get_way_id(file_group_name, target_index) == len(points_list_sum) + sum_way.index(answer) + 1
     elif 'relation' == target[0]:
         file_group_name = target[1].split('=')[1]
         target_index = relations_list[file_group_name].index(target[2])
