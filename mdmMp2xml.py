@@ -2656,12 +2656,11 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
             task_id_points = pickle.load(p_file)
         with open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
             task_id_pointattrs = pickle.load(pattrs_file)
-        # orig_id = -1
         for _point in task_id_points:
             _points_attr = task_id_pointattrs[_point]
             orig_id = task_id_points.index(_point)
             if _point in printed_points:
-                continue
+                print('punkt wydrukowany juz', file=sys.stderr)
             else:
                 printed_points.add(_point)
             for filename in output_files:
