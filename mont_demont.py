@@ -2971,7 +2971,7 @@ class plikPNT(object):
                     self.punktzPntAdrCiti.liniaZPliku2Dane(rekordy, liniaPliku)
                     if not self.Dokladnosc or self.Dokladnosc == '0':
                         if self.ustalDokladnosc(liniaPliku):
-                            self.errOutWriter.errOutWriter('Nie moge ustalic dokladnosci dla pliku %s'
+                            self.errOutWriter.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
                                                             % self.NazwaPliku)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
