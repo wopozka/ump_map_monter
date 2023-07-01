@@ -47,18 +47,24 @@ def test_normalization_ids(target, answer):
         _point = (1, a)
         points_list_sum.append(_point)
         points_list['filename1'].append(_point)
+        points_list_sum.append((0, a,))
+        points_list['filename1'].append((0, a,))
     ways_list['filename1'] = ['1_way' + str(a) for a in range(10)]
     relations_list['filename1'] = ['1_relation' + str(a) for a in range(10)]
     for a in range(10):
         _point = (2, a)
         points_list_sum.append(_point)
         points_list['filename2'].append(_point)
+        points_list_sum.append((0, a,))
+        points_list['filename2'].append((0, a,))
     ways_list['filename2'] = ['2_way' + str(a) for a in range(10)]
     relations_list['filename2'] = ['2_relation' + str(a) for a in range(10)]
     for a in range(10):
         _point = (3, a)
         points_list_sum.append(_point)
         points_list['filename3'].append(_point)
+        points_list_sum.append((0, a,))
+        points_list['filename3'].append((0, a,))
 
     ways_list['filename3'] = ['3_way' + str(a) for a in range(10)]
     relations_list['filename3'] = ['3_relation' + str(a) for a in range(10)]

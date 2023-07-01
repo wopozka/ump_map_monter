@@ -1292,15 +1292,17 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
         
 
 def points_append(node, attrs, map_elements_props=None):
+    #     # attrs['_src'] = srcidx
+    #     attrs['_timestamp'] = filestamp
+    #     points.append(node)
+    #     pointattrs[points.index(node)] = attrs
     if map_elements_props is None:
         return
     _points = map_elements_props['points']
     _pointattrs = map_elements_props['pointattrs']
-    if node not in map_elements_props['points']:
-    # attrs['_src'] = srcidx
-        attrs['_timestamp'] = filestamp
-        _points.append(node)
-        _pointattrs[_points.index(node)] = attrs
+    attrs['_timestamp'] = filestamp
+    _points.append(node)
+    _pointattrs[_points.index(node)] = attrs
 
             
 def prepare_line(nodes_str, closed=False, map_elements_props=None):
