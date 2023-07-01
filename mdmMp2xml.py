@@ -1298,6 +1298,8 @@ def points_append(node, attrs, map_elements_props=None):
     #     pointattrs[points.index(node)] = attrs
     if map_elements_props is None:
         return
+    if node in map_elements_props['points']:
+        return
     _points = map_elements_props['points']
     _pointattrs = map_elements_props['pointattrs']
     attrs['_timestamp'] = filestamp
