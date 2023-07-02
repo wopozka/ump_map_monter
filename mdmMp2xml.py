@@ -3435,6 +3435,10 @@ def main(options, args):
                     for _bpoint, _bpointattr in pickle.load(pickled_f).items():
                         bpointattrs[_bpoint] = _bpointattr
             for point in bpoints:
+                # for point in bpoints:
+                #     index = bpoints.index(point)
+                #     pointattrs[index]['_timestamp'] = borderstamp
+                #     print_point(point, index, out)
                 index = bpoints.index(point)
                 bpointattrs[index]['_timestamp'] = borderstamp
                 print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
