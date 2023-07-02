@@ -3429,11 +3429,11 @@ def main(options, args):
         idpfx = ""
         if options.borders_file is not None:
             sys.stderr.write("and border points... ")
-            bpointattrs = dict()
-            for pickled_pointattrs in pickled_filenames['pointattrs']:
-                with open(pickled_pointattrs, 'rb') as pickled_f:
-                    for _bpoint, _bpointattr in pickle.load(pickled_f).items():
-                        bpointattrs[_bpoint] = _bpointattr
+            bpointattrs = defaultdict(dict)
+            # for pickled_pointattrs in pickled_filenames['pointattrs']:
+            #     with open(pickled_pointattrs, 'rb') as pickled_f:
+            #         for _bpoint, _bpointattr in pickle.load(pickled_f).items():
+            #             bpointattrs[_bpoint] = _bpointattr
             for point in bpoints:
                 # for point in bpoints:
                 #     index = bpoints.index(point)
