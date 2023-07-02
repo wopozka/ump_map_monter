@@ -134,6 +134,9 @@ class Mylist(object):
     def points_numbers(self):
         return [self.k[a] + self.b for a in self.k]
 
+    def get_point_id(self, value):
+        return self.index(value)
+
 
 class Features(object):  # fake enum
     poi, polyline, polygon, ignore = range(4)
@@ -1304,6 +1307,7 @@ def points_append(node, attrs, map_elements_props=None):
     _pointattrs = map_elements_props['pointattrs']
     attrs['_timestamp'] = filestamp
     _points.append(node)
+    point_id = _points.get_point_id(node)
     _pointattrs[_points.index(node)] = attrs
 
             
@@ -1669,7 +1673,6 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
     maxtypes = {}
     map_elements_props = {'points': Mylist(bpoints, 0), 'pointattrs': defaultdict(dict),
                           'ways': list(), 'relations': list()}
-    print(len(bpoints), len(map_elements_props['points']), file=sys.stderr)
     polyline = None
     feat = None
     comment = None
@@ -2661,10 +2664,11 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
         with open(pickled_filenames['pointattrs'][task_id], 'rb') as pattrs_file:
             task_id_pointattrs = pickle.load(pattrs_file)
         for _point in task_id_points:
-            _points_attr = task_id_pointattrs[_point]
+            point_id = task_id_points.get_point_id(_point)
+            _points_attr = task_id_pointattrs[point_id]
             orig_id = task_id_points.index(_point)
             if _point in printed_points:
-                print('punkt wydrukowany juz', file=sys.stderr)
+                print('punkt wydrukowany juz', _point, file=sys.stderr)
             else:
                 printed_points.add(_point)
             for filename in output_files:
@@ -2837,9 +2841,11 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
 #     out.close()
 
 
-def output_nominatim_pickled(options, pickled_filenames=None):
-    streets_counter = defaultdict(list)
+def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
+    if bpoints is None:
+        bpoints = []
     l_ways = list()
+    streets_counter = defaultdict(list)
 
     # ponieważ tutaj mamy sporo iterowania z dodawaniem nowych drog, dlatego wczytujemy calosc
     # danych i je osobno obrabiamy. Tworzymy też nowy obiekt node_generalizator
@@ -2868,7 +2874,8 @@ def output_nominatim_pickled(options, pickled_filenames=None):
     #  fragment dodajacy krotkie odcinki drog dla wsi ktore nie posiadaja ulic
     #  zbieramy info o wszytskich miastach
     for task_id in local_points:
-        for _point, _points_attr in zip(local_points[task_id], local_pointattrs[task_id].values()):
+        for _point in local_points[task_id]:
+            _points_attr = local_pointattrs[task_id][local_points[task_id].get_point_id(_point)]
             if 'place' in _points_attr and 'name' in _points_attr:
                 n = _points_attr['name']
                 p = _points_attr['place']
@@ -2893,7 +2900,8 @@ def output_nominatim_pickled(options, pickled_filenames=None):
     printdebug("City=>Streets scan part1: " + str(datetime.now()), options)
     # teraz skan wszystkich ulic
     for task_id in local_ways:
-        for _way, _points in zip(local_ways[task_id], local_points[task_id]):
+        _points = local_points[task_id]
+        for _way in local_ways[task_id]:
             if _way is None:
                 continue
             if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
@@ -2926,11 +2934,12 @@ def output_nominatim_pickled(options, pickled_filenames=None):
                     #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
 
     # dodajemy nowe drogi do wszystkich drog
-    for way in newway:
+    for way in l_ways:
         local_ways[way['task_id']].append(way['newway'])
 
     for task_id in local_ways:
-        for _way, _points in zip(local_ways[task_id], local_points[task_id]):
+        _points = local_points[task_id]
+        for _way in local_ways[task_id]:
             if _way is None:
                 continue
             if 'is_in' in _way and 'name' in _way and 'highway' in _way:
@@ -2968,10 +2977,12 @@ def output_nominatim_pickled(options, pickled_filenames=None):
                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
                 pind0 = len(local_points[task_id])
                 local_points[task_id].append(pt0)
-                local_pointattrs[task_id].append({'_timestamp': filestamp})
+                pt0_point_id = local_points[task_id].get_point_id(pt0)
+                local_pointattrs[task_id][pt0_point_id] = {'_timestamp': filestamp}
                 pind1 = len(local_points[task_id])
                 local_points[task_id].append(pt1)
-                local_pointattrs[task_id].append({'_timestamp': filestamp})
+                pt1_point_id = local_points[task_id].get_point_id(pt1)
+                local_pointattrs[task_id][pt1_point_id] = {'_timestamp': filestamp}
                 way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
                     'name': miasto, 'addr:city': miasto, 'highway': "residental"}
                 local_ways[task_id].append(way)
@@ -2979,27 +2990,31 @@ def output_nominatim_pickled(options, pickled_filenames=None):
 
     for task_id in local_ways:
         for way_id, _way in enumerate(local_ways[task_id]):
-            _n_way = remove_label_braces(_way)
-            if 'name' in _n_way and not _way['name'] and 'addr:city' in _n_way and _n_way['addr:city']:
-                _n_way['name'] = _n_way['addr:city']
-            local_ways[task_id][way_id] = _n_way
+            if _way is None:
+                continue
+            no_braces_way = remove_label_braces(_way)
+            if 'name' in no_braces_way and not no_braces_way['name'] and 'addr:city' in no_braces_way and \
+                    no_braces_way['addr:city']:
+                no_braces_way['name'] = no_braces_way['addr:city']
+            local_ways[task_id][way_id] = no_braces_way
     try:
-        f = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
-        out = open(f, "w", encoding="utf-8")
+        out = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
         sys.exit()
 
     node_generalizator = NodeGeneralizator()
+    node_generalizator.insert_borders(bpoints)
 
     for task_id in local_points:
-        node_generalizator.insert_points(local_points[task_id])
-        node_generalizator.insert_ways(local_ways[task_id])
+        node_generalizator.insert_points(task_id, local_points[task_id])
+        node_generalizator.insert_ways(task_id, local_ways[task_id])
 
     for task_id in local_points:
-        orig_id = -1
-        for _point, _points_attr in zip(local_points[task_id], local_pointattrs[task_id].values()):
-            orig_id += 1
+        _point_attrs = local_pointattrs[task_id]
+        for _point in local_points[task_id]:
+            _points_attr = _point_attrs[local_points[task_id].get_point_id(_point)]
+            orig_id = local_points[task_id].get_point_id(_point)
             print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
 
     for task_id in local_ways:
@@ -3011,11 +3026,11 @@ def output_nominatim_pickled(options, pickled_filenames=None):
             if 'ref' in _way and 'highway' in _way:
                 if _way['highway'] in {'cycleway', 'path', 'footway'}:
                     continue
-            print_way_pickled(local_points[task_id], _way, task_id, orig_id, node_generalizator, out)
+            print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
 
     # out.write("</osm>\n")
     out.close()
-    return f.name
+    return out.name
 
 # def output_nominatim(prefix, num, options):
 #     streets_counter = defaultdict(list)
@@ -3412,7 +3427,8 @@ def main(options, args):
                                                            pickled_filenames=pickled_filenames,
                                                            node_generalizator=node_generalizator)
         if options.nominatim_file is not None:
-            generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames)
+            generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
+                                                                    bpoints=bpoints)
 
         # naglowek osm i punkty granic
         printinfo_nlf("Working on header... ")
