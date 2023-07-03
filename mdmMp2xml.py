@@ -43,6 +43,7 @@ import os.path
 from functools import partial
 import copy
 import tempfile
+from multiprocessing import Queue
 
 
 class MylistB(object):
@@ -2521,7 +2522,8 @@ def add_city_region_to_way(l_way):
 
 
 
-def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None, ids_to_process=0):
+def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None, ids_to_process=0,
+                          multiprocessing_queue=None):
     try:
         output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
     except IOError as ioerror:
@@ -2591,7 +2593,10 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s) done (took %s)."
                                % elapsed)
-    return {a: b.name for a, b in output_files.items()}
+    return_val_dict = {a: b.name for a, b in output_files.items()}
+    if multiprocessing_queue is not None:
+        multiprocessing_queue.put(return_val_dict)
+    return return_val_dict
 
 
 def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname, messages_printer=None,
@@ -2763,7 +2768,8 @@ def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, 
     return pickled_file_names
 
 
-def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0):
+def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0,
+                             multiprocessing_queue=None):
     """
     Generates nominatim output from processed data
     Parameters
@@ -2775,6 +2781,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
                                    'relations" [filename1, filename2, filename3...]}
     border_points: border points from borders file
     ids_to_process: number of object indentifier (points + ways + relastion to proces, relations num is obsolete
+    multiprocessing_queue: queue for returning generated filename
     Returns
     -------
 
@@ -2834,6 +2841,8 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
     for g_name in post_nom_picle_files.values():
         for filenam in g_name:
             os.remove(filenam)
+    if multiprocessing_queue is not None:
+        multiprocessing_queue.put(out.name)
     return out.name
 
 
@@ -3062,19 +3071,26 @@ def main(options, args):
                                                                         border_points=bpoints,
                                                                         ids_to_process=ids_to_process_nominatim)
         else:
+            normal_output_queue = Queue()
             normal_process = Process(target=output_normal_pickled,
                                      args=(options, output_files_to_generate,),
                                      kwargs={'pickled_filenames': pickled_filenames,
                                      'node_generalizator': node_generalizator,
-                                     'ids_to_process': ids_to_process})
+                                     'ids_to_process': ids_to_process,
+                                     'multiprocessing_queue': normal_output_queue})
+            nominatim_output_queue = Queue()
             nominatim_process = Process(target=output_nominatim_pickled, args=(options,),
                                         kwargs={'pickled_filenames': pickled_filenames,
                                                 'border_points': bpoints,
-                                                'ids_to_process': ids_to_process_nominatim})
+                                                'ids_to_process': ids_to_process_nominatim,
+                                                'multiprocessing_queue': nominatim_output_queue})
             normal_process.start()
             nominatim_process.start()
             nominatim_process.join()
             normal_process.join()
+            generated_nominatim_filename = nominatim_output_queue.get()
+            generated_output_filenames = normal_output_queue.get()
+
         # naglowek osm i punkty granic
         messages_printer.printinfo_nlf("Working on header... ")
         elapsed = datetime.now().replace(microsecond=0)
@@ -3089,15 +3105,7 @@ def main(options, args):
         if options.borders_file is not None:
             sys.stderr.write("and border points... ")
             bpointattrs = defaultdict(dict)
-            # for pickled_pointattrs in pickled_filenames['pointattrs']:
-            #     with open(pickled_pointattrs, 'rb') as pickled_f:
-            #         for _bpoint, _bpointattr in pickle.load(pickled_f).items():
-            #             bpointattrs[_bpoint] = _bpointattr
             for point in bpoints:
-                # for point in bpoints:
-                #     index = bpoints.index(point)
-                #     pointattrs[index]['_timestamp'] = borderstamp
-                #     print_point(point, index, out)
                 index = bpoints.index(point)
                 bpointattrs[index]['_timestamp'] = borderstamp
                 print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
