@@ -195,6 +195,9 @@ class NodeGeneralizator(object):
         self.t_table_relations = OrderedDict()
         self.sum_points = -1
         self.sum_ways = -1
+        self.points_ofset = dict()
+        self.ways_ofset = dict()
+        self.relations_ofset = dict()
 
     def insert_borders(self, borders):
         self.borders_point_len = len(borders)
@@ -202,44 +205,56 @@ class NodeGeneralizator(object):
     def insert_points(self, file_group_name, points):
         len_points = len(points) - self.borders_point_len
         self.t_table_points[file_group_name] = len_points
+        self.points_ofset[file_group_name] = -1
 
     def insert_ways(self, file_group_name, way_val):
         self.t_table_ways[file_group_name] = len(way_val)
+        self.ways_ofset[file_group_name] = -1
 
     def insert_relations(self, file_group_name, way_val):
         self.t_table_relations[file_group_name] = len(way_val)
+        self.relations_ofset[file_group_name] = -1
 
     def get_point_id(self, file_group_name, orig_id):
         if orig_id < self.borders_point_len:
             return orig_id + 1
-        new_id = orig_id + 1
+        if self.points_ofset[file_group_name] > -1:
+            return self.points_ofset[file_group_name] + orig_id
+        new_id = 1
         for a in self.t_table_points:
             if a == file_group_name:
                 break
             new_id += self.t_table_points[a]
-        return new_id
+        self.points_ofset[file_group_name] = new_id
+        return new_id + orig_id
 
     def get_way_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
-            self.sum_point = sum(self.t_table_points[a] for a in self.t_table_points)
-        new_id = orig_id + self.sum_point + self.borders_point_len + 1
+            self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
+        if self.ways_ofset[file_group_name] > -1:
+            return orig_id + self.sum_points + self.borders_point_len
+        new_id = 1
         for a in self.t_table_ways:
             if a == file_group_name:
                 break
             new_id += self.t_table_ways[a]
-        return new_id
+        self.ways_ofset[file_group_name] = new_id
+        return new_id + orig_id + self.sum_points + self.borders_point_len
 
     def get_relation_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
             self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
         if self.sum_ways == -1:
             self.sum_ways = sum(self.t_table_ways[a] for a in self.t_table_ways)
-        new_id = orig_id + self.sum_ways + self.sum_points + self.borders_point_len + 1
+        if self.relations_ofset[file_group_name] > -1:
+            return orig_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
+        new_id = 1
         for a in self.t_table_relations:
             if a == file_group_name:
                 break
             new_id += self.t_table_relations[a]
-        return new_id
+        self.relations_ofset[file_group_name] = new_id
+        return new_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
 
 class NodesToWayNotFound(ValueError):
     """
