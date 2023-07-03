@@ -272,7 +272,7 @@ class MessagePrinters(object):
         self.working_thread = os.getpid()
         self.workid = workid
         self.verbose = verbose
-        self.worning_num = 0
+        self.warning_num = 0
         self.error_num = 0
 
     def printdebug(self, p_string):
@@ -294,7 +294,7 @@ class MessagePrinters(object):
         sys.stderr.write("\tWARNING: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
 
     def get_worning_num(self):
-        return self.worning_num
+        return self.warning_num
 
     def get_error_num(self):
         return self.error_num
@@ -2590,16 +2590,11 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
                     del pointattrs[node]['_out']
 
 
-def save_pickled_data(prefix, num, map_elements_props=None):
+def save_pickled_data(pickled_files, map_elements_props=None):
     try:
-        with open(prefix + ".normal." + str(num) + ".points_pickle", 'wb') as pickle_f:
-            pickle.dump(map_elements_props['points'], pickle_f)
-        with open(prefix + ".normal." + str(num) + ".pointattrs_pickle", 'wb') as pickle_f:
-            pickle.dump(map_elements_props['pointattrs'], pickle_f)
-        with open(prefix + ".normal." + str(num) + ".ways_pickle", 'wb') as pickle_f:
-            pickle.dump(map_elements_props['ways'], pickle_f)
-        with open(prefix + ".normal." + str(num) + ".relations_pickle", 'wb') as pickle_f:
-            pickle.dump(map_elements_props['relations'], pickle_f)
+        for pf_name in pickled_files:
+            with open(pickled_files[pf_name], 'wb') as pickle_f:
+                pickle.dump(map_elements_props[pf_name], pickle_f)
     except IOError:
         sys.stderr.write("\tERROR: Can't write pickle files \n")
         sys.exit()
@@ -2765,7 +2760,7 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
     for out in output_files.values():
         out.close()
     elapsed = datetime.now().replace(microsecond=0) - elapsed
-    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s) (took %s)."
+    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s) done (took %s)."
                                % elapsed)
     return {a: b.name for a, b in output_files.items()}
 
@@ -2892,203 +2887,246 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
 #
 #     out.close()
 
-def output_nominatim_preprocessing(options, pickled_filenames=None, border_points=None, ids_to_process=0):
-    return
+def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname, messages_printer=None,
+                                   node_generalizator=None):
+    """
+    Zmiana parametrów dróg i aadresow dla nominatima
+    Parameters
+    ----------
+    file_g_name - unikatowa nazwa/numer pliku pickla w ktrym przechowywane byly dane
+    points_fname - nazwa pliku z punktami
+    pointattrs_fname - nazwa pliku z pointattraami
+    ways_fname - nazwa pliku z drogami
+    messages_printer - klasa obslugujaca druk informacji i ostrzezen
+    node_generalizator - generalizator nodwo
 
+    Returns: OrderedDict {nowa grupa: nowe dane
+    -------
 
-def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0):
+    """
     filestamp = None
-    if border_points is None:
-        border_points = []
     l_ways = list()
     streets_counter = defaultdict(list)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
-    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
-    # ponieważ tutaj mamy sporo iterowania z dodawaniem nowych drog, dlatego wczytujemy calosc
-    # danych i je osobno obrabiamy. Tworzymy też nowy obiekt node_generalizator
-    # relacji wczytywac nie musimy bo z nimi nic nie robimy
-    # wczytujemy wszystkie punktu
-    local_points = OrderedDict()
-    for task_id, pickled in enumerate(pickled_filenames['points']):
-        if filestamp is None:
-            filestamp = datetime.fromtimestamp(os.path.getmtime(pickled)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        with open(pickled, 'rb') as p_file:
-            local_points[task_id] = pickle.load(p_file)
+
+    # wczytaujemy wszystkie pointy
+    if filestamp is None:
+        filestamp = datetime.fromtimestamp(os.path.getmtime(points_fname)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(points_fname, 'rb') as p_file:
+        local_points = pickle.load(p_file)
 
     # wczytujemy wszystkie pointattrs
     local_pointattrs = OrderedDict()
-    for task_id, pickled in enumerate(pickled_filenames['pointattrs']):
-        with open(pickled, 'rb') as p_file:
-            local_pointattrs[task_id] = pickle.load(p_file)
+    with open(pointattrs_fname, 'rb') as p_file:
+        local_pointattrs = pickle.load(p_file)
 
     # wczytujemy wszystkie drogi
     local_ways = OrderedDict()
-    for task_id, pickled in enumerate(pickled_filenames['ways']):
-        with open(pickled, 'rb') as p_file:
-            local_ways[task_id] = pickle.load(p_file)
+    with open(ways_fname, 'rb') as p_file:
+        local_ways = pickle.load(p_file)
 
     messages_printer.printdebug("City=>Streets scan start: " + str(datetime.now()))
 
     #  fragment dodajacy krotkie odcinki drog dla wsi ktore nie posiadaja ulic
     #  zbieramy info o wszytskich miastach
-    for task_id in local_points:
-        for _point in local_points[task_id]:
-            _points_attr = local_pointattrs[task_id][local_points[task_id].get_point_id(_point)]
-            if 'place' in _points_attr and 'name' in _points_attr:
-                n = _points_attr['name']
-                p = _points_attr['place']
-                lat = _point[0]
-                lon = _point[1]
-                radius = 0
-                if p == 'city':
-                    radius = 25
-                if p == 'town':
-                    radius = 10
-                if p == 'village':
-                    radius = 5
-                m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0, 'task_id': task_id}
-                streets_counter[n].append(m)
-                # if n in streets_counter:
-                #     streets_counter[n].append(m)
-                # else:
-                #     streets_counter[n] = [l]
-                #     # l = []
-                #     # l.append(m)
-                #     # streets_counter[n] = l
+
+    for _point in local_points:
+        _points_attr = local_pointattrs[local_points.get_point_id(_point)]
+        if 'place' in _points_attr and 'name' in _points_attr:
+            n = _points_attr['name']
+            p = _points_attr['place']
+            lat = _point[0]
+            lon = _point[1]
+            radius = 0
+            if p == 'city':
+                radius = 25
+            if p == 'town':
+                radius = 10
+            if p == 'village':
+                radius = 5
+            # m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0, 'task_id': task_id}
+            m = {'radius': radius, 'lat': lat, 'lon': lon, 'cnt': 0}
+            streets_counter[n].append(m)
     messages_printer.printdebug("City=>Streets scan part1: " + str(datetime.now()))
     # teraz skan wszystkich ulic
-    for task_id in local_ways:
-        _points = local_points[task_id]
-        for _way in local_ways[task_id]:
-            if _way is None:
-                continue
-            if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
-                if _way['highway'] in ('trunk', 'primary', 'secondary', 'motorway'):
-                    pcnt = len(_way['_nodes'])
-                    # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
-                    start = 0
-                    lenKM = 0
-                    waydivided = False
-                    for i in range(0, pcnt):
-                        # printerror("A="+str(i))
-                        if i == start:
-                            lenKM = 0
-                        else:
-                            # tutaj poprawic, bo points nie bedzie zmienna globalna
-                            lenKM += distKM(_points[_way['_nodes'][i]][0], _points[_way['_nodes'][i]][1],
-                                            _points[_way['_nodes'][i - 1]][0], _points[_way['_nodes'][i - 1]][1])
-                        if lenKM > 3:
-                            newway = _way.copy()
-                            newway['_nodes'] = _way['_nodes'][start:i + 1]
-                            newway['split'] = str(start) + ":" + str(i) + " KM:" + str(lenKM)
-                            l_ways.append({'task_id': task_id, 'newway': newway})
-                            start = i
-                            lenKM = 0
-                            waydivided = True
-                    if waydivided:
-                        _way['_nodes'] = _way['_nodes'][start:]
-                        _way['split'] = 'last'
-                    # else:
-                    #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
+
+    _points = local_points
+    for _way in local_ways:
+        if _way is None:
+            continue
+        if 'ref' in _way and 'highway' in _way and 'is_in' not in _way and 'split' not in _way:
+            if _way['highway'] in ('trunk', 'primary', 'secondary', 'motorway'):
+                pcnt = len(_way['_nodes'])
+                # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
+                start = 0
+                lenKM = 0
+                waydivided = False
+                for i in range(0, pcnt):
+                    # printerror("A="+str(i))
+                    if i == start:
+                        lenKM = 0
+                    else:
+                        # tutaj poprawic, bo points nie bedzie zmienna globalna
+                        lenKM += distKM(_points[_way['_nodes'][i]][0], _points[_way['_nodes'][i]][1],
+                                        _points[_way['_nodes'][i - 1]][0], _points[_way['_nodes'][i - 1]][1])
+                    if lenKM > 3:
+                        newway = _way.copy()
+                        newway['_nodes'] = _way['_nodes'][start:i + 1]
+                        newway['split'] = str(start) + ":" + str(i) + " KM:" + str(lenKM)
+                        l_ways.append({'newway': newway})
+                        start = i
+                        lenKM = 0
+                        waydivided = True
+                if waydivided:
+                    _way['_nodes'] = _way['_nodes'][start:]
+                    _way['split'] = 'last'
+                # else:
+                #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
 
     # dodajemy nowe drogi do wszystkich drog
     for way in l_ways:
-        local_ways[way['task_id']].append(way['newway'])
+        local_ways.append(way['newway'])
 
-    for task_id in local_ways:
-        _points = local_points[task_id]
-        for _way in local_ways[task_id]:
-            if _way is None:
-                continue
-            if 'is_in' in _way and 'name' in _way and 'highway' in _way:
-                try:
-                    towns = _way['is_in'].split(";")
-                    waylat = _points[_way['_nodes'][0]][0]
-                    waylon = _points[_way['_nodes'][0]][1]
-                    for town in towns:
-                        if town in streets_counter:
-                            found = 0
-                            for l in streets_counter[town]:
-                                if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
-                                    l['cnt'] += 1
-                                    found = 1
-                                    break
-                            if found == 0:
-                                messages_printer.printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + _way['name'] +
-                                           " (" + str(waylat) + "," + str(waylon) + ")")
-                        else:
-                            messages_printer.printdebug("Brak Miasta: " + town + " ul.: " + _way['name'] + " (" +
-                                                        str(waylat) + "," + str(waylon) + ")")
-                except IndexError:
-                    pprint.pprint(_way, sys.stderr)
+    for _way in local_ways:
+        if _way is None:
+            continue
+        if 'is_in' in _way and 'name' in _way and 'highway' in _way:
+            try:
+                towns = _way['is_in'].split(";")
+                waylat = _points[_way['_nodes'][0]][0]
+                waylon = _points[_way['_nodes'][0]][1]
+                for town in towns:
+                    if town in streets_counter:
+                        found = 0
+                        for l in streets_counter[town]:
+                            if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
+                                l['cnt'] += 1
+                                found = 1
+                                break
+                        if found == 0:
+                            messages_printer.printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + _way['name'] +
+                                                        " (" + str(waylat) + "," + str(waylon) + ")")
+                    else:
+                        messages_printer.printdebug("Brak Miasta: " + town + " ul.: " + _way['name'] + " (" +
+                                                    str(waylat) + "," + str(waylon) + ")")
+            except IndexError:
+                pprint.pprint(_way, sys.stderr)
     messages_printer.printdebug("City=>Streets scan part2: " + str(datetime.now()))
     # i dodawanie krotkich ulic
 
     for miasto in streets_counter:
         for k in streets_counter[miasto]:
-            task_id = k['task_id']
             if k['cnt'] != 0:
                 messages_printer.printdebug("Ulice: " + miasto + "\tszt. " + str(k['cnt']))
             else:
                 messages_printer.printdebug("Short way added:" + miasto)
                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
-                pind0 = len(local_points[task_id])
-                local_points[task_id].append(pt0)
-                pt0_point_id = local_points[task_id].get_point_id(pt0)
-                local_pointattrs[task_id][pt0_point_id] = {'_timestamp': filestamp}
-                pind1 = len(local_points[task_id])
-                local_points[task_id].append(pt1)
-                pt1_point_id = local_points[task_id].get_point_id(pt1)
-                local_pointattrs[task_id][pt1_point_id] = {'_timestamp': filestamp}
+                pind0 = len(local_points)
+                local_points.append(pt0)
+                pt0_point_id = local_points.get_point_id(pt0)
+                local_pointattrs[pt0_point_id] = {'_timestamp': filestamp}
+                pind1 = len(local_points)
+                local_points.append(pt1)
+                pt1_point_id = local_points.get_point_id(pt1)
+                local_pointattrs[pt1_point_id] = {'_timestamp': filestamp}
                 way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
-                    'name': miasto, 'addr:city': miasto, 'highway': "residental"}
-                local_ways[task_id].append(way)
+                       'name': miasto, 'addr:city': miasto, 'highway': "residental"}
+                local_ways.append(way)
     messages_printer.printdebug("City=>Streets scan stop: " + str(datetime.now()))
 
-    for task_id in local_ways:
-        for way_id, _way in enumerate(local_ways[task_id]):
-            if _way is None:
-                continue
-            no_braces_way = remove_label_braces(_way)
-            if 'name' in no_braces_way and not no_braces_way['name'] and 'addr:city' in no_braces_way and \
-                    no_braces_way['addr:city']:
-                no_braces_way['name'] = no_braces_way['addr:city']
-            local_ways[task_id][way_id] = no_braces_way
+    for way_id, _way in enumerate(local_ways):
+        if _way is None:
+            continue
+        no_braces_way = remove_label_braces(_way)
+        if 'name' in no_braces_way and not no_braces_way['name'] and 'addr:city' in no_braces_way and \
+                no_braces_way['addr:city']:
+            no_braces_way['name'] = no_braces_way['addr:city']
+        local_ways[way_id] = no_braces_way
+
+    pickled_file_names = OrderedDict()
+    for f_tempname in ('points', 'pointattrs', 'ways'):
+        aaa_fname = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+        aaa_fname.close()
+        pickled_file_names[f_tempname] = aaa_fname.name
+    save_pickled_data(pickled_file_names, {'points': local_points, 'pointattrs': local_pointattrs, 'ways': local_ways})
+    node_generalizator.insert_points(file_g_name, local_points)
+    node_generalizator.insert_ways(file_g_name, local_ways)
+
+    return pickled_file_names
+
+
+def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0):
+    """
+    Generates nominatim output from processed data
+    Parameters
+    ----------
+    options: options command line
+    pickled_filenames: dictionary {'points': [filename1, filename2, filename3...],
+                                   'pointparams': [filename1, filename2, filename3...]
+                                   'ways': [filename1, filename2, filename3...]
+                                   'relations" [filename1, filename2, filename3...]}
+    border_points: border points from borders file
+    ids_to_process: number of object indentifier (points + ways + relastion to proces, relations num is obsolete
+    Returns
+    -------
+
+    """
+
+    elapsed = datetime.now().replace(microsecond=0)
+    messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
+    messages_printer.printinfo("Generating nominatim output. Preprocessing %s ids" % ids_to_process)
+    node_generalizator = NodeGeneralizator()
+    node_generalizator.insert_borders(border_points)
+    post_nom_picle_files = {'points': [], 'pointattrs': [], 'ways': []}
+    for task_id in range(len(pickled_filenames['points'])):
+        local_points = pickled_filenames['points'][task_id]
+        local_pointattrs = pickled_filenames['pointattrs'][task_id]
+        local_ways = pickled_filenames['ways'][task_id]
+        ppm = output_nominatim_preprocessing(task_id, local_points, local_pointattrs, local_ways,
+                                                                    messages_printer=messages_printer,
+                                                                    node_generalizator=node_generalizator)
+        for tmp_elem in post_nom_picle_files:
+            post_nom_picle_files[tmp_elem].append(ppm[tmp_elem])
+
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
+    messages_printer.printinfo("Preprocessing nominatim output done (took %s)." % elapsed)
+
     try:
         out = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + out.name + "!\n")
         sys.exit()
 
-    node_generalizator = NodeGeneralizator()
-    node_generalizator.insert_borders(border_points)
+    elapsed = datetime.now().replace(microsecond=0)
+    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
+    for task_id, pickled_point in enumerate(post_nom_picle_files['points']):
+        with open(pickled_point, 'rb') as p_file:
+            task_id_points = pickle.load(p_file)
+        with open(post_nom_picle_files['pointattrs'][task_id], 'rb') as pattrs_file:
+            task_id_pointattrs = pickle.load(pattrs_file)
+        for _point in task_id_points:
+            point_id = task_id_points.get_point_id(_point)
+            _points_attr = task_id_pointattrs[point_id]
+            print_point_pickled(_point, _points_attr, task_id, point_id, node_generalizator, out)
 
-    for task_id in local_points:
-        node_generalizator.insert_points(task_id, local_points[task_id])
-        node_generalizator.insert_ways(task_id, local_ways[task_id])
-
-    for task_id in local_points:
-        _point_attrs = local_pointattrs[task_id]
-        for _point in local_points[task_id]:
-            _points_attr = _point_attrs[local_points[task_id].get_point_id(_point)]
-            orig_id = local_points[task_id].get_point_id(_point)
-            print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
-
-    for task_id in local_ways:
-        orig_id = -1
-        for _way in local_ways[task_id]:
-            orig_id += 1
-            if _way is None:
-                continue
-            if 'ref' in _way and 'highway' in _way:
-                if _way['highway'] in {'cycleway', 'path', 'footway'}:
+    for task_id, pickled_way in enumerate(post_nom_picle_files['ways']):
+        with open(pickled_way, 'rb') as p_file:
+            orig_id = -1
+            for _way in pickle.load(p_file):
+                orig_id += 1
+                if _way is None:
                     continue
-            print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+                if 'ref' in _way and 'highway' in _way:
+                    if _way['highway'] in {'cycleway', 'path', 'footway'}:
+                        continue
+                print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
     out.close()
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
+    for g_name in post_nom_picle_files.values():
+        for filenam in g_name:
+            os.remove(filenam)
     return out.name
 
 # def output_nominatim(prefix, num, options):
@@ -3318,9 +3356,12 @@ def worker(task, options, border_points=None):
     post_load_processing(options, task['file'], maxtypes=maxtypes, map_elements_props=map_elements_props,
                          progress_bar=progress_bar, messages_printer=messages_printer)
     progress_bar.set_done('drp')
-    save_pickled_data("UMP-PL", task['idx'], map_elements_props=map_elements_props)
 
-
+    pickled_files_names = {'points': "UMP-PL" + ".normal." + str(task['idx']) + ".points_pickle",
+                           'pointattrs': "UMP-PL" + ".normal." + str(task['idx']) + ".pointattrs_pickle",
+                           'ways': "UMP-PL" + ".normal." + str(task['idx']) + ".ways_pickle",
+                           'relations': "UMP-PL" + ".normal." + str(task['idx']) + ".relations_pickle"}
+    save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
     l_warns = str(messages_printer.get_worning_num())
     l_errors = str(messages_printer.get_error_num())
@@ -3444,6 +3485,8 @@ def main(options, args):
 
         # wczytaj pliki piklowane i stwórz poprawny node_generalizator
         pickled_filenames = {'points': [], 'pointattrs': [], 'ways': [], 'relations': []}
+        ids_to_process = 0
+        ids_to_process_nominatim = 0
         for work_no, workelem in enumerate(worklist):
             pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
             pickled_filenames['points'].append(pickled_nodes_filename)
@@ -3452,15 +3495,16 @@ def main(options, args):
             pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
             pickled_filenames['relations'].append(pickled_relations_filename)
             pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
-            ids_to_process = 0
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_points(work_no, pickled_data)
                 ids_to_process += len(pickled_data)
+                ids_to_process_nominatim += len(pickled_data)
             with open(pickled_ways_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_ways(work_no, pickled_data)
                 ids_to_process += len(pickled_data)
+                ids_to_process_nominatim += len(pickled_data)
             with open(pickled_relations_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_relations(work_no, pickled_data)
@@ -3484,7 +3528,7 @@ def main(options, args):
 
             generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
                                                                     border_points=bpoints,
-                                                                    ids_to_process=ids_to_process)
+                                                                    ids_to_process=ids_to_process_nominatim)
 
         # naglowek osm i punkty granic
         messages_printer.printinfo_nlf("Working on header... ")
