@@ -32,7 +32,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
-from multiprocessing import Pool
+from multiprocessing import Pool, Process
 from datetime import datetime
 import time
 # import pdb
@@ -43,6 +43,7 @@ import os.path
 from functools import partial
 import copy
 import tempfile
+
 
 class MylistB(object):
     """
@@ -266,6 +267,7 @@ class NodesToWayNotFound(ValueError):
 
     def __str__(self):
         return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
+
 
 class MessagePrinters(object):
     def __init__(self, workid='', verbose=False):
@@ -1004,29 +1006,6 @@ workid = 0
 
 glob_progress_bar_queue = None
 
-
-# def printdebug(string, options):
-#     global working_thread
-#     if options.verbose:
-#         sys.stderr.write("\tDEBUG: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
-
-
-# def printerror(string):
-#     sys.stderr.write("\tERROR: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
-
-
-# def printinfo(string):
-#     sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
-
-
-# def printinfo_nlf(string):
-#     sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string))
-
-
-# def printwarn(string):
-#     sys.stderr.write("\tWARNING: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
-        
-
 def recode(line):
     try:
         return line
@@ -1336,21 +1315,16 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
             prev_house = "xx"
         
 
-def points_append(node, attrs, map_elements_props=None):
-    #     # attrs['_src'] = srcidx
-    #     attrs['_timestamp'] = filestamp
-    #     points.append(node)
-    #     pointattrs[points.index(node)] = attrs
+def points_append(point, attrs, map_elements_props=None):
     if map_elements_props is None:
         return
-    if node in map_elements_props['points']:
+    if point in map_elements_props['points']:
         return
     _points = map_elements_props['points']
     _pointattrs = map_elements_props['pointattrs']
     attrs['_timestamp'] = filestamp
-    _points.append(node)
-    point_id = _points.get_point_id(node)
-    _pointattrs[_points.index(node)] = attrs
+    _points.append(point)
+    _pointattrs[_points.index(point)] = attrs
 
             
 def prepare_line(nodes_str, closed=False, map_elements_props=None):
@@ -2156,7 +2130,6 @@ def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=
             outer['_nodes'] = inner
             way['_nodes'] = tmp
         way['_nodes'].reverse()
-
     return rel
 
 
@@ -2169,48 +2142,13 @@ def index_to_wayid(index, points):
 
 
 def index_to_relationid(index,  map_elements_props):
-    points =  map_elements_props['points']
-    ways =  map_elements_props['ways']
+    points = map_elements_props['points']
+    ways = map_elements_props['ways']
     return index_to_wayid(len(ways) + index, points)
 
 
 def xmlize(xml_str):
     return saxutils.escape(xml_str, {'\'': '&apos;'})
-
-
-# def print_point(point, index, ostr):
-#     global maxid
-#     global idpfx
-#
-#     """Prints a pair of coordinates and their ID as XML"""
-#     if '_out' in pointattrs[index]:
-#         return
-#     if '_timestamp' in pointattrs[index]:
-#         timestamp = pointattrs[index]['_timestamp']
-#     else:
-#         sys.stderr.write("warning: no timestamp for point %r\n" % pointattrs[index])
-#         timestamp = runstamp
-#     currid = index_to_nodeid(index)
-#     if currid > maxid:
-#         maxid = currid
-#     idstring = idpfx + str(currid)
-#     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
-#                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
-#     # print >>ostr, (head)
-#     ostr.write(head)
-#     if '_src' in pointattrs[index]:
-#         src = pointattrs[index].pop('_src')
-#     for key in pointattrs[index]:
-#         if key.startswith('_'):
-#             continue
-#         if len(str(pointattrs[index][key])) > 255:
-#             sys.stderr.write("\tERROR: key value too long " + key + ": " + str(pointattrs[index][key]) + "\n")
-#             continue
-#         try:
-#             ostr.write(("\t<tag k='%s' v='%s' />\n" % (key, xmlize(pointattrs[index][key]))))
-#         except:
-#             sys.stderr.write("converting key " + key + ": " + str(pointattrs[index][key]) + " failed\n")
-#     ostr.write("</node>\n")
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
@@ -2255,43 +2193,6 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
     ostr.write("</node>\n")
 
 
-# def print_way(way, index, ostr):
-#     if way is None:
-#         return
-#     global maxid
-#     global idpfx
-#
-#     """Prints a way given by way together with its ID to stdout as XML"""
-# #    pdb.set_trace()
-#     if '_c' in way:
-#         if way['_c'] <= 0:
-#             return
-#         way.pop('_c')
-#     if '_timestamp' in way:
-#         timestamp = way['_timestamp']
-#     else:
-#         sys.stderr.write("warning: no timestamp in way %r\n" % way)
-#         timestamp = runstamp
-#     currid = index_to_wayid(index)
-#     if currid > maxid:
-#         maxid = currid
-#     idstring = idpfx + str(currid)
-#     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
-#     for nindex in way['_nodes']:
-#         refstring = idpfx + str(index_to_nodeid(nindex))
-#         ostr.write("\t<nd ref='%s' />\n" % refstring)
-#
-#     if '_src' in way:
-#         src = way.pop('_src')
-#     for key in way:
-#         if key.startswith('_'):
-#             continue
-#         if len(str(way[key])) > 255:
-#             sys.stderr.write("\tERROR: key value too long " + key + ": " + str(way[key]) + "\n")
-#             continue
-#         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
-#     ostr.write("</way>\n")
-
 def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     if way is None:
         return
@@ -2321,53 +2222,6 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
             continue
         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(way[key])))
     ostr.write("</way>\n")
-
-
-# def print_relation(rel, index, ostr):
-#     global maxid
-#     global idpfx
-#
-#     """Prints a relation given by rel together with its ID to stdout as XML"""
-#     if '_c' in rel:
-#         if rel['_c'] <= 0:
-#             return
-#         rel.pop('_c')
-#     if "_members" not in rel:
-#         sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
-#         return
-#
-#     if '_timestamp' in rel:
-#         timestamp = rel['_timestamp']
-#     else:
-#         sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
-#         timestamp = runstamp
-#     currid = index_to_relationid(index)
-#     if currid > maxid:
-#         maxid = currid
-#     idstring = idpfx + str(currid)
-#     ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
-#     for role, (type, members) in rel['_members'].items():
-#         for member in members:
-#             if type == "node":
-#                 id = index_to_nodeid(member)
-#             elif type == "way":
-#                 id = index_to_wayid(member)
-#             else:
-#                 id = index_to_relationid(member)
-#             refstring = idpfx + str(id)
-#             # print >>ostr,("\t<member type='%s' ref='%s' role='%s' />" % (type, refstring, role))
-#             ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (type, refstring, role))
-#
-#     if '_src' in rel:
-#         src = rel.pop('_src')
-#     for key in rel:
-#         if key.startswith('_'):
-#             continue
-#         # print >>ostr,("\t<tag k='%s' v='%s' />" % (key, xmlize(rel[key])))
-#         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
-#         # print >>ostr,("\t<tag k='source' v='%s' />" % (source))
-#     # print >>ostr,("</relation>")
-#     ostr.write("</relation>\n")
 
 
 def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
@@ -2409,8 +2263,7 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options, filename='', maxtypes=None, progress_bar=None, map_elements_props=None,
-                         messages_printer=None):
+def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, messages_printer=None):
     # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
     if maxtypes is None:
         maxtypes = {}
@@ -2625,6 +2478,7 @@ def remove_label_braces(local_way):
                     new_way['name'] = new_way['short_name']
     return new_way
 
+
 def add_city_region_atm_to_pointsattr(l_pointsattr):
     _pac = l_pointsattr.copy()
     if options.regions and 'is_in:state' in _pac:
@@ -2648,6 +2502,7 @@ def add_city_region_atm_to_pointsattr(l_pointsattr):
         _pac['amenity_atm'] = 'atm'
     return _pac
 
+
 def add_city_region_to_way(l_way):
     newway = l_way.copy()
     if 'addr:city' in newway:
@@ -2664,32 +2519,6 @@ def add_city_region_to_way(l_way):
             newway['is_in'] += ";" + city + region
     return newway
 
-
-# def output_normal(prefix, num, options):
-#     global maxid
-#     global idpfx
-#
-#     try:
-#         f = prefix + ".normal." + str(num) + ".osm"
-#         out = open(f, "w", encoding="utf-8")
-#     except IOError:
-#         sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
-#         sys.exit()
-#
-#     for point in points:
-#         index = points.index(point)
-#         if options.skip_housenumbers:
-#             if ('note' in pointattrs[index]) and (pointattrs[index]['note'] == 'housenumber'):
-#                 continue
-#         print_point(point, index, out)
-#
-#     for index, way in enumerate(ways):
-#         print_way(way, index, out)
-#
-#     for index, rel in enumerate(relations):
-#         print_relation(rel, index, out)
-#
-#     out.close()
 
 
 def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None, ids_to_process=0):
@@ -2765,128 +2594,6 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
     return {a: b.name for a, b in output_files.items()}
 
 
-# def output_navit(prefix, num):
-#     global maxid
-#     global idpfx
-#
-#     try:
-#         f = prefix + ".navit." + str(num) + ".osm"
-#         out = open(f, "w", encoding="utf-8")
-#     except IOError:
-#         sys.stderr.write("\tERROR: Can't open Navit output file " + f + "!\n")
-#         sys.exit()
-#
-#     for point in points:
-#         index = points.index(point)
-#         print_point(point, index, out)
-#
-#     for index, way in enumerate(ways):
-#         if way is None:
-#             continue
-#         newway = way.copy()
-#         if ('natural' in newway) and (newway['natural'] == 'coastline'):
-#             newway['natural'] = 'water'
-#         print_way(newway, index, out)
-#
-#     for index, rel in enumerate(relations):
-#         print_relation(rel, index, out)
-#
-#     out.close()
-#
-#
-# def output_index(prefix, num, options):
-#     global maxid
-#     global idpfx
-#
-#     try:
-#         f = prefix + ".index." + str(num) + ".osm"
-#         out = open(f, "w", encoding="utf-8")
-#     except IOError:
-#         sys.stderr.write("\tERROR: Can't open index output file " + f + "!\n")
-#         sys.exit()
-#
-#     for point in points:
-#         index = points.index(point)
-#         attrs = pointattrs[index].copy()  # store them here
-#
-#         if options.regions and 'is_in:state' in pointattrs[index]:
-#             if 'place' in pointattrs[index] and (pointattrs[index]['place'] == 'city' or
-#                                                  pointattrs[index]['place'] == 'town' or
-#                                                  pointattrs[index]['place'] == 'village'):
-#                 pointattrs[index]['name'] = ''.join((pointattrs[index]['name'], " (", pointattrs[index]['is_in:state'],
-#                                                      ")"))
-#
-#             if 'addr:city' in pointattrs[index]:
-#                 region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
-#                 cities = pointattrs[index]['addr:city'].split(';')
-#                 pointattrs[index]['addr:city'] = cities.pop(0) + region
-#                 for city in cities:
-#                     pointattrs[index]['addr:city'] += ";" + city + region
-#
-#             if 'is_in' in pointattrs[index]:
-#                 region = ''.join((" (", pointattrs[index]['is_in:state'], ")"))
-#                 cities = pointattrs[index]['is_in'].split(';')
-#                 pointattrs[index]['is_in'] = cities.pop(0) + region
-#                 for city in cities:
-#                     pointattrs[index]['is_in'] += ";" + city + region
-#
-#         # dodawanie amenity_atm dla bankomatow (dawniej bylo osmand_amenity=atm)
-#         if 'amenity' in pointattrs[index] and (pointattrs[index]['amenity'] == 'atm'):
-#             pointattrs[index]['amenity_atm'] = 'atm'
-#
-#         print_point(point, index, out)
-#         pointattrs[index] = attrs.copy()	# restore
-#
-#     # dla ulic bez nazwy (wyciete {}) uzupelniamy z loc_name lub podobnych
-#     for index, way in enumerate(ways):
-#         if way is None:
-#             continue
-#         if (not ('is_in' in way)):
-#             continue
-#
-#         newway = way.copy()
-#         p = re.compile('\{.*\}')                        # dowolny string otoczony klamrami
-#         if 'alt_name' in newway:
-#             tmpname = newway['alt_name']
-#             if 'name' in newway:			# przechowanie nazwy z Label
-#                 nname = p.sub( "", newway['name'])
-#                 newway['alt_name'] = str.strip(nname)
-#             else:
-#                 newway.pop('alt_name')
-#             newway['name'] = tmpname			# alt_name z Label3 to glowna nazwa do indeksowania
-#
-#         else:
-#             if 'name' in newway:
-#                 nname = p.sub( "", newway['name'])
-#                 newway['name'] = str.strip(nname)
-#
-#                 if (newway['name']==""):                     # zastepowanie pustych name
-#                     if ('loc_name' in newway):
-#                         newway['name'] = newway['loc_name']
-#                         newway.pop('loc_name')
-#                     elif ('short_name' in newway):
-#                         newway['name'] = newway['short_name']
-#
-#
-#         if options.regions and 'is_in:state' in newway:
-#             if 'addr:city' in newway:
-#                 region = ''.join((" (", newway['is_in:state'], ")"))
-#                 cities = newway['addr:city'].split(';')
-#                 newway['addr:city'] = cities.pop(0) + region
-#                 for city in cities:
-#                     newway['addr:city'] += ";" + city + region
-#
-#             if 'is_in' in newway:
-#                 region = ''.join((" (", newway['is_in:state'], ")"))
-#                 cities = newway['is_in'].split(';')
-#                 newway['is_in'] = cities.pop(0) + region
-#                 for city in cities:
-#                     newway['is_in'] += ";" + city + region
-#
-#         print_way(newway, index, out)
-#
-#     out.close()
-
 def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname, messages_printer=None,
                                    node_generalizator=None):
     """
@@ -2900,7 +2607,7 @@ def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, 
     messages_printer - klasa obslugujaca druk informacji i ostrzezen
     node_generalizator - generalizator nodwo
 
-    Returns: OrderedDict {nowa grupa: nowe dane
+    Returns OrderedDict {nowa grupa: nowe dane
     -------
 
     """
@@ -3129,179 +2836,6 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
             os.remove(filenam)
     return out.name
 
-# def output_nominatim(prefix, num, options):
-#     streets_counter = defaultdict(list)
-#     global maxid
-#     global idpfx
-#
-#     printdebug("City=>Streets scan start: "+str(datetime.now()), options)
-#     #
-#     #  fragment dodajacy krotkie odcinki drog dla wsi
-#     #  ktore nie posiadaja ulic
-#     #
-#     #    zbieramy info o wszytskich miastach
-#     for point in points:
-#         index = points.index(point)
-#         if 'place' in pointattrs[index] and 'name' in pointattrs[index] :
-#             n = pointattrs[index]['name']
-#             p = pointattrs[index]['place']
-#             lat = point[0]
-#             lon = point[1]
-#             radius = 0
-#             if p == 'city':
-#                 radius = 25
-#             if p == 'town':
-#                 radius = 10
-#             if p == 'village':
-#                 radius = 5
-#             m={'radius':radius,'lat':lat,'lon':lon,'cnt':0}
-#             if n in streets_counter:
-#                 streets_counter[n].append(m)
-#             else:
-#                 l=[]
-#                 l.append(m)
-#                 streets_counter[n]=l
-#     printdebug("City=>Streets scan part1: "+str(datetime.now()), options)
-#     # teraz skan wszystkich ulic
-#     for way in ways:
-#         if way is None:
-#             continue
-#         if ('ref' in way) and ('highway' in way) and ('is_in' not in way) and ('split' not in way):
-#             if way['highway' ] == 'trunk' or way['highway'] == 'primary' or way['highway'] == 'secondary' or \
-#                     way['highway'] == 'motorway':
-#                 pcnt = len(way['_nodes'])
-#                 # printerror("Ref ="+way['ref']+" HW="+way['highway']+" Len="+str(pcnt))
-#                 start = 0
-#                 lenKM = 0
-#                 waydivided = False
-#                 for i in range(0, pcnt):
-#                 # printerror("A="+str(i))
-#                     if i == start:
-#                         lenKM = 0
-#                     else:
-#                         lenKM += distKM(points[way['_nodes'][i]][0], points[way['_nodes'][i]][1],
-#                         points[way['_nodes'][i-1]][0], points[way['_nodes'][i-1]][1])
-#                     if lenKM > 3:
-#                         newway=way.copy()
-#                         newway['_nodes'] = way['_nodes'][start:i+1]
-#                         newway['split'] = str(start)+":"+str(i)+" KM:"+str(lenKM)
-#                         ways.append(newway)
-#                         start = i
-#                         lenKM = 0
-#                         waydivided = True
-#                 if waydivided:
-#                     way['_nodes'] = way['_nodes'][start:]
-#                     way['split'] ='last'
-#                 # else:
-#                 #   printerror("\tRef ="+way['ref']+" HW="+way['highway'])
-#     for way in ways:
-#         if way is None:
-#             continue
-#         if 'is_in' in way and 'name' in way and 'highway' in way:
-#             try:
-#                 towns = way['is_in'].split(";")
-#                 waylat = points[way['_nodes'][0]][0]
-#                 waylon = points[way['_nodes'][0]][1]
-#                 for town in towns:
-#                     if town in streets_counter:
-#                         found = 0
-#                         for l in streets_counter[town]:
-#                             if distKM(l['lat'], l['lon'], waylat, waylon) < l['radius']:
-#                                 l['cnt'] += 1
-#                                 found = 1
-#                                 break
-#                         if found == 0:
-#                             printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) +
-#                                        "," + str(waylon) + ")", options)
-#                     else:
-#                         printdebug("Brak Miasta: " + town + " ul.: " + way['name'] + " (" + str(waylat) + "," +
-#                                    str(waylon) + ")", options)
-#             except IndexError:
-#                 pprint.pprint(way, sys.stderr)
-#
-#     printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
-#     # i dodawanie krotkich ulic
-#     for m in streets_counter:
-#         for k in streets_counter[m]:
-#             if k['cnt'] != 0:
-#                 printdebug("Ulice: " + m + "\tszt. " + str(k['cnt']), options)
-#             else:
-#                 printdebug("Short way added:" + m, options)
-#                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
-#                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
-#                 attrs = {'_timestamp': filestamp}
-#                 pind0 = len(points)
-#                 points_append(pt0, attrs.copy())
-#                 pind1 = len(points)
-#                 points_append(pt1, attrs.copy())
-#                 way = {
-#                     '_timestamp': filestamp,
-#                     '_nodes': [pind0, pind1],
-#                     '_c': 2,
-# ##                    '_src': srcidx,
-#                     'is_in': m,
-#                     'name': m,
-#                     'addr:city':m,
-#                     'highway': "residental"
-#                 }
-#                 ways.append(way)
-#     printdebug("City=>Streets scan stop: "+str(datetime.now()), options)
-#
-#
-#     # oraz na koniec operacja jak w indeksie, czyli usuwanie {}
-#     # jesli zostaje pusta nazwa, podmien
-#     for way in ways:
-#         if way is None:
-#             continue
-#         p = re.compile( '\{.*\}')                        # dowolny string otoczony klamrami
-#         if 'alt_name' in way:
-#             tmpname = way['alt_name']
-#             if 'name' in way:                        # przechowanie nazwy z Label
-#                 nname = p.sub( "", way['name'])
-#                 way['alt_name'] = str.strip(nname)
-#             else:
-#                 way.pop('alt_name')
-#             way['name'] = tmpname                    # alt_name z Label3 to glowna nazwa do indeksowania
-#
-#         else:
-#             if 'name' in way:
-#                 nname = p.sub( "", way['name'])
-#                 way['name'] = str.strip(nname)
-#
-#                 if (way['name']==""):                     # zastepowanie pustych name
-#                     if ('loc_name' in way):
-#                         way['name'] = way['loc_name']
-#                         way.pop('loc_name')
-#                     elif ('short_name' in way):
-#                         way['name'] = way['short_name']
-#
-#         # empty name? put in city name - workaround for no near named road
-#         if (('name' in way) and (way['name']=="") and ('addr:city' in way) and(way['addr:city']!="")):
-#             way['name'] = way['addr:city']
-#
-#
-#     try:
-#         f=prefix+".nominatim."+str(num)+".osm"
-#         out = open(f, "w", encoding="utf-8")
-#     except IOError:
-#         sys.stderr.write("\tERROR: Can't open nominatim output file " + f + "!\n")
-#         sys.exit()
-#
-#     for point in points:
-#         index=points.index(point)
-#         print_point(point, index, out)
-#
-#     for index, way in enumerate(ways):
-#         if way is None:
-#             continue
-#         # pomijamy szlaki dla nominatima ("ref" nie wystepuje dla zwyklych tras rowerowych czy chodnikow)
-#         if ('ref' in way) and ('highway' in way):
-#             if (way['highway'] == 'cycleway' ) or (way['highway'] == 'path') or (way['highway'] == 'footway'):
-#                 continue
-#         print_way(way, index, out)
-#
-#     out.close()
-
 
 def write_output_files(in_file='', dest_filename='', headerf=''):
     elapsed = datetime.now().replace(microsecond=0)
@@ -3316,7 +2850,6 @@ def write_output_files(in_file='', dest_filename='', headerf=''):
 
 
 def worker(task, options, border_points=None):
-
     global working_thread
     global workid
     global filestamp
@@ -3353,7 +2886,7 @@ def worker(task, options, border_points=None):
                                              messages_printer=messages_printer)
     progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(options, task['file'], maxtypes=maxtypes, map_elements_props=map_elements_props,
+    post_load_processing(maxtypes=maxtypes, map_elements_props=map_elements_props,
                          progress_bar=progress_bar, messages_printer=messages_printer)
     progress_bar.set_done('drp')
 
@@ -3519,17 +3052,29 @@ def main(options, args):
         if options.nonumber_file is not None:
             output_files_to_generate.append('no_number')
 
-        generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
-                                                           pickled_filenames=pickled_filenames,
-                                                           node_generalizator=node_generalizator,
-                                                           ids_to_process=ids_to_process)
-
-        if options.nominatim_file is not None:
-
-            generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
-                                                                    border_points=bpoints,
-                                                                    ids_to_process=ids_to_process_nominatim)
-
+        if options.nominatim_file is None or options.threadnum == 1:
+            generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
+                                                               pickled_filenames=pickled_filenames,
+                                                               node_generalizator=node_generalizator,
+                                                               ids_to_process=ids_to_process)
+            if options.nominatim_file is not None:
+                generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
+                                                                        border_points=bpoints,
+                                                                        ids_to_process=ids_to_process_nominatim)
+        else:
+            normal_process = Process(target=output_normal_pickled,
+                                     args=(options, output_files_to_generate,),
+                                     kwargs={'pickled_filenames': pickled_filenames,
+                                     'node_generalizator': node_generalizator,
+                                     'ids_to_process': ids_to_process})
+            nominatim_process = Process(target=output_nominatim_pickled, args=(options,),
+                                        kwargs={'pickled_filenames': pickled_filenames,
+                                                'border_points': bpoints,
+                                                'ids_to_process': ids_to_process_nominatim})
+            normal_process.start()
+            nominatim_process.start()
+            nominatim_process.join()
+            normal_process.join()
         # naglowek osm i punkty granic
         messages_printer.printinfo_nlf("Working on header... ")
         elapsed = datetime.now().replace(microsecond=0)
