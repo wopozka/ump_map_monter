@@ -267,13 +267,42 @@ class NodesToWayNotFound(ValueError):
     def __str__(self):
         return "<NodesToWayNotFound %r,%r>" % (self.node_a, self.node_b,)
 
+class MessagePrinters(object):
+    def __init__(self, workid='', verbose=False):
+        self.working_thread = os.getpid()
+        self.workid = workid
+        self.verbose = verbose
+        self.worning_num = 0
+        self.error_num = 0
 
+    def printdebug(self, p_string):
+        if self.verbose:
+            sys.stderr.write("\tDEBUG: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+
+    def printerror(self, p_string):
+        self.error_num += 1
+        sys.stderr.write("\tERROR: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+
+    def printinfo(self, p_string):
+        sys.stderr.write("\tINFO: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+
+    def printinfo_nlf(self, p_string):
+        sys.stderr.write("\tINFO: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string))
+
+    def printwarn(self, p_string):
+        self.warning_num += 1
+        sys.stderr.write("\tWARNING: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+
+    def get_worning_num(self):
+        return self.worning_num
+
+    def get_error_num(self):
+        return self.error_num
+
+
+# some global constants
 __version__ = '0.8.1'
-
-# Krok zwiekszania osm_id per obszar. Istotny gdy nie ma normalize_ids
-# zbyt duzy moze powodowac problemy z aplikacjami ktore na jego podstawie cos
-# sobie wyznaczaja/obliczaja/zapamietuja etc (przyklad: nominatim)
-idperarea = 0
+extra_tags = " version='1' changeset='1' "
 
 pline_types = {
     0x1:  ["highway",  "motorway"],
@@ -964,7 +993,7 @@ poi_types = {
 # # pointattrs = {}
 # pointattrs = defaultdict(dict)
 # ways = []
-relations = []
+# relations = []
 
 working_thread = os.getpid()
 workid = 0
@@ -972,33 +1001,30 @@ workid = 0
 # borders = None
 # borders_resize = 1
 # nominatim_build = 0
-extra_tags = " version='1' changeset='1' "
-idpfx = ""
-maxid = 0
 
 glob_progress_bar_queue = None
 
 
-def printdebug(string, options):
-    global working_thread
-    if options.verbose:
-        sys.stderr.write("\tDEBUG: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
+# def printdebug(string, options):
+#     global working_thread
+#     if options.verbose:
+#         sys.stderr.write("\tDEBUG: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
 
 
-def printerror(string):
-    sys.stderr.write("\tERROR: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
+# def printerror(string):
+#     sys.stderr.write("\tERROR: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
 
 
-def printinfo(string):
-    sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
+# def printinfo(string):
+#     sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
 
 
-def printinfo_nlf(string):
-    sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string))
+# def printinfo_nlf(string):
+#     sys.stderr.write("\tINFO: "+str(working_thread)+":"+str(workid)+":"+str(string))
 
 
-def printwarn(string):
-    sys.stderr.write("\tWARNING: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
+# def printwarn(string):
+#     sys.stderr.write("\tWARNING: "+str(working_thread)+":"+str(workid)+":"+str(string)+"\n")
         
 
 def recode(line):
@@ -1065,7 +1091,7 @@ def cut_prefix(string):
     return string
 
 
-def convert_btag(way, key, value, feat, options, bpoints):
+def convert_btag(way, key, value, feat, options, bpoints, messages_printer=None):
     if key.lower() in ('label',):
         pass
     elif key in ('Data0',):
@@ -1077,13 +1103,13 @@ def convert_btag(way, key, value, feat, options, bpoints):
         elif int(value, 0) == 0x1e:
             pass
         else:
-            printerror("Unknown line type " + hex(int(value, 0)))
+            messages_printer.printerror("Unknown line type " + hex(int(value, 0)))
     elif key == 'EndLevel':
         pass
     else:
         if options.ignore_errors:
-            printerror("Unknown key: " + key)
-            printerror("Value:       " + value)
+            messages_printer.printerror("Unknown key: " + key)
+            messages_printer.printerror("Value:       " + value)
             pass 
         else:
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
@@ -1091,6 +1117,7 @@ def convert_btag(way, key, value, feat, options, bpoints):
 
 def parse_borders_return_bpoints(infile, options, border_stamp):
     bpoints = MylistB()
+    messages_printer = MessagePrinters(workid='borders', verbose=options.verbose)
     polyline = None
     feat = None
     comment = None
@@ -1115,7 +1142,7 @@ def parse_borders_return_bpoints(infile, options, border_stamp):
             way = {'_timestamp': border_stamp}
             for key in polyline:
                 if polyline[key] != '':
-                    convert_btag(way, key, polyline[key], feat, options, bpoints)
+                    convert_btag(way, key, polyline[key], feat, options, bpoints, messages_printer=messages_printer)
             polyline = None
         elif feat == Features.ignore:
             pass
@@ -1347,7 +1374,7 @@ def prepare_line(nodes_str, closed=False, map_elements_props=None):
     return pts, node_indices
 
             
-def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None):
+def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None, messages_printer=None):
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
@@ -1401,10 +1428,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                         label = ref + label
                     elif code.lower() == '0x1c':
                         label = value.replace('~[0x1c]', '')
-                        printerror("1C" + label)
+                        messages_printer.printerror("1C" + label)
                     elif code.lower() == '0x1e':
                         label = value.replace('~[0x1e]', ' ')
-                        printerror("1E" + label)
+                        messages_printer.printerror("1E" + label)
                     else:
                         raise ParsingError('Problem parsing label ' + value)
             if 'name' not in way and label != "":
@@ -1450,7 +1477,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 if int(value, 0) in pline_types:
                     tag(way, pline_types[int(value, 0)])
                 else:
-                    printerror("Unknown line type "+hex(int(value, 0)))
+                    messages_printer.printerror("Unknown line type "+hex(int(value, 0)))
             else:
                 way['ump:type'] = value
         elif key in ('EndLevel', 'Level', 'Levels',):
@@ -1487,7 +1514,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                         way['website'] = miscvalue
                 pass
             else:
-                printerror("Niewlaciwy format MiscInfo: " + value)
+                messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
         elif key == 'Transit':  # "no thru traffic" / "local traffic only"
             if value.lower().startswith('n'):
                 way['access'] = 'destination'
@@ -1551,10 +1578,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                     way['marked_trail_blue'] = 'yes'
                 else:
                     ref.append(colour)
-                    printerror("Unknown 'Szlak' colour: " + colour)
+                    messages_printer.printerror("Unknown 'Szlak' colour: " + colour)
             way['ref'] = ";".join(ref)
         elif key.startswith('NumbersExt'):
-            printerror("warning: " + key + " tag discarded")
+            messages_printer.printerror("warning: " + key + " tag discarded")
         elif key.startswith('Numbers'):
             unused = int(key[7:], 0)
             value = value.split(',')
@@ -1672,22 +1699,24 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             pass
         else:
             if ignore_errors:
-                printwarn("W: Unknown key: " + key)
-                printwarn("W: Value:       " + value)
+                messages_printer.printwarn("W: Unknown key: " + key)
+                messages_printer.printwarn("W: Value:       " + value)
                 pass
             else:
                 raise ParsingError("Unknown key " + key + " in polyline / polygon")
     return way
 
 
-def parse_txt(infile, options, progress_bar=None, bpoints=None):
-    if bpoints is None:
-        bpoints = []
+def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
+    if border_points is None:
+        border_points = []
     otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
                    r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
     maxtypes = {}
-    map_elements_props = {'points': Mylist(bpoints, 0), 'pointattrs': defaultdict(dict),
-                          'ways': list(), 'relations': list()}
+    map_elements_props = {'points': Mylist(border_points, 0),  # zmodyfikowana lista do obsługi pointsów
+                          'pointattrs': defaultdict(dict),  # format: point_id: {atrybuty pointa}
+                          'ways': list(), 'relations': list()  # zwykle listy
+                          }
     polyline = None
     feat = None
     comment = None
@@ -1709,7 +1738,8 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
-            way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props)
+            way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props,
+                                          messages_printer=messages_printer)
             if feat == Features.polygon:
                 if 'ump:typ' in way:
                     utyp = way['ump:typ']
@@ -1722,7 +1752,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
                 if t in shape_types:
                     tag(way, shape_types[t])
                 else:
-                    printerror("Unknown shape type " + hex(t))
+                    messages_printer.printerror("Unknown shape type " + hex(t))
 
             elif feat == Features.poi:
                 if 'ump:typ' in way:
@@ -1737,7 +1767,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
                 if t in poi_types:
                     tag(way, poi_types[t])
                 else:
-                    printerror("Unknown poi type " + hex(t))
+                    messages_printer.printerror("Unknown poi type " + hex(t))
 
                 # Label=Supermarket (24h), Typ=24H
                 if 'name' in way and (way['name'].find('(24h)') > -1 or way['name'].find('(24H)') > -1 or
@@ -1816,18 +1846,18 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
                         street = way['name']
                     else:
                         street = "<empty>"
-                    printerror("Line:" + str(linenum)+":Numeracja - brak poprawnej nazwy ulicy: '" + street + "'.")
+                    messages_printer.printerror("Line:" + str(linenum)+":Numeracja - brak poprawnej nazwy ulicy: '" + street + "'.")
                     street = 'STREET_missing'
                 try:
                     m = way['addr:city']
                 except:
                     m = 'MIASTO_missing'
-                    printerror("Line:" + str(linenum) + ":Numeracja - brak Miasto=!")
+                    messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak Miasto=!")
                 try:
                     region = way['is_in:state']
                 except:
                     region = ""
-                    printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
+                    messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
                 add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props)
                 add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props)
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
@@ -1853,7 +1883,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
             try:
                 key, value = line.split('=', 1)
             except:
-                printerror(line)
+                messages_printer.printerror(line)
                 raise ParsingError('Can\'t split the thing')
             key = key.strip()
             if key in polyline:
@@ -1864,7 +1894,7 @@ def parse_txt(infile, options, progress_bar=None, bpoints=None):
                 elif key == 'City' and polyline[key] == 'Y':
                     pass
                 else:
-                    printerror("Line:" + str(linenum) + ": Ignoring repeated key " + key + "!")
+                    messages_printer.printerror("Line:" + str(linenum) + ": Ignoring repeated key " + key + "!")
             polyline[key] = recode(value).strip()
         elif line.startswith(';'):
             strn = recode(line[1:].strip(" \t\n"))
@@ -1896,7 +1926,7 @@ def create_node_ways_relation(all_ways):
            {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
 
 
-def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None):
+def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     _points = map_elements_props['points']
     _ways = map_elements_props['ways']
     if a not in node_ways_relation or b not in node_ways_relation:
@@ -1907,31 +1937,32 @@ def nodes_to_way_id(a, b, node_ways_relation=None, map_elements_props=None):
     if len(way_ids) == 1:
         return tuple(way_ids)[0]
     elif len(way_ids) > 1:
-        printerror("DEBUG: multiple roads found for restriction. Using only one")
+        messages_printer.printerror("DEBUG: multiple roads found for restriction. Using only one")
         for way_id in way_ids:
-            printerror(str(_ways[way_id]))
-            printerror(str([_points[node] for node in _ways[way_id]['_nodes']]))
+            messages_printer.printerror(str(_ways[way_id]))
+            messages_printer.printerror(str([_points[node] for node in _ways[way_id]['_nodes']]))
         return tuple(way_ids)[0]
     else:
-        printerror("DEBUG: no roads found for restriction.")
-        printerror(','.join(_points[a]) + ' ' + ','.join(_points[b]))
-        printerror(str(node_ways_relation[a]))
-        printerror(str(node_ways_relation[b]))
+        messages_printer.printerror("DEBUG: no roads found for restriction.")
+        messages_printer.printerror(','.join(_points[a]) + ' ' + ','.join(_points[b]))
+        messages_printer.printerror(str(node_ways_relation[a]))
+        messages_printer.printerror(str(node_ways_relation[b]))
         for way in _ways:
             if way is None:
                 continue
             way_nodes = way['_nodes']
             if a in way_nodes:
-                printerror("DEBUG: node a: %r found in way: %r" % (a, way))
+                messages_printer.printerror("DEBUG: node a: %r found in way: %r" % (a, way))
             if b in way_nodes:
-                printerror("DEBUG: node b: %r found in way: %r" % (b, way))
+                messages_printer.printerror("DEBUG: node b: %r found in way: %r" % (b, way))
         raise NodesToWayNotFound(a, b)
     return None
 
 
-def nodes_to_way(a, b, node_ways_relation=None, map_elements_props=None):
+def nodes_to_way(a, b, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     _ways = map_elements_props['ways']
-    return _ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)]
+    return _ways[nodes_to_way_id(a, b, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                 messages_printer=messages_printer)]
 
 
 def way_to_way_id(way, node_ways_relation=None):
@@ -2060,15 +2091,15 @@ def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
               map_elements_props=map_elements_props)
 
 
-def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None):
+def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     ways = map_elements_props['ways']
     nodes = rel.pop('_nodes')
     # from_way_index = ways.index(nodes_to_way(nodes[0], nodes[1]))
     # to_way_index = ways.index(nodes_to_way(nodes[-2], nodes[-1]))
     from_way_index = nodes_to_way_id(nodes[0], nodes[1], node_ways_relation=node_ways_relation,
-                                     map_elements_props=map_elements_props)
+                                     map_elements_props=map_elements_props, messages_printer=messages_printer)
     to_way_index = nodes_to_way_id(nodes[-2], nodes[-1], node_ways_relation=node_ways_relation,
-                                   map_elements_props=map_elements_props)
+                                   map_elements_props=map_elements_props, messages_printer=messages_printer)
     rel['_members'] = {
         'from': ('way', [from_way_index]),
         'via':  ('node', nodes[1:-1]),
@@ -2378,7 +2409,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(options, filename='', maxtypes=None, progress_bar=None, map_elements_props=None):
+def post_load_processing(options, filename='', maxtypes=None, progress_bar=None, map_elements_props=None,
+                         messages_printer=None):
     # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
     if maxtypes is None:
         maxtypes = {}
@@ -2502,7 +2534,7 @@ def post_load_processing(options, filename='', maxtypes=None, progress_bar=None,
         if rel['type'] in ('restriction', 'lane_restriction',):
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
-                                                    map_elements_props=map_elements_props)
+                                                    map_elements_props=map_elements_props, )
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
@@ -2665,14 +2697,16 @@ def add_city_region_to_way(l_way):
 #     out.close()
 
 
-def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None):
+def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None, ids_to_process=0):
     try:
         output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
     except IOError as ioerror:
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
-
-    printed_points = set()
+    messages_printer = MessagePrinters(workid='1', verbose=options.verbose)
+    elapsed = datetime.now().replace(microsecond=0)
+    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s). Processing %s ids." % ids_to_process)
+    # printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
             task_id_points = pickle.load(p_file)
@@ -2682,10 +2716,10 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
             point_id = task_id_points.get_point_id(_point)
             _points_attr = task_id_pointattrs[point_id]
             orig_id = task_id_points.index(_point)
-            if _point in printed_points:
-                print('punkt wydrukowany juz', _point, file=sys.stderr)
-            else:
-                printed_points.add(_point)
+            # if _point in printed_points:
+            #     print('punkt wydrukowany juz', _point, file=sys.stderr)
+            # else:
+            #     printed_points.add(_point)
             for filename in output_files:
                 out = output_files[filename]
                 if filename in {'normal', 'navit'}:
@@ -2730,6 +2764,9 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
                     print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['navit'])
     for out in output_files.values():
         out.close()
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
+    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s) (took %s)."
+                               % elapsed)
     return {a: b.name for a, b in output_files.items()}
 
 
@@ -2855,19 +2892,27 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
 #
 #     out.close()
 
+def output_nominatim_preprocessing(options, pickled_filenames=None, border_points=None, ids_to_process=0):
+    return
 
-def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
-    if bpoints is None:
-        bpoints = []
+
+def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0):
+    filestamp = None
+    if border_points is None:
+        border_points = []
     l_ways = list()
     streets_counter = defaultdict(list)
-
+    elapsed = datetime.now().replace(microsecond=0)
+    messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
+    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
     # ponieważ tutaj mamy sporo iterowania z dodawaniem nowych drog, dlatego wczytujemy calosc
     # danych i je osobno obrabiamy. Tworzymy też nowy obiekt node_generalizator
     # relacji wczytywac nie musimy bo z nimi nic nie robimy
     # wczytujemy wszystkie punktu
     local_points = OrderedDict()
     for task_id, pickled in enumerate(pickled_filenames['points']):
+        if filestamp is None:
+            filestamp = datetime.fromtimestamp(os.path.getmtime(pickled)).strftime("%Y-%m-%dT%H:%M:%SZ")
         with open(pickled, 'rb') as p_file:
             local_points[task_id] = pickle.load(p_file)
 
@@ -2883,8 +2928,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
         with open(pickled, 'rb') as p_file:
             local_ways[task_id] = pickle.load(p_file)
 
-
-    printdebug("City=>Streets scan start: " + str(datetime.now()), options)
+    messages_printer.printdebug("City=>Streets scan start: " + str(datetime.now()))
 
     #  fragment dodajacy krotkie odcinki drog dla wsi ktore nie posiadaja ulic
     #  zbieramy info o wszytskich miastach
@@ -2912,7 +2956,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
                 #     # l = []
                 #     # l.append(m)
                 #     # streets_counter[n] = l
-    printdebug("City=>Streets scan part1: " + str(datetime.now()), options)
+    messages_printer.printdebug("City=>Streets scan part1: " + str(datetime.now()))
     # teraz skan wszystkich ulic
     for task_id in local_ways:
         _points = local_points[task_id]
@@ -2971,23 +3015,23 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
                                     found = 1
                                     break
                             if found == 0:
-                                printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + _way['name'] +
-                                           " (" + str(waylat) + "," + str(waylon) + ")", options)
+                                messages_printer.printdebug("Brak BLISKIEGO miasta: " + town + " ul.: " + _way['name'] +
+                                           " (" + str(waylat) + "," + str(waylon) + ")")
                         else:
-                            printdebug("Brak Miasta: " + town + " ul.: " + _way['name'] + " (" + str(waylat) +
-                                       "," + str(waylon) + ")", options)
+                            messages_printer.printdebug("Brak Miasta: " + town + " ul.: " + _way['name'] + " (" +
+                                                        str(waylat) + "," + str(waylon) + ")")
                 except IndexError:
                     pprint.pprint(_way, sys.stderr)
-    printdebug("City=>Streets scan part2: " + str(datetime.now()), options)
+    messages_printer.printdebug("City=>Streets scan part2: " + str(datetime.now()))
     # i dodawanie krotkich ulic
 
     for miasto in streets_counter:
         for k in streets_counter[miasto]:
             task_id = k['task_id']
             if k['cnt'] != 0:
-                printdebug("Ulice: " + miasto + "\tszt. " + str(k['cnt']), options)
+                messages_printer.printdebug("Ulice: " + miasto + "\tszt. " + str(k['cnt']))
             else:
-                printdebug("Short way added:" + miasto, options)
+                messages_printer.printdebug("Short way added:" + miasto)
                 pt0 = (float(k['lat']) + 0.0004, float(k['lon']))
                 pt1 = (float(k['lat']) + 0.0008, float(k['lon']))
                 pind0 = len(local_points[task_id])
@@ -3001,7 +3045,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
                 way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
                     'name': miasto, 'addr:city': miasto, 'highway': "residental"}
                 local_ways[task_id].append(way)
-    printdebug("City=>Streets scan stop: " + str(datetime.now()), options)
+    messages_printer.printdebug("City=>Streets scan stop: " + str(datetime.now()))
 
     for task_id in local_ways:
         for way_id, _way in enumerate(local_ways[task_id]):
@@ -3015,11 +3059,11 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
     try:
         out = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
     except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + f + "!\n")
+        sys.stderr.write("\tERROR: Can't open normal output file " + out.name + "!\n")
         sys.exit()
 
     node_generalizator = NodeGeneralizator()
-    node_generalizator.insert_borders(bpoints)
+    node_generalizator.insert_borders(border_points)
 
     for task_id in local_points:
         node_generalizator.insert_points(task_id, local_points[task_id])
@@ -3042,9 +3086,9 @@ def output_nominatim_pickled(options, pickled_filenames=None, bpoints=None):
                 if _way['highway'] in {'cycleway', 'path', 'footway'}:
                     continue
             print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
-
-    # out.write("</osm>\n")
     out.close()
+    elapsed = datetime.now().replace(microsecond=0) - elapsed
+    messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     return out.name
 
 # def output_nominatim(prefix, num, options):
@@ -3233,23 +3277,16 @@ def write_output_files(in_file='', dest_filename='', headerf=''):
     return
 
 
-def worker(task, options, bpoints=None):
+def worker(task, options, border_points=None):
 
     global working_thread
     global workid
     global filestamp
-    global maxid
-    global idpfx
     global glob_progress_bar_queue
-    if bpoints is None:
-        bpoints = list()
-    if options.normalize_ids:
-        idpfx = ":id:" + str(task['idx']) + ":"
-    else:
-        idpfx = ""
-    working_thread = str(os.getpid())
+    if border_points is None:
+        border_points = list()
+    messages_printer = MessagePrinters(workid=task['idx'], verbose=options.verbose)
     workid = task['idx']
-    maxid = 0
     num_lines_to_process = 0
         
     try:
@@ -3262,9 +3299,9 @@ def worker(task, options, bpoints=None):
         infile.seek(0)
 
     except IOError:
-        printerror("Can't open file " + task['file'])
+        messages_printer.printerror("Can't open file " + task['file'])
         sys.exit()
-    printinfo("Loading " + task['file'])
+    messages_printer.printinfo("Loading " + task['file'])
 
     filestamp = datetime.fromtimestamp(os.path.getmtime(task['file'])).strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
@@ -3274,27 +3311,22 @@ def worker(task, options, bpoints=None):
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
-    maxtypes, map_elements_props = parse_txt(infile, options, progress_bar=progress_bar, bpoints=bpoints)
+    maxtypes, map_elements_props = parse_txt(infile, options, progress_bar=progress_bar, border_points=border_points,
+                                             messages_printer=messages_printer)
     progress_bar.set_done('mp')
     infile.close()
     post_load_processing(options, task['file'], maxtypes=maxtypes, map_elements_props=map_elements_props,
-                         progress_bar=progress_bar)
+                         progress_bar=progress_bar, messages_printer=messages_printer)
     progress_bar.set_done('drp')
-    
-    # output_normal("UMP-PL", task['idx'], options)
-    # if options.navit_file != None:
-    #     output_navit("UMP-PL", task['idx'])	 # no data change
-    # if options.nonumber_file != None:
-    #     output_nonumbers("UMP-PL", task['idx'])	 # no data change
-    # if options.index_file != None:
-    #     output_index("UMP-PL", task['idx'], options)  # no data change
-    # if options.nominatim_file != None:
-    #     output_nominatim("UMP-PL", task['idx'], options)  # data is changed
     save_pickled_data("UMP-PL", task['idx'], map_elements_props=map_elements_props)
 
-    warn = ''
-    printinfo("Finished " + task['file'] + " (" + str(maxid) + " ids)" + warn)
-    task['ids'] = maxid		# ale main korzysta z result (ze wzg. na pool.map)
+
+    ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
+    l_warns = str(messages_printer.get_worning_num())
+    l_errors = str(messages_printer.get_error_num())
+    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num ) + " ids)" + ', Warnings: ' + l_warns +
+                               ', Errors: ' + l_errors + '.')
+    task['ids']		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
 
 
@@ -3309,6 +3341,7 @@ def main(options, args):
     else:
         glob_progress_bar_queue = None
 
+    messages_printer = MessagePrinters(workid='main thread', verbose=options.verbose)
     node_generalizator = NodeGeneralizator()
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -3388,7 +3421,7 @@ def main(options, args):
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:                
-                result = worker(workelem, options, bpoints=bpoints)
+                result = worker(workelem, options, border_points=bpoints)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
         else:
             copy_options = copy.copy(options)
@@ -3401,13 +3434,13 @@ def main(options, args):
             # print(vars(copy_options)
             pool = Pool(processes=copy_options.threadnum)
             # result = pool.map(worker, worklist, options)
-            result = pool.map(partial(worker, options=copy_options, bpoints=bpoints), worklist)
+            result = pool.map(partial(worker, options=copy_options, border_points=bpoints), worklist)
             pool.terminate()
             for workelem in worklist:
                 workelem['ids'] = result[(workelem['idx'])-1]
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
-        printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
+        messages_printer.printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
 
         # wczytaj pliki piklowane i stwórz poprawny node_generalizator
         pickled_filenames = {'points': [], 'pointattrs': [], 'ways': [], 'relations': []}
@@ -3419,15 +3452,19 @@ def main(options, args):
             pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
             pickled_filenames['relations'].append(pickled_relations_filename)
             pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
+            ids_to_process = 0
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_points(work_no, pickled_data)
+                ids_to_process += len(pickled_data)
             with open(pickled_ways_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_ways(work_no, pickled_data)
+                ids_to_process += len(pickled_data)
             with open(pickled_relations_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_relations(work_no, pickled_data)
+                ids_to_process += len(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
         output_files_to_generate = ['normal']
@@ -3440,24 +3477,26 @@ def main(options, args):
 
         generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
                                                            pickled_filenames=pickled_filenames,
-                                                           node_generalizator=node_generalizator)
+                                                           node_generalizator=node_generalizator,
+                                                           ids_to_process=ids_to_process)
+
         if options.nominatim_file is not None:
+
             generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
-                                                                    bpoints=bpoints)
+                                                                    border_points=bpoints,
+                                                                    ids_to_process=ids_to_process)
 
         # naglowek osm i punkty granic
-        printinfo_nlf("Working on header... ")
+        messages_printer.printinfo_nlf("Working on header... ")
         elapsed = datetime.now().replace(microsecond=0)
         headerf = "UMP-PL.header.osm"
         try:
             out = open(headerf, "w", encoding="utf-8")
         except IOError:
-            printerror("\nCan't create header file " + headerf + "!")
+            messages_printer.printerror("\nCan't create header file " + headerf + "!")
             sys.exit()
         out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
         out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
-        maxid = 0
-        idpfx = ""
         if options.borders_file is not None:
             sys.stderr.write("and border points... ")
             bpointattrs = defaultdict(dict)
@@ -3478,7 +3517,7 @@ def main(options, args):
         sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
         if options.nominatim_file is not None:
-            printinfo_nlf("Nominatim output... ")
+            messages_printer.printinfo_nlf("Nominatim output... ")
             try:
                 write_output_files(in_file=generated_nominatim_filename, dest_filename=options.nominatim_file,
                                    headerf=headerf)
@@ -3488,7 +3527,7 @@ def main(options, args):
                 sys.exit()            
 
         if options.navit_file is not None:
-            printinfo_nlf("Navit output... ")
+            messages_printer.printinfo_nlf("Navit output... ")
             # elapsed = datetime.now().replace(microsecond=0)
             try:
                 write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
@@ -3498,7 +3537,7 @@ def main(options, args):
                 sys.exit()
 
         if options.index_file is not None:
-            printinfo_nlf("OsmAnd index... ")
+            messages_printer.printinfo_nlf("OsmAnd index... ")
             try:
                 write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
                                    headerf=headerf)
@@ -3507,7 +3546,7 @@ def main(options, args):
                 sys.exit()                        
 
         if options.nonumber_file is not None:
-            printinfo_nlf("NoNumber output... ")
+            messages_printer.printinfo_nlf("NoNumber output... ")
             try:
                 write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
                                    headerf=headerf)
@@ -3515,13 +3554,13 @@ def main(options, args):
                 sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
                 sys.exit()
 
-        printinfo_nlf("Normal output... ")
+        messages_printer.printinfo_nlf("Normal output... ")
         try:
             temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
             temp_file.close()
             write_output_files(in_file=generated_output_filenames['normal'], dest_filename=temp_file.name,
                                headerf=headerf)
-            printinfo_nlf("Normal output copying to stdout or destination file ")
+            messages_printer.printinfo_nlf("Normal output copying to stdout or destination file ")
             elapsed = datetime.now().replace(microsecond=0)
             if options.outputfile is None:
                 shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
@@ -3532,7 +3571,7 @@ def main(options, args):
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("done (took " + str(elapsed) + ").\n")
             elapsed = datetime.now().replace(microsecond=0) - runtime
-            printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
+            messages_printer.printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
         except IOError:
             sys.stderr.write("\n\tERROR: Normal output failed!\n")
             sys.exit()
