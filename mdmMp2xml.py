@@ -2786,7 +2786,8 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
     -------
 
     """
-
+    if border_points is None:
+        border_points = []
     elapsed = datetime.now().replace(microsecond=0)
     messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
     messages_printer.printinfo("Generating nominatim output. Preprocessing %s ids" % ids_to_process)
