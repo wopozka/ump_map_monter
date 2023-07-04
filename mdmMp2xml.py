@@ -1052,7 +1052,7 @@ def cut_prefix(string):
     return string
 
 
-def convert_btag(way, key, value, feat, options, bpoints, messages_printer=None):
+def convert_btag(key, value, options, bpoints, messages_printer=None):
     if key.lower() in ('label',):
         pass
     elif key in ('Data0',):
@@ -1103,7 +1103,7 @@ def parse_borders_return_bpoints(infile, options, border_stamp):
             way = {'_timestamp': border_stamp}
             for key in polyline:
                 if polyline[key] != '':
-                    convert_btag(way, key, polyline[key], feat, options, bpoints, messages_printer=messages_printer)
+                    convert_btag(key, polyline[key], options, bpoints, messages_printer=messages_printer)
             polyline = None
         elif feat == Features.ignore:
             pass
