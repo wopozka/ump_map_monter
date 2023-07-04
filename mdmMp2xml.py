@@ -231,30 +231,26 @@ class NodeGeneralizator(object):
     def get_way_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
             self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
-        if self.ways_offset[file_group_name] > -1:
-            return orig_id + self.sum_points + self.borders_point_len
-        new_id = 1
-        for a in self.t_table_ways:
-            if a == file_group_name:
-                break
-            new_id += self.t_table_ways[a]
-        self.ways_offset[file_group_name] = new_id
-        return new_id + orig_id + self.sum_points + self.borders_point_len
+        if self.ways_offset[file_group_name] == -1:
+            self.ways_offset[file_group_name] = 1
+            for a in self.t_table_ways:
+                if a == file_group_name:
+                    break
+                self.ways_offset[file_group_name] += self.t_table_ways[a]
+        return self.ways_offset[file_group_name] + orig_id + self.sum_points + self.borders_point_len
 
     def get_relation_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
             self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
         if self.sum_ways == -1:
             self.sum_ways = sum(self.t_table_ways[a] for a in self.t_table_ways)
-        if self.relations_offset[file_group_name] > -1:
-            return orig_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
-        new_id = 1
-        for a in self.t_table_relations:
-            if a == file_group_name:
-                break
-            new_id += self.t_table_relations[a]
-        self.relations_offset[file_group_name] = new_id
-        return new_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
+        if self.relations_offset[file_group_name] == -1:
+            self.relations_offset[file_group_name] = 1
+            for a in self.t_table_relations:
+                if a == file_group_name:
+                    break
+                self.relations_offset[file_group_name] += self.t_table_relations[a]
+        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
 
 class NodesToWayNotFound(ValueError):
     """
