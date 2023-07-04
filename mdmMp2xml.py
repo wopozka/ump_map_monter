@@ -51,12 +51,9 @@ class MylistB(object):
     The class for storage of borders file data points
     """
     def __init__(self):
-        # dictionary containing key: value pairs. key is an integer number seperate for each point
-        # value is actuall reference to node data (see below for self.v)
+        # key is node id (v.index(str(lat), str(lon))), value tuple(str(lat), str(lon))
         self.k = {}
-        # a list of nodes data, node is in a form of dict eg: dictionary eg.
-        # {id: '1600019', timestamp: '2023-06-16T16:02:23Z', visible: 'true',  version: '1', changeset: '1',
-        # lat: '50.157630', lon: '19.332180}
+        # tuple(str(lat), str(lon))
         self.v = []
 
     def __len__(self):
@@ -93,10 +90,11 @@ class Mylist(object):
     """
     The modified list bultin type, that support faster return of element index
     """
-    def __init__(self, borders, base):
+    def __init__(self, borders):
+        # key is node id (v.index(str(lat), str(lon))), value tuple(str(lat), str(lon))
         self.k = {}
+        # tuple(str(lat), str(lon))
         self.v = []
-        # self.b = base
         self.b = len(borders)
         self.borders = borders
 
@@ -197,9 +195,9 @@ class NodeGeneralizator(object):
         self.t_table_relations = OrderedDict()
         self.sum_points = -1
         self.sum_ways = -1
-        self.points_ofset = dict()
-        self.ways_ofset = dict()
-        self.relations_ofset = dict()
+        self.points_offset = dict()
+        self.ways_offset = dict()
+        self.relations_offset = dict()
 
     def insert_borders(self, borders):
         self.borders_point_len = len(borders)
@@ -207,40 +205,40 @@ class NodeGeneralizator(object):
     def insert_points(self, file_group_name, points):
         len_points = len(points) - self.borders_point_len
         self.t_table_points[file_group_name] = len_points
-        self.points_ofset[file_group_name] = -1
+        self.points_offset[file_group_name] = -1
 
     def insert_ways(self, file_group_name, way_val):
         self.t_table_ways[file_group_name] = len(way_val)
-        self.ways_ofset[file_group_name] = -1
+        self.ways_offset[file_group_name] = -1
 
     def insert_relations(self, file_group_name, way_val):
         self.t_table_relations[file_group_name] = len(way_val)
-        self.relations_ofset[file_group_name] = -1
+        self.relations_offset[file_group_name] = -1
 
     def get_point_id(self, file_group_name, orig_id):
         if orig_id < self.borders_point_len:
             return orig_id + 1
-        if self.points_ofset[file_group_name] > -1:
-            return self.points_ofset[file_group_name] + orig_id
+        if self.points_offset[file_group_name] > -1:
+            return self.points_offset[file_group_name] + orig_id
         new_id = 1
         for a in self.t_table_points:
             if a == file_group_name:
                 break
             new_id += self.t_table_points[a]
-        self.points_ofset[file_group_name] = new_id
+        self.points_offset[file_group_name] = new_id
         return new_id + orig_id
 
     def get_way_id(self, file_group_name, orig_id):
         if self.sum_points == -1:
             self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
-        if self.ways_ofset[file_group_name] > -1:
+        if self.ways_offset[file_group_name] > -1:
             return orig_id + self.sum_points + self.borders_point_len
         new_id = 1
         for a in self.t_table_ways:
             if a == file_group_name:
                 break
             new_id += self.t_table_ways[a]
-        self.ways_ofset[file_group_name] = new_id
+        self.ways_offset[file_group_name] = new_id
         return new_id + orig_id + self.sum_points + self.borders_point_len
 
     def get_relation_id(self, file_group_name, orig_id):
@@ -248,14 +246,14 @@ class NodeGeneralizator(object):
             self.sum_points = sum(self.t_table_points[a] for a in self.t_table_points)
         if self.sum_ways == -1:
             self.sum_ways = sum(self.t_table_ways[a] for a in self.t_table_ways)
-        if self.relations_ofset[file_group_name] > -1:
+        if self.relations_offset[file_group_name] > -1:
             return orig_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
         new_id = 1
         for a in self.t_table_relations:
             if a == file_group_name:
                 break
             new_id += self.t_table_relations[a]
-        self.relations_ofset[file_group_name] = new_id
+        self.relations_offset[file_group_name] = new_id
         return new_id + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
 
 class NodesToWayNotFound(ValueError):
@@ -985,19 +983,6 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
-# Lines with a # above can be removed to save half of the memory used
-# (but some look-ups will be slower)
-# k zawiera slownik {[lat,lon]->poz,....} ; mapowanie (lat,lon)->id
-# v zawiera tablice { [lat,lon], [lat,lon],....}  mapowanie id->(lat,lon)
-# bpoints = MylistB()
-
-# later will be initialized as Mylist instance, lets leave it None for now.
-# points = None
-# # pointattrs = {}
-# pointattrs = defaultdict(dict)
-# ways = []
-# relations = []
-
 working_thread = os.getpid()
 workid = 0
 
@@ -1688,7 +1673,7 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
     otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
                    r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
     maxtypes = {}
-    map_elements_props = {'points': Mylist(border_points, 0),  # zmodyfikowana lista do obsługi pointsów
+    map_elements_props = {'points': Mylist(border_points),  # zmodyfikowana lista do obsługi pointsów
                           'pointattrs': defaultdict(dict),  # format: point_id: {atrybuty pointa}
                           'ways': list(), 'relations': list()  # zwykle listy
                           }
