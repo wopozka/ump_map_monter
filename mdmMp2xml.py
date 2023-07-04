@@ -2780,7 +2780,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
                                    'ways': [filename1, filename2, filename3...]
                                    'relations" [filename1, filename2, filename3...]}
     border_points: border points from borders file
-    ids_to_process: number of object indentifier (points + ways + relastion to proces, relations num is obsolete
+    ids_to_process: number of object identifier (points + ways + relaction to proces, relations num is obsolete
     multiprocessing_queue: queue for returning generated filename
     Returns
     -------
