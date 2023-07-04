@@ -1022,11 +1022,12 @@ def lats_longs_from_line(nodes_str):
         if l < 9:
             lo += '0' * (9 - l)
         longs.append(lo)
-    return lats, longs
+    return tuple(zip(lats, longs))
+    # return lats, longs
 
 
-def nodes_from_bline(nodes_str):
-    """Appends new nodes to the points list"""
+def points_from_bline(points_str):
+    """Appends new points to the points list"""
     # Kwadrat dla Polski.
     # 54.85628,13.97873
     # 48.95703,24.23996
@@ -1035,12 +1036,12 @@ def nodes_from_bline(nodes_str):
     maxW = -12.00000
     maxS = 34.00000
     maxE = 50.00000
-    lats, longs = lats_longs_from_line(nodes_str)
-    nodes = []
-    for node in list(zip(lats, longs)):
-        if maxN > float(node[0]) > maxS and maxW < float(node[1]) < maxE:
-            nodes.append(node)
-    return nodes
+    # lats, longs = lats_longs_from_line(points_str)
+    points = []
+    for point in lats_longs_from_line(points_str):
+        if maxN > float(point[0]) > maxS and maxW < float(point[1]) < maxE:
+            points.append(point)
+    return points
     
         
 # TxF: ucinanie przedrostkow
@@ -1056,7 +1057,7 @@ def convert_btag(key, value, options, bpoints, messages_printer=None):
     if key.lower() in ('label',):
         pass
     elif key in ('Data0',):
-        for _tmpnode in nodes_from_bline(value):
+        for _tmpnode in points_from_bline(value):
             bpoints_append(_tmpnode, bpoints)
     elif key == 'Type':
         if int(value, 0) == 0x4b:
@@ -1309,25 +1310,25 @@ def points_append(point, attrs, map_elements_props=None):
     _pointattrs[_points.index(point)] = attrs
 
             
-def prepare_line(nodes_str, closed=False, map_elements_props=None):
+def prepare_line(points_str, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
-    lats, longs = lats_longs_from_line(nodes_str)
-    nodes = list(zip(lats, longs))
-    for node in nodes:
-        points_append(node, {}, map_elements_props=map_elements_props)
+    # lats, longs = lats_longs_from_line(nodes_str)
+    points = lats_longs_from_line(points_str)
+    for point in points:
+        points_append(point, {}, map_elements_props=map_elements_props)
     try:
-        node_indices = list(map(map_elements_props['points'].index, nodes))
+        point_indices = list(map(map_elements_props['points'].index, points))
     except:
         print(map_elements_props['points'])
-        print(node)
+        print(point)
         raise ParsingError('Can\'t map node indices')
     pts = 0
-    for node in node_indices:
-        if '_out' not in map_elements_props['pointattrs'][node]:
+    for point_idx in point_indices:
+        if '_out' not in map_elements_props['pointattrs'][point_idx]:
             pts += 1
     if closed:
-        node_indices.append(node_indices[0])
-    return pts, node_indices
+        point_indices.append(point_indices[0])
+    return pts, point_indices
 
             
 def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None, messages_printer=None):
