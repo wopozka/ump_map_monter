@@ -3061,16 +3061,7 @@ def main(options, args):
         if options.nonumber_file is not None:
             output_files_to_generate.append('no_number')
 
-        if options.nominatim_file is None or options.threadnum == 1:
-            generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
-                                                               pickled_filenames=pickled_filenames,
-                                                               node_generalizator=node_generalizator,
-                                                               ids_to_process=ids_to_process)
-            if options.nominatim_file is not None:
-                generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
-                                                                        border_points=bpoints,
-                                                                        ids_to_process=ids_to_process_nominatim)
-        else:
+        if options.nominatim_file is not None and options.threadnum > 1:
             normal_output_queue = Queue()
             normal_process = Process(target=output_normal_pickled,
                                      args=(options, output_files_to_generate,),
@@ -3090,6 +3081,15 @@ def main(options, args):
             normal_process.join()
             generated_nominatim_filename = nominatim_output_queue.get()
             generated_output_filenames = normal_output_queue.get()
+        else:
+            generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
+                                                               pickled_filenames=pickled_filenames,
+                                                               node_generalizator=node_generalizator,
+                                                               ids_to_process=ids_to_process)
+            if options.nominatim_file is not None:
+                generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
+                                                                        border_points=bpoints,
+                                                                        ids_to_process=ids_to_process_nominatim)
 
         # naglowek osm i punkty granic
         messages_printer.printinfo_nlf("Working on header... ")
