@@ -988,6 +988,11 @@ workid = 0
 
 glob_progress_bar_queue = None
 
+def path_file(filename):
+    if filename.startswith('~'):
+        return os.path.expanduser(filename)
+    return filename
+
 def recode(line):
     try:
         return line
@@ -2504,16 +2509,16 @@ def add_city_region_to_way(l_way):
 
 
 
-def output_normal_pickled(options, filetypes, pickled_filenames=None, node_generalizator=None, ids_to_process=0,
+def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, node_generalizator=None, ids_to_process=0,
                           multiprocessing_queue=None):
     try:
-        output_files = {a: tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False) for a in filetypes}
+        output_files = {a: open(a, 'a', encoding='utf-8') for a in filenames_to_gen}
     except IOError as ioerror:
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
     messages_printer = MessagePrinters(workid='1', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s). Processing %s ids." % ids_to_process)
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids." % ids_to_process)
     # printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
@@ -2571,14 +2576,15 @@ def output_normal_pickled(options, filetypes, pickled_filenames=None, node_gener
                 if 'navit' in output_files:
                     print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['navit'])
     for out in output_files.values():
+        out.write("</osm>\n")
         out.close()
     elapsed = datetime.now().replace(microsecond=0) - elapsed
-    messages_printer.printinfo("Generating " + ', '.join(filetypes) + " output(s) done (took %s)."
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s) done (took %s)."
                                % elapsed)
-    return_val_dict = {a: b.name for a, b in output_files.items()}
-    if multiprocessing_queue is not None:
-        multiprocessing_queue.put(return_val_dict)
-    return return_val_dict
+    # return_val_dict = {a: b.name for a, b in output_files.items()}
+    # if multiprocessing_queue is not None:
+    #     multiprocessing_queue.put(return_val_dict)
+    return
 
 
 def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname, messages_printer=None,
@@ -2750,7 +2756,7 @@ def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, 
     return pickled_file_names
 
 
-def output_nominatim_pickled(options, pickled_filenames=None, border_points=None, ids_to_process=0,
+def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None, border_points=None, ids_to_process=0,
                              multiprocessing_queue=None):
     """
     Generates nominatim output from processed data
@@ -2790,7 +2796,7 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
     messages_printer.printinfo("Preprocessing nominatim output done (took %s)." % elapsed)
 
     try:
-        out = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+        out = open(nominatim_filename, 'a', encoding='utf-8')
     except IOError:
         sys.stderr.write("\tERROR: Can't open normal output file " + out.name + "!\n")
         sys.exit()
@@ -2818,15 +2824,16 @@ def output_nominatim_pickled(options, pickled_filenames=None, border_points=None
                     if _way['highway'] in {'cycleway', 'path', 'footway'}:
                         continue
                 print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
+    out.write("</osm>\n")
     out.close()
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     for g_name in post_nom_picle_files.values():
         for filenam in g_name:
             os.remove(filenam)
-    if multiprocessing_queue is not None:
-        multiprocessing_queue.put(out.name)
-    return out.name
+    # if multiprocessing_queue is not None:
+    #     multiprocessing_queue.put(out.name)
+    return
 
 
 def write_output_files(in_file='', dest_filename='', headerf=''):
@@ -3036,129 +3043,120 @@ def main(options, args):
                 ids_to_process += len(pickled_data)
 
         # zapisywanie pikli w normalnym trybie
-        output_files_to_generate = ['normal']
+        output_files_to_generate = {}
+        if options.outputfile is not None:
+            output_files_to_generate['normal'] = os.path.join(os.getcwd(), path_file(options.outputfile))
+        else:
+            _aaa = tempfile.NamedTemporaryFile(dir=os.getcwd(), encoding='utf-8', delete=False)
+            _aaa.close()
+            output_files_to_generate['normal'].aaa.name
         if options.navit_file is not None:
-            output_files_to_generate.append('navit')
+            output_files_to_generate['navit'] = os.path.join(os.getcwd(), path_file(options.navit_file))
         if options.index_file is not None:
-            output_files_to_generate.append('index')
+            output_files_to_generate['index'] = os.path.join(os.getcwd(), path_file(options.index_file))
         if options.nonumber_file is not None:
-            output_files_to_generate.append('no_number')
+            output_files_to_generate['no_number'] = os.path.join(os.getcwd(), path_file(options.nonumber_file))
+
+        messages_printer.printinfo_nlf("Working on header and boarding points ")
+        elapsed = datetime.now().replace(microsecond=0)
+        for filename in output_files_to_generate:
+            with open(filename, 'w', encoding='utf-8') as header_f:
+                try:
+                    header_f.write("<?xml version='1.0' encoding='UTF-8'?>\n")
+                    header_f.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
+                    if options.borders_file is not None:
+                        bpointattrs = defaultdict(dict)
+                        for point in bpoints:
+                            index = bpoints.index(point)
+                            bpointattrs[index]['_timestamp'] = borderstamp
+                            print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, header_f)
+                except IOError as f_except:
+                    sys.stderr.write("\n\tERROR: Can't write header file for %s!\n" % f_except.filename)
+                    sys.exit()
+        elapsed = datetime.now().replace(microsecond=0) - elapsed
+        sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
         if options.nominatim_file is not None and options.threadnum > 1:
-            normal_output_queue = Queue()
+            # normal_output_queue = Queue()
             normal_process = Process(target=output_normal_pickled,
                                      args=(options, output_files_to_generate,),
                                      kwargs={'pickled_filenames': pickled_filenames,
                                      'node_generalizator': node_generalizator,
-                                     'ids_to_process': ids_to_process,
-                                     'multiprocessing_queue': normal_output_queue})
-            nominatim_output_queue = Queue()
-            nominatim_process = Process(target=output_nominatim_pickled, args=(options,),
+                                     'ids_to_process': ids_to_process})
+                                     #'multiprocessing_queue': normal_output_queue})
+            # nominatim_output_queue = Queue()
+            nom_filename = os.path.join(os.getcwd(), options.nominatim_file)
+            nominatim_process = Process(target=output_nominatim_pickled, args=(options, nom_filename),
                                         kwargs={'pickled_filenames': pickled_filenames,
                                                 'border_points': bpoints,
-                                                'ids_to_process': ids_to_process_nominatim,
-                                                'multiprocessing_queue': nominatim_output_queue})
+                                                'ids_to_process': ids_to_process_nominatim})
+                                                #'multiprocessing_queue': nominatim_output_queue})
             normal_process.start()
             nominatim_process.start()
             nominatim_process.join()
             normal_process.join()
-            generated_nominatim_filename = nominatim_output_queue.get()
-            generated_output_filenames = normal_output_queue.get()
+            # generated_nominatim_filename = nominatim_output_queue.get()
+            # generated_output_filenames = normal_output_queue.get()
         else:
-            generated_output_filenames = output_normal_pickled(options, output_files_to_generate,
-                                                               pickled_filenames=pickled_filenames,
-                                                               node_generalizator=node_generalizator,
-                                                               ids_to_process=ids_to_process)
+            output_normal_pickled(options, output_files_to_generate, pickled_filenames=pickled_filenames,
+                                                                     node_generalizator=node_generalizator,
+                                                                     ids_to_process=ids_to_process)
             if options.nominatim_file is not None:
                 generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
                                                                         border_points=bpoints,
                                                                         ids_to_process=ids_to_process_nominatim)
 
-        # naglowek osm i punkty granic
-        messages_printer.printinfo_nlf("Working on header... ")
-        elapsed = datetime.now().replace(microsecond=0)
-        headerf = "UMP-PL.header.osm"
-        try:
-            out = open(headerf, "w", encoding="utf-8")
-        except IOError:
-            messages_printer.printerror("\nCan't create header file " + headerf + "!")
-            sys.exit()
-        out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
-        out.write("<osm version='0.6' generator='mdmMp2xml %s converter for UMP-PL'>\n" % __version__)
-        if options.borders_file is not None:
-            sys.stderr.write("and border points... ")
-            bpointattrs = defaultdict(dict)
-            for point in bpoints:
-                index = bpoints.index(point)
-                bpointattrs[index]['_timestamp'] = borderstamp
-                print_point_pickled(point, bpointattrs[index], 0, index, node_generalizator, out)
-        out.close()
-        elapsed = datetime.now().replace(microsecond=0) - elapsed
-        sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
-        if options.nominatim_file is not None:
-            messages_printer.printinfo_nlf("Nominatim output... ")
+        # if options.nominatim_file is not None:
+        #     messages_printer.printinfo_nlf("Nominatim output... ")
+        #     try:
+        #         write_output_files(in_file=generated_nominatim_filename, dest_filename=options.nominatim_file,
+        #                            headerf=headerf)
+        #         os.remove(generated_nominatim_filename)
+        #     except IOError:
+        #         sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
+        #         sys.exit()
+        #
+        # if options.navit_file is not None:
+        #     messages_printer.printinfo_nlf("Navit output... ")
+        #     # elapsed = datetime.now().replace(microsecond=0)
+        #     try:
+        #         write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
+        #                            headerf=headerf)
+        #     except IOError:
+        #         sys.stderr.write("\n\tERROR: Navit output failed!\n")
+        #         sys.exit()
+        #
+        # if options.index_file is not None:
+        #     messages_printer.printinfo_nlf("OsmAnd index... ")
+        #     try:
+        #         write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
+        #                            headerf=headerf)
+        #     except IOError:
+        #         sys.stderr.write("\n\tERROR: Index output failed!\n")
+        #         sys.exit()
+        #
+        # if options.nonumber_file is not None:
+        #     messages_printer.printinfo_nlf("NoNumber output... ")
+        #     try:
+        #         write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
+        #                            headerf=headerf)
+        #     except IOError:
+        #         sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
+        #         sys.exit()
+        if options.outputfile is None:
+            messages_printer.printinfo_nlf("Normal output copying to stdout ")
             try:
-                write_output_files(in_file=generated_nominatim_filename, dest_filename=options.nominatim_file,
-                                   headerf=headerf)
-                os.remove(generated_nominatim_filename)
+                elapsed = datetime.now().replace(microsecond=0)
+                shutil.copyfileobj(open(output_files_to_generate['normal'], 'r', encoding="utf-8"), sys.stdout)
+                os.remove(output_files_to_generate['normal'])
+                elapsed = datetime.now().replace(microsecond=0) - elapsed
+                sys.stderr.write("done (took " + str(elapsed) + ").\n")
             except IOError:
-                sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
-                sys.exit()            
-
-        if options.navit_file is not None:
-            messages_printer.printinfo_nlf("Navit output... ")
-            # elapsed = datetime.now().replace(microsecond=0)
-            try:
-                write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
-                                   headerf=headerf)
-            except IOError:
-                sys.stderr.write("\n\tERROR: Navit output failed!\n")
+                sys.stderr.write("\n\tERROR: Normal output failed!\n")
                 sys.exit()
-
-        if options.index_file is not None:
-            messages_printer.printinfo_nlf("OsmAnd index... ")
-            try:
-                write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
-                                   headerf=headerf)
-            except IOError:
-                sys.stderr.write("\n\tERROR: Index output failed!\n")
-                sys.exit()                        
-
-        if options.nonumber_file is not None:
-            messages_printer.printinfo_nlf("NoNumber output... ")
-            try:
-                write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
-                                   headerf=headerf)
-            except IOError:
-                sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
-                sys.exit()
-
-        messages_printer.printinfo_nlf("Normal output... ")
-        try:
-            temp_file = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
-            temp_file.close()
-            write_output_files(in_file=generated_output_filenames['normal'], dest_filename=temp_file.name,
-                               headerf=headerf)
-            messages_printer.printinfo_nlf("Normal output copying to stdout or destination file ")
-            elapsed = datetime.now().replace(microsecond=0)
-            if options.outputfile is None:
-                shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), sys.stdout)
-            else:
-                with open(options.outputfile, 'a', encoding="utf-8") as _dest:
-                    shutil.copyfileobj(open(temp_file.name, 'r', encoding="utf-8"), _dest)
-            os.remove(temp_file.name)
-            elapsed = datetime.now().replace(microsecond=0) - elapsed
-            sys.stderr.write("done (took " + str(elapsed) + ").\n")
-            elapsed = datetime.now().replace(microsecond=0) - runtime
-            messages_printer.printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
-        except IOError:
-            sys.stderr.write("\n\tERROR: Normal output failed!\n")
-            sys.exit()
-
-        os.remove(headerf)
-        for _filename in generated_output_filenames.values():
-            os.remove(_filename)
+        elapsed = datetime.now().replace(microsecond=0) - runtime
+        messages_printer.printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
     else:
         sys.stderr.write("\tINFO: Border file required when more than one area given: --border \n")
 
