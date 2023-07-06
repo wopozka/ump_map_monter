@@ -981,17 +981,14 @@ poi_types = {
 
 working_thread = os.getpid()
 workid = 0
-
-# borders = None
-# borders_resize = 1
-# nominatim_build = 0
-
 glob_progress_bar_queue = None
+
 
 def path_file(filename):
     if filename.startswith('~'):
         return os.path.abspath(os.path.join(os.getcwd(), os.path.expanduser(filename)))
     return os.path.abspath(os.path.join(os.getcwd(), filename))
+
 
 def recode(line):
     try:
@@ -1958,7 +1955,7 @@ def signbit(x):
 
 def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None):
     """
-    return either next or previous node relative to the pivot point. In some cases does not do anythnig as the next
+    return either next or previous node relative to the pivot point. In some cases does not do anything as the next
     point is the only one
     :param pivot: the node that is our reference
     :param direction: in which direction we are looking, according or against nodes order
@@ -1999,7 +1996,6 @@ def split_way(way=None, splitting_point=None, node_ways_relation=None, map_eleme
 
 
 def name_turn_restriction(rel, nodes, points):
-
     # Multiple via nodes are not approved by OSM anyway
     if 'restriction' not in rel and len(nodes) == 3:
         # No projection needed
@@ -2072,7 +2068,6 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     if rel['_c'] > 0:
         ways[rel['_members']['from'][1][0]]['_c'] += 1
         ways[rel['_members']['to'][1][0]]['_c'] += 1
-
     return nodes
 
 
@@ -2380,8 +2375,6 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
                 sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
-
-
 
     # Quirks, but do not overwrite specific values
     for way in ways:
@@ -3034,7 +3027,7 @@ def main(options, args):
         if options.nonumber_file is not None:
             output_files_to_generate['no_number'] = path_file(options.nonumber_file)
 
-        messages_printer.printinfo_nlf("Working on header and boarding points ")
+        messages_printer.printinfo_nlf("Working on header and border points ")
         elapsed = datetime.now().replace(microsecond=0)
         for filename in output_files_to_generate.values():
             with open(filename, 'w', encoding='utf-8') as header_f:
@@ -3054,14 +3047,11 @@ def main(options, args):
         sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
         if options.nominatim_file is not None and options.threadnum > 1:
-            # normal_output_queue = Queue()
-            normal_process = Process(target=output_normal_pickled,
-                                     args=(options, output_files_to_generate,),
+            normal_process = Process(target=output_normal_pickled, args=(options, output_files_to_generate,),
                                      kwargs={'pickled_filenames': pickled_filenames,
-                                     'node_generalizator': node_generalizator,
-                                     'ids_to_process': ids_to_process})
+                                             'node_generalizator': node_generalizator,
+                                             'ids_to_process': ids_to_process})
                                      #'multiprocessing_queue': normal_output_queue})
-            # nominatim_output_queue = Queue()
             nom_filename = path_file(options.nominatim_file)
             nominatim_process = Process(target=output_nominatim_pickled, args=(options, nom_filename),
                                         kwargs={'pickled_filenames': pickled_filenames,
@@ -3074,8 +3064,7 @@ def main(options, args):
             normal_process.join()
         else:
             output_normal_pickled(options, output_files_to_generate, pickled_filenames=pickled_filenames,
-                                                                     node_generalizator=node_generalizator,
-                                                                     ids_to_process=ids_to_process)
+                                  node_generalizator=node_generalizator, ids_to_process=ids_to_process)
             if options.nominatim_file is not None:
                 output_nominatim_pickled(options, pickled_filenames=pickled_filenames, border_points=bpoints,
                                          ids_to_process=ids_to_process_nominatim)
@@ -3133,6 +3122,5 @@ if __name__ == '__main__':
     parser.add_option("--regions",
                       action="store_true", dest="regions", default=False,
                       help="attach regions to cities in the index file")
-
     (options, args) = parser.parse_args()
     main(options, args)
