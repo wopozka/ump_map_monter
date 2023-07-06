@@ -2512,7 +2512,7 @@ def add_city_region_to_way(l_way):
 def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, node_generalizator=None, ids_to_process=0,
                           multiprocessing_queue=None):
     try:
-        output_files = {a: open(a, 'a', encoding='utf-8') for a in filenames_to_gen}
+        output_files = {a: open(filenames_to_gen[a], 'a', encoding='utf-8') for a in filenames_to_gen}
     except IOError as ioerror:
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
