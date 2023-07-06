@@ -3064,9 +3064,9 @@ def main(options, args):
             output_normal_pickled(options, output_files_to_generate, pickled_filenames=pickled_filenames,
                                   node_generalizator=node_generalizator, ids_to_process=ids_to_process)
             if options.nominatim_file is not None:
-                output_nominatim_pickled(options, pickled_filenames=pickled_filenames, border_points=bpoints,
+                output_nominatim_pickled(options, path_file(options.nominatim_file),
+                                         pickled_filenames=pickled_filenames, border_points=bpoints,
                                          ids_to_process=ids_to_process_nominatim)
-
         if options.outputfile is None:
             messages_printer.printinfo_nlf("Normal output copying to stdout ")
             try:
