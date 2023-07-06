@@ -3051,13 +3051,11 @@ def main(options, args):
                                      kwargs={'pickled_filenames': pickled_filenames,
                                              'node_generalizator': node_generalizator,
                                              'ids_to_process': ids_to_process})
-                                     #'multiprocessing_queue': normal_output_queue})
             nom_filename = path_file(options.nominatim_file)
             nominatim_process = Process(target=output_nominatim_pickled, args=(options, nom_filename),
                                         kwargs={'pickled_filenames': pickled_filenames,
                                                 'border_points': bpoints,
                                                 'ids_to_process': ids_to_process_nominatim})
-                                                #'multiprocessing_queue': nominatim_output_queue})
             normal_process.start()
             nominatim_process.start()
             nominatim_process.join()
