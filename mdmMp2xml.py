@@ -990,8 +990,8 @@ glob_progress_bar_queue = None
 
 def path_file(filename):
     if filename.startswith('~'):
-        return os.path.expanduser(filename)
-    return filename
+        return os.path.abspath(os.path.join(os.getcwd(), os.path.expanduser(filename)))
+    return os.path.abspath(os.path.join(os.getcwd(), filename))
 
 def recode(line):
     try:
@@ -3022,17 +3022,17 @@ def main(options, args):
         # zapisywanie pikli w normalnym trybie
         output_files_to_generate = {}
         if options.outputfile is not None:
-            output_files_to_generate['normal'] = os.path.join(os.getcwd(), path_file(options.outputfile))
+            output_files_to_generate['normal'] = path_file(options.outputfile)
         else:
             _aaa = tempfile.NamedTemporaryFile(dir=os.getcwd(), encoding='utf-8', delete=False)
             _aaa.close()
             output_files_to_generate['normal'].aaa.name
         if options.navit_file is not None:
-            output_files_to_generate['navit'] = os.path.join(os.getcwd(), path_file(options.navit_file))
+            output_files_to_generate['navit'] = path_file(options.navit_file)
         if options.index_file is not None:
-            output_files_to_generate['index'] = os.path.join(os.getcwd(), path_file(options.index_file))
+            output_files_to_generate['index'] = path_file(options.index_file)
         if options.nonumber_file is not None:
-            output_files_to_generate['no_number'] = os.path.join(os.getcwd(), path_file(options.nonumber_file))
+            output_files_to_generate['no_number'] = path_file(options.nonumber_file)
 
         messages_printer.printinfo_nlf("Working on header and boarding points ")
         elapsed = datetime.now().replace(microsecond=0)
@@ -3062,7 +3062,7 @@ def main(options, args):
                                      'ids_to_process': ids_to_process})
                                      #'multiprocessing_queue': normal_output_queue})
             # nominatim_output_queue = Queue()
-            nom_filename = os.path.join(os.getcwd(), options.nominatim_file)
+            nom_filename = path_file(options.nominatim_file)
             nominatim_process = Process(target=output_nominatim_pickled, args=(options, nom_filename),
                                         kwargs={'pickled_filenames': pickled_filenames,
                                                 'border_points': bpoints,
