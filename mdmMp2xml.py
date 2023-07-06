@@ -2508,7 +2508,6 @@ def add_city_region_to_way(l_way):
     return newway
 
 
-
 def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, node_generalizator=None, ids_to_process=0,
                           multiprocessing_queue=None):
     try:
@@ -2575,15 +2574,12 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
                 print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['normal'])
                 if 'navit' in output_files:
                     print_relation_pickled(_relation, task_id, orig_id, node_generalizator, output_files['navit'])
-    for out in output_files.values():
+    for filetype, out in output_files.items():
         out.write("</osm>\n")
         out.close()
+        messages_printer.printinfo("Generated %s file: %s" % (filetype, filenames_to_gen[filetype]))
     elapsed = datetime.now().replace(microsecond=0) - elapsed
-    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s) done (took %s)."
-                               % elapsed)
-    # return_val_dict = {a: b.name for a, b in output_files.items()}
-    # if multiprocessing_queue is not None:
-    #     multiprocessing_queue.put(return_val_dict)
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s) done (took %s)." % elapsed)
     return
 
 
@@ -2823,6 +2819,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     for g_name in post_nom_picle_files.values():
         for filenam in g_name:
             os.remove(filenam)
+    messages_printer.printinfo("Generate nominatim file: %s)." % nominatim_filename)
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     return
@@ -3039,7 +3036,7 @@ def main(options, args):
 
         messages_printer.printinfo_nlf("Working on header and boarding points ")
         elapsed = datetime.now().replace(microsecond=0)
-        for filename in output_files_to_generate:
+        for filename in output_files_to_generate.values():
             with open(filename, 'w', encoding='utf-8') as header_f:
                 try:
                     header_f.write("<?xml version='1.0' encoding='UTF-8'?>\n")
