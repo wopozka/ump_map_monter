@@ -2587,10 +2587,10 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
     return
 
 
-def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname, messages_printer=None,
-                                   node_generalizator=None):
+def output_nominatim_points_ways_preprocessing(file_g_name, points_fname, pointattrs_fname, ways_fname,
+                                               messages_printer=None, node_generalizator=None):
     """
-    Zmiana parametrów dróg i aadresow dla nominatima
+    Zmiana parametrów dróg i aadresow dla nominatima i zapis do nowych zapiklowanych plikow
     Parameters
     ----------
     file_g_name - unikatowa nazwa/numer pliku pickla w ktrym przechowywane byly dane
@@ -2600,7 +2600,7 @@ def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, 
     messages_printer - klasa obslugujaca druk informacji i ostrzezen
     node_generalizator - generalizator nodwo
 
-    Returns OrderedDict {nowa grupa: nowe dane
+    Returns OrderedDict {'points': [file1, file2, file3], 'pointsattr': [file1, file2, file3], 'ways': [file1, file2...]
     -------
 
     """
@@ -2746,13 +2746,12 @@ def output_nominatim_preprocessing(file_g_name, points_fname, pointattrs_fname, 
 
     pickled_file_names = OrderedDict()
     for f_tempname in ('points', 'pointattrs', 'ways'):
-        aaa_fname = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False)
+        aaa_fname = tempfile.NamedTemporaryFile(mode='w', encoding="utf-8", delete=False, dir=os.getcwd())
         aaa_fname.close()
         pickled_file_names[f_tempname] = aaa_fname.name
     save_pickled_data(pickled_file_names, {'points': local_points, 'pointattrs': local_pointattrs, 'ways': local_ways})
     node_generalizator.insert_points(file_g_name, local_points)
     node_generalizator.insert_ways(file_g_name, local_ways)
-
     return pickled_file_names
 
 
@@ -2776,9 +2775,9 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     """
     if border_points is None:
         border_points = []
-    elapsed = datetime.now().replace(microsecond=0)
     messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
-    messages_printer.printinfo("Generating nominatim output. Preprocessing %s ids" % ids_to_process)
+    elapsed = datetime.now().replace(microsecond=0)
+    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
     node_generalizator = NodeGeneralizator()
     node_generalizator.insert_borders(border_points)
     post_nom_picle_files = {'points': [], 'pointattrs': [], 'ways': []}
@@ -2786,14 +2785,11 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
         local_points = pickled_filenames['points'][task_id]
         local_pointattrs = pickled_filenames['pointattrs'][task_id]
         local_ways = pickled_filenames['ways'][task_id]
-        ppm = output_nominatim_preprocessing(task_id, local_points, local_pointattrs, local_ways,
-                                                                    messages_printer=messages_printer,
-                                                                    node_generalizator=node_generalizator)
+        ppm = output_nominatim_points_ways_preprocessing(task_id, local_points, local_pointattrs, local_ways,
+                                                         messages_printer=messages_printer,
+                                                         node_generalizator=node_generalizator)
         for tmp_elem in post_nom_picle_files:
             post_nom_picle_files[tmp_elem].append(ppm[tmp_elem])
-
-    elapsed = datetime.now().replace(microsecond=0) - elapsed
-    messages_printer.printinfo("Preprocessing nominatim output done (took %s)." % elapsed)
 
     try:
         out = open(nominatim_filename, 'a', encoding='utf-8')
@@ -2801,8 +2797,6 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
         sys.stderr.write("\tERROR: Can't open normal output file " + out.name + "!\n")
         sys.exit()
 
-    elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
     for task_id, pickled_point in enumerate(post_nom_picle_files['points']):
         with open(pickled_point, 'rb') as p_file:
             task_id_points = pickle.load(p_file)
@@ -2826,25 +2820,11 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
                 print_way_pickled(_way, task_id, orig_id, node_generalizator, out)
     out.write("</osm>\n")
     out.close()
-    elapsed = datetime.now().replace(microsecond=0) - elapsed
-    messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     for g_name in post_nom_picle_files.values():
         for filenam in g_name:
             os.remove(filenam)
-    # if multiprocessing_queue is not None:
-    #     multiprocessing_queue.put(out.name)
-    return
-
-
-def write_output_files(in_file='', dest_filename='', headerf=''):
-    elapsed = datetime.now().replace(microsecond=0)
-    destination = open(dest_filename, 'w', encoding="utf-8")
-    shutil.copyfileobj(open(headerf, 'r', encoding="utf-8"), destination)
-    shutil.copyfileobj(open(in_file, 'r', encoding="utf-8"), destination)
-    destination.write("</osm>\n")
-    destination.close()
     elapsed = datetime.now().replace(microsecond=0) - elapsed
-    sys.stderr.write(dest_filename + " ready (took " + str(elapsed) + ").\n")
+    messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     return
 
 
@@ -3095,55 +3075,14 @@ def main(options, args):
             nominatim_process.start()
             nominatim_process.join()
             normal_process.join()
-            # generated_nominatim_filename = nominatim_output_queue.get()
-            # generated_output_filenames = normal_output_queue.get()
         else:
             output_normal_pickled(options, output_files_to_generate, pickled_filenames=pickled_filenames,
                                                                      node_generalizator=node_generalizator,
                                                                      ids_to_process=ids_to_process)
             if options.nominatim_file is not None:
-                generated_nominatim_filename = output_nominatim_pickled(options, pickled_filenames=pickled_filenames,
-                                                                        border_points=bpoints,
-                                                                        ids_to_process=ids_to_process_nominatim)
+                output_nominatim_pickled(options, pickled_filenames=pickled_filenames, border_points=bpoints,
+                                         ids_to_process=ids_to_process_nominatim)
 
-
-        # if options.nominatim_file is not None:
-        #     messages_printer.printinfo_nlf("Nominatim output... ")
-        #     try:
-        #         write_output_files(in_file=generated_nominatim_filename, dest_filename=options.nominatim_file,
-        #                            headerf=headerf)
-        #         os.remove(generated_nominatim_filename)
-        #     except IOError:
-        #         sys.stderr.write("\n\tERROR: Nominatim output failed!\n")
-        #         sys.exit()
-        #
-        # if options.navit_file is not None:
-        #     messages_printer.printinfo_nlf("Navit output... ")
-        #     # elapsed = datetime.now().replace(microsecond=0)
-        #     try:
-        #         write_output_files(in_file=generated_output_filenames['navit'], dest_filename=options.navit_file,
-        #                            headerf=headerf)
-        #     except IOError:
-        #         sys.stderr.write("\n\tERROR: Navit output failed!\n")
-        #         sys.exit()
-        #
-        # if options.index_file is not None:
-        #     messages_printer.printinfo_nlf("OsmAnd index... ")
-        #     try:
-        #         write_output_files(in_file=generated_output_filenames['index'], dest_filename=options.index_file,
-        #                            headerf=headerf)
-        #     except IOError:
-        #         sys.stderr.write("\n\tERROR: Index output failed!\n")
-        #         sys.exit()
-        #
-        # if options.nonumber_file is not None:
-        #     messages_printer.printinfo_nlf("NoNumber output... ")
-        #     try:
-        #         write_output_files(in_file=generated_output_filenames['no_number'], dest_filename=options.nonumber_file,
-        #                            headerf=headerf)
-        #     except IOError:
-        #         sys.stderr.write("\n\tERROR: NoNumber output failed!\n")
-        #         sys.exit()
         if options.outputfile is None:
             messages_printer.printinfo_nlf("Normal output copying to stdout ")
             try:
