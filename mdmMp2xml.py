@@ -1009,10 +1009,11 @@ def lats_longs_from_line(nodes_str):
     longs = []
     for la, element in enumerate(nodes_str.split(',')):
         floor, fractional = element.strip('()').split('.')
+        coord = floor + '.' + fractional.ljust(6, '0')
         if la % 2:
-            longs.append(floor + '.' + fractional.ljust(6, '0'))
+            longs.append(coord)
         else:
-            lats.append(floor + '.' + fractional.ljust(6, '0'))
+            lats.append(coord)
     return tuple(zip(lats, longs))
 
 
