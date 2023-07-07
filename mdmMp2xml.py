@@ -43,7 +43,6 @@ import os.path
 from functools import partial
 import copy
 import tempfile
-from multiprocessing import Queue
 
 
 class MylistB(object):
