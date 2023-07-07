@@ -120,3 +120,16 @@ def test_normalization_ids(target, answer):
         ids_normalizer.get_relation_id('filename1', relations_list['filename1'].index('1_relation0'))
         ids_normalizer.get_relation_id('filename2', relations_list['filename2'].index('2_relation2'))
         ids_normalizer.get_relation_id('filename3', relations_list['filename3'].index('3_relation9'))
+
+TEST_LATS_LONGS_FROM_LINE = (
+    ('(51.11111,21.11111),(52.11111,22.11111),(53.11111,23.11111),(54.11111,24.11111)', (('51.111110', '21.111110'), ('52.111110', '22.111110'), ('53.111110', '23.111110'), ('54.111110', '24.111110')),),
+    ('(51.111111,21.111111),(52.111111,22.111111)', (('51.111111', '21.111111'), ('52.111111', '22.111111')),),
+    ('(51.1111111,21.1111111),(52.1111111,22.1111111)', (('51.1111111', '21.1111111'), ('52.1111111', '22.1111111')),),
+    ('(5.11111,2.11111),(5.11111,2.11111)', (('5.111110', '2.111110'), ('5.111110','2.111110')),),
+    ('(-5.11111,-2.11111),(-5.11111,-2.11111)', (('-5.111110', '-2.111110'), ('-5.111110', '-2.111110')),),
+    ('(-51.11111,-25.11111),(-51.11111,-25.11111)', (('-51.111110', '-25.111110'), ('-51.111110', '-25.111110')),),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_LATS_LONGS_FROM_LINE)
+def test_lats_longs_from_string(target, answer):
+    assert mdmMp2xml.lats_longs_from_line(target) == answer

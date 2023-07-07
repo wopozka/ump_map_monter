@@ -1005,27 +1005,15 @@ def bpoints_append(node, bpoints):
         
 
 def lats_longs_from_line(nodes_str):
-    nodes = []
-    for element in nodes_str.split(','):
-        element = element.strip('()')
-        nodes.append(element)
-
     lats = []
     longs = []
-
-    for la in nodes[::2]:
-        l = len(la)
-        if l < 9:
-            la += '0' * (9 - l)
-        lats.append(la)
-
-    for lo in nodes[1::2]:
-        l = len(lo)
-        if l < 9:
-            lo += '0' * (9 - l)
-        longs.append(lo)
+    for la, element in enumerate(nodes_str.split(',')):
+        floor, fractional = element.strip('()').split('.')
+        if la % 2:
+            longs.append('.'.join((floor, fractional.ljust(6, '0'))))
+        else:
+            lats.append('.'.join((floor, fractional.ljust(6, '0'))))
     return tuple(zip(lats, longs))
-    # return lats, longs
 
 
 def points_from_bline(points_str):
