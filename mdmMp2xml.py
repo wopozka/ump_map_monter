@@ -3006,9 +3006,9 @@ def main(options, args):
         if options.outputfile is not None:
             output_files_to_generate['normal'] = path_file(options.outputfile)
         else:
-            _aaa = tempfile.NamedTemporaryFile(dir=os.getcwd(), encoding='utf-8', delete=False)
+            _aaa = tempfile.NamedTemporaryFile(mode='w', dir=os.getcwd(), encoding='utf-8', delete=False)
             _aaa.close()
-            output_files_to_generate['normal'].aaa.name
+            output_files_to_generate['normal'] = _aaa.name
         if options.navit_file is not None:
             output_files_to_generate['navit'] = path_file(options.navit_file)
         if options.index_file is not None:
