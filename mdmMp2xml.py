@@ -1007,7 +1007,7 @@ def lats_longs_from_line(nodes_str):
     lats = []
     longs = []
     for la, element in enumerate(nodes_str.split(',')):
-        floor, fractional = element.strip('()').split('.')
+        floor, fractional = element.strip('()').split('.', 1)
         coord = floor + '.' + fractional.ljust(6, '0')
         if la % 2:
             longs.append(coord)
