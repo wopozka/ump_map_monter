@@ -2800,7 +2800,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     for g_name in post_nom_picle_files.values():
         for filenam in g_name:
             os.remove(filenam)
-    messages_printer.printinfo("Generate nominatim file: %s)." % nominatim_filename)
+    messages_printer.printinfo("Generated nominatim file: %s." % nominatim_filename)
     elapsed = datetime.now().replace(microsecond=0) - elapsed
     messages_printer.printinfo("Generating nominatim output done (took %s)." % elapsed)
     return
@@ -3014,6 +3014,8 @@ def main(options, args):
             output_files_to_generate['index'] = path_file(options.index_file)
         if options.nonumber_file is not None:
             output_files_to_generate['no_number'] = path_file(options.nonumber_file)
+        if options.nominatim_file is not None:
+            output_files_to_generate['nominatim'] = path_file(options.nominatim_file)
 
         messages_printer.printinfo_nlf("Working on header and border points ")
         elapsed = datetime.now().replace(microsecond=0)
@@ -3035,11 +3037,11 @@ def main(options, args):
         sys.stderr.write("written (took " + str(elapsed) + ").\n")
 
         if options.nominatim_file is not None and options.threadnum > 1:
+            nom_filename = output_files_to_generate.pop('nominatim')
             normal_process = Process(target=output_normal_pickled, args=(options, output_files_to_generate,),
                                      kwargs={'pickled_filenames': pickled_filenames,
                                              'node_generalizator': node_generalizator,
                                              'ids_to_process': ids_to_process})
-            nom_filename = path_file(options.nominatim_file)
             nominatim_process = Process(target=output_nominatim_pickled, args=(options, nom_filename),
                                         kwargs={'pickled_filenames': pickled_filenames,
                                                 'border_points': bpoints,
@@ -3049,12 +3051,12 @@ def main(options, args):
             nominatim_process.join()
             normal_process.join()
         else:
+            if options.nominatim_file is not None:
+                nom_filename = output_files_to_generate.pop('nominatim')
+                output_nominatim_pickled(options, nom_filename, pickled_filenames=pickled_filenames,
+                                         border_points=bpoints, ids_to_process=ids_to_process_nominatim)
             output_normal_pickled(options, output_files_to_generate, pickled_filenames=pickled_filenames,
                                   node_generalizator=node_generalizator, ids_to_process=ids_to_process)
-            if options.nominatim_file is not None:
-                output_nominatim_pickled(options, path_file(options.nominatim_file),
-                                         pickled_filenames=pickled_filenames, border_points=bpoints,
-                                         ids_to_process=ids_to_process_nominatim)
         if options.outputfile is None:
             messages_printer.printinfo_nlf("Normal output copying to stdout ")
             try:
