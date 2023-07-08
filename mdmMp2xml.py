@@ -1007,8 +1007,12 @@ def lats_longs_from_line(nodes_str):
     lats = []
     longs = []
     for la, element in enumerate(nodes_str.split(',')):
-        floor, fractional = element.strip('()').split('.', 1)
-        coord = floor + '.' + fractional.ljust(6, '0')
+        if '.' in element:
+            floor, fractional = element.strip('()').split('.', 1)
+            coord = floor + '.' + fractional.ljust(6, '0')
+        else:
+            coord = element.ljust(element.ljust(9, '0'))
+            print('Dziwna linia Data: %s' % nodes_str, file=sys.stderr)
         if la % 2:
             longs.append(coord)
         else:
