@@ -603,9 +603,9 @@ poi_types = {
     0x17105: ["highway",  "stop"],
     0x1711: ["note",     "FIXME"],
     0x1712: ["landuse",  "construction"],
-    # 0x1714: ["traffic_sign",  "maxweight"],
-    # 0x1715: ["traffic_sign",  "maxwight"],
-    # 0x1716: ["traffic_sign",  "maxheight"],
+    0x1714: ["traffic_sign",  "maxweight"],
+    0x1715: ["traffic_sign",  "maxwight"],
+    0x1716: ["traffic_sign",  "maxheight"],
     0x170a: ["note",     "FIXME: verify"],
     0x170d: ["note",     "FIXME"],
     0x1805: ["man_made", "beacon", "traffic_signals"],
@@ -985,6 +985,12 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
+poi_types_tags_from_label = {
+    0x1714: ("maxweight",),
+    0x1715: ("maxwight",),
+    0x1716: ("maxheight",)
+}
+
 working_thread = os.getpid()
 workid = 0
 glob_progress_bar_queue = None
@@ -1147,6 +1153,11 @@ def unproj(lat, lon):
 def tag(way, pairs):
     for key, value in zip(pairs[::2], pairs[1::2]):
         way[key] = value
+
+
+def add_tags_from_name(way, tags):
+    for tag in tags:
+        way[tag] = way['name']
 
 
 def polygon_make_ccw(shape, c_points):
@@ -1725,6 +1736,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 # obsluga bledow Type=
                 if t in poi_types:
                     tag(way, poi_types[t])
+                    if t in poi_types_tags_from_label:
+                        add_tags_from_name(way, poi_types_tags_from_label[t])
                 else:
                     messages_printer.printerror("Unknown poi type " + hex(t))
 
@@ -1735,9 +1748,6 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 else:
                     if 'ump:typ' in way and way['ump:typ'] == "24H":
                         way['opening_hours'] = "24/7"
-                # dodajemy maxweight, maxwidth, maxheight ale jeszcze nie wiem jak
-                # placeholder
-                # pooprawa nazw ulic dla POI (gdy wpisane sa dwie ulice przedzielone slashem)
                 if 'addr:street' in way:
                     match = re.match('(.*)[,/] *(.*)', way['addr:street'])
                     if match:
@@ -3047,7 +3057,7 @@ def main(options, args):
                     sys.stderr.write("\n\tERROR: Can't write header file for %s!\n" % f_except.filename)
                     sys.exit()
         elapsed = datetime.now().replace(microsecond=0) - elapsed
-        sys.stderr.write("written (took " + str(elapsed) + ").\n")
+        messages_printer.printinfo_nlf("written (took " + str(elapsed) + ").\n")
 
         if options.nominatim_file is not None and options.threadnum > 1:
             nom_filename = output_files_to_generate.pop('nominatim')
@@ -3077,9 +3087,9 @@ def main(options, args):
                 shutil.copyfileobj(open(output_files_to_generate['normal'], 'r', encoding="utf-8"), sys.stdout)
                 os.remove(output_files_to_generate['normal'])
                 elapsed = datetime.now().replace(microsecond=0) - elapsed
-                sys.stderr.write("done (took " + str(elapsed) + ").\n")
+                messages_printer.printinfo_nlf("done (took " + str(elapsed) + ").\n")
             except IOError:
-                sys.stderr.write("\n\tERROR: Normal output failed!\n")
+                messages_printer.printinfo_nlf("\n\tERROR: Normal output failed!\n")
                 sys.exit()
         elapsed = datetime.now().replace(microsecond=0) - runtime
         messages_printer.printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
