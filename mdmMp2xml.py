@@ -1156,6 +1156,8 @@ def tag(way, pairs):
 
 
 def add_tags_from_name(way, tags):
+    if 'name' not in way:
+        return
     for tag in tags:
         way[tag] = way['name']
 
