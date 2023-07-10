@@ -603,6 +603,9 @@ poi_types = {
     0x17105: ["highway",  "stop"],
     0x1711: ["note",     "FIXME"],
     0x1712: ["landuse",  "construction"],
+    # 0x1714: ["traffic_sign",  "maxweight"],
+    # 0x1715: ["traffic_sign",  "maxwight"],
+    # 0x1716: ["traffic_sign",  "maxheight"],
     0x170a: ["note",     "FIXME: verify"],
     0x170d: ["note",     "FIXME"],
     0x1805: ["man_made", "beacon", "traffic_signals"],
@@ -1732,7 +1735,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 else:
                     if 'ump:typ' in way and way['ump:typ'] == "24H":
                         way['opening_hours'] = "24/7"
-
+                # dodajemy maxweight, maxwidth, maxheight ale jeszcze nie wiem jak
+                # placeholder
                 # pooprawa nazw ulic dla POI (gdy wpisane sa dwie ulice przedzielone slashem)
                 if 'addr:street' in way:
                     match = re.match('(.*)[,/] *(.*)', way['addr:street'])
