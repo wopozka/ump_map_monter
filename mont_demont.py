@@ -2927,7 +2927,7 @@ class plikPNT(object):
             zawartoscPliku = zawartoscPliku[indeksPierwszegoPoprawnegoElementu:]
             return zawartoscPliku
         else:
-            return zawartoscPliku
+            return []
 
     def ustalDokladnosc(self, LiniaZPliku):
         """

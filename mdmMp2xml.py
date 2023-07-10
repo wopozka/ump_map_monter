@@ -264,30 +264,34 @@ class NodesToWayNotFound(ValueError):
 
 
 class MessagePrinters(object):
-    def __init__(self, workid='', verbose=False):
+    def __init__(self, workid='', working_file='', verbose=False):
         self.working_thread = os.getpid()
         self.workid = workid
+        self.working_file = ''
+        if working_file:
+            self.working_file = ': ' + working_file
         self.verbose = verbose
         self.warning_num = 0
         self.error_num = 0
+        self.msg_core = str(self.working_thread) + ":" + str(self.workid) + self.working_file + ":"
 
     def printdebug(self, p_string):
         if self.verbose:
-            sys.stderr.write("\tDEBUG: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+            sys.stderr.write("\tDEBUG: " + self.msg_core + str(p_string) + "\n")
 
     def printerror(self, p_string):
         self.error_num += 1
-        sys.stderr.write("\tERROR: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+        sys.stderr.write("\tERROR: " + self.msg_core + str(p_string) + "\n")
 
     def printinfo(self, p_string):
-        sys.stderr.write("\tINFO: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+        sys.stderr.write("\tINFO: " + self.msg_core + str(p_string) + "\n")
 
     def printinfo_nlf(self, p_string):
-        sys.stderr.write("\tINFO: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string))
+        sys.stderr.write("\tINFO: " + self.msg_core + str(p_string) + "\n")
 
     def printwarn(self, p_string):
         self.warning_num += 1
-        sys.stderr.write("\tWARNING: " + str(self.working_thread) + ":" + str(self.workid) + ":" + str(p_string) + "\n")
+        sys.stderr.write("\tWARNING: " + self.msg_core + str(p_string) + "\n")
 
     def get_worning_num(self):
         return self.warning_num
@@ -2501,7 +2505,7 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
     except IOError as ioerror:
         sys.stderr.write("\tERROR: Can't open normal output file " + ioerror.filename + "!\n")
         sys.exit()
-    messages_printer = MessagePrinters(workid='1', verbose=options.verbose)
+    messages_printer = MessagePrinters(workid='1', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
     messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids." % ids_to_process)
     # printed_points = set()
@@ -2757,7 +2761,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     """
     if border_points is None:
         border_points = []
-    messages_printer = MessagePrinters(workid='2', verbose=options.verbose)
+    messages_printer = MessagePrinters(workid='2', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
     messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
     node_generalizator = NodeGeneralizator()
@@ -2818,7 +2822,7 @@ def worker(task, options, border_points=None):
     global glob_progress_bar_queue
     if border_points is None:
         border_points = list()
-    messages_printer = MessagePrinters(workid=task['idx'], verbose=options.verbose)
+    messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
     workid = task['idx']
     num_lines_to_process = 0
         
