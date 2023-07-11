@@ -26,6 +26,7 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+
 class Mkgmap(object):
     def __init__(self, args, zmienne):
         self.args = args
@@ -768,7 +769,7 @@ class UstawieniaPoczatkowe(object):
             self.Kodowanie = 'cp1250'
         self.ReadErrors = 'ignore'
         self.WriteErrors = 'ignore'
-        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\mkgmap.jar'
+        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\\mkgmap.jar'
         self.wczytajKonfiguracje()
 
     def ustaw_katalog_home(self, katalog_home):
@@ -3009,16 +3010,16 @@ def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow, err_
         with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
     except FileNotFoundError:
-        err_out_writer.stderrwrite('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except PermissionError:
-        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except IOError:
-        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     if definicje_aliasow_z_pliku:
-        return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
+        return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer)
     return {}
 
 
@@ -3205,7 +3206,7 @@ def montujpliki(args, naglowek_mapy=''):
     # wlasnorecznie zdefiniowane aliasy
     wlasne_aliasy = {}
     if hasattr(args, 'wlasne_typy') and args.wlasne_typy:
-        wlasne_aliasy = wczytaj_json_i_zwroc_wlasne_definicje_aliasow(args.wlasne_typy)
+        wlasne_aliasy = wczytaj_json_i_zwroc_wlasne_definicje_aliasow(args.wlasne_typy, stderr_stdout_writer)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer, wlasny_alias2type=wlasne_aliasy)
     try:
         os.remove(os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
@@ -4022,7 +4023,7 @@ def kompiluj_mape(args):
                 skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
                 break
         if not skrot_kraju:
-            stderr_stdout_writer.stderrwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
+            stderr_stdout_writer.stderrorwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
         else:
             pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
@@ -4048,11 +4049,11 @@ def kompiluj_mape(args):
     process = subprocess.Popen(java_call_args)
     process.wait()
     if args.format_mapy == 'gmapsupp':
-        if os.path.exists(gmapsupp_img_path ):
+        if os.path.exists(gmapsupp_img_path):
             stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal plik %s' % gmapsupp_img_path)
         else:
-            stderr_stdout_writer.stderrwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
-                                             gmapsupp_img_path)
+            stderr_stdout_writer.stderrorwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
+                                               gmapsupp_img_path)
 
     else:
         if os.path.exists(gmapi_folder_path):
