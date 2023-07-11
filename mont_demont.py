@@ -348,9 +348,17 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]'):
             return ''
-        for tmp_label in ('Label', 'adrLabel'):
+        for tmp_label in ('adrLabel', 'Label'):
             if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
-                return ''
+                if dane_do_zapisu[tmp_label].startswith('~'):
+                    if ' ' in dane_do_zapisu[tmp_label]:
+                        dane_do_zapisu[tmp_label] = dane_do_zapisu[tmp_label].split(' ', 1)[-1].strip()
+                    else:
+                        continue
+                if dane_do_zapisu[tmp_label].startswith('{'):
+                    dane_do_zapisu[tmp_label] = dane_do_zapisu[tmp_label].split('}', 1)[-1].strip()
+                if dane_do_zapisu[tmp_label]:
+                    return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
             data = dane_do_zapisu[[a for a in dane_do_zapisu if a.startswith('Data')][0]][1:-1].split('),(')
             # teraz trzeba policzyc przy ktorych wezlach mamy problem
