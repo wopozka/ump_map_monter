@@ -49,6 +49,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.progress_bar = dict(dict())
             #  dla progress_bar_queue uzywamy zmiennej globalnej, znacznie upraszcza obsluge komunikacji multiprocessing
             self.progress_bar_queue = glob_progress_bar_queue
+            self.size_var = {'height': 0, 'width': 0}
 
             body = tkinter.Frame(self)
             # self.initial_focus = self
@@ -117,6 +118,7 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             textDistanceFrame.pack(fill='x')
 
             progress_bar_lframe = tkinter.ttk.LabelFrame(body, text=u'Postęp przetwarzania plików mp')
+            progress_bar_lframe.bind("<Configure>", self.window_resized)
             progress_bar_lframe.pack(fill='both', expand=1, anchor='n')
             self.progress_bar_canv_frame = tkinter.Frame(progress_bar_lframe)
             self.progress_bar_canv_frame.pack(fill='both', side='left', expand=1)
@@ -191,6 +193,9 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         for obszar in self.obszary:
             self.progress_bar[obszar]['mp'].configure(length=width-20)
             self.progress_bar[obszar]['drp'].configure(length=width-20)
+
+    def window_resized(self, event):
+        print(event.height, event.width)
 
     def update_me(self):
         # obsługa labelek stanóœ oraz przełączanie następnego etapu
