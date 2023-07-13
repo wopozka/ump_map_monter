@@ -1676,8 +1676,24 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 pass
             else:
                 raise ParsingError("Unknown key " + key + " in polyline / polygon")
-    return way
+    return convert_tag_postprocess(way)
 
+def convert_tag_postprocess(way):
+    if 'ump:type' in way:
+        if way['ump:type'] in ('0x6616', '0x6617'):
+            # for peeks and valleys elevation in meters is stored as streetdesc, copy it
+            if 'addr:street' in way and way['addr:street']:
+                way['ele'] = way['addr:street']
+        elif way['ump:type'] == '0x1714':
+            if 'name' in way:
+                way['maxweight'] = way['name']
+        elif way['ump:type'] == '0x1715':
+            if 'name' in way:
+                way['maxwight'] = way['name']
+        elif way['ump:type'] == '0x1716':
+            if 'name' in way:
+                way['maxheight'] = way['name']
+    return way
 
 def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
     if border_points is None:
@@ -1738,8 +1754,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 # obsluga bledow Type=
                 if t in poi_types:
                     tag(way, poi_types[t])
-                    if t in poi_types_tags_from_label:
-                        add_tags_from_name(way, poi_types_tags_from_label[t])
+                    # if t in poi_types_tags_from_label:
+                    #     add_tags_from_name(way, poi_types_tags_from_label[t])
                 else:
                     messages_printer.printerror("Unknown poi type " + hex(t))
 
