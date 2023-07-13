@@ -3059,7 +3059,7 @@ def main(options, args):
                     sys.stderr.write("\n\tERROR: Can't write header file for %s!\n" % f_except.filename)
                     sys.exit()
         elapsed = datetime.now().replace(microsecond=0) - elapsed
-        messages_printer.printinfo_nlf("written (took " + str(elapsed) + ").\n")
+        messages_printer.printinfo_nlf("written (took " + str(elapsed) + ").")
 
         if options.nominatim_file is not None and options.threadnum > 1:
             nom_filename = output_files_to_generate.pop('nominatim')
