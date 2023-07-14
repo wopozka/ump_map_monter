@@ -985,11 +985,11 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
-poi_types_tags_from_label = {
-    0x1714: ("maxweight",),
-    0x1715: ("maxwight",),
-    0x1716: ("maxheight",)
-}
+# poi_types_tags_from_label = {
+#     0x1714: ("maxweight",),
+#     0x1715: ("maxwight",),
+#     0x1716: ("maxheight",)
+# }
 
 working_thread = os.getpid()
 workid = 0
@@ -1155,11 +1155,11 @@ def tag(way, pairs):
         way[key] = value
 
 
-def add_tags_from_name(way, tags):
-    if 'name' not in way:
-        return
-    for tag in tags:
-        way[tag] = way['name']
+# def add_tags_from_name(way, tags):
+#     if 'name' not in way:
+#         return
+#     for tag in tags:
+#         way[tag] = way['name']
 
 
 def polygon_make_ccw(shape, c_points):
@@ -1676,9 +1676,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 pass
             else:
                 raise ParsingError("Unknown key " + key + " in polyline / polygon")
-    return convert_tag_postprocess(way)
+    return way
 
-def convert_tag_postprocess(way):
+
+def postprocess_poi_tags(way):
     if 'ump:type' in way:
         if way['ump:type'] in ('0x6616', '0x6617'):
             # for peeks and valleys elevation in meters is stored as streetdesc, copy it
@@ -1693,6 +1694,20 @@ def convert_tag_postprocess(way):
         elif way['ump:type'] == '0x1716':
             if 'name' in way:
                 way['maxheight'] = way['name']
+
+    # Label=Supermarket (24h), Typ=24H
+    if 'name' in way and (way['name'].find('(24h)') > -1 or way['name'].find('(24H)') > -1 or
+                          way['name'].find('{24h}') > -1 or way['name'].find('{24H}') > -1):
+        way['opening_hours'] = "24/7"
+    else:
+        if 'ump:typ' in way and way['ump:typ'] == "24H":
+            way['opening_hours'] = "24/7"
+    if 'addr:street' in way:
+        match = re.match('(.*)[,/] *(.*)', way['addr:street'])
+        if match:
+            way['addr:street'] = match.group(2)
+            # if 'addr:housenumber' in way:
+            # way['addr:housenumber'] += ''.join(' (', match.group(1), ')')
     return way
 
 def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
@@ -1754,27 +1769,11 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 # obsluga bledow Type=
                 if t in poi_types:
                     tag(way, poi_types[t])
-                    # if t in poi_types_tags_from_label:
-                    #     add_tags_from_name(way, poi_types_tags_from_label[t])
                 else:
                     messages_printer.printerror("Unknown poi type " + hex(t))
-
-                # Label=Supermarket (24h), Typ=24H
-                if 'name' in way and (way['name'].find('(24h)') > -1 or way['name'].find('(24H)') > -1 or
-                                      way['name'].find('{24h}') > -1 or way['name'].find('{24H}') > -1):
-                    way['opening_hours'] = "24/7"
-                else:
-                    if 'ump:typ' in way and way['ump:typ'] == "24H":
-                        way['opening_hours'] = "24/7"
-                if 'addr:street' in way:
-                    match = re.match('(.*)[,/] *(.*)', way['addr:street'])
-                    if match:
-                        way['addr:street'] = match.group(2)
-                        # if 'addr:housenumber' in way:
-                        # way['addr:housenumber'] += ''.join(' (', match.group(1), ')')
+                way = postprocess_poi_tags(way)
 
             elif feat == Features.polyline:
-
                 # TxF: tu potrzebna do wlasciwego indeksowania obsluga przedrostkow
                 if 'name' in way and cut_prefix(way['name']) != way['name']:
                     way['short_name'] = cut_prefix(way['name'])
