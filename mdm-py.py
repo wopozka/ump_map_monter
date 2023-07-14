@@ -60,7 +60,7 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
     :return (pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami)
     """
     pliki_z_niepoprawnymi_kluczami = defaultdict(lambda: set())
-    pliki_z_konfliktami = {}
+    pliki_z_konfliktami = set()
     for n_pliku in pliki_do_sprawdzenia:
         nazwa_pliku = os.path.join(zmienne.KatalogzUMP, n_pliku)
         with open(nazwa_pliku, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_w_cvs:
@@ -84,6 +84,7 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
                         if not klucz_z_numerem_znaleziony:
                             pliki_z_niepoprawnymi_kluczami[n_pliku].add(klucz)
     return pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami
+
 
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
 
@@ -153,7 +154,7 @@ class PaczujResult(tkinter.Toplevel):
     def wypelnij_spaczowane_pliki(self):
         canvas_i_scroll_pionowy = tkinter.Frame(self.body)
         canvas_i_scroll_pionowy.pack(expand=True, fill='both')
-        ramka_pliku_canvas = tkinter.Canvas(canvas_i_scroll_pionowy, width=900, heigh=500)
+        ramka_pliku_canvas = tkinter.Canvas(canvas_i_scroll_pionowy, width=900, height=500)
         ramka_pliku_canvas.pack(side='left', anchor='n')
         belka_przewijania_pionowa = tkinter.ttk.Scrollbar(canvas_i_scroll_pionowy, orient='vertical',
                                                           command=ramka_pliku_canvas.yview)
@@ -810,6 +811,7 @@ class ConfigWindow(tkinter.Toplevel):
             self.mkgmmap_jar_path.set(aaa)
             self.Konfiguracja.mkgmap_jar_path = aaa
 
+
 class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało
     def __init__(self):
@@ -856,13 +858,11 @@ class mdmConfig(object):
         setattr(args, 'trybosmand', False)
         return args
 
-
     def zwroc_args_do_mont(self):
         args = self.zwroc_args(self.mont_opcje)
         args = self.zwroc_args(self.mont_demont_opcje, args)
         args.plikmp = 'wynik.mp'
         return args
-
 
     def zwroc_args_do_demont(self):
         args = self.zwroc_args(self.demont_opcje)
@@ -888,7 +888,6 @@ class mdmConfig(object):
 
     def zwroc_args_dla_rozdzialu_klas(self):
         return Argumenty()
-
 
     def zwroc_args(self, argumenty, args_=None):
         if args_ is None:
@@ -1379,7 +1378,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
             thread = threading.Thread(target=self.cvsci, args=(obszary, message, self.stopthreadqueue,
                                                                self.progreststartstopqueue))
         thread.start()
-            # self.cvsci(self.args.obszary,self.args.message)
+        # self.cvsci(self.args.obszary,self.args.message)
         # mont_demont_py.cvsup(self.args)
         self.progres_start_stop_check()
         self.wait_window(self)
@@ -1469,7 +1468,6 @@ class cvsOutputReceaver(tkinter.Toplevel):
         return 0
 
     def apply(self):
-
         pass  # override
 
     def cvsci(self, obszary, message, stopthreadqueue, progreststartstopqueue):
@@ -2503,26 +2501,25 @@ class mdm_gui_py(tkinter.Tk):
             self.autopolypoly.configure(background='orange red')
 
     def montuj_shortcut(self, event):
-
-        if (str(self.montButton['state']) != 'disabled'):
+        if str(self.montButton['state']) != 'disabled':
             self.OnButtonClickMont()
         return 0
 
     def demontuj_shortcut(self, event):
-        if (str(self.demontButton['state']) != 'disabled'):
+        if str(self.demontButton['state']) != 'disabled':
             self.OnButtonClickDemont()
         return 0
 
     def sprawdz_shortcut(self, event):
-        if (str(self.sprawdzButton['state']) != 'disabled'):
+        if str(self.sprawdzButton['state']) != 'disabled':
             self.OnButtonClickSprawdz()
 
     def edit_shortcut(self, event):
-        if (str(self.editButton['state']) != 'disabled'):
+        if str(self.editButton['state']) != 'disabled':
             self.OnButtonClickEdit()
 
     def montuj_edit_shortcut(self, event):
-        if (str(self.montButton['state']) != 'disabled'):
+        if str(self.montButton['state']) != 'disabled':
             self.OnButtonClickMont()
             thread = threading.Thread(target=self.help_function_montuj_edit_shortcut, args=())
             thread.start()
@@ -2606,7 +2603,6 @@ class mdm_gui_py(tkinter.Tk):
         else:
             self.montButton.configure(state='disabled')
         return 0
-
 
     def OnButtonClickOdswiezListeObszarow(self):
         self.GenerujListeObszarow()

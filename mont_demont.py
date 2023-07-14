@@ -26,6 +26,7 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+
 class Mkgmap(object):
     def __init__(self, args, zmienne):
         self.args = args
@@ -64,7 +65,7 @@ class Mkgmap(object):
             pass
         else:
             if int(self.args.max_jobs):
-                java_call_args += ['--max-jobs=' + args.max_jobs]
+                java_call_args += ['--max-jobs=' + self.args.max_jobs]
         nazwa_map = 'UMP mkgmap ' + date.today().strftime('%d%b%y')
         java_call_args += ['--family-name=' + nazwa_map, '--series-name=' + nazwa_map]
         plik_licencji = os.path.join(os.path.join(self.zmienne.KatalogzUMP, 'narzedzia'), 'UMP_mkgmap_licencja.txt')
@@ -348,9 +349,17 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_label_dla_drogi_z_numerami(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] in ('[POLYGON]', '[POI]'):
             return ''
-        for tmp_label in ('Label', 'adrLabel'):
+        for tmp_label in ('adrLabel', 'Label'):
             if tmp_label in dane_do_zapisu and dane_do_zapisu[tmp_label]:
-                return ''
+                if dane_do_zapisu[tmp_label].startswith('~'):
+                    if ' ' in dane_do_zapisu[tmp_label]:
+                        dane_do_zapisu[tmp_label] = dane_do_zapisu[tmp_label].split(' ', 1)[-1].strip()
+                    else:
+                        continue
+                if dane_do_zapisu[tmp_label].startswith('{'):
+                    dane_do_zapisu[tmp_label] = dane_do_zapisu[tmp_label].split('}', 1)[-1].strip()
+                if dane_do_zapisu[tmp_label]:
+                    return ''
         if any(a.startswith('Numbers') for a in dane_do_zapisu):
             data = dane_do_zapisu[[a for a in dane_do_zapisu if a.startswith('Data')][0]][1:-1].split('),(')
             # teraz trzeba policzyc przy ktorych wezlach mamy problem
@@ -760,7 +769,7 @@ class UstawieniaPoczatkowe(object):
             self.Kodowanie = 'cp1250'
         self.ReadErrors = 'ignore'
         self.WriteErrors = 'ignore'
-        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\mkgmap.jar'
+        self.mkgmap_jar_path = 'c:\\ump\\mkgmap-r4905\\mkgmap.jar'
         self.wczytajKonfiguracje()
 
     def ustaw_katalog_home(self, katalog_home):
@@ -2927,7 +2936,7 @@ class plikPNT(object):
             zawartoscPliku = zawartoscPliku[indeksPierwszegoPoprawnegoElementu:]
             return zawartoscPliku
         else:
-            return zawartoscPliku
+            return []
 
     def ustalDokladnosc(self, LiniaZPliku):
         """
@@ -2971,7 +2980,7 @@ class plikPNT(object):
                     self.punktzPntAdrCiti.liniaZPliku2Dane(rekordy, liniaPliku)
                     if not self.Dokladnosc or self.Dokladnosc == '0':
                         if self.ustalDokladnosc(liniaPliku):
-                            self.errOutWriter.errOutWriter('Nie moge ustalic dokladnosci dla pliku %s'
+                            self.errOutWriter.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s'
                                                             % self.NazwaPliku)
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
@@ -3001,16 +3010,16 @@ def wczytaj_json_i_zwroc_wlasne_definicje_aliasow(plik_z_definicjami_typow, err_
         with open(plik_ze_sciezka) as plik_aliasow:
             definicje_aliasow_z_pliku = plik_aliasow.readlines()
     except FileNotFoundError:
-        err_out_writer.stderrwrite('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge znalezc pliku: %s. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except PermissionError:
-        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge otworzyc pliku: %s. Brak dostepu. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     except IOError:
-        err_out_writer.stderrwrite('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
+        err_out_writer.stderrorwrite('Nie moge otworzyc pliku: %s. I/O Error. Ignoruje definicje.' % plik_ze_sciezka)
         return {}
     if definicje_aliasow_z_pliku:
-        return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku)
+        return zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer)
     return {}
 
 
@@ -3031,7 +3040,7 @@ def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer):
         try:
             def_aliasu = json.loads(definicja_aliasu)
         except json.decoder.JSONDecodeError:
-            perr_out_writer.stderrwrite('Niepoprawna linia w pliku z aliasami:')
+            err_out_writer.stderrwrite('Niepoprawna linia w pliku z aliasami:')
             err_out_writer.stderrwrite(str(definicja_aliasu))
             continue
         if dozwolone_klucze.difference(a for a in def_aliasu):
@@ -3197,7 +3206,7 @@ def montujpliki(args, naglowek_mapy=''):
     # wlasnorecznie zdefiniowane aliasy
     wlasne_aliasy = {}
     if hasattr(args, 'wlasne_typy') and args.wlasne_typy:
-        wlasne_aliasy = wczytaj_json_i_zwroc_wlasne_definicje_aliasow(args.wlasne_typy)
+        wlasne_aliasy = wczytaj_json_i_zwroc_wlasne_definicje_aliasow(args.wlasne_typy, stderr_stdout_writer)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer, wlasny_alias2type=wlasne_aliasy)
     try:
         os.remove(os.path.join(Zmienne.KatalogRoboczy, Zmienne.OutputFile))
@@ -3531,7 +3540,8 @@ def demontuj(args):
         else:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
-                    orgPlikZawartosc = open(nazwa_pliku, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors).readlines()
+                    orgPlikZawartosc = open(nazwa_pliku, encoding=Zmienne.Kodowanie,
+                                            errors=Zmienne.ReadErrors).readlines()
                 else:
                     orgPlikZawartosc = open(os.path.join(Zmienne.KatalogzUMP, nazwa_pliku), encoding=Zmienne.Kodowanie,
                                             errors=Zmienne.ReadErrors).readlines()
@@ -3973,7 +3983,7 @@ def wojkuj(args):
     wynik_mp = os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile)
     mapa_woj_mp = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'mapka_woj.mp')
     wynik_mp_wojek = tempfile.NamedTemporaryFile('w', encoding=Zmienne.Kodowanie, dir=Zmienne.KatalogRoboczy,
-                                                   delete=False)
+                                                 delete=False)
     wynik_mp_wojek.close()
     wojek_call = [wojek_exe, '-s', wojek_slownik_txt, '-k', mapa_woj_mp, '-f', wynik_mp, '-F', wynik_mp_wojek.name]
     print(' '.join(wojek_call))
@@ -4013,7 +4023,7 @@ def kompiluj_mape(args):
                 skrot_kraju = dwuliterowy_skrot_panstw[kod_kraju[0:ii]]
                 break
         if not skrot_kraju:
-            stderr_stdout_writer.stderrwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
+            stderr_stdout_writer.stderrorwrite('Nie moge ustalic skrotu kraju dla: %s' % plik_do_k)
         else:
             pliki_do_kompilacji.append('--country-abbr=' + skrot_kraju)
         pliki_do_kompilacji.append(plik_do_k)
@@ -4039,11 +4049,11 @@ def kompiluj_mape(args):
     process = subprocess.Popen(java_call_args)
     process.wait()
     if args.format_mapy == 'gmapsupp':
-        if os.path.exists(gmapsupp_img_path ):
+        if os.path.exists(gmapsupp_img_path):
             stderr_stdout_writer.stdoutwrite('Kompilacja zakonczona sukcesem. Powstal plik %s' % gmapsupp_img_path)
         else:
-            stderr_stdout_writer.stderrwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
-                                             gmapsupp_img_path)
+            stderr_stdout_writer.stderrorwrite('Kompilacja nieudana. Nie powstal plik %s. Sprawdz konsole!' %
+                                               gmapsupp_img_path)
 
     else:
         if os.path.exists(gmapi_folder_path):
@@ -4264,29 +4274,34 @@ def main(argumenty):
     parsers_listuj.set_defaults(func=listujobszary)
 
     # parser dla komendy zapiszkonf
-    parsers_zapiszkonf = subparsers.add_parser('zapiszkonf', help='tworzy plik konfiguracyjny z katalogiem domowym ump i katalogiem roboczym')
+    parsers_zapiszkonf = subparsers.add_parser('zapiszkonf', help='tworzy plik konfiguracyjny z katalogiem domowym ump '
+                                                                  'i katalogiem roboczym')
     parsers_zapiszkonf.set_defaults(func=zapiszkonfiguracje)
 
     # parser dla komendy edytuj - uruchamianie mapedit
     parsers_edytuj = subparsers.add_parser('edytuj', help='uruchom mapedit')
-    parsers_edytuj.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do demontazu, domyslnie wynik.mp')
+    parsers_edytuj.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do demontazu, '
+                                                                          'domyslnie wynik.mp')
     parsers_edytuj.add_argument('-me2', '--mapedit-2', action='store_true', dest='mapedit2',
                                 help='alternatywna wersja mapedit, zdefiniowana w konfiguracji')
     parsers_edytuj.set_defaults(func=edytuj)
 
     # parser dla komendy sprawdz - sprawdza negenem
     parsers_sprawdz = subparsers.add_parser('sprawdz', help='sprawdza siatke drog netgenem')
-    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, domyslnie wynik.mp')
+    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
+                                                                           'domyslnie wynik.mp')
     parsers_sprawdz.set_defaults(func=sprawdz)
 
     # parser dla komendy sprawdz_numeracje
     parsers_sprawdz = subparsers.add_parser('sprawdz_numeracje', help='sprawdza numeracje')
-    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, domyslnie wynik.mp')
+    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
+                                                                           'domyslnie wynik.mp')
     parsers_sprawdz.set_defaults(func=sprawdz_numeracje)
 
     # parser dla komendy sprawdz_siatke_routingowa
     parsers_sprawdz = subparsers.add_parser('sprawdz_siatke_routingowa', help='sprawdz ciaglosc siatki routingowej')
-    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, domyslnie wynik.mp')
+    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
+                                                                           'domyslnie wynik.mp')
     parsers_sprawdz.add_argument('-m', '--mode', dest='mode', default='sprawdz_siatke_dwukierunkowa',
                                  choices=['sprawdz_siatke_dwukierunkowa', 'sprawdz_siatke_jednokierunkowa'],
                                  help='sprawdz siatke routingowa dwukierunkowa i jednokierunkowa')
@@ -4334,7 +4349,7 @@ def main(argumenty):
     # parser dla komendy wojkuj
     parser_wojkuj_mape = subparsers.add_parser('wojkuj', help="Dodaj dane przy pomocy wojka")
     parser_wojkuj_mape.add_argument('-i', '--input-file', dest='plikmp', default=['wynik.mp'], nargs=1,
-                 help='Nazwa pliku do przetworzenia. Domyslnie wynik.mp')
+                                    help='Nazwa pliku do przetworzenia. Domyslnie wynik.mp')
     parser_wojkuj_mape.set_defaults(func=wojkuj)
 
     # parser dla komendy kompiluj mape
@@ -4342,12 +4357,13 @@ def main(argumenty):
     parser_kompiluj_mape.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
     parser_kompiluj_mape.add_argument('-fi', '--family-id', default='6324', help='family id mapy, domyslnie 6324')
     parser_kompiluj_mape.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
-                                      help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
+                                      help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez '
+                                           'polskich literek')
     parser_kompiluj_mape.add_argument('-nt', '--nazwa-typ', default='domyslny',
                                       choices=['brak', 'domyslny', 'rzuq', 'olowos', 'reczniak'],
                                       help='wybierz plik typ dla mapy - domyslny jest uzywany standardowo')
     parser_kompiluj_mape.add_argument('-uw', '--uwzglednij-warstwice', default=False, action='store_true',
-                                     help='Dodaj warstwice do pliku mapy')
+                                      help='Dodaj warstwice do pliku mapy')
     parser_kompiluj_mape.add_argument('-fm', '--format-mapy', default='gmapsupp', choices=['gmapsupp', 'gmapi'],
                                       help="Generuj mape w formacie gmapsupp.img albo gmapii. "
                                            "Gmapsupp wgrywasz do odbiornika, gmapi wgrywasz do mapsource/basecamp.")
@@ -4369,12 +4385,13 @@ def main(argumenty):
     parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
     parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
-    parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ'
-                                                                                'domyslnie 6324')
+    parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ '
+                                                                               '(domyslnie 6324')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
     parser_kompiluj_typ.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
-                                     help='kodowanie pliku: cp1250 - z polskimi literkami, ascii - bez polskich literek')
+                                     help='kodowanie pliku: cp1250 - z polskimi literkami,'
+                                          ' ascii - bez polskich literek')
     parser_kompiluj_typ.set_defaults(func=stworz_plik_typ)
 
     args = parser.parse_args()
