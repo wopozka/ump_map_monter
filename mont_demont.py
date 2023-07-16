@@ -2481,12 +2481,14 @@ class PlikiDoMontowania(object):
         return self.ogranicz_granice_lub_obszary('obszary.txt')
 
     def zamien_granice_na_granice_czesciowe(self):
-        agranice = self.zwroc_granice_czesciowe()
-        with open(os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt'), 'w',
-                  encoding=self.zmienne.Kodowanie, errors=self.zmienne.WriteErrors) as f:
-            for a in agranice:
-                f.write(a)
-        self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, 'granice-czesciowe.txt')
+        gr_czesciowe = tempfile.NamedTemporaryFile(mode='w', encoding=self.zmienne.Kodowanie,
+                                                   dir=self.zmienne.KatalogRoboczy, delete=False,
+                                                   suffix='_granice-czesciowe.txt',
+                                                   errors=self.zmienne.WriteErrors)
+        for a in self.zwroc_granice_czesciowe():
+            gr_czesciowe.write(a)
+        gr_czesciowe.close()
+        self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, gr_czesciowe.name)
 
     def usun_plik_z_granicami(self):
         if 'granice' in self.Pliki[0]:
