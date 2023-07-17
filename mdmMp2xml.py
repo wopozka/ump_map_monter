@@ -895,7 +895,7 @@ poi_types = {
     0x5d00: ["tourism",  "information"],
     0x5f00: ["natural",  "scree"],
     0x5e00: ["highway", "elevator"],
-    0x6100: ["military", "bunker", "building", "bunker", "amenity", "shelter"],
+    0x6100: ["military", "bunker", "building", "bunker"],
     0x6101: ["historic", "ruins"],
     0x6200: ["depth",    "_name"],
     0x6300: ["ele",      "_name"],
