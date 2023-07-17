@@ -1004,6 +1004,10 @@ def path_file(filename):
     return os.path.abspath(os.path.join(os.getcwd(), filename))
 
 
+def create_pickled_file_name(pickle_type, task_idx):
+    return "UMP-PL.normal." + task_idx + '.' + pickle_type + "_pickle"
+
+
 def recode(line):
     try:
         return line
@@ -2891,10 +2895,10 @@ def worker(task, options, border_points=None):
                          progress_bar=progress_bar, messages_printer=messages_printer)
     progress_bar.set_done('drp')
 
-    pickled_files_names = {'points': "UMP-PL" + ".normal." + str(task['idx']) + ".points_pickle",
-                           'pointattrs': "UMP-PL" + ".normal." + str(task['idx']) + ".pointattrs_pickle",
-                           'ways': "UMP-PL" + ".normal." + str(task['idx']) + ".ways_pickle",
-                           'relations': "UMP-PL" + ".normal." + str(task['idx']) + ".relations_pickle"}
+    pickled_files_names = {'points': create_pickled_file_name('points', str(task['idx'])),
+                           'pointattrs': create_pickled_file_name('pointattrs', str(task['idx'])),
+                           'ways': create_pickled_file_name('ways', str(task['idx'])),
+                           'relations': create_pickled_file_name('relations', str(task['idx'])),}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
     l_warns = str(messages_printer.get_worning_num())
@@ -3017,13 +3021,14 @@ def main(options, args):
         ids_to_process = 0
         ids_to_process_nominatim = 0
         for work_no, workelem in enumerate(worklist):
-            pickled_nodes_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".points_pickle"
+            _task_idx = str(workelem['idx'])
+            pickled_nodes_filename = create_pickled_file_name('points', _task_idx)
             pickled_filenames['points'].append(pickled_nodes_filename)
-            pickled_ways_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".ways_pickle"
+            pickled_ways_filename = create_pickled_file_name('ways', _task_idx)
             pickled_filenames['ways'].append(pickled_ways_filename)
-            pickled_relations_filename = "UMP-PL" + ".normal." + str(workelem['idx']) + ".relations_pickle"
-            pickled_filenames['relations'].append(pickled_relations_filename)
-            pickled_filenames['pointattrs'].append("UMP-PL" + ".normal." + str(workelem['idx']) + ".pointattrs_pickle")
+            pickled_relations_filename = create_pickled_file_name('relations', _task_idx)
+            pickled_filenames['relations'].append( pickled_relations_filename)
+            pickled_filenames['pointattrs'].append(create_pickled_file_name('pointattrs', _task_idx))
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_points(work_no, pickled_data)
