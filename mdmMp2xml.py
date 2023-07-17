@@ -77,7 +77,7 @@ class MylistB(object):
         return value in self.k
 
     def append(self, value):
-        self.v.append(value) #
+        self.v.append(value)  #
         self.k[value] = len(self.k)
 
     def __iter__(self):
@@ -249,7 +249,9 @@ class NodeGeneralizator(object):
                 if a == file_group_name:
                     break
                 self.relations_offset[file_group_name] += self.t_table_relations[a]
-        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + self.borders_point_len
+        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + \
+               self.borders_point_len
+
 
 class NodesToWayNotFound(ValueError):
     """
@@ -1044,7 +1046,6 @@ def points_from_bline(points_str):
     maxW = -12.00000
     maxS = 34.00000
     maxE = 50.00000
-    # lats, longs = lats_longs_from_line(points_str)
     points = []
     for point in lats_longs_from_line(points_str):
         if maxN > float(point[0]) > maxS and maxW < float(point[1]) < maxE:
@@ -1327,7 +1328,6 @@ def points_append(point, attrs, map_elements_props=None):
             
 def prepare_line(points_str, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
-    # lats, longs = lats_longs_from_line(nodes_str)
     points = lats_longs_from_line(points_str)
     for point in points:
         points_append(point, {}, map_elements_props=map_elements_props)
@@ -1710,6 +1710,7 @@ def postprocess_poi_tags(way):
             # way['addr:housenumber'] += ''.join(' (', match.group(1), ')')
     return way
 
+
 def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
     if border_points is None:
         border_points = []
@@ -1833,7 +1834,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                         street = way['name']
                     else:
                         street = "<empty>"
-                    messages_printer.printerror("Line:" + str(linenum)+":Numeracja - brak poprawnej nazwy ulicy: '" + street + "'.")
+                    messages_printer.printerror("Line:" + str(linenum)+":Numeracja - brak poprawnej nazwy ulicy: '" +
+                                                street + "'.")
                     street = 'STREET_missing'
                 try:
                     m = way['addr:city']
@@ -2173,7 +2175,7 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
     orig_id: oryginalna pozycja w przetwarzanym pliku
     node_generalizator: klasa obslugujaca przeliczanie numerow pointow, way oraz relacji
     ostr: plik wyjsciowy
-    Returns: None
+    Returns None
     -------
 
     """
@@ -2538,7 +2540,8 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
         sys.exit()
     messages_printer = MessagePrinters(workid='1', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids." % ids_to_process)
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids."
+                               % ids_to_process)
     # printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
@@ -2779,6 +2782,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     Parameters
     ----------
     options: options command line
+    nominatim_filename: the name for nominatim file to be generated
     pickled_filenames: dictionary {'points': [filename1, filename2, filename3...],
                                    'pointparams': [filename1, filename2, filename3...]
                                    'ways': [filename1, filename2, filename3...]
@@ -2811,7 +2815,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
     try:
         out = open(nominatim_filename, 'a', encoding='utf-8')
     except IOError:
-        sys.stderr.write("\tERROR: Can't open normal output file " + out.name + "!\n")
+        sys.stderr.write("\tERROR: Can't open nominatim output file " + nominatim_filename + "!\n")
         sys.exit()
 
     for task_id, pickled_point in enumerate(post_nom_picle_files['points']):
@@ -2945,14 +2949,9 @@ def main(options, args):
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
 
     if options.borders_file is not None or len(args) == 1:
-
         if options.borders_file is not None:
-
             #  parsowanie po nowemu. Najpierw plik granic a potem pliki po kolei.
-            if options.borders_file.startswith('~'):
-                border_filename = os.path.expanduser(options.borders_file)
-            else:
-                border_filename = os.path.abspath(options.borders_file)
+            border_filename = path_file(options.borders_file)
             elapsed = datetime.now().replace(microsecond=0)
             try:
                 borderf = open(border_filename, "r", encoding='cp1250')
@@ -3011,8 +3010,8 @@ def main(options, args):
                 workelem['ids'] = result[(workelem['idx'])-1]
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
-        messages_printer.printinfo("Area processing done (took " + str(elapsed) + "). Generating outputs:")
-
+        messages_printer.printinfo("Area processing done (took " + str(elapsed) + "). Reading pickle files:")
+        elapsed = datetime.now().replace(microsecond=0)
         # wczytaj pliki piklowane i stwórz poprawny node_generalizator
         pickled_filenames = {'points': [], 'pointattrs': [], 'ways': [], 'relations': []}
         ids_to_process = 0
@@ -3039,7 +3038,9 @@ def main(options, args):
                 pickled_data = pickle.load(pickled_f)
                 node_generalizator.insert_relations(work_no, pickled_data)
                 ids_to_process += len(pickled_data)
-
+        elapsed = datetime.now().replace(microsecond=0) - elapsed
+        messages_printer.printinfo("Pickle files reading done (took " + str(elapsed) + "). Generating outputs:")
+        elapsed = datetime.now().replace(microsecond=0)
         # zapisywanie pikli w normalnym trybie
         output_files_to_generate = {}
         if options.outputfile is not None:
@@ -3076,7 +3077,7 @@ def main(options, args):
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         messages_printer.printinfo_nlf("written (took " + str(elapsed) + ").")
 
-        if options.nominatim_file is not None and options.threadnum > 1:
+        if options.nominatim_file is not None and options.threadnum > 1 and not options.monoprocess_outputs:
             nom_filename = output_files_to_generate.pop('nominatim')
             normal_process = Process(target=output_normal_pickled, args=(options, output_files_to_generate,),
                                      kwargs={'pickled_filenames': pickled_filenames,
@@ -3150,5 +3151,7 @@ if __name__ == '__main__':
     parser.add_option("--regions",
                       action="store_true", dest="regions", default=False,
                       help="attach regions to cities in the index file")
+    parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
+                      help="generate outputs in single process, do not use multiprocessing")
     (options, args) = parser.parse_args()
     main(options, args)
