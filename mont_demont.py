@@ -2483,8 +2483,7 @@ class PlikiDoMontowania(object):
     def zamien_granice_na_granice_czesciowe(self):
         gr_czesciowe = tempfile.NamedTemporaryFile(mode='w', encoding=self.zmienne.Kodowanie,
                                                    dir=self.zmienne.KatalogRoboczy, delete=False,
-                                                   suffix='_granice-czesciowe.txt',
-                                                   errors=self.zmienne.WriteErrors)
+                                                   suffix='_granice-czesciowe.txt')
         for a in self.zwroc_granice_czesciowe():
             gr_czesciowe.write(a)
         gr_czesciowe.close()
