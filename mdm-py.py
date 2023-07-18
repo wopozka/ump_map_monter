@@ -874,6 +874,7 @@ class mdmConfig(object):
         args = Argumenty()
         args.borders_file = None
         args.threadnum = 1
+        args.monoprocess_outputs = False
         args.index_file = None
         args.nominatim_file = None
         args.navit_file = None
