@@ -3027,7 +3027,7 @@ def main(options, args):
             pickled_ways_filename = create_pickled_file_name('ways', _task_idx)
             pickled_filenames['ways'].append(pickled_ways_filename)
             pickled_relations_filename = create_pickled_file_name('relations', _task_idx)
-            pickled_filenames['relations'].append( pickled_relations_filename)
+            pickled_filenames['relations'].append(pickled_relations_filename)
             pickled_filenames['pointattrs'].append(create_pickled_file_name('pointattrs', _task_idx))
             with open(pickled_nodes_filename, 'rb') as pickled_f:
                 pickled_data = pickle.load(pickled_f)
