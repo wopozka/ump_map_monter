@@ -3042,12 +3042,12 @@ def zwroc_wlasne_definicje_aliasow(definicje_aliasow_z_pliku, err_out_writer):
         try:
             def_aliasu = json.loads(definicja_aliasu)
         except json.decoder.JSONDecodeError:
-            err_out_writer.stderrwrite('Niepoprawna linia w pliku z aliasami:')
-            err_out_writer.stderrwrite(str(definicja_aliasu))
+            err_out_writer.stderrorwrite('Niepoprawna linia w pliku z aliasami:')
+            err_out_writer.stderrorwrite(str(definicja_aliasu))
             continue
         if dozwolone_klucze.difference(a for a in def_aliasu):
-            err_out_writer.stderrwrite('Niepoprawna definicja w pliku z aliasami, ignoruje')
-            err_out_writer.stderrwrite(str(definicja_aliasu))
+            err_out_writer.stderrorwrite('Niepoprawna definicja w pliku z aliasami, ignoruje')
+            err_out_writer.stderrorwrite(str(definicja_aliasu))
             continue
         alias = def_aliasu['Alias']
         err_out_writer.stdoutwrite('Alias dla %s wczytany.' % alias)

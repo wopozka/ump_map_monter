@@ -638,7 +638,9 @@ TEST_WLASNE_ALIASY = (
 )
 @pytest.mark.parametrize('target, answer', TEST_WLASNE_ALIASY)
 def testuj_zbuduj_defnicje_wlasne_defnicje_aliasow(target, answer):
-    assert mont_demont.zwroc_wlasne_definicje_aliasow(target) == answer
+    args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    assert mont_demont.zwroc_wlasne_definicje_aliasow(target, stderr_stdout_writer) == answer
 
 TEST_USUN_NAGLOWEK = (
     (['OziExplorer Point File Version 1.0\n', 'WGS 84\n', 'Reserved 1\n', 'Reserved 2\n', '255,65535,3,8,0,0,POI-Budejovice.bunkry.pnt\n', '  49.18261,  16.80830,  0,,,,WIADUKT\n', '\n'], ['  49.18261,  16.80830,  0,,,,WIADUKT\n', '\n']),
