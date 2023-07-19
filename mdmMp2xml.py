@@ -1449,11 +1449,11 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['_c'] = count
         elif key == 'Type':
             way['ump:type'] = value
-            if feat == Features.polyline:
-                if int(value, 0) in pline_types:
-                    tag(way, pline_types[int(value, 0)])
-                else:
-                    messages_printer.printerror("Unknown line type "+hex(int(value, 0)))
+            # if feat == Features.polyline:
+            #     if int(value, 0) in pline_types:
+            #         tag(way, pline_types[int(value, 0)])
+            #     else:
+            #         messages_printer.printerror("Unknown line type "+hex(int(value, 0)))
         elif key in ('EndLevel', 'Level', 'Levels',):
             # if 'highway' not in way:
             #     way['highway'] = levels[int(value, 0)]
@@ -1777,6 +1777,18 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 way = postprocess_poi_tags(way)
 
             elif feat == Features.polyline:
+                if 'ump:typ' in way:
+                    utyp = way['ump:typ']
+                    if utyp in umppoi_types:
+                        t = umppoi_types[utyp]
+                    else:
+                        t = int(way['ump:type'], 0)
+                else:
+                    t = int(way['ump:type'], 0)
+                if t in pline_types:
+                    tag(way, pline_types[t])
+                else:
+                    messages_printer.printerror("Unknown line type " + hex(t))
                 # TxF: tu potrzebna do wlasciwego indeksowania obsluga przedrostkow
                 if 'name' in way and cut_prefix(way['name']) != way['name']:
                     way['short_name'] = cut_prefix(way['name'])

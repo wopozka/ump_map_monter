@@ -562,6 +562,7 @@ class TestyPoprawnosciDanych(object):
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu)
         # self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
         self.resetuj_wspolrzedne()
 
