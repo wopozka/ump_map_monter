@@ -279,9 +279,13 @@ class TestyPoprawnosciDanych(object):
                         self.error_out_writer.stderrorwrite('Nieznany klucz: %s %s' % (klucz, coords))
         return ''
 
-    def sprawdz_poprawnosc_wartosci_klucza(self, dane_do_zapisu):
+    def sprawdz_poprawnosc_wartosci_klucza(self, dane_do_zapisu, klucze_do_sprawdzenia=None):
+        if klucze_do_sprawdzenia is None:
+            klucze = self.dozwolone_wart_kluczy_funkcje.keys()
+        else:
+            klucze = klucze_do_sprawdzenia
         coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-        for klucz in self.dozwolone_wart_kluczy_funkcje:
+        for klucz in klucze:
             if klucz in dane_do_zapisu:
                 czy_ok, info_blad = self.dozwolone_wart_kluczy_funkcje[klucz](dane_do_zapisu[klucz])
                 if not czy_ok:
@@ -561,8 +565,8 @@ class TestyPoprawnosciDanych(object):
         self.sprawdzData0Only(dane_do_zapisu)
         self.sprawdz_label_dla_poi(dane_do_zapisu)
         self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
+        self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu, klucze_do_sprawdzenia=('EndLevel',))
         self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
-        self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu)
         # self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu)
         self.resetuj_wspolrzedne()
 
@@ -575,7 +579,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu, klucze_do_sprawdzenia=None))
         wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
         # wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
