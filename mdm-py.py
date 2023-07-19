@@ -816,7 +816,7 @@ class mdmConfig(object):
     # zapisywanie i odczytywanie opcji montażu i demontażu, tak aby można było sobie zaznaczyć raz i aby tak pozostało
     def __init__(self):
         self.montDemontOptions = {}
-        self.mont_opcje = {'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False,
+        self.mont_opcje = {'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False, 'no_osm': False,
                            'monthash': False, 'graniceczesciowe': False,
                            'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx', 'sprytne_entrypoints': False}
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
@@ -2086,6 +2086,8 @@ class mdm_gui_py(tkinter.Tk):
                                           variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('sprytne_entrypoints'))
         menu_montuj_opcje.add_checkbutton(label=u'Oszczędzaj pamięć',
                                           variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
+        menu_montuj_opcje.add_checkbutton(label=u'Bez danych OSM',
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('no_osm'))
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
                                                     variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))

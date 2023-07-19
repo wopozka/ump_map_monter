@@ -2457,6 +2457,8 @@ class PlikiDoMontowania(object):
                 self.Pliki = [f for f in self.Pliki if f.find('topo') < 0]
             if filtry.noszlaki:
                 self.Pliki = [f for f in self.Pliki if f.find('szlaki') < 0]
+            if filtry.no_osm:
+                self.Pliki = [f for f in self.Pliki if f.find('osm.woda.txt') < 0]
         return
 
     def ogranicz_granice_lub_obszary(self, plik_do_ograniczenia):
@@ -4221,6 +4223,7 @@ def main(argumenty):
     parser_montuj.add_argument('-ns', '--no-szlaki', action='store_true', dest='noszlaki', help='nie montuj szlakow')
     parser_montuj.add_argument('-nc', '--no-city', action='store_true', dest='nocity', help='nie montuj plikow miast')
     parser_montuj.add_argument('-np', '--no-pnt', action='store_true', dest='nopnt', help='nie montuj plikow pnt')
+    parser_montuj.add_argument('-no', '--no-osm', action='store_true', help='nie montuj plikow z osm: *osm.woda.txt')
     parser_montuj.add_argument('-o', '--output-file', dest='plikmp', default='wynik.mp',
                                help='nazwa pliku wynikowego. Domyslnie wynik.mp')
     parser_montuj.add_argument('-nh', '--no-hash', dest='monthash', action='store_true',
