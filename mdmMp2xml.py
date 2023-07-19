@@ -1448,14 +1448,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             else:
                 way['_c'] = count
         elif key == 'Type':
+            way['ump:type'] = value
             if feat == Features.polyline:
-                way['ump:type'] = value
                 if int(value, 0) in pline_types:
                     tag(way, pline_types[int(value, 0)])
                 else:
                     messages_printer.printerror("Unknown line type "+hex(int(value, 0)))
-            else:
-                way['ump:type'] = value
         elif key in ('EndLevel', 'Level', 'Levels',):
             # if 'highway' not in way:
             #     way['highway'] = levels[int(value, 0)]
