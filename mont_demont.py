@@ -4165,10 +4165,10 @@ def stworz_plik_typ(args):
             plik_typ_zawartosc += ikonka[3:]
             plik_typ_zawartosc += ['[end]', '\n']
 
-    nazwa_typu_plik = {'reczniak': ['polygon-outdoor.txt', 'line-outdoor.txt'],
+    nazwa_typu_plik = {'reczniak': ['polygon-outdoor.txt', 'line-outdoor_mkgmap.txt'],
                        'rzuq': ['polygon-rzuq003.txt', 'line-rzuq003.txt'],
                        'olowos': ['polygon-olowos.txt', 'line-olowos.txt'],
-                       'domyslny': ['polygon.txt', 'line.txt']}
+                       'domyslny': ['polygon.txt', 'line_mkgmap.txt']}
 
     for plik in nazwa_typu_plik[nazwa_typ]:
         with open(os.path.join(katalog_ikonki, plik), 'r', encoding=zmienne.Kodowanie) as pl:
@@ -4395,7 +4395,7 @@ def main(argumenty):
     parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
                                       help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
     parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ '
-                                                                               '(domyslnie 6324')
+                                                                               '(domyslnie 6324)')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
                                      help='Dodaj warstwice do pliku typ')
     parser_kompiluj_typ.add_argument('-cp', '--code-page', default='cp1250', choices=['cp1250', 'ascii'],
