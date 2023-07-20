@@ -3126,7 +3126,7 @@ def zapiszkonfiguracje(args):
         configfile.write('KATALOGROBOCZY=' + KATALOGROBOCZY)
 
 
-def listujobszary(args, wydruku_obszary=True):
+def listujobszary(args, wydrukuj_obszary=True):
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
     if args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
@@ -3138,7 +3138,7 @@ def listujobszary(args, wydruku_obszary=True):
         print('Bledna konfiguracja, nie znalazlem zadnych obszarow.', file=sys.stderr)
         return []
     else:
-        if wydruku_obszary:
+        if wydrukuj_obszary:
             print('\n'.join(listaobszarow), file=sys.stdout)
         return listaobszarow
 
@@ -3377,11 +3377,13 @@ def montuj_mkgmap(args):
     args.trybosmand = False
     args.tryb_mkgmap = True
     args.entry_otwarte_do_extras = False
+    args.no_osm = True
     obszary = tuple(args.obszary)
-    dostepne_obszary = listujobszary(args, wydruku_obszary=False)
+    dostepne_obszary = listujobszary(args, wydrukuj_obszary=False)
     for obszar in obszary:
         naglowek_mapy = '[IMG ID]\n'
         if obszar not in dostepne_obszary:
+            stderr_stdout_writer.stderrorwrite('Nie moge odnalezc obszaru %s' % obszar)
             continue
         miasto = obszar.split('-')[-1].strip()
         args.obszary = [obszar]
