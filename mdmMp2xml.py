@@ -306,6 +306,9 @@ class MessagePrinters(object):
 __version__ = '0.8.1'
 extra_tags = " version='1' changeset='1' "
 
+# in case we need it for future, just placeholder
+umppline_types = dict()
+
 pline_types = {
     0x1:  ["highway",  "motorway"],
     0x2:  ["highway",  "trunk"],
@@ -432,6 +435,7 @@ pline_types = {
 umpshape_types = {
 # placeholder
 }
+
 
 shape_types = {
     0x1:  ["landuse",  "residential"],
@@ -1794,8 +1798,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             elif feat == Features.polyline:
                 if 'ump:typ' in way:
                     utyp = way['ump:typ']
-                    if utyp in umppoi_types:
-                        t = umppoi_types[utyp]
+                    if utyp in umppline_types:
+                        t = umppline_types[utyp]
                     else:
                         t = int(way['ump:type'], 0)
                 else:
