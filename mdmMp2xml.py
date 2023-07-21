@@ -516,12 +516,12 @@ umppoi_types = {
                 'ATM': 0x2f062,
                 'KANTOR': 0x2f063,
 
-                'BUS': 0x2f080,            
-                'TRAM': 0x2f081,            
-                'METRO': 0x2f082,            
-                'PKS': 0x2f083,            
-                'PKP': 0x2f084,            
-                'TAXI': 0x2f085,            
+                'BUS': 0x2f080,
+                'TRAM': 0x2f081,
+                'METRO': 0x2f082,
+                'PKS': 0x2f083,
+                'PKP': 0x2f084,
+                'TAXI': 0x2f085,
 
                 'PRZYCHODNIA': 0x30025,
                 'WETERYNARZ': 0x30026,
@@ -681,7 +681,7 @@ poi_types = {
     0x2507: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
     0x2600: ["highway",  "rest_area"],
     0x2700: ["highway",  "exit"],
-    0x2800: ["note",    "housenumber"], 
+    0x2800: ["note",    "housenumber"],
     0x2900: ["landuse",  "commercial"],
     0x2a:   ["amenity",  "restaurant"],
     0x2a00: ["amenity",  "restaurant"],
@@ -790,7 +790,7 @@ poi_types = {
     0x2f050: ["amenity",  "post_office", "type", "courier"],
     0x2f051: ["amenity",  "post_office", "type", "courier", "operator", "dhl"],
     0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "ups"],
-    0x2f06: ["amenity",  "bank"], 
+    0x2f06: ["amenity",  "bank"],
     0x2f061: ["amenity",  "bank", "atm", "yes"],
     0x2f062: ["amenity",  "atm"],
     0x2f063: ["amenity",  "bureau_de_change"],
@@ -1020,19 +1020,16 @@ def recode(line):
 def bpoints_append(node, bpoints):
     if node not in bpoints:
         bpoints.append(node)
-        
+
 
 def lats_longs_from_line(nodes_str):
     lats = []
     longs = []
     for la, element in enumerate(nodes_str.split(',')):
-        if '.' in element:
-            floor, fractional = element.strip('()').split('.', 1)
-            coord = floor + '.' + fractional.ljust(6, '0')
-        else:
-            coord = element.strip('()').ljust(9, '0')
-            print('Dziwna linia Data: %s' % nodes_str, file=sys.stderr)
-        # coord = '{:.{n_dec_digits}f}'.format(float(element.strip('()')), n_dec_digits=6)
+        try:
+            coord = '{:.{n_dec_digits}f}'.format(float(element.strip('()')), n_dec_digits=6)
+        except ValueError:
+            return tuple()
         if la % 2:
             longs.append(coord)
         else:
@@ -1055,8 +1052,8 @@ def points_from_bline(points_str):
         if maxN > float(point[0]) > maxS and maxW < float(point[1]) < maxE:
             points.append(point)
     return points
-    
-        
+
+
 # TxF: ucinanie przedrostkow
 def cut_prefix(string):
     if string.startswith("aleja ") or string.startswith("Aleja ") or string.startswith("rondo ") or \
@@ -1085,7 +1082,6 @@ def convert_btag(key, value, options, bpoints, messages_printer=None):
         if options.ignore_errors:
             messages_printer.printerror("Unknown key: " + key)
             messages_printer.printerror("Value:       " + value)
-            pass 
         else:
             raise ParsingError("Unknown key " + key + " in polyline / polygon")
 
@@ -1152,9 +1148,9 @@ def unproj(lat, lon):
 # def projlat(lat):
 #    return lat
 # def projlon(lat, lon):
-#    return lon * math.cos(lat / 180.0 * math.pi)            
-            
-            
+#    return lon * math.cos(lat / 180.0 * math.pi)
+
+
 def tag(way, pairs):
     for key, value in zip(pairs[::2], pairs[1::2]):
         way[key] = value
@@ -1209,7 +1205,7 @@ def polygon_make_ccw(shape, c_points):
     else:
         # Likely an illegal shape
         shape['fixme'] = "Weird shape"
-        
+
 
 def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_props):
     interp_types = {"o": "odd", "e": "even", "b": "all"}
@@ -1316,7 +1312,7 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
             prev_node = hi_node
         else:
             prev_house = "xx"
-        
+
 
 def points_append(point, attrs, map_elements_props=None):
     if map_elements_props is None:
@@ -1329,10 +1325,13 @@ def points_append(point, attrs, map_elements_props=None):
     _points.append(point)
     _pointattrs[_points.get_point_id(point)] = attrs
 
-            
+
 def prepare_line(points_str, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
     points = lats_longs_from_line(points_str)
+    # if there is some problem with DataX coordinates, then points is empty
+    if not points:
+        return 0, tuple()
     for point in points:
         points_append(point, {}, map_elements_props=map_elements_props)
     try:
@@ -1349,7 +1348,7 @@ def prepare_line(points_str, closed=False, map_elements_props=None):
         point_indices.append(point_indices[0])
     return pts, point_indices
 
-            
+
 def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None, messages_printer=None):
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
@@ -1431,6 +1430,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             num = int(key[4:])
             count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
+            if not way['_nodes']:
+                return {}
             if '_c' in way:
                 way['_c'] += count
             else:
@@ -1438,6 +1439,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             # way['layer'] = num ??
         elif key.startswith('_Inner'):
             count, nodes = prepare_line(value, closed=feat == Features.polygon, map_elements_props=map_elements_props)
+            if not nodes:
+                return {}
             if '_innernodes' not in way:
                 way['_innernodes'] = []
                 if feat != Features.polygon:
@@ -1675,7 +1678,6 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             if ignore_errors:
                 messages_printer.printwarn("W: Unknown key: " + key)
                 messages_printer.printwarn("W: Value:       " + value)
-                pass
             else:
                 raise ParsingError("Unknown key " + key + " in polyline / polygon")
     return way
@@ -1746,6 +1748,18 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
         elif line == '[END]' and feat != Features.ignore:
             way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props,
                                           messages_printer=messages_printer)
+            # w przypadku gdy nie uda sie skonwertowac punktow z DataX, wtedy way bedzie pustym slownikiem, musimy
+            # takie cos obsluzyc, albo ignorujemy takie wpisy albo wywalamy program.
+            if not way:
+                if options.ignore_errors:
+                    messages_printer.printerror("Corrupted DataX values for poi/polyline/polygon. Ognoring data.")
+                    messages_printer.printerror(', '.join(_key + '=' + _val for _key, _val in polyline.items()))
+                    comment = None
+                    polyline = None
+                    continue
+                else:
+                    raise ParsingError("Corrupted DataX values for poi/polyline/polygon" + str(polyline))
+
             if feat == Features.polygon:
                 if 'ump:typ' in way:
                     utyp = way['ump:typ']
@@ -2057,8 +2071,8 @@ def name_turn_restriction(rel, nodes, points):
         else:
             rel['restriction'] = 'no_left_turn'
     if len(nodes) == 4:
-        rel['restriction'] = 'no_u_turn'    
-    
+        rel['restriction'] = 'no_u_turn'
+
 
 def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
     """
@@ -2874,7 +2888,7 @@ def worker(task, options, border_points=None):
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
     workid = task['idx']
     num_lines_to_process = 0
-        
+
     try:
         if sys.platform.startswith('linux'):
             file_encoding = 'cp1250'
@@ -2955,9 +2969,9 @@ def main(options, args):
         sys.stderr.write("\tINFO: Navit output will be written.\n")
     if options.nonumber_file is not None:
         sys.stderr.write("\tINFO: NoNumberX output will be written.\n")
-    if options.skip_housenumbers:    
+    if options.skip_housenumbers:
         sys.stderr.write("\tINFO: Skiping housenumbers (Type=0x2800) in default output\n")
-    if options.positive_ids:    
+    if options.positive_ids:
         sys.stderr.write("\tINFO: The --positive-ids option is obsolete.\n")
     if options.ignore_errors:
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
@@ -3004,7 +3018,7 @@ def main(options, args):
             workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
             worklist.append(workelem)
         if options.threadnum == 1:
-            for workelem in worklist:                
+            for workelem in worklist:
                 result = worker(workelem, options, border_points=bpoints)
                 # sys.stderr.write("\tINFO: Task " + str(workelem['idx']) + ": " + str(result) + " ids\n")
         else:
