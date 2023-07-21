@@ -1327,7 +1327,7 @@ def points_append(point, attrs, map_elements_props=None):
     _pointattrs = map_elements_props['pointattrs']
     attrs['_timestamp'] = filestamp
     _points.append(point)
-    _pointattrs[_points.index(point)] = attrs
+    _pointattrs[_points.get_point_id(point)] = attrs
 
             
 def prepare_line(points_str, closed=False, map_elements_props=None):
@@ -1336,7 +1336,7 @@ def prepare_line(points_str, closed=False, map_elements_props=None):
     for point in points:
         points_append(point, {}, map_elements_props=map_elements_props)
     try:
-        point_indices = list(map(map_elements_props['points'].index, points))
+        point_indices = list(map(map_elements_props['points'].get_point_id, points))
     except:
         print(map_elements_props['points'])
         print(point)
