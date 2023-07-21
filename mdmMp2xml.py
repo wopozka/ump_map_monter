@@ -1751,14 +1751,15 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             # w przypadku gdy nie uda sie skonwertowac punktow z DataX, wtedy way bedzie pustym slownikiem, musimy
             # takie cos obsluzyc, albo ignorujemy takie wpisy albo wywalamy program.
             if not way:
+                string_polyline = ', '.join(_key + '=' + _val for _key, _val in polyline.items())
                 if options.ignore_errors:
-                    messages_printer.printerror("Corrupted DataX values for poi/polyline/polygon. Ognoring data.")
-                    messages_printer.printerror(', '.join(_key + '=' + _val for _key, _val in polyline.items()))
+                    messages_printer.printerror("Corrupted DataX values for poi/polyline/polygon. Ignoring data.")
+                    messages_printer.printerror(string_polyline)
                     comment = None
                     polyline = None
                     continue
                 else:
-                    raise ParsingError("Corrupted DataX values for poi/polyline/polygon" + str(polyline))
+                    raise ParsingError("Corrupted DataX values for poi/polyline/polygon: " + string_polyline)
 
             if feat == Features.polygon:
                 if 'ump:typ' in way:
