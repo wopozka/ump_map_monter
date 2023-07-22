@@ -2927,7 +2927,7 @@ def worker(task, options, border_points=None):
     pickled_files_names = {'points': create_pickled_file_name('points', str(task['idx'])),
                            'pointattrs': create_pickled_file_name('pointattrs', str(task['idx'])),
                            'ways': create_pickled_file_name('ways', str(task['idx'])),
-                           'relations': create_pickled_file_name('relations', str(task['idx'])),}
+                           'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
     l_warns = str(messages_printer.get_worning_num())
