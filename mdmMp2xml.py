@@ -1211,7 +1211,7 @@ def polygon_make_ccw(shape, c_points):
         shape['fixme'] = "Weird shape"
 
 
-def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_props):
+def add_addrinfo(nodes, addrs, street, city, region, right, count, filestamp, map_elements_props):
     interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
@@ -1272,14 +1272,14 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
                     low_node = (low_node[0] + normlat / 10,
                                 low_node[1] + normlon / 10)
                 attrs['addr:housenumber'] = low
-                points_append(low_node, attrs.copy(), map_elements_props=map_elements_props)
+                points_append(low_node, attrs.copy(), filestamp=filestamp, map_elements_props=map_elements_props)
 
             pt1 = len(points)
             hi_node = unproj(nlat + dlat - shortlat, nlon + dlon - shortlon)
             while hi_node in points:
                 hi_node = (hi_node[0] - normlat / 10, hi_node[1] - normlon / 10)
             attrs['addr:housenumber'] = hi
-            points_append(hi_node, attrs.copy(), map_elements_props=map_elements_props)
+            points_append(hi_node, attrs.copy(), filestamp=filestamp, map_elements_props=map_elements_props)
 
             if len(addrs[n]) >= 8:
                 if addrs[n][6] != "-1":
@@ -1318,7 +1318,7 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
             prev_house = "xx"
 
 
-def points_append(point, attrs, map_elements_props=None):
+def points_append(point, attrs, filestamp=None, map_elements_props=None):
     if map_elements_props is None:
         return
     if point in map_elements_props['points']:
@@ -1330,14 +1330,14 @@ def points_append(point, attrs, map_elements_props=None):
     _pointattrs[_points.get_point_id(point)] = attrs
 
 
-def prepare_line(points_str, closed=False, map_elements_props=None):
+def prepare_line(points_str, filestamp=None, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
     points = lats_longs_from_line(points_str)
     # if there is some problem with DataX coordinates, then points is empty
     if not points:
         return 0, tuple()
     for point in points:
-        points_append(point, {}, map_elements_props=map_elements_props)
+        points_append(point, {}, filestamp=filestamp, map_elements_props=map_elements_props)
     try:
         point_indices = list(map(map_elements_props['points'].get_point_id, points))
     except:
@@ -1353,7 +1353,8 @@ def prepare_line(points_str, closed=False, map_elements_props=None):
     return pts, point_indices
 
 
-def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None, messages_printer=None):
+def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_elements_props=None,
+                            messages_printer=None):
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
@@ -1432,7 +1433,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['oneway'] = value
         elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
             num = int(key[4:])
-            count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon,
+            count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
             if not way['_nodes']:
                 return {}
@@ -1442,7 +1443,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['_c'] = count
             # way['layer'] = num ??
         elif key.startswith('_Inner'):
-            count, nodes = prepare_line(value, closed=feat == Features.polygon, map_elements_props=map_elements_props)
+            count, nodes = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
+                                        map_elements_props=map_elements_props)
             if not nodes:
                 return {}
             if '_innernodes' not in way:
@@ -1719,7 +1721,7 @@ def postprocess_poi_tags(way):
     return way
 
 
-def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
+def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None, filestamp=None):
     if border_points is None:
         border_points = []
     otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
@@ -1750,8 +1752,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
-            way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props,
-                                          messages_printer=messages_printer)
+            way = convert_tags_return_way(polyline, feat, options.ignore_errors, filestamp=filestamp,
+                                          map_elements_props=map_elements_props, messages_printer=messages_printer)
             # w przypadku gdy nie uda sie skonwertowac punktow z DataX, wtedy way bedzie pustym slownikiem, musimy
             # takie cos obsluzyc, albo ignorujemy takie wpisy albo wywalamy program.
             if not way:
@@ -1880,8 +1882,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 except:
                     region = ""
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props)
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props)
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], filestamp, map_elements_props)
+                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], filestamp, map_elements_props)
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
@@ -2134,7 +2136,7 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     return nodes
 
 
-def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=None):
+def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
     ways = map_elements_props['ways']
     if node_ways_relation is None:
         outer_index = ways.index(outer)
@@ -2309,7 +2311,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, messages_printer=None):
+def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, filestamp=None,
+                         messages_printer=None):
     # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
     if maxtypes is None:
         maxtypes = {}
@@ -2413,6 +2416,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     ways.append(subway)
             else:
                 map_elements_props['relations'].append(make_multipolygon(way, way.pop('_innernodes'),
+                                                                         filestamp=filestamp,
                                                                          node_ways_relation=node_multipolygon_relation,
                                                                          map_elements_props=map_elements_props))
 
@@ -2657,14 +2661,11 @@ def output_nominatim_points_ways_preprocessing(file_g_name, points_fname, pointa
     -------
 
     """
-    filestamp = None
     l_ways = list()
     streets_counter = defaultdict(list)
     elapsed = datetime.now().replace(microsecond=0)
-
     # wczytaujemy wszystkie pointy
-    if filestamp is None:
-        filestamp = datetime.fromtimestamp(os.path.getmtime(points_fname)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    nominatim_filestamp = datetime.fromtimestamp(os.path.getmtime(points_fname)).strftime("%Y-%m-%dT%H:%M:%SZ")
     with open(points_fname, 'rb') as p_file:
         local_points = pickle.load(p_file)
 
@@ -2778,12 +2779,12 @@ def output_nominatim_points_ways_preprocessing(file_g_name, points_fname, pointa
                 pind0 = len(local_points)
                 local_points.append(pt0)
                 pt0_point_id = local_points.get_point_id(pt0)
-                local_pointattrs[pt0_point_id] = {'_timestamp': filestamp}
+                local_pointattrs[pt0_point_id] = {'_timestamp': nominatim_filestamp}
                 pind1 = len(local_points)
                 local_points.append(pt1)
                 pt1_point_id = local_points.get_point_id(pt1)
-                local_pointattrs[pt1_point_id] = {'_timestamp': filestamp}
-                way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
+                local_pointattrs[pt1_point_id] = {'_timestamp': nominatim_filestamp}
+                way = {'_timestamp': nominatim_filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
                        'name': miasto, 'addr:city': miasto, 'highway': "residental"}
                 local_ways.append(way)
     messages_printer.printdebug("City=>Streets scan stop: " + str(datetime.now()))
@@ -2886,12 +2887,12 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
 def worker(task, options, border_points=None):
     global working_thread
     global workid
-    global filestamp
     global glob_progress_bar_queue
     if border_points is None:
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
     workid = task['idx']
+    filestamp = task['filestamp']
     num_lines_to_process = 0
 
     try:
@@ -2908,20 +2909,14 @@ def worker(task, options, border_points=None):
         sys.exit()
     messages_printer.printinfo("Loading " + task['file'])
 
-    filestamp = datetime.fromtimestamp(os.path.getmtime(task['file'])).strftime("%Y-%m-%dT%H:%M:%SZ")
-    try:
-        filestamp
-    except:
-        filestamp = runstamp
-
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
     maxtypes, map_elements_props = parse_txt(infile, options, progress_bar=progress_bar, border_points=border_points,
-                                             messages_printer=messages_printer)
+                                             messages_printer=messages_printer, filestamp=filestamp)
     progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(maxtypes=maxtypes, map_elements_props=map_elements_props,
-                         progress_bar=progress_bar, messages_printer=messages_printer)
+    post_load_processing(maxtypes=maxtypes, progress_bar=progress_bar, map_elements_props=map_elements_props,
+                         filestamp=filestamp, messages_printer=messages_printer)
     progress_bar.set_done('drp')
 
     pickled_files_names = {'points': create_pickled_file_name('points', str(task['idx'])),
@@ -2992,11 +2987,6 @@ def main(options, args):
                 sys.stderr.write("\tERROR: Can't open border input file " + border_filename + "!\n")
                 sys.exit()
             borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            try:
-                borderstamp
-            except:
-                borderstamp = runstamp
-
             bpoints = parse_borders_return_bpoints(borderf, options, borderstamp)
             borderf.close()
             node_generalizator.insert_borders(bpoints)
@@ -3020,7 +3010,11 @@ def main(options, args):
                 sys.exit()
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
-            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
+            if options.force_timestamp is None:
+                f_stamp = datetime.fromtimestamp(os.path.getmtime(f).strftime("%Y-%m-%dT%H:%M:%SZ"))
+            else:
+                f_stamp = options.force_timestamp
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'filestamp': f_stamp}
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:
@@ -3187,5 +3181,7 @@ if __name__ == '__main__':
                       help="attach regions to cities in the index file")
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
+    parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
+                      help='Force given timestamp for map elements, useful for testing process.')
     (options, args) = parser.parse_args()
     main(options, args)
