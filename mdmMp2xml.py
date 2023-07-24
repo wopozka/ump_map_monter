@@ -3011,7 +3011,7 @@ def main(options, args):
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
             if options.force_timestamp is None:
-                f_stamp = datetime.fromtimestamp(os.path.getmtime(f).strftime("%Y-%m-%dT%H:%M:%SZ"))
+                f_stamp = datetime.fromtimestamp(os.path.getmtime(f)).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 f_stamp = options.force_timestamp
             workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'filestamp': f_stamp}

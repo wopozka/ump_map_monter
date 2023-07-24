@@ -885,6 +885,7 @@ class mdmConfig(object):
         args.normalize_ids = False
         args.ignore_errors = False
         args.regions = False
+        args.no_osm = True
         return args
 
     def zwroc_args_dla_rozdzialu_klas(self):
