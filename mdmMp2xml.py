@@ -440,7 +440,7 @@ umpshape_types = {
 shape_types = {
     0x1:  ["landuse",  "residential"],
     0x2:  ["landuse",  "residential"],
-    0x3:  ["highway",  "pedestrian", "area", "yes"],
+    0x3:  ["landuse",  "residential"],
     0x4:  ["landuse",  "military"],
     0x5:  ["amenity",  "parking"],
     0x6:  ["building", "garages"],
