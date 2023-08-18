@@ -134,6 +134,35 @@ def createToolTip(widget, text):
     widget.bind('<Leave>', leave)
 
 
+class CvsAnnotate(tkinter.Toplevel):
+    def __init__(self, parent, *args, **kwargs):
+        self.parent = parent
+        super().__init__(parent, *args, **kwargs)
+        body = tkinter.Frame(self)
+        body.pack(padx=5, pady=5, fill='both', expand=1)
+        buttons_frame = tkinter.Frame(body)
+        buttons_frame.pack()
+        self.cvs_f_name_var = tkinter.StringVar()
+        self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var)
+        self.cvs_f_name.pack(side='left')
+        sel_file_button = tkinter.ttk.Button(buttons_frame, text=u'Wybierz plik', command=self.wybierz_plik)
+        sel_file_button.pack(side='left')
+        annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate', command=self.cvs_annotate)
+        annotate_button.apck(side='left')
+        close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
+        close_button.pack(side='left')
+        self.text_w = tkinter.scrolledtext.ScrolledText(body)
+        self.text_w.pack(fill='both', expand=1)
+
+    def wybierz_plik(self):
+        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji')
+        if plik_do_annotate:
+            self.cvs_f_name_var.set(plik_do_annotate)
+
+
+    def cvs_annotate(self):
+        pass
+
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
     def __init__(self, parent, spaczowane_pliki, *args, **kwargs):
@@ -2108,6 +2137,11 @@ class mdm_gui_py(tkinter.Tk):
                                             command=lambda: self.selectUnselect_aol(None))
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
 
+        # menu CVS
+        menu_cvs = tkinter.Menu(menubar, tearoff=0)
+        menu_cvs.add_command('cvs annotate', command=self.cvs_annotate)
+        menu_cvs.add_command('cvs log', command=self.cvs_log)
+
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
         menuPomoc.add_command(label=u'Skróty klawiaturowe', command=self.skrotyKlawiaturowe)
@@ -2738,6 +2772,13 @@ class mdm_gui_py(tkinter.Tk):
         self.args.katrob = self.Zmienne.KatalogRoboczy
         a = mont_demont_py.patch(self.args)
         return a
+
+    # obsluga menu CVS
+    def cvs_annotate(self):
+        pass
+
+    def cvs_log(self):
+        pass
 
     def OnButtonClickCvsUp(self):
         obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
