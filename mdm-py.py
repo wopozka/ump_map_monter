@@ -143,12 +143,18 @@ class CvsAnnotate(tkinter.Toplevel):
         buttons_frame = tkinter.Frame(body)
         buttons_frame.pack()
         self.cvs_f_name_var = tkinter.StringVar()
-        self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var)
+        self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=100)
         self.cvs_f_name.pack(side='left')
         sel_file_button = tkinter.ttk.Button(buttons_frame, text=u'Wybierz plik', command=self.wybierz_plik)
         sel_file_button.pack(side='left')
+        self.rev_var = tkinter.StringVar()
+        rev_entry = tkinter.Entry(buttons_frame, textvariable=self.rev_var)
+        rev_entry.pack(side='left')
+        self.date_var = tkinter.StringVar()
+        date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
+        date_entry.pack(side='left')
         annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate', command=self.cvs_annotate)
-        annotate_button.apck(side='left')
+        annotate_button.pack(side='left')
         close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
         close_button.pack(side='left')
         self.text_w = tkinter.scrolledtext.ScrolledText(body)
@@ -2139,8 +2145,9 @@ class mdm_gui_py(tkinter.Tk):
 
         # menu CVS
         menu_cvs = tkinter.Menu(menubar, tearoff=0)
-        menu_cvs.add_command('cvs annotate', command=self.cvs_annotate)
-        menu_cvs.add_command('cvs log', command=self.cvs_log)
+        menu_cvs.add_command(label='cvs annotate', command=self.cvs_annotate)
+        menu_cvs.add_command(label='cvs log', command=self.cvs_log)
+        menubar.add_cascade(label='CVS', menu=menu_cvs)
 
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
@@ -2775,7 +2782,7 @@ class mdm_gui_py(tkinter.Tk):
 
     # obsluga menu CVS
     def cvs_annotate(self):
-        pass
+        aaa = CvsAnnotate(self)
 
     def cvs_log(self):
         pass
