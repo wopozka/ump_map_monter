@@ -135,21 +135,26 @@ def createToolTip(widget, text):
 
 
 class CvsAnnotate(tkinter.Toplevel):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, zmienne, *args, **kwargs):
         self.parent = parent
+        self.zmienne = zmienne
         super().__init__(parent, *args, **kwargs)
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
         buttons_frame = tkinter.Frame(body)
         buttons_frame.pack()
         self.cvs_f_name_var = tkinter.StringVar()
-        self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=100)
+        self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=60, bg='ivory2')
         self.cvs_f_name.pack(side='left')
         sel_file_button = tkinter.ttk.Button(buttons_frame, text=u'Wybierz plik', command=self.wybierz_plik)
         sel_file_button.pack(side='left')
+        rev_label = tkinter.Label(buttons_frame, text=u'Numer rewizji/tag')
+        rev_label.pack(side='left')
         self.rev_var = tkinter.StringVar()
         rev_entry = tkinter.Entry(buttons_frame, textvariable=self.rev_var)
         rev_entry.pack(side='left')
+        date_label = tkinter.Label(buttons_frame, text=u'Data commitu')
+        date_label.pack(side='left')
         self.date_var = tkinter.StringVar()
         date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
         date_entry.pack(side='left')
@@ -161,13 +166,35 @@ class CvsAnnotate(tkinter.Toplevel):
         self.text_w.pack(fill='both', expand=1)
 
     def wybierz_plik(self):
-        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji')
+        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji',
+                                                              initialdir=self.zmienne.KatalogzUMP)
         if plik_do_annotate:
             self.cvs_f_name_var.set(plik_do_annotate)
 
-
     def cvs_annotate(self):
-        pass
+        f_name = self.cvs_f_name_var.get()
+        if not f_name:
+            return
+        else:
+            f_name = os.path.relpath(f_name, self.zmienne.KatalogzUMP)
+        CVSROOT = '-d:pserver:' + self.zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
+        os.chdir(self.zmienne.KatalogzUMP)
+        print('subprocess')
+        process = subprocess.Popen(['cvs', CVSROOT, 'annotate', f_name], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        print('uruchomiony czekam')
+        process.wait()
+        print('zakonczony')
+        stderr = process.stderr.readlines()
+        stdout = process.stdout.readlines()
+        if stdout:
+            for line in stdout:
+                self.text_w.insert('end', line.strip())
+        elif stderr:
+            for line in stderr:
+                self.text_w.insert('end', line.strip())
+        else:
+            pass
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
@@ -2782,7 +2809,7 @@ class mdm_gui_py(tkinter.Tk):
 
     # obsluga menu CVS
     def cvs_annotate(self):
-        aaa = CvsAnnotate(self)
+        aaa = CvsAnnotate(self, self.Zmienne)
 
     def cvs_log(self):
         pass
