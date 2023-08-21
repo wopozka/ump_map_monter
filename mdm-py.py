@@ -135,7 +135,7 @@ def createToolTip(widget, text):
 
 
 class CvsAnnotate(tkinter.Toplevel):
-    def __init__(self, parent, zmienne, *args, **kwargs):
+    def __init__(self, parent, zmienne, command, *args, **kwargs):
         self.parent = parent
         self.zmienne = zmienne
         super().__init__(parent, *args, **kwargs)
@@ -158,12 +158,18 @@ class CvsAnnotate(tkinter.Toplevel):
         self.date_var = tkinter.StringVar()
         date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
         date_entry.pack(side='left')
-        annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate', command=self.cvs_annotate)
+        if command == 'annotate':
+            annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate', command=self.cvs_annotate)
+        else:
+            annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Log', command=self.cvs_log)
         annotate_button.pack(side='left')
         close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
         close_button.pack(side='left')
         self.text_w = tkinter.scrolledtext.ScrolledText(body)
         self.text_w.pack(fill='both', expand=1)
+        self.grab_set()
+        self.focus_set()
+        self.wait_window(self)
 
     def wybierz_plik(self):
         plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji',
@@ -171,7 +177,7 @@ class CvsAnnotate(tkinter.Toplevel):
         if plik_do_annotate:
             self.cvs_f_name_var.set(plik_do_annotate)
 
-    def cvs_annotate(self):
+    def cvs_command(self, cvs_command):
         f_name = self.cvs_f_name_var.get()
         if not f_name:
             return
@@ -179,22 +185,25 @@ class CvsAnnotate(tkinter.Toplevel):
             f_name = os.path.relpath(f_name, self.zmienne.KatalogzUMP)
         CVSROOT = '-d:pserver:' + self.zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
         os.chdir(self.zmienne.KatalogzUMP)
-        print('subprocess')
-        process = subprocess.Popen(['cvs', CVSROOT, 'annotate', f_name], stdout=subprocess.PIPE,
+        process = subprocess.Popen(['cvs', CVSROOT, cvs_command, f_name], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
-        print('uruchomiony czekam')
-        process.wait()
-        print('zakonczony')
-        stderr = process.stderr.readlines()
-        stdout = process.stdout.readlines()
+        stdout, stderr = process.communicate()
         if stdout:
-            for line in stdout:
-                self.text_w.insert('end', line.strip())
+            self.text_w.delete('1.0', 'end')
+            for line in stdout.decode(self.zmienne.Kodowanie):
+                self.text_w.insert('end', str(line))
         elif stderr:
-            for line in stderr:
+            self.text_w.delete('1.0', 'end')
+            for line in stderr.decode(self.zmienne.Kodowanie):
                 self.text_w.insert('end', line.strip())
         else:
             pass
+
+    def cvs_annotate(self):
+        self.cvs_command('annotate')
+
+    def cvs_log(self):
+        self.cvs_command('log')
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
@@ -2809,10 +2818,10 @@ class mdm_gui_py(tkinter.Tk):
 
     # obsluga menu CVS
     def cvs_annotate(self):
-        aaa = CvsAnnotate(self, self.Zmienne)
+        aaa = CvsAnnotate(self, self.Zmienne, 'annotate')
 
     def cvs_log(self):
-        pass
+        aaa = CvsAnnotate(self, self.Zmienne, 'log')
 
     def OnButtonClickCvsUp(self):
         obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
