@@ -177,6 +177,9 @@ class CvsAnnotate(tkinter.Toplevel):
         self.wyszukaj_var = tkinter.StringVar()
         wyszukaj_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.wyszukaj_var)
         wyszukaj_entry.pack(side='left', fill='x', expand=1)
+        wyszukaj_entry.bind('<Return>', self.wyszukaj_w_dol_bind)
+        wyszukaj_entry.bind('<Up>', self.wyszukaj_w_gore_bind)
+        wyszukaj_entry.bind('<Down>', self.wyszukaj_w_dol_bind)
         szukaj_w_gore = tkinter.ttk.Button(wysz_filtracja_frame, text='<<', command=self.wyszukaj_w_gore)
         szukaj_w_gore.pack(side='left')
         szukaj_w_dol = tkinter.ttk.Button(wysz_filtracja_frame, text='>>', command=self.wyszukaj_w_dol)
@@ -186,6 +189,7 @@ class CvsAnnotate(tkinter.Toplevel):
         self.pokaz_zawierajace_var = tkinter.StringVar()
         pokaz_zawierajace_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.pokaz_zawierajace_var)
         pokaz_zawierajace_entry.pack(side='left', expand=1, fill='x')
+        pokaz_zawierajace_entry.bind('<Return>', self.filtruj_bind)
         filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
         filtruj_button.pack(side='left')
 
@@ -214,23 +218,24 @@ class CvsAnnotate(tkinter.Toplevel):
         if self.rev_var.get():
             cvs_commandline += ['-r', self.rev_var.get()]
         if self.date_var.get():
-            cvs_commandline += ['-D', self.date_var.get()]
+            cvs_commandline += ['-d', self.date_var.get()]
         process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stdout:
-            self.annotate_log_content = []
-            self.text_w.delete('1.0', 'end')
-            for line in stdout.decode(self.zmienne.Kodowanie):
-                self.text_w.insert('end', str(line))
-                self.annotate_log_content.append(line)
+            lines_to_print = stdout.decode(self.zmienne.Kodowanie)
         elif stderr:
-            self.text_w.delete('1.0', 'end')
-            self.annotate_log_content = []
-            for line in stderr.decode(self.zmienne.Kodowanie):
-                self.text_w.insert('end', line.strip())
-                self.annotate_log_content.append(line)
+            lines_to_print = stderr.decode(self.zmienne.Kodowanie)
         else:
-            pass
+            lines_to_print = []
+        self.annotate_log_content = []
+        self.text_w.delete('1.0', 'end')
+        output_str = ''
+        for literka in lines_to_print:
+            self.text_w.insert('end', literka)
+            output_str += literka
+            if literka == '\n':
+                self.annotate_log_content.append(output_str)
+                output_str = ''
 
     def cvs_annotate(self):
         self.cvs_command('annotate')
@@ -238,8 +243,14 @@ class CvsAnnotate(tkinter.Toplevel):
     def cvs_log(self):
         self.cvs_command('log')
 
+    def wyszukaj_w_gore_bind(self, event):
+        self.wyszukaj(forwards=False, backwards=True)
+
     def wyszukaj_w_gore(self):
         self.wyszukaj(forwards=False, backwards=True)
+
+    def wyszukaj_w_dol_bind(self, event):
+        self.wyszukaj(forwards=True, backwards=False)
 
     def wyszukaj_w_dol(self):
         self.wyszukaj(forwards=True, backwards=False)
@@ -264,15 +275,18 @@ class CvsAnnotate(tkinter.Toplevel):
                 else:
                     self.cursor_index = 'end'
 
+    def filtruj_bind(self, event):
+        self.filtruj()
+
     def filtruj(self):
         self.text_w.delete('1.0', 'end')
         reg_expr = self.pokaz_zawierajace_var.get()
         for line in self.annotate_log_content:
             if reg_expr:
                 if re.search(reg_expr, line) is not None:
-                    self.text_w.insert('end', line.strip())
+                    self.text_w.insert('end', line)
             else:
-                self.text_w.insert('end', line.strip())
+                self.text_w.insert('end', line)
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
