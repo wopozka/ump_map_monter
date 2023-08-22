@@ -214,7 +214,7 @@ class CvsAnnotate(tkinter.Toplevel):
         if self.rev_var.get():
             cvs_commandline += ['-r', self.rev_var.get()]
         if self.date_var.get():
-            cvs_commandline += ['-d', self.date_var.get()]
+            cvs_commandline += ['-D', self.date_var.get()]
         process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stdout:
