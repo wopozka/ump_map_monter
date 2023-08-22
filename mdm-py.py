@@ -210,8 +210,12 @@ class CvsAnnotate(tkinter.Toplevel):
             f_name = os.path.relpath(f_name, self.zmienne.KatalogzUMP)
         CVSROOT = '-d:pserver:' + self.zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
         os.chdir(self.zmienne.KatalogzUMP)
-        process = subprocess.Popen(['cvs', CVSROOT, cvs_command, f_name], stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+        cvs_commandline = ['cvs', CVSROOT, cvs_command]
+        if self.rev_var.get():
+            cvs_commandline += ['-r', self.rev_var.get()]
+        if self.date_var.get():
+            cvs_commandline += ['-d', self.date_var.get()]
+        process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stdout:
             self.annotate_log_content = []
