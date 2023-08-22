@@ -8,6 +8,7 @@ import tkinter.filedialog
 import tkinter.scrolledtext
 import tkinter.messagebox
 import sys
+import re
 
 DownloadEverything = 0
 try:
@@ -138,11 +139,13 @@ class CvsAnnotate(tkinter.Toplevel):
     def __init__(self, parent, zmienne, command, *args, **kwargs):
         self.parent = parent
         self.zmienne = zmienne
+        self.annotate_log_content = list()
+        self.cursor_index = '1.0'
         super().__init__(parent, *args, **kwargs)
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
         buttons_frame = tkinter.Frame(body)
-        buttons_frame.pack()
+        buttons_frame.pack(fill='x')
         self.cvs_f_name_var = tkinter.StringVar()
         self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=60, bg='ivory2')
         self.cvs_f_name.pack(side='left')
@@ -168,21 +171,25 @@ class CvsAnnotate(tkinter.Toplevel):
         self.text_w = tkinter.scrolledtext.ScrolledText(body)
         self.text_w.pack(fill='both', expand=1)
         wysz_filtracja_frame = tkinter.ttk.LabelFrame(body, text=u'Wyszukiwanie i filtracja')
-        wysz_filtracja_frame.pack(fill='x', expand=1)
+        wysz_filtracja_frame.pack(fill='x')
         wysz_label = tkinter.Label(wysz_filtracja_frame, text=u'Szukaj')
         wysz_label.pack(side='left')
         self.wyszukaj_var = tkinter.StringVar()
         wyszukaj_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.wyszukaj_var)
         wyszukaj_entry.pack(side='left', fill='x', expand=1)
-        szukaj_w_gore = tkinter.ttk.Button(wysz_filtracja_frame, text='<<')
+        szukaj_w_gore = tkinter.ttk.Button(wysz_filtracja_frame, text='<<', command=self.wyszukaj_w_gore)
         szukaj_w_gore.pack(side='left')
-        szukaj_w_dol = tkinter.ttk.Button(wysz_filtracja_frame, text='>>')
+        szukaj_w_dol = tkinter.ttk.Button(wysz_filtracja_frame, text='>>', command=self.wyszukaj_w_dol)
         szukaj_w_dol.pack(side='left')
         pokaz_zawierajace_label = tkinter.Label(wysz_filtracja_frame, text=u'Pokaż linie zawierające tylko (RegEx)')
         pokaz_zawierajace_label.pack(side='left')
         self.pokaz_zawierajace_var = tkinter.StringVar()
         pokaz_zawierajace_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.pokaz_zawierajace_var)
         pokaz_zawierajace_entry.pack(side='left', expand=1, fill='x')
+        filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
+        filtruj_button.pack(side='left')
+
+        self.text_w.tag_config('podswietl', background='yellow')
 
         self.transient(self.parent)
         self.focus_set()
@@ -207,13 +214,17 @@ class CvsAnnotate(tkinter.Toplevel):
                                    stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stdout:
+            self.annotate_log_content = []
             self.text_w.delete('1.0', 'end')
             for line in stdout.decode(self.zmienne.Kodowanie):
                 self.text_w.insert('end', str(line))
+                self.annotate_log_content.append(line)
         elif stderr:
             self.text_w.delete('1.0', 'end')
+            self.annotate_log_content = []
             for line in stderr.decode(self.zmienne.Kodowanie):
                 self.text_w.insert('end', line.strip())
+                self.annotate_log_content.append(line)
         else:
             pass
 
@@ -222,6 +233,42 @@ class CvsAnnotate(tkinter.Toplevel):
 
     def cvs_log(self):
         self.cvs_command('log')
+
+    def wyszukaj_w_gore(self):
+        self.wyszukaj(forwards=False, backwards=True)
+
+    def wyszukaj_w_dol(self):
+        self.wyszukaj(forwards=True, backwards=False)
+
+    def wyszukaj(self, forwards=None, backwards=None):
+        if self.wyszukaj_var.get():
+            found_index = self.text_w.search(self.wyszukaj_var.get(), self.cursor_index, backwards=backwards,
+                                             forwards=forwards, nocase=True)
+            if found_index:
+                self.text_w.tag_remove('podswietl', '1.0', 'end')
+                line_n, char_n = found_index.split('.', 1)
+                found_end_index = line_n + '.' + str(int(char_n) + len(self.wyszukaj_var.get()))
+                self.text_w.tag_add('podswietl', found_index, found_end_index)
+                self.text_w.see(found_index)
+                if forwards:
+                    self.cursor_index = found_end_index
+                else:
+                    self.cursor_index = found_index
+            else:
+                if forwards:
+                    self.cursor_index = '1.0'
+                else:
+                    self.cursor_index = 'end'
+
+    def filtruj(self):
+        self.text_w.delete('1.0', 'end')
+        reg_expr = self.pokaz_zawierajace_var.get()
+        for line in self.annotate_log_content:
+            if reg_expr:
+                if re.search(reg_expr, line) is not None:
+                    self.text_w.insert('end', line.strip())
+            else:
+                self.text_w.insert('end', line.strip())
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
