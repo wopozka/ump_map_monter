@@ -178,7 +178,7 @@ class CvsAnnotate(tkinter.Toplevel):
         szukaj_w_gore.pack(side='left')
         szukaj_w_dol = tkinter.ttk.Button(wysz_filtracja_frame, text='>>')
         szukaj_w_dol.pack(side='left')
-        pokaz_zawierajace_label = tkinter.Label(wysz_filtracja_frame, text=u'Pokaż linie zawierające tylko')
+        pokaz_zawierajace_label = tkinter.Label(wysz_filtracja_frame, text=u'Pokaż linie zawierające tylko (RegEx)')
         pokaz_zawierajace_label.pack(side='left')
         self.pokaz_zawierajace_var = tkinter.StringVar()
         pokaz_zawierajace_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.pokaz_zawierajace_var)
