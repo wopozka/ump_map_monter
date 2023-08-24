@@ -143,6 +143,8 @@ class CvsAnnotate(tkinter.Toplevel):
         self.annotate_log_content = list()
         self.log_content = list()
         self.cursor_index = '1.0'
+        self.text_widgets = {'annotate': None, 'log': None}
+        self.annotate_log_content = {'annotate': [], 'log': []}
         super().__init__(parent, *args, **kwargs)
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
@@ -167,11 +169,8 @@ class CvsAnnotate(tkinter.Toplevel):
         self.date_var = tkinter.StringVar()
         date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
         date_entry.pack(side='left')
-        if command == 'annotate':
-            annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate/Log', command=self.cvs_annotate_log)
-        else:
-            annotate_button = tkinter.ttk.Button(buttons_frame, text=u'Log', command=self.cvs_annotate_log)
-        annotate_button.pack(side='left')
+        annotate_log_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate/Log', command=self.cvs_annotate_log)
+        annotate_log_button.pack(side='left')
         close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
         close_button.pack(side='left')
         self.log_annotate_nbook = tkinter.ttk.Notebook(body)
@@ -180,12 +179,12 @@ class CvsAnnotate(tkinter.Toplevel):
         annotate_text_frame.pack(fill='both', expand=1)
         log_text_frame = tkinter.Frame(self.log_annotate_nbook)
         log_text_frame.pack(fill='both', expand=1)
-        self.text_w = tkinter.scrolledtext.ScrolledText(annotate_text_frame)
-        self.text_w.pack(fill='both', expand=1)
-        self.log_text_w = tkinter.scrolledtext.ScrolledText(log_text_frame)
-        self.log_text_w.pack(fill='both', expand=1)
-        self.log_annotate_nbook.add(annotate_text_frame, text='Annotate')
-        self.log_annotate_nbook.add(log_text_frame, text='Log')
+        self.text_widgets['annotate'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame)
+        self.text_widgets['annotate'].pack(fill='both', expand=1)
+        self.text_widgets['log'] = tkinter.scrolledtext.ScrolledText(log_text_frame)
+        self.text_widgets['log'].pack(fill='both', expand=1)
+        self.log_annotate_nbook.add(annotate_text_frame, text='annotate')
+        self.log_annotate_nbook.add(log_text_frame, text='log')
         wysz_filtracja_frame = tkinter.ttk.LabelFrame(body, text=u'Wyszukiwanie i filtracja')
         wysz_filtracja_frame.pack(fill='x')
         wysz_label = tkinter.Label(wysz_filtracja_frame, text=u'Szukaj')
@@ -209,8 +208,8 @@ class CvsAnnotate(tkinter.Toplevel):
         filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
         filtruj_button.pack(side='left')
 
-        self.text_w.tag_config('podswietl', background='yellow')
-        self.log_text_w.tag_config('podswietl', background='yellow')
+        self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
+        self.text_widgets['log'].tag_config('podswietl', background='yellow')
         self.transient(self.parent)
         self.focus_set()
         self.grab_set()
@@ -278,14 +277,14 @@ class CvsAnnotate(tkinter.Toplevel):
 
 
     def cvs_annotate_log(self):
-        self.annotate_log_content = self.cvs_command('annotate')
-        self.log_content = self.cvs_command('log')
-        self.text_w.delete('1.0', 'end')
-        self.log_text_w.delete('1.0', 'end')
-        for line in self.annotate_log_content:
-            self.text_w.insert('end', line)
-        for line in self.log_content:
-            self.log_text_w.insert('end', line)
+        self.annotate_log_content['annotate'] = self.cvs_command('annotate')
+        self.annotate_log_content['log'] = self.cvs_command('log')
+        self.text_widgets['annotate'].delete('1.0', 'end')
+        self.text_widgets['log'].delete('1.0', 'end')
+        for line in self.annotate_log_content['annotate']:
+            self.text_widgets['annotate'].insert('end', line)
+        for line in self.annotate_log_content['log']:
+            self.text_widgets['log'].insert('end', line)
 
 
     def wyszukaj_w_gore_bind(self, event):
@@ -302,19 +301,15 @@ class CvsAnnotate(tkinter.Toplevel):
 
     def wyszukaj(self, forwards=None, backwards=None):
         tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
-        if tabname == 'Annotate':
-            textfield = self.text_w
-        else:
-            textfield = self.log_text_w
         if self.wyszukaj_var.get():
-            found_index = textfield.search(self.wyszukaj_var.get(), self.cursor_index, backwards=backwards,
-                                             forwards=forwards, nocase=True)
+            found_index = self.text_widgets[tabname].search(self.wyszukaj_var.get(), self.cursor_index,
+                                                            backwards=backwards, forwards=forwards, nocase=True)
             if found_index:
-                textfield.tag_remove('podswietl', '1.0', 'end')
+                self.text_widgets[tabname].tag_remove('podswietl', '1.0', 'end')
                 line_n, char_n = found_index.split('.', 1)
                 found_end_index = line_n + '.' + str(int(char_n) + len(self.wyszukaj_var.get()))
-                textfield.tag_add('podswietl', found_index, found_end_index)
-                textfield.see(found_index)
+                self.text_widgets[tabname].tag_add('podswietl', found_index, found_end_index)
+                self.text_widgets[tabname].see(found_index)
                 if forwards:
                     self.cursor_index = found_end_index
                 else:
@@ -329,14 +324,15 @@ class CvsAnnotate(tkinter.Toplevel):
         self.filtruj()
 
     def filtruj(self):
-        self.text_w.delete('1.0', 'end')
+        tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
+        self.text_widgets[tabname].delete('1.0', 'end')
         reg_expr = self.pokaz_zawierajace_var.get()
-        for line in self.annotate_log_content:
+        for line in self.annotate_log_content[tabname]:
             if reg_expr:
                 if re.search(reg_expr, line) is not None:
-                    self.text_w.insert('end', line)
+                    self.text_widgets[tabname].insert('end', line)
             else:
-                self.text_w.insert('end', line)
+                self.text_widgets[tabname].insert('end', line)
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
@@ -2314,8 +2310,7 @@ class mdm_gui_py(tkinter.Tk):
 
         # menu CVS
         menu_cvs = tkinter.Menu(menubar, tearoff=0)
-        menu_cvs.add_command(label='cvs annotate', command=self.cvs_annotate)
-        menu_cvs.add_command(label='cvs log', command=self.cvs_log)
+        menu_cvs.add_command(label='cvs annotate/log', command=self.cvs_annotate)
         menubar.add_cascade(label='CVS', menu=menu_cvs)
 
         # menu Pomoc
@@ -2952,9 +2947,6 @@ class mdm_gui_py(tkinter.Tk):
     # obsluga menu CVS
     def cvs_annotate(self):
         aaa = CvsAnnotate(self, self.Zmienne, 'annotate')
-
-    def cvs_log(self):
-        aaa = CvsAnnotate(self, self.Zmienne, 'log')
 
     def OnButtonClickCvsUp(self):
         obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
