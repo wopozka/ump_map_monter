@@ -828,7 +828,7 @@ class HelpWindow(tkinter.Toplevel):
                     ]
 
         for a in listaSkrotowKlawiaturowych:
-            okienko.insert('end', a)
+            okienko.insert('insert', a)
 
         okienko.config(state='disabled')
 
