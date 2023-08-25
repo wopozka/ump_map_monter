@@ -136,7 +136,7 @@ def createToolTip(widget, text):
 
 
 class CvsAnnotate(tkinter.Toplevel):
-    def __init__(self, parent, zmienne, command, *args, **kwargs):
+    def __init__(self, parent, zmienne, *args, **kwargs):
         self.log_annotate_file = os.path.join(os.path.expanduser('~'), '.log_annotate_file')
         self.parent = parent
         self.zmienne = zmienne
@@ -145,7 +145,7 @@ class CvsAnnotate(tkinter.Toplevel):
         self.cursor_index = '1.0'
         self.text_widgets = {'annotate': None, 'revision_log': None, 'log': None}
         self.annotate_log_content = {'annotate': [], 'log': []}
-        self.revision_log = defaultdict(str)
+        self.revision_log = None
         super().__init__(parent, *args, **kwargs)
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
@@ -170,7 +170,7 @@ class CvsAnnotate(tkinter.Toplevel):
         self.date_var = tkinter.StringVar()
         date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
         date_entry.pack(side='left')
-        annotate_log_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate/Log', command=self.cvs_annotate_log)
+        annotate_log_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate/Log', command=self.run_cvs_log_cvs_annotate_save_results)
         annotate_log_button.pack(side='left')
         close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
         close_button.pack(side='left')
@@ -280,26 +280,35 @@ class CvsAnnotate(tkinter.Toplevel):
         return log_list
 
 
-    def cvs_annotate_log(self):
+    def run_cvs_log_cvs_annotate_save_results(self):
         self.annotate_log_content['annotate'] = self.cvs_command('annotate')
         self.annotate_log_content['log'] = self.cvs_command('log')
+        self.wypelnij_okno_annotate('')
+        self.wypelnij_okno_log('')
+
+    def wypelnij_okno_annotate(self, reg_expr):
         self.text_widgets['annotate'].delete('1.0', 'end')
-        self.text_widgets['log'].delete('1.0', 'end')
         for l_no, line in enumerate(self.annotate_log_content['annotate']):
-            self.text_widgets['annotate'].insert('end', line)
-            ind_start = str(l_no + 1) + '.0'
-            ind_end = str(l_no + 1) + '.' + str(line.find(' '))
-            self.text_widgets['annotate'].tag_add('revision', ind_start, ind_end)
+            if not reg_expr or reg_expr and re.search(reg_expr, line) is not None:
+                ind_start = self.text_widgets['annotate'].index('insert')
+                ind_end = ind_start.split('.', 1)[0] + '.' + str(line.find(' '))
+                self.text_widgets['annotate'].insert('insert', line)
+                self.text_widgets['annotate'].tag_add('revision', ind_start, ind_end)
+
+    def wypelnij_okno_log(self, reg_expr):
+        self.text_widgets['log'].delete('1.0', 'end')
         revision = ''
+        revision_log = defaultdict(str)
         for line in self.annotate_log_content['log']:
-            self.text_widgets['log'].insert('end', line)
+            if not reg_expr or reg_expr and re.search(reg_expr, line) is not None:
+                self.text_widgets['log'].insert('insert', line)
             if line.startswith('revision'):
                 revision = line.rstrip()
             elif line.startswith('-----') or line.startswith('====='):
                 revision = ''
             if revision:
-                self.revision_log[revision] += line
-
+                revision_log[revision] += line
+        self.revision_log = {a: revision_log[a] for a in revision_log}
 
     def wyszukaj_w_gore_bind(self, event):
         self.wyszukaj(forwards=False, backwards=True)
@@ -335,24 +344,21 @@ class CvsAnnotate(tkinter.Toplevel):
                     self.cursor_index = 'end'
 
     def filtruj_bind(self, event):
-        self.filtruj()
+        tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
+        reg_expr = self.pokaz_zawierajace_var.get()
+        if tabname == 'annotate':
+            self.wypelnij_okno_annotate(reg_expr)
+        else:
+            self.wypelnij_okno_log(reg_expr)
 
     def filtruj(self):
-        tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
-        self.text_widgets[tabname].delete('1.0', 'end')
-        reg_expr = self.pokaz_zawierajace_var.get()
-        for line in self.annotate_log_content[tabname]:
-            if reg_expr:
-                if re.search(reg_expr, line) is not None:
-                    self.text_widgets[tabname].insert('end', line)
-            else:
-                self.text_widgets[tabname].insert('end', line)
+        self.filtruj_bind(None)
 
     def revision_clicked(self, event):
         row = self.text_widgets['annotate'].index('current').split('.')[0]
         revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
         self.text_widgets['revision_log'].delete('1.0', 'end')
-        self.text_widgets['revision_log'].insert('end', self.revision_log['revision ' + revision])
+        self.text_widgets['revision_log'].insert('insert', self.revision_log['revision ' + revision])
 
 
 class PaczujResult(tkinter.Toplevel):
@@ -2967,7 +2973,7 @@ class mdm_gui_py(tkinter.Tk):
 
     # obsluga menu CVS
     def cvs_annotate(self):
-        aaa = CvsAnnotate(self, self.Zmienne, 'annotate')
+        aaa = CvsAnnotate(self, self.Zmienne)
 
     def OnButtonClickCvsUp(self):
         obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
