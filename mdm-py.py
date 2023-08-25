@@ -143,8 +143,9 @@ class CvsAnnotate(tkinter.Toplevel):
         self.annotate_log_content = list()
         self.log_content = list()
         self.cursor_index = '1.0'
-        self.text_widgets = {'annotate': None, 'log': None}
+        self.text_widgets = {'annotate': None, 'revision_log': None, 'log': None}
         self.annotate_log_content = {'annotate': [], 'log': []}
+        self.revision_log = defaultdict(str)
         super().__init__(parent, *args, **kwargs)
         body = tkinter.Frame(self)
         body.pack(padx=5, pady=5, fill='both', expand=1)
@@ -181,6 +182,8 @@ class CvsAnnotate(tkinter.Toplevel):
         log_text_frame.pack(fill='both', expand=1)
         self.text_widgets['annotate'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame)
         self.text_widgets['annotate'].pack(fill='both', expand=1)
+        self.text_widgets['revision_log'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame, height=10)
+        self.text_widgets['revision_log'].pack(fill='x')
         self.text_widgets['log'] = tkinter.scrolledtext.ScrolledText(log_text_frame)
         self.text_widgets['log'].pack(fill='both', expand=1)
         self.log_annotate_nbook.add(annotate_text_frame, text='annotate')
@@ -207,7 +210,8 @@ class CvsAnnotate(tkinter.Toplevel):
         pokaz_zawierajace_entry.bind('<Return>', self.filtruj_bind)
         filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
         filtruj_button.pack(side='left')
-
+        self.text_widgets['annotate'].tag_config('revision', foreground='red')
+        self.text_widgets['annotate'].tag_bind('revision', '<Double-Button-1>', self.revision_clicked)
         self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
         self.text_widgets['log'].tag_config('podswietl', background='yellow')
         self.transient(self.parent)
@@ -281,10 +285,20 @@ class CvsAnnotate(tkinter.Toplevel):
         self.annotate_log_content['log'] = self.cvs_command('log')
         self.text_widgets['annotate'].delete('1.0', 'end')
         self.text_widgets['log'].delete('1.0', 'end')
-        for line in self.annotate_log_content['annotate']:
+        for l_no, line in enumerate(self.annotate_log_content['annotate']):
             self.text_widgets['annotate'].insert('end', line)
+            ind_start = str(l_no + 1) + '.0'
+            ind_end = str(l_no + 1) + '.' + str(line.find(' '))
+            self.text_widgets['annotate'].tag_add('revision', ind_start, ind_end)
+        revision = ''
         for line in self.annotate_log_content['log']:
             self.text_widgets['log'].insert('end', line)
+            if line.startswith('revision'):
+                revision = line.rstrip()
+            elif line.startswith('-----') or line.startswith('====='):
+                revision = ''
+            if revision:
+                self.revision_log[revision] += line
 
 
     def wyszukaj_w_gore_bind(self, event):
@@ -333,6 +347,13 @@ class CvsAnnotate(tkinter.Toplevel):
                     self.text_widgets[tabname].insert('end', line)
             else:
                 self.text_widgets[tabname].insert('end', line)
+
+    def revision_clicked(self, event):
+        row = self.text_widgets['annotate'].index('@' + str(event.x) + ',' + str(event.y)).split('.')[0]
+        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        self.text_widgets['revision_log'].delete('1.0', 'end')
+        self.text_widgets['revision_log'].insert('end', self.revision_log['revision ' + revision])
+
 
 class PaczujResult(tkinter.Toplevel):
     """klasa przechowuje okienko w którym pokazywane są wyniki łatania plików"""
