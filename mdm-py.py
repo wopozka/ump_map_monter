@@ -182,8 +182,12 @@ class CvsAnnotate(tkinter.Toplevel):
         log_text_frame.pack(fill='both', expand=1)
         self.text_widgets['annotate'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame)
         self.text_widgets['annotate'].pack(fill='both', expand=1)
-        self.text_widgets['revision_log'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame, height=10)
-        self.text_widgets['revision_log'].pack(fill='x')
+        revision_log_diff_frame = tkinter.Frame(annotate_text_frame)
+        revision_log_diff_frame.pack(expand=1, fill='x')
+        self.text_widgets['revision_log'] = tkinter.scrolledtext.ScrolledText(revision_log_diff_frame, height=10)
+        self.text_widgets['revision_log'].pack(fill='x', side='left', expand=1)
+        self.text_widgets['diff_log'] = tkinter.scrolledtext.ScrolledText(revision_log_diff_frame, height=10)
+        self.text_widgets['diff_log'].pack(fill='x', side='left', expand=1)
         self.text_widgets['log'] = tkinter.scrolledtext.ScrolledText(log_text_frame)
         self.text_widgets['log'].pack(fill='both', expand=1)
         self.log_annotate_nbook.add(annotate_text_frame, text='annotate')
@@ -211,7 +215,8 @@ class CvsAnnotate(tkinter.Toplevel):
         filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
         filtruj_button.pack(side='left')
         self.text_widgets['annotate'].tag_config('revision', foreground='red')
-        self.text_widgets['annotate'].tag_bind('revision', '<Double-Button-1>', self.revision_clicked)
+        self.text_widgets['annotate'].tag_bind('revision', '<Button-1>', self.revision_clicked)
+        self.text_widgets['annotate'].tag_bind('revision', '<Double-Button-1>', self.revision_double_clicked)
         self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
         self.text_widgets['log'].tag_config('podswietl', background='yellow')
         self.transient(self.parent)
@@ -249,7 +254,7 @@ class CvsAnnotate(tkinter.Toplevel):
             self.cvs_f_name_var.set(plik_do_annotate)
             self.zapisz_log_annotate()
 
-    def cvs_command(self, cvs_command):
+    def cvs_command(self, cvs_command, revision1, revision2):
         f_name = self.cvs_f_name_var.get()
         if not f_name:
             return
@@ -262,6 +267,8 @@ class CvsAnnotate(tkinter.Toplevel):
             cvs_commandline += ['-r', self.rev_var.get()]
         if cvs_command == 'annotate' and self.date_var.get():
             cvs_commandline += ['-d', self.date_var.get()]
+        if cvs_command == 'diff':
+            cvs_commandline += ['-u', '-r', revision1, '-r', revision2]
         process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stdout:
@@ -281,8 +288,8 @@ class CvsAnnotate(tkinter.Toplevel):
 
 
     def run_cvs_log_cvs_annotate_save_results(self):
-        self.annotate_log_content['annotate'] = self.cvs_command('annotate')
-        self.annotate_log_content['log'] = self.cvs_command('log')
+        self.annotate_log_content['annotate'] = self.cvs_command('annotate', '', '')
+        self.annotate_log_content['log'] = self.cvs_command('log', '', '')
         self.wypelnij_okno_annotate('')
         self.wypelnij_okno_log('')
 
@@ -359,6 +366,18 @@ class CvsAnnotate(tkinter.Toplevel):
         revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
         self.text_widgets['revision_log'].delete('1.0', 'end')
         self.text_widgets['revision_log'].insert('insert', self.revision_log['revision ' + revision])
+
+    def revision_double_clicked(self, event):
+        self.revision_clicked(event)
+        row = self.text_widgets['annotate'].index('current').split('.')[0]
+        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        if revision.count('.') == 1:
+            rev_main, rev_side = revision.split('.')
+            if rev_side not in ('0', '1'):
+                revision0 = rev_main + '.' + str(int(rev_side) - 1)
+                self.text_widgets['diff_log'].delete('1.0', 'end')
+                for line in self.cvs_command('diff', revision0, revision):
+                    self.text_widgets['diff_log'].insert('insert', line)
 
 
 class PaczujResult(tkinter.Toplevel):
