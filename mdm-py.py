@@ -349,7 +349,7 @@ class CvsAnnotate(tkinter.Toplevel):
                 self.text_widgets[tabname].insert('end', line)
 
     def revision_clicked(self, event):
-        row = self.text_widgets['annotate'].index('@' + str(event.x) + ',' + str(event.y)).split('.')[0]
+        row = self.text_widgets['annotate'].index('current').split('.')[0]
         revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
         self.text_widgets['revision_log'].delete('1.0', 'end')
         self.text_widgets['revision_log'].insert('end', self.revision_log['revision ' + revision])
