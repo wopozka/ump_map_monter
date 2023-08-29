@@ -1850,10 +1850,12 @@ class cvsOutputReceaver(tkinter.Toplevel):
                     #
                 except queue.Empty:
                     pass
-                line = process.stdout.readline()
-                if line.decode(Zmienne.Kodowanie) != '':
-                    self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
-
+                try:
+                    line, errs = process.communicate(timeout=1)
+                    if line.decode(Zmienne.Kodowanie) != '':
+                        self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+                except subprocess.TimeoutExpired:
+                    pass
                 # time.sleep(0.1)
                 processexitstatus = process.poll()
 
