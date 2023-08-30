@@ -2400,7 +2400,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     for node in ways[-1]['_nodes']:
                         node_ways_relation[node].add(new_way_id)
 
-    # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
+    # we have to transfer relations ordered dict into the list, as it is easier to add elements to the end
     map_elements_props['relations'] = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
