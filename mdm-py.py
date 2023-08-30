@@ -1852,7 +1852,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         progreststartstopqueue.put('start')
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
-        string = ''
+        stop_string = ''
         czyzatrzymac = 0
 
         os.chdir(Zmienne.KatalogzUMP)
@@ -1867,8 +1867,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
             while processexitstatus is None:
                 try:
-                    string = stopthreadqueue.get_nowait()
-                    if string == 'stop':
+                    stop_string = stopthreadqueue.get_nowait()
+                    if stop_string == 'stop':
                         process.terminate()
                         czyzatrzymac = 1
                         break
@@ -1887,15 +1887,15 @@ class cvsOutputReceaver(tkinter.Toplevel):
             if czyzatrzymac:
                 break
 
-        if string == 'stop':
+        if stop_string == 'stop':
             self.outputwindow.inputqueue.put(u'Proces uaktualniania przerwany na żądanie użytkownika!\n')
 
-        else:
-            # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
-            # trzeba doczytać tutaj.
-            while line.decode(Zmienne.Kodowanie) != '':
-                line = process.stdout.readline()
-                self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+        # else:
+        #     # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
+        #     # trzeba doczytać tutaj.
+        #     while line.decode(Zmienne.Kodowanie) != '':
+        #         line = process.stdout.readline()
+        #         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
 
