@@ -1890,12 +1890,15 @@ class cvsOutputReceaver(tkinter.Toplevel):
         if stop_string == 'stop':
             self.outputwindow.inputqueue.put(u'Proces uaktualniania przerwany na żądanie użytkownika!\n')
 
-        # else:
-        #     # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
-        #     # trzeba doczytać tutaj.
-        #     while line.decode(Zmienne.Kodowanie) != '':
-        #         line = process.stdout.readline()
-        #         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+        else:
+            # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
+            # trzeba doczytać tutaj.
+            try:
+                line, errs = process.communicate()
+                if line.decode(Zmienne.Kodowanie):
+                    self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+            except subprocess.TimeoutExpired:
+                pass
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
 
