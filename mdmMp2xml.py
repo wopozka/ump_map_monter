@@ -1435,6 +1435,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             num = int(key[4:])
             count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
+            # jesli nie uda sie skonwertowac DataX na cos poprawnego to wtedy zwroc pusty slownik.
             if not way['_nodes']:
                 return {}
             if '_c' in way:
