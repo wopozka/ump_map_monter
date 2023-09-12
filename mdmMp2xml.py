@@ -2201,10 +2201,23 @@ def xmlize(xml_str):
 
 
 def extract_reference_code(label, refpos, messages_printer):
-    reftype = {0x02: 'ref', 0x05: 'ref', 0x1d: 'loc_name',  # Abbrevations
-               0x1f: 'ele', 0x2a: 'int_ref',  # Fixme should differentate the types
-               0x2b: 'int_ref', 0x2c: 'int_ref', 0x2d: 'ref', 0x2e: 'ref', 0x2f: 'ref', 0x1e: 'loc_name',
-               0x01: 'int_ref', 0x02: 'int_ref', 0x04: 'ref', 0x06: 'ref'}
+    reftype = {
+        # interstate symbol, name can consist only digits, allowed only at beginning of label
+        0x01: 'int_ref', 0x2a: 'int_ref',
+        # US Highway – shield, name can consist only from digits, allowed only at beginning of label
+        0x02: 'int_ref',  0x2b: 'int_ref',
+        # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
+        0x03: 'ref', 0x2c: 'int_ref',
+        # Highway – big, allowed only at beginning of label
+        0x04: 'ref', 0x2d: 'ref',
+        # Main road – middle, allowed only at beginning of label
+        0x05: 'ref', 0x2e: 'ref',
+        # Main road – small, allowed only at beginning of label
+        0x06: 'ref', 0x2f: 'ref',
+        # Country, region, abrevation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
+        0x1d: 'loc_name',
+        0x1f: 'ele'  # elevation
+    }
     try:
         # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
         label_split = label[refpos + 2:].split(' ', 1)  # above line in py_ver = 2.4
@@ -2219,23 +2232,29 @@ def extract_reference_code(label, refpos, messages_printer):
         return reftype[int(code, 0)], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     except:
-        if code.lower() == '0x06':
-            label = ref + label
-            pass
-        elif code.lower() == '0x1b':
+        if code.lower() == '0x1b':  # Used before a letter forces it to be a lower case
             way['loc_name'] = right
             label = ref + label
+            return 'loc_name', right, ref + label
+        # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
+        # one the word completely, not separated
         elif code.lower() == '0x1c':
             way['loc_name'] = ref
             label = ref + label
-        elif code.lower() == '0x1c':
-            label = value.replace('~[0x1c]', '')
-            messages_printer.printerror("1C" + label)
+            return 'loc_name', ref, ref + label
+        # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
+        # word completely, by blank separated
         elif code.lower() == '0x1e':
-            label = value.replace('~[0x1e]', ' ')
+            label = label.replace('~[0x1e]', '')
             messages_printer.printerror("1E" + label)
+            return '', '', label.replace('~[0x1e]', '')
+        # separator before elevation,
+        elif code.lower() == '0x1f':
+            label = label.replace('~[0x1f]', ' ')
+            messages_printer.printerror("1F" + label)
+            return '', '', label.replace('~[0x1f]', ' ')
         else:
-            raise ParsingError('Problem parsing label ' + value)
+            raise ParsingError('Problem parsing label ' + label)
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
     """
