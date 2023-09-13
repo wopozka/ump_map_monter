@@ -1384,37 +1384,48 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             label = value
             refpos = label.find("~[")
             if refpos > -1:
-                try:
-                    # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
-                    label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
-                    if len(label_split) == 2:
-                        refstr, right = label[refpos + 2:].split(' ', 1)
-                    else:
-                        refstr = label_split[0]
-                        right = ""
-
-                    code, ref = refstr.split(']')
-                    label = (label[:refpos] + right).strip(' \t')
-                    way[reftype[int(code, 0)]] = ref.replace("/", ";")
-                except:
-                    if code.lower() == '0x06':
-                        label = ref + label
-                        pass
-                    elif code.lower() == '0x1b':
-                        way['loc_name'] = right
-                        label = ref + label
-                    elif code.lower() == '0x1c':
-                        way['loc_name'] = ref
-                        label = ref + label
-                    elif code.lower() == '0x1c':
-                        label = value.replace('~[0x1c]', '')
-                        messages_printer.printerror("1C" + label)
-                    elif code.lower() == '0x1e':
-                        label = value.replace('~[0x1e]', ' ')
-                        messages_printer.printerror("1E" + label)
+                success, code_tag, code_value, label = \
+                    extract_reference_code(label, refpos, messages_printer=messages_printer)
+                if success:
+                    if code_tag and code_value:
+                        way[code_tag] = code_value
+                else:
+                    if ignore_errors:
+                        messages_printer.printerror('Unknown ref code: ' + code_value + ' for label: ' + value +
+                                                    '. Ignoring.')
                     else:
                         raise ParsingError('Problem parsing label ' + value)
-            if 'name' not in way and label != "":
+                # try:
+                #     # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
+                #     label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
+                #     if len(label_split) == 2:
+                #         refstr, right = label[refpos + 2:].split(' ', 1)
+                #     else:
+                #         refstr = label_split[0]
+                #         right = ""
+                #
+                #     code, ref = refstr.split(']')
+                #     label = (label[:refpos] + right).strip(' \t')
+                #     way[reftype[int(code, 0)]] = ref.replace("/", ";")
+                # except:
+                #     if code.lower() == '0x06':
+                #         label = ref + label
+                #         pass
+                #     elif code.lower() == '0x1b':
+                #         way['loc_name'] = right
+                #         label = ref + label
+                #     elif code.lower() == '0x1c':
+                #         way['loc_name'] = ref
+                #         label = ref + label
+                #     elif code.lower() == '0x1c':
+                #         label = value.replace('~[0x1c]', '')
+                #         messages_printer.printerror("1C" + label)
+                #     elif code.lower() == '0x1e':
+                #         label = value.replace('~[0x1e]', ' ')
+                #         messages_printer.printerror("1E" + label)
+                #     else:
+                #         raise ParsingError('Problem parsing label ' + value)
+            if 'name' not in way and label:
                 way['name'] = label.strip()
         elif key.lower() in ('label2',):
             way['loc_name'] = value
@@ -2252,23 +2263,24 @@ def extract_reference_code(label, refpos, messages_printer=None):
         return True, reftype[reference_code], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     else:
-        if code.lower() == '0x1b':  # Used before a letter forces it to be a lower case
+        # Used before a letter forces it to be a lower case
+        if code.lower() == '0x1b':
             # way['loc_name'] = right
             label = ref + label
-            return True, 'loc_name', right, ref + label
+            return True, 'loc_name', right, label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
         elif code.lower() == '0x1c':
             # way['loc_name'] = ref
             label = ref + label
-            return True, 'loc_name', ref, ref + label
+            return True, 'loc_name', ref, label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
         elif code.lower() == '0x1e':
             label = label.replace('~[0x1e]', '')
             if messages_printer is not None:
                 messages_printer.printerror("1E" + label)
-            return True, '', '', label.replace('~[0x1e]', '')
+            return True, '', '', label
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown reference code: " + code)
