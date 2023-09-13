@@ -2201,6 +2201,18 @@ def xmlize(xml_str):
 
 
 def extract_reference_code(label, refpos, messages_printer):
+    """
+    Extracting reference numbers, abbreviations and elevations inserted into map sources by special codes: ~[0x01]XXX
+    Parameters
+    ----------
+    label: map object label
+    refpos: location of ~[ in the label
+    messages_printer: reference to message printer class, for error printing
+
+    Returns
+    -------
+    tuple(conversion_result, name_of_way_key, value of reference, new label)
+    """
     reftype = {
         # interstate symbol, name can consist only digits, allowed only at beginning of label
         0x01: 'int_ref', 0x2a: 'int_ref',
@@ -2214,47 +2226,55 @@ def extract_reference_code(label, refpos, messages_printer):
         0x05: 'ref', 0x2e: 'ref',
         # Main road – small, allowed only at beginning of label
         0x06: 'ref', 0x2f: 'ref',
-        # Country, region, abrevation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
+        # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
         0x1d: 'loc_name',
         0x1f: 'ele'  # elevation
     }
-    try:
-        # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
-        label_split = label[refpos + 2:].split(' ', 1)  # above line in py_ver = 2.4
-        if len(label_split) == 2:
-            refstr, right = label[refpos + 2:].split(' ', 1)
-        else:
-            refstr = label_split[0]
-            right = ""
 
-        code, ref = refstr.split(']')
-        label = (label[:refpos] + right).strip(' \t')
-        return reftype[int(code, 0)], ref.replace("/", ";"), label
+    label_split = label[refpos + 2:].split(' ', 1)
+    if len(label_split) == 2:
+        refstr, right = label[refpos + 2:].split(' ', 1)
+    else:
+        refstr = label_split[0]
+        right = ""
+
+    code, ref = refstr.split(']')
+    label = (label[:refpos] + right).strip(' \t')
+    try:
+        reference_code = int(code, 0)
+    except ValueError:
+        messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
+        return False, code.lower(), ref, label
+
+    if reference_code in reftype:
+        return True, reftype[reference_code], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
-    except:
+    else:
         if code.lower() == '0x1b':  # Used before a letter forces it to be a lower case
             way['loc_name'] = right
             label = ref + label
-            return 'loc_name', right, ref + label
+            return True, 'loc_name', right, ref + label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
         elif code.lower() == '0x1c':
             way['loc_name'] = ref
             label = ref + label
-            return 'loc_name', ref, ref + label
+            return True, 'loc_name', ref, ref + label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
         elif code.lower() == '0x1e':
             label = label.replace('~[0x1e]', '')
             messages_printer.printerror("1E" + label)
-            return '', '', label.replace('~[0x1e]', '')
+            return True, '', '', label.replace('~[0x1e]', '')
         # separator before elevation,
         elif code.lower() == '0x1f':
             label = label.replace('~[0x1f]', ' ')
             messages_printer.printerror("1F" + label)
-            return '', '', label.replace('~[0x1f]', ' ')
+            return True, '', '', label.replace('~[0x1f]', ' ')
         else:
-            raise ParsingError('Problem parsing label ' + label)
+            messages_printer.printerror("Unknown reference code: " + code)
+            return False, code.lower(), ref, label
+            # raise ParsingError('Problem parsing label ' + label)
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
     """
