@@ -146,6 +146,8 @@ TEST_EXTRACT_REF_CODE = (
     ('~[0x03]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
     ('~[0x2c]123', (True, 'ref', '123', '')),
     ('~[0x2c]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
+    ('Polska~[0x1d]Pl', (True, 'loc_name', 'Pl', 'Polska')),
+    ('Kasprowy Wierch~[0x1f]1987', (True, 'ele', '1987', 'Kasprowy Wierch')),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_REF_CODE)

@@ -2228,7 +2228,8 @@ def extract_reference_code(label, refpos, messages_printer=None):
         0x06: 'ref', 0x2f: 'ref',
         # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
         0x1d: 'loc_name',
-        0x1f: 'ele'  # elevation
+        # elevation
+        0x1f: 'ele'
     }
 
     label_split = label[refpos + 2:].split(' ', 1)
@@ -2268,12 +2269,6 @@ def extract_reference_code(label, refpos, messages_printer=None):
             if messages_printer is not None:
                 messages_printer.printerror("1E" + label)
             return True, '', '', label.replace('~[0x1e]', '')
-        # separator before elevation,
-        elif code.lower() == '0x1f':
-            label = label.replace('~[0x1f]', ' ')
-            if messages_printer is not None:
-                messages_printer.printerror("1F" + label)
-            return True, '', '', label.replace('~[0x1f]', ' ')
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown reference code: " + code)
