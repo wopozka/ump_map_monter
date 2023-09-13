@@ -140,6 +140,12 @@ def test_lats_longs_from_string(target, answer):
 TEST_EXTRACT_REF_CODE = (
     ('~[0x01]123', (True, 'int_ref', '123', '')),
     ('~[0x01]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
+    ('~[0x2a]123', (True, 'int_ref', '123', '')),
+    ('~[0x2a]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
+    ('~[0x03]123', (True, 'ref', '123', '')),
+    ('~[0x03]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
+    ('~[0x2c]123', (True, 'ref', '123', '')),
+    ('~[0x2c]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_REF_CODE)

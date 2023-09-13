@@ -2219,7 +2219,7 @@ def extract_reference_code(label, refpos, messages_printer=None):
         # US Highway – shield, name can consist only from digits, allowed only at beginning of label
         0x02: 'int_ref',  0x2b: 'int_ref',
         # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
-        0x03: 'ref', 0x2c: 'int_ref',
+        0x03: 'ref', 0x2c: 'ref',
         # Highway – big, allowed only at beginning of label
         0x04: 'ref', 0x2d: 'ref',
         # Main road – middle, allowed only at beginning of label
