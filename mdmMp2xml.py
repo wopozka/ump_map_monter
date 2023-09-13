@@ -2200,7 +2200,7 @@ def xmlize(xml_str):
     return saxutils.escape(xml_str, {'\'': '&apos;'})
 
 
-def extract_reference_code(label, refpos, messages_printer):
+def extract_reference_code(label, refpos, messages_printer=None):
     """
     Extracting reference numbers, abbreviations and elevations inserted into map sources by special codes: ~[0x01]XXX
     Parameters
@@ -2243,7 +2243,8 @@ def extract_reference_code(label, refpos, messages_printer):
     try:
         reference_code = int(code, 0)
     except ValueError:
-        messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
+        if messages_printer is not None:
+            messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
         return False, code.lower(), ref, label
 
     if reference_code in reftype:
@@ -2251,28 +2252,31 @@ def extract_reference_code(label, refpos, messages_printer):
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     else:
         if code.lower() == '0x1b':  # Used before a letter forces it to be a lower case
-            way['loc_name'] = right
+            # way['loc_name'] = right
             label = ref + label
             return True, 'loc_name', right, ref + label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
         elif code.lower() == '0x1c':
-            way['loc_name'] = ref
+            # way['loc_name'] = ref
             label = ref + label
             return True, 'loc_name', ref, ref + label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
         elif code.lower() == '0x1e':
             label = label.replace('~[0x1e]', '')
-            messages_printer.printerror("1E" + label)
+            if messages_printer is not None:
+                messages_printer.printerror("1E" + label)
             return True, '', '', label.replace('~[0x1e]', '')
         # separator before elevation,
         elif code.lower() == '0x1f':
             label = label.replace('~[0x1f]', ' ')
-            messages_printer.printerror("1F" + label)
+            if messages_printer is not None:
+                messages_printer.printerror("1F" + label)
             return True, '', '', label.replace('~[0x1f]', ' ')
         else:
-            messages_printer.printerror("Unknown reference code: " + code)
+            if messages_printer is not None:
+                messages_printer.printerror("Unknown reference code: " + code)
             return False, code.lower(), ref, label
             # raise ParsingError('Problem parsing label ' + label)
 

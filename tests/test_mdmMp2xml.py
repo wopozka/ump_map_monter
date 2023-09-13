@@ -136,3 +136,13 @@ TEST_LATS_LONGS_FROM_LINE = (
 @pytest.mark.parametrize('target, answer', TEST_LATS_LONGS_FROM_LINE)
 def test_lats_longs_from_string(target, answer):
     assert mdmMp2xml.lats_longs_from_line(target) == answer
+
+TEST_EXTRACT_REF_CODE = (
+    ('~[0x01]123', (True, 'int_ref', '123', '')),
+    ('~[0x01]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_REF_CODE)
+def test_extract_reference_code(target, answer):
+    refpos = target.find('~[')
+    assert mdmMp2xml.extract_reference_code(target, refpos, messages_printer=None) == answer
