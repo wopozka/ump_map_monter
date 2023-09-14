@@ -305,6 +305,7 @@ class MessagePrinters(object):
 # some global constants
 __version__ = '0.8.1'
 extra_tags = " version='1' changeset='1' "
+runstamp = ''
 
 # in case we need it for future, just placeholder
 umppline_types = dict()
@@ -1002,6 +1003,14 @@ workid = 0
 glob_progress_bar_queue = None
 
 
+def set_runstamp(r_stamp):
+    global runstamp
+    runstamp = r_stamp
+
+def get_runstamp():
+    global runstamp
+    return runstamp
+
 def path_file(filename):
     if filename.startswith('~'):
         return os.path.abspath(os.path.join(os.getcwd(), os.path.expanduser(filename)))
@@ -1395,36 +1404,6 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                                                     '. Ignoring.')
                     else:
                         raise ParsingError('Problem parsing label ' + value)
-                # try:
-                #     # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
-                #     label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
-                #     if len(label_split) == 2:
-                #         refstr, right = label[refpos + 2:].split(' ', 1)
-                #     else:
-                #         refstr = label_split[0]
-                #         right = ""
-                #
-                #     code, ref = refstr.split(']')
-                #     label = (label[:refpos] + right).strip(' \t')
-                #     way[reftype[int(code, 0)]] = ref.replace("/", ";")
-                # except:
-                #     if code.lower() == '0x06':
-                #         label = ref + label
-                #         pass
-                #     elif code.lower() == '0x1b':
-                #         way['loc_name'] = right
-                #         label = ref + label
-                #     elif code.lower() == '0x1c':
-                #         way['loc_name'] = ref
-                #         label = ref + label
-                #     elif code.lower() == '0x1c':
-                #         label = value.replace('~[0x1c]', '')
-                #         messages_printer.printerror("1C" + label)
-                #     elif code.lower() == '0x1e':
-                #         label = value.replace('~[0x1e]', ' ')
-                #         messages_printer.printerror("1E" + label)
-                #     else:
-                #         raise ParsingError('Problem parsing label ' + value)
             if 'name' not in way and label:
                 way['name'] = label.strip()
         elif key.lower() in ('label2',):
@@ -2308,7 +2287,7 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
         timestamp = pointattr['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp for point %r\n" % pointattr)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_point_id(task_id, orig_id)
     idstring = str(currid)
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
@@ -2340,7 +2319,7 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
         timestamp = way['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp in way %r\n" % way)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_way_id(task_id, orig_id)
     idstring = str(currid)
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
@@ -2374,7 +2353,7 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
         timestamp = rel['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_relation_id(task_id, orig_id)
     idstring = str(currid)
     ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
@@ -3026,7 +3005,6 @@ def main(options, args):
         parser.print_help()
         sys.exit()
     global glob_progress_bar_queue
-    global runstamp
     if hasattr(options, 'progress_bar_queue'):
         glob_progress_bar_queue = options.progress_bar_queue
     else:
@@ -3035,11 +3013,11 @@ def main(options, args):
     messages_printer = MessagePrinters(workid='main thread', verbose=options.verbose)
     node_generalizator = NodeGeneralizator()
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
-    runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    set_runstamp(time.strftime("%Y-%m-%dT%H:%M:%SZ"))
     runtime = datetime.now().replace(microsecond=0)
     bpoints = None
 
-    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + runstamp + "\n")
+    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + get_runstamp() + "\n")
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -3085,7 +3063,7 @@ def main(options, args):
             sys.stderr.write("\tINFO: " + str(len(bpoints)) + " ids of border points (took " + str(elapsed) + ").\n")
         else:
             if options.force_timestamp is None:
-                borderstamp = runstamp
+                borderstamp = get_runstamp()
             else:
                 borderstamp = options.force_timestamp
             sys.stderr.write("\tINFO: Running without border file.\n")
