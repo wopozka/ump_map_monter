@@ -1367,10 +1367,6 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
-    reftype = {0x02: 'ref', 0x05: 'ref', 0x1d: 'loc_name',  # Abbrevations
-               0x1f: 'ele', 0x2a: 'int_ref',  #  Fixme should differentate the types
-               0x2b: 'int_ref', 0x2c: 'int_ref', 0x2d: 'ref', 0x2e: 'ref', 0x2f: 'ref', 0x1e: 'loc_name',
-               0x01: 'int_ref', 0x02: 'int_ref', 0x04: 'ref', 0x06: 'ref'}
     ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
                      'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
                      'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
