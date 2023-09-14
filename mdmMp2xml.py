@@ -3074,14 +3074,20 @@ def main(options, args):
             except IOError:
                 sys.stderr.write("\tERROR: Can't open border input file " + border_filename + "!\n")
                 sys.exit()
-            borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if options.force_timestamp is None:
+                borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                borderstamp = options.force_timestamp
             bpoints = parse_borders_return_bpoints(borderf, options, borderstamp)
             borderf.close()
             node_generalizator.insert_borders(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("\tINFO: " + str(len(bpoints)) + " ids of border points (took " + str(elapsed) + ").\n")
         else:
-            borderstamp = runstamp
+            if options.force_timestamp is None:
+                borderstamp = runstamp
+            else:
+                borderstamp = options.force_timestamp
             sys.stderr.write("\tINFO: Running without border file.\n")
 
         worklist = []
@@ -3270,6 +3276,7 @@ if __name__ == '__main__':
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
-                      help='Force given timestamp for map elements, useful for testing process.')
+                      help='Force given timestamp for map elements, useful for testing process '
+                           'proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
     (options, args) = parser.parse_args()
     main(options, args)
