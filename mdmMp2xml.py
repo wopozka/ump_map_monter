@@ -295,7 +295,7 @@ class MessagePrinters(object):
         self.warning_num += 1
         sys.stderr.write("\tWARNING: " + self.msg_core + str(p_string) + "\n")
 
-    def get_worning_num(self):
+    def get_warning_num(self):
         return self.warning_num
 
     def get_error_num(self):
@@ -2992,7 +2992,7 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
-    l_warns = str(messages_printer.get_worning_num())
+    l_warns = str(messages_printer.get_warning_num())
     l_errors = str(messages_printer.get_error_num())
     messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num ) + " ids)" + ', Warnings: ' + l_warns +
                                ', Errors: ' + l_errors + '.')
