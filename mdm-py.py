@@ -1486,7 +1486,7 @@ class cvsDialog(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog = tkinter.Label(self, text='AAAAA')
+        katalog = tkinter.Label(self, text='Pliki do CVSa')
         katalog.pack()
         logwindowsFrame = tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
@@ -1654,7 +1654,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog = tkinter.Label(self, text='AAAAA')
+        katalog = tkinter.Label(self, text=u'Wyjście z CVSa')
         katalog.pack(fill='x', expand=0)
         logwindowsFrame = tkinter.ttk.Labelframe(self, text=u'Dane wyjściowe')
         logwindowsFrame.pack(fill='both', expand=1)
