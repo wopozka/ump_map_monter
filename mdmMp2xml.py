@@ -992,14 +992,6 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
-# poi_types_tags_from_label = {
-#     0x1714: ("maxweight",),
-#     0x1715: ("maxwight",),
-#     0x1716: ("maxheight",)
-# }
-
-working_thread = os.getpid()
-workid = 0
 glob_progress_bar_queue = None
 
 
@@ -1007,9 +999,11 @@ def set_runstamp(r_stamp):
     global runstamp
     runstamp = r_stamp
 
+
 def get_runstamp():
     global runstamp
     return runstamp
+
 
 def path_file(filename):
     if filename.startswith('~'):
@@ -2289,8 +2283,8 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
     ostr.write(head)
-    if '_src' in pointattr:
-        src = pointattr.pop('_src')
+    # if '_src' in pointattr:
+    #     src = pointattr.pop('_src')
     for key in pointattr:
         if key.startswith('_'):
             continue
@@ -2323,8 +2317,8 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
         refstring = node_generalizator.get_point_id(task_id, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
-    if '_src' in way:
-        src = way.pop('_src')
+    # if '_src' in way:
+    #     src = way.pop('_src')
     for key in way:
         if key.startswith('_'):
             continue
@@ -2342,7 +2336,7 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
             return
         rel.pop('_c')
     if "_members" not in rel:
-        sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
+        sys.stderr.write("warning: Unable to print relation not having members: %r\n" % rel)
         return
 
     if '_timestamp' in rel:
@@ -2365,8 +2359,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
             refstring = str(_id)
             ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (_type, refstring, role))
 
-    if '_src' in rel:
-        src = rel.pop('_src')
+    # if '_src' in rel:
+    #     src = rel.pop('_src')
     for key in rel:
         if key.startswith('_'):
             continue
@@ -2432,7 +2426,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                                        map_elements_props=map_elements_props)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
+                                            % rel)
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
     for way_id, way in levelledways.items():
@@ -2492,7 +2487,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
             try:
                 prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
     for rel in map_elements_props['relations']:
         _line_num += 1
@@ -2504,7 +2499,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
+                                            % rel)
 
     # Quirks, but do not overwrite specific values
     for way in ways:
@@ -2948,15 +2944,11 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
 
 
 def worker(task, options, border_points=None):
-    global working_thread
-    global workid
     global glob_progress_bar_queue
     if border_points is None:
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
-    workid = task['idx']
     filestamp = task['filestamp']
-    num_lines_to_process = 0
 
     try:
         if sys.platform.startswith('linux'):
@@ -2990,9 +2982,8 @@ def worker(task, options, border_points=None):
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
     l_warns = str(messages_printer.get_warning_num())
     l_errors = str(messages_printer.get_error_num())
-    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num ) + " ids)" + ', Warnings: ' + l_warns +
+    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num) + " ids)" + ', Warnings: ' + l_warns +
                                ', Errors: ' + l_errors + '.')
-    task['ids']		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
 
 
