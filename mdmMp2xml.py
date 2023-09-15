@@ -3240,7 +3240,7 @@ if __name__ == '__main__':
                       help="obsolete")
     parser.add_option("--normalize_ids",
                       action="store_true", dest="normalize_ids", default=False,
-                      help="remove gaps in id usage")
+                      help="obsolete, remove gaps in id usage")
     parser.add_option("--ignore_errors",
                       action="store_true", dest="ignore_errors", default=False,
                       help="try to ignore errors in .mp file")
@@ -3250,7 +3250,7 @@ if __name__ == '__main__':
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
-                      help='Force given timestamp for map elements, useful for testing process '
-                           'proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
+                      help='Force given timestamp for map elements, useful for testing. '
+                           'Proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
     (options, args) = parser.parse_args()
     main(options, args)
