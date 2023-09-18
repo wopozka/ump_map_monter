@@ -2162,20 +2162,6 @@ def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map
     return rel
 
 
-def index_to_nodeid(index):
-    return index + 1
-
-
-def index_to_wayid(index, points):
-    return index_to_nodeid(len(points) + index)
-
-
-def index_to_relationid(index,  map_elements_props):
-    points = map_elements_props['points']
-    ways = map_elements_props['ways']
-    return index_to_wayid(len(ways) + index, points)
-
-
 def xmlize(xml_str):
     return saxutils.escape(xml_str, {'\'': '&apos;'})
 
