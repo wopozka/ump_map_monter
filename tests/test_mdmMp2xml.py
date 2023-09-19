@@ -172,3 +172,12 @@ TEST_EXTRACT_MISC_INFO = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
 def test_extrace_miscinfo(target, answer):
     assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
+
+TEST_EXTRACT_HLEVEL = (
+    ('(15,0),(16,2),(18,2),(19,0),(44,0),(45,1),(46,0)', []),
+    ('(4,0),(5,2)', []),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
+def test_extrace_miscinfo(target, answer):
+    assert mdmMp2xml.extract_hlevel(target) == answer
