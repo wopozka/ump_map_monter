@@ -1458,27 +1458,9 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
         elif key == 'MiscInfo':
-            # wiki => "wikipedia=pl:" fb, url => "website="
-            if '=' in value:
-                misckey, miscvalue = value.split("=", 1)
-                if misckey == 'url':
-                    if miscvalue.startswith('http') or miscvalue.find(':') > 0:
-                        way['website'] = miscvalue
-                    else:
-                        way['website'] = r"http://"+miscvalue
-                elif misckey == 'wiki':
-                    if not miscvalue.startswith('http'):
-                        way['wikipedia'] = "pl:"+miscvalue
-                    else:
-                        way['website'] = miscvalue
-                elif misckey == 'fb':  # 'facebook' tag isn't widely used
-                    if not miscvalue.startswith('http'):
-                        way['website'] = "https://facebook.com/" + miscvalue
-                    else:
-                        way['website'] = miscvalue
-                pass
-            else:
-                messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
+            misckey, miscvalue = extract_miscinfo(value, messages_printer=messages_printer)
+            if misckey and miscvalue:
+                way[misckey] = miscvalue
         elif key == 'Transit':  # "no thru traffic" / "local traffic only"
             if value.lower().startswith('n'):
                 way['access'] = 'destination'
@@ -2244,6 +2226,38 @@ def extract_reference_code(label, refpos, messages_printer=None):
                 messages_printer.printerror("Unknown reference code: " + code)
             return False, code.lower(), ref, label
             # raise ParsingError('Problem parsing label ' + label)
+
+
+def extract_miscinfo(value, messages_printer=None):
+    # wiki => "wikipedia=pl:" fb, url => "website="
+    if '=' in value:
+        misckey, miscvalue = value.split("=", 1)
+        if misckey == 'url':
+            if miscvalue.startswith('http') or miscvalue.find(':') > 0:
+                return 'website', miscvalue
+            else:
+                return 'website', r"http://" + miscvalue
+        elif misckey == 'wiki':
+            if miscvalue.startswith('http'):
+                return 'website', miscvalue
+            else:
+                return 'wikipedia', "pl:" + miscvalue
+        elif misckey == 'fb':  # 'facebook' tag isn't widely used
+            if miscvalue.startswith('http'):
+                return 'website', miscvalue
+            else:
+                return 'website', "https://facebook.com/" + miscvalue
+        elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id'):
+            messages_printer.printwarn('Ignoruje MisInfo: ' + value)
+        else:
+            if messages_printer is not None:
+                messages_printer.printerror("Nieznany MiscInfo: " + value)
+            return '', ''
+    else:
+        if messages_printer is not None:
+            messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
+    return '', ''
+
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
     """

@@ -156,3 +156,19 @@ TEST_EXTRACT_REF_CODE = (
 def test_extract_reference_code(target, answer):
     refpos = target.find('~[')
     assert mdmMp2xml.extract_reference_code(target, refpos, messages_printer=None) == answer
+
+TEST_EXTRACT_MISC_INFO = (
+    ('url=https://ump.waw.pl', ('website', 'https://ump.waw.pl')),
+    ('url=http://ump.waw.pl', ('website', 'http://ump.waw.pl')),
+    ('url=ump.waw.pl', ('website', r'http://ump.waw.pl')),
+    ('wiki=https://pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski', ('website', 'https://pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski')),
+    ('wiki=pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski', ('wikipedia', 'pl:pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski')),
+    ('fb=https://www.facebook.com/UMPpcPL/', ('website', 'https://www.facebook.com/UMPpcPL/')),
+    ('fb=UMPpcPL', ('website', 'https://facebook.com/UMPpcPL')),
+    ('rurl=http://www.alchemia.gda.pl/', ('', '')),
+    ('urlhttps://ump.waw.pl', ('', '')),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
+def test_extrace_misinfo(target, answer):
+    assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
