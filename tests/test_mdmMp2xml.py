@@ -170,5 +170,5 @@ TEST_EXTRACT_MISC_INFO = (
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
-def test_extrace_misinfo(target, answer):
+def test_extrace_miscinfo(target, answer):
     assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
