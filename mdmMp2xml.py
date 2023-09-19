@@ -1885,11 +1885,14 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             # rule picks up something interesting, e.g. a polyline
             pass
         elif polyline is not None and line != '':
-            try:
+            if '=' in line:
                 key, value = line.split('=', 1)
-            except:
-                messages_printer.printerror(line)
-                raise ParsingError('Can\'t split the thing')
+            else:
+                if options.ignore_errors:
+                    messages_printer.printerror('Line:' + str(linenum) + ':Missing = in line: %s. Ignoring' % line)
+                else:
+                    messages_printer.printerror('Line:' + str(linenum) + 'Missing = in line: %s' % line)
+                    raise ParsingError('Can\'t split the thing')
             key = key.strip()
             if key in polyline:
                 if key.startswith('Data'):
