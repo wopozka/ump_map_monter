@@ -2241,7 +2241,7 @@ def extract_miscinfo(value, messages_printer=None):
                 return 'website', miscvalue
             else:
                 return 'website', "https://facebook.com/" + miscvalue
-        elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id'):
+        elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id', 'BilID', 'nest'):
             messages_printer.printwarn('Ignoruje MisInfo: ' + value)
         else:
             if messages_printer is not None:
