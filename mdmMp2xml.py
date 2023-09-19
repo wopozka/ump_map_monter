@@ -2242,18 +2242,24 @@ def extract_miscinfo(value, messages_printer=None):
             else:
                 return 'website', "https://facebook.com/" + miscvalue
         elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id', 'BilID', 'nest'):
-            messages_printer.printwarn('Ignoruje MisInfo: ' + value)
+            messages_printer.printwarn('Ignoring MisInfo: ' + value)
         else:
             if messages_printer is not None:
-                messages_printer.printerror("Nieznany MiscInfo: " + value)
+                messages_printer.printerror("Unknown MiscInfo: " + value)
             return '', ''
     else:
         if messages_printer is not None:
-            messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
+            messages_printer.printerror("Improper format MiscInfo: " + value)
     return '', ''
 
 
 def extract_hlevel(value):
+    """
+    converts mp-type HLevel to segment type of levels. Each segment is tupple in a form
+    (start_node_num, end_node_num, level), node -1 is to the end of the road
+    :param value: string: hlevel string
+    :return: (start_node_num, end_node_num, level), (end_node_num, end_node_num2, level) ... (end_node_numX, -1, level)
+    """
     curlevel = 0
     curnode = 0
     level_list = []

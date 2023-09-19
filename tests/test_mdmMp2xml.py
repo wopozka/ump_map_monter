@@ -176,6 +176,7 @@ def test_extrace_miscinfo(target, answer):
 TEST_EXTRACT_HLEVEL = (
     ('(15,0),(16,2),(18,2),(19,0),(44,0),(45,1),(46,0)', []),
     ('(4,0),(5,2)', []),
+    ('(3,0),(6,2),(12,2)', [(0,6,0),(6,-1,2)]),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
