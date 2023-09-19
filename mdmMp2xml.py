@@ -1491,22 +1491,16 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['except'] = ','.join(excpts)
         elif key == 'HLevel0':
             if feat != Features.polyline:
-                raise ParsingError('HLevel0 used on a polygon')
-            curlevel = 0
-            curnode = 0
-            level_list = []
-            for level in value.split(')'):
-                if level == "":
-                    break
-                pair = level.strip(', ()').split(',')
-                start = int(pair[0], 0)
-                level = int(pair[1], 0)
-                if start > curnode and level != curlevel:
-                    level_list.append((curnode, start, curlevel))
-                    curnode = start
-                curlevel = level
-            level_list.append((curnode, -1, curlevel))
-            way['_levels'] = level_list
+                if options.ignore_errors:
+                    messages_printer.printerror('HLevel0 used on a polygon')
+                else:
+                    raise ParsingError('HLevel0 used on a polygon')
+            else:
+                level_list = extract_hlevel(value)
+                if level_list:
+                    way['_levels'] = level_list
+                else:
+                    messages_printer.printerror('HLevel0 value corrupted. Ignoring')
         elif key == 'Szlak':
             ref = []
             for colour in value.split(','):
@@ -2257,6 +2251,24 @@ def extract_miscinfo(value, messages_printer=None):
         if messages_printer is not None:
             messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
     return '', ''
+
+
+def extract_hlevel(value):
+    curlevel = 0
+    curnode = 0
+    level_list = []
+    for level in value.split(')'):
+        if level == "":
+            break
+        pair = level.strip(', ()').split(',')
+        start = int(pair[0], 0)
+        level = int(pair[1], 0)
+        if start > curnode and level != curlevel:
+            level_list.append((curnode, start, curlevel))
+            curnode = start
+        curlevel = level
+    level_list.append((curnode, -1, curlevel))
+    return level_list
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
