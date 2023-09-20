@@ -182,3 +182,14 @@ TEST_EXTRACT_HLEVEL = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
 def test_extrace_miscinfo(target, answer):
     assert mdmMp2xml.extract_hlevel(target) == answer
+
+TEST_EXTRACT_ROUTEPARAM = (
+    ('0,0,0,1,0,0,0,0,0,0,0,0', {'ump:speed_limit': '0', 'ump:route_class': '0', 'toll': 'yes'}),
+    ('0,0,0,0,1,1,1,1,1,1,1,1', {'ump:speed_limit': '0', 'ump:route_class': '0', 'emergency': 'no', 'goods': 'no', 'motorcar': 'no', 'psv': 'no', 'taxi': 'no', 'foot': 'no', 'bicycle': 'no', 'hgv': 'no'}),
+    ('0,0,0,a,0,0,0,0,0,0,0,0', {}),
+
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_ROUTEPARAM)
+def test_extract_routeparam(target, answer):
+    assert mdmMp2xml.extract_routeparam(target) == answer

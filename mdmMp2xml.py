@@ -1470,18 +1470,27 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             else:
                 way['motorcycle'] = 'no'
         elif key in ('RouteParam', 'Routeparam'):
-            params = value.split(',')
-            way['ump:speed_limit'] = params[0]
-            way['ump:route_class'] = params[1]
-            if params[0] != '0':
-                way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
-            if params[2] == '1':
-                way['oneway'] = 'yes'
-            if params[3] == '1':
-                way['toll'] = 'yes'
-            for i, val in enumerate(params[4:]):
-                if val == '1':
-                    way[exceptions[i]] = 'no'
+            r_params = extract_routeparam(value)
+            if r_params:
+                for rp_key, rp_val in r_params.items():
+                    way[rp_key] = rp_val
+            else:
+                if options.ignore_errors:
+                    messages_printer.printerror('Corrupted RouteParam parameters: %s' % value)
+                else:
+                    raise ParsingError('Corrupted RouteParam parameters: %s' % value)
+            # params = value.split(',')
+            # way['ump:speed_limit'] = params[0]
+            # way['ump:route_class'] = params[1]
+            # if params[0] != '0':
+            #     way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+            # if params[2] == '1':
+            #     way['oneway'] = 'yes'
+            # if params[3] == '1':
+            #     way['toll'] = 'yes'
+            # for i, val in enumerate(params[4:]):
+            #     if val == '1':
+            #         way[exceptions[i]] = 'no'
         elif key == 'RestrParam':
             params = value.split(',')
             excpts = []
@@ -2275,6 +2284,39 @@ def extract_hlevel(value):
         curlevel = level
     level_list.append((curnode, -1, curlevel))
     return level_list
+
+
+def extract_routeparam(value):
+    """
+    extracts routeparam values from RouteParam string
+    Parameters
+    ----------
+    value: str: coma seperated values of route param: speed limit, route class, one way, route is toll, no emergency,
+    no delivery, no car/motocycle, no bus, no taxi, no pedestrian, no bicycle, no truck, eg: 0,0,0,1,0,0,0,0,0,0,0,0
+
+    Returns
+    -------
+    dict: {key, value}, empty dict in case of failure
+    """
+    maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '108', 7: '128'}
+    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    try:
+        params = tuple(int(a) for a in value.split(','))
+    except ValueError:
+        return {}
+    _way = dict()
+    _way['ump:speed_limit'] = str(params[0])
+    _way['ump:route_class'] = str(params[1])
+    if params[0] != 0:
+        _way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+    if params[2] != 0:
+        _way['oneway'] = 'yes'
+    if params[3] != 0:
+        _way['toll'] = 'yes'
+    for i, val in enumerate(params[4:]):
+        if val != 0:
+            _way[exceptions[i]] = 'no'
+    return _way
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
