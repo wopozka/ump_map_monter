@@ -1499,24 +1499,30 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 else:
                     messages_printer.printerror('HLevel0 value corrupted. Ignoring')
         elif key == 'Szlak':
-            ref = []
-            for colour in value.split(','):
-                if colour.lower() == 'zolty':
-                    ref.append('Żółty szlak')
-                    way['marked_trail_yellow'] = 'yes'
-                elif colour.lower() == 'zielony':
-                    ref.append('Zielony szlak')
-                    way['marked_trail_green'] = 'yes'
-                elif colour.lower() == 'czerwony':
-                    ref.append('Czerwony szlak')
-                    way['marked_trail_red'] = 'yes'
-                elif colour.lower() == 'niebieski':
-                    ref.append('Niebieski szlak')
-                    way['marked_trail_blue'] = 'yes'
-                else:
-                    ref.append(colour)
-                    messages_printer.printerror("Unknown 'Szlak' colour: " + colour)
-            way['ref'] = ";".join(ref)
+            trial_tag, trial_refs, unknown_refs = extract_szlak(value)
+            for t_tag in trial_tag:
+                way[t_tag] = 'yes'
+            way['ref'] = ";".join(trial_refs)
+            for u_ref in unknown_refs:
+                messages_printer.printerror("Unknown 'Szlak' colour: " + u_ref)
+            # ref = []
+            # for colour in value.split(','):
+            #     if colour.lower() == 'zolty':
+            #         ref.append('Żółty szlak')
+            #         way['marked_trail_yellow'] = 'yes'
+            #     elif colour.lower() == 'zielony':
+            #         ref.append('Zielony szlak')
+            #         way['marked_trail_green'] = 'yes'
+            #     elif colour.lower() == 'czerwony':
+            #         ref.append('Czerwony szlak')
+            #         way['marked_trail_red'] = 'yes'
+            #     elif colour.lower() == 'niebieski':
+            #         ref.append('Niebieski szlak')
+            #         way['marked_trail_blue'] = 'yes'
+            #     else:
+            #         ref.append(colour)
+            #         messages_printer.printerror("Unknown 'Szlak' colour: " + colour)
+            # way['ref'] = ";".join(ref)
         elif key.startswith('NumbersExt'):
             messages_printer.printerror("warning: " + key + " tag discarded")
         elif key.startswith('Numbers'):
@@ -2239,7 +2245,7 @@ def extract_miscinfo(value, messages_printer=None):
             else:
                 return 'website', "https://facebook.com/" + miscvalue
         elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id', 'BilID', 'nest'):
-            messages_printer.printwarn('Ignoring MisInfo: ' + value)
+            messages_printer.printwarn('Ignoring MiscInfo: ' + value)
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown MiscInfo: " + value)
@@ -2273,6 +2279,29 @@ def extract_hlevel(value):
         curlevel = level
     level_list.append((curnode, -1, curlevel))
     return level_list
+
+
+def extract_szlak(value):
+    ref = []
+    unknonw_ref = []
+    trial_tag = []
+    for colour in value.split(','):
+        if colour.lower() == 'zolty':
+            ref.append('Żółty szlak')
+            trial_tag.append('marked_trail_yellow')
+        elif colour.lower() == 'zielony':
+            ref.append('Zielony szlak')
+            trial_tag.append('marked_trail_green')
+        elif colour.lower() == 'czerwony':
+            ref.append('Czerwony szlak')
+            trial_tag.append('marked_trail_red')
+        elif colour.lower() == 'niebieski':
+            ref.append('Niebieski szlak')
+            trial_tag('marked_trail_blue')
+        else:
+            ref.append(colour)
+            unknonw_ref.append(colour)
+    return trial_tag, ref, unknonw_ref
 
 
 def extract_routeparam(value):
