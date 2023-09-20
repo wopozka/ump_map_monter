@@ -1214,7 +1214,10 @@ def polygon_make_ccw(shape, c_points):
         shape['fixme'] = "Weird shape"
 
 
-def add_addrinfo(nodes, addrs, street, city, region, right, count, filestamp, map_elements_props):
+def add_addrinfo(f_way, addrs, street, city, region, right, map_elements_props):
+    nodes = f_way['_nodes']
+    count = f_way['_c']
+    filestamp = f_way['_timestamp']
     interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
@@ -1825,8 +1828,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 except:
                     region = ""
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], filestamp, map_elements_props)
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], filestamp, map_elements_props)
+                add_addrinfo(way, addrinfo, street, m, region, 0, map_elements_props)
+                add_addrinfo(way, addrinfo, street, m, region, 1, map_elements_props)
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
