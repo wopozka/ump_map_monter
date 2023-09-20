@@ -1499,30 +1499,13 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 else:
                     messages_printer.printerror('HLevel0 value corrupted. Ignoring')
         elif key == 'Szlak':
+            # czy to jest w ogole gdzies wykorzystywane?
             trial_tag, trial_refs, unknown_refs = extract_szlak(value)
             for t_tag in trial_tag:
                 way[t_tag] = 'yes'
             way['ref'] = ";".join(trial_refs)
             for u_ref in unknown_refs:
                 messages_printer.printerror("Unknown 'Szlak' colour: " + u_ref)
-            # ref = []
-            # for colour in value.split(','):
-            #     if colour.lower() == 'zolty':
-            #         ref.append('Żółty szlak')
-            #         way['marked_trail_yellow'] = 'yes'
-            #     elif colour.lower() == 'zielony':
-            #         ref.append('Zielony szlak')
-            #         way['marked_trail_green'] = 'yes'
-            #     elif colour.lower() == 'czerwony':
-            #         ref.append('Czerwony szlak')
-            #         way['marked_trail_red'] = 'yes'
-            #     elif colour.lower() == 'niebieski':
-            #         ref.append('Niebieski szlak')
-            #         way['marked_trail_blue'] = 'yes'
-            #     else:
-            #         ref.append(colour)
-            #         messages_printer.printerror("Unknown 'Szlak' colour: " + colour)
-            # way['ref'] = ";".join(ref)
         elif key.startswith('NumbersExt'):
             messages_printer.printerror("warning: " + key + " tag discarded")
         elif key.startswith('Numbers'):
