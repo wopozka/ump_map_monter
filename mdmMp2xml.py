@@ -1479,18 +1479,6 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                     messages_printer.printerror('Corrupted RouteParam parameters: %s' % value)
                 else:
                     raise ParsingError('Corrupted RouteParam parameters: %s' % value)
-            # params = value.split(',')
-            # way['ump:speed_limit'] = params[0]
-            # way['ump:route_class'] = params[1]
-            # if params[0] != '0':
-            #     way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
-            # if params[2] == '1':
-            #     way['oneway'] = 'yes'
-            # if params[3] == '1':
-            #     way['toll'] = 'yes'
-            # for i, val in enumerate(params[4:]):
-            #     if val == '1':
-            #         way[exceptions[i]] = 'no'
         elif key == 'RestrParam':
             params = value.split(',')
             excpts = []
