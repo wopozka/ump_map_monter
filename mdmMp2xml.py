@@ -1158,16 +1158,15 @@ def unproj(lat, lon):
 #    return lon * math.cos(lat / 180.0 * math.pi)
 
 
-def tag(way, pairs):
-    for key, value in zip(pairs[::2], pairs[1::2]):
+def get_type_from_umptyp(way, ump_spw_types):
+    if 'ump:typ' in way and way['ump:typ'] in ump_spw_types:
+        return ump_spw_types[way['ump:typ']]
+    return int(way['ump:type'], 0)
+
+
+def tag(way, spw_types):
+    for key, value in zip(spw_types[::2], spw_types[1::2]):
         way[key] = value
-
-
-# def add_tags_from_name(way, tags):
-#     if 'name' not in way:
-#         return
-#     for tag in tags:
-#         way[tag] = way['name']
 
 
 def polygon_make_ccw(shape, c_points):
@@ -1714,48 +1713,26 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                     raise ParsingError("Corrupted DataX values for poi/polyline/polygon: " + string_polyline)
 
             if feat == Features.polygon:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umpshape_types:
-                        t = umpshape_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umpshape_types)
+                if u_type in shape_types:
+                    tag(way, shape_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                if t in shape_types:
-                    tag(way, shape_types[t])
-                else:
-                    messages_printer.printerror("Unknown shape type " + hex(t))
+                    messages_printer.printerror("Unknown shape type " + hex(u_type))
 
             elif feat == Features.poi:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umppoi_types:
-                        t = umppoi_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umppoi_types)
+                if u_type in poi_types:
+                    tag(way, poi_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                # obsluga bledow Type=
-                if t in poi_types:
-                    tag(way, poi_types[t])
-                else:
-                    messages_printer.printerror("Unknown poi type " + hex(t))
+                    messages_printer.printerror("Unknown poi type " + hex(u_type))
                 way = postprocess_poi_tags(way)
 
             elif feat == Features.polyline:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umppline_types:
-                        t = umppline_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umppline_types)
+                if u_type in pline_types:
+                    tag(way, pline_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                if t in pline_types:
-                    tag(way, pline_types[t])
-                else:
-                    messages_printer.printerror("Unknown line type " + hex(t))
+                    messages_printer.printerror("Unknown line type " + hex(u_type))
                 # TxF: tu potrzebna do wlasciwego indeksowania obsluga przedrostkow
                 if 'name' in way and cut_prefix(way['name']) != way['name']:
                     way['short_name'] = cut_prefix(way['name'])
@@ -1893,7 +1870,7 @@ def create_node_ways_relation(all_ways):
         if '_innernodes' in way and '_join' not in way:
             for node in way["_nodes"]:
                 tmp_node_ways_rel_multipolygon[node].add(way_no)
-    # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
+    # let's return simple dictionary, as defaultdict resulted in creating empty entry in case of list
     # comprehension
     return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}, \
            {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
