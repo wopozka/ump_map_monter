@@ -295,7 +295,7 @@ class MessagePrinters(object):
         self.warning_num += 1
         sys.stderr.write("\tWARNING: " + self.msg_core + str(p_string) + "\n")
 
-    def get_worning_num(self):
+    def get_warning_num(self):
         return self.warning_num
 
     def get_error_num(self):
@@ -305,6 +305,7 @@ class MessagePrinters(object):
 # some global constants
 __version__ = '0.8.1'
 extra_tags = " version='1' changeset='1' "
+runstamp = ''
 
 # in case we need it for future, just placeholder
 umppline_types = dict()
@@ -440,7 +441,7 @@ umpshape_types = {
 shape_types = {
     0x1:  ["landuse",  "residential"],
     0x2:  ["landuse",  "residential"],
-    0x3:  ["highway",  "pedestrian", "area", "yes"],
+    0x3:  ["landuse",  "residential"],
     0x4:  ["landuse",  "military"],
     0x5:  ["amenity",  "parking"],
     0x6:  ["building", "garages"],
@@ -991,15 +992,17 @@ poi_types = {
     0xf201: ["highway",  "traffic_signals"],
 }
 
-# poi_types_tags_from_label = {
-#     0x1714: ("maxweight",),
-#     0x1715: ("maxwight",),
-#     0x1716: ("maxheight",)
-# }
-
-working_thread = os.getpid()
-workid = 0
 glob_progress_bar_queue = None
+
+
+def set_runstamp(r_stamp):
+    global runstamp
+    runstamp = r_stamp
+
+
+def get_runstamp():
+    global runstamp
+    return runstamp
 
 
 def path_file(filename):
@@ -1155,16 +1158,15 @@ def unproj(lat, lon):
 #    return lon * math.cos(lat / 180.0 * math.pi)
 
 
-def tag(way, pairs):
-    for key, value in zip(pairs[::2], pairs[1::2]):
+def get_type_from_umptyp(way, ump_spw_types):
+    if 'ump:typ' in way and way['ump:typ'] in ump_spw_types:
+        return ump_spw_types[way['ump:typ']]
+    return int(way['ump:type'], 0)
+
+
+def tag(way, spw_types):
+    for key, value in zip(spw_types[::2], spw_types[1::2]):
         way[key] = value
-
-
-# def add_tags_from_name(way, tags):
-#     if 'name' not in way:
-#         return
-#     for tag in tags:
-#         way[tag] = way['name']
 
 
 def polygon_make_ccw(shape, c_points):
@@ -1211,7 +1213,10 @@ def polygon_make_ccw(shape, c_points):
         shape['fixme'] = "Weird shape"
 
 
-def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_props):
+def add_addrinfo(f_way, addrs, street, city, region, right, map_elements_props):
+    nodes = f_way['_nodes']
+    count = f_way['_c']
+    filestamp = f_way['_timestamp']
     interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
@@ -1272,14 +1277,14 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
                     low_node = (low_node[0] + normlat / 10,
                                 low_node[1] + normlon / 10)
                 attrs['addr:housenumber'] = low
-                points_append(low_node, attrs.copy(), map_elements_props=map_elements_props)
+                points_append(low_node, attrs.copy(), filestamp=filestamp, map_elements_props=map_elements_props)
 
             pt1 = len(points)
             hi_node = unproj(nlat + dlat - shortlat, nlon + dlon - shortlon)
             while hi_node in points:
                 hi_node = (hi_node[0] - normlat / 10, hi_node[1] - normlon / 10)
             attrs['addr:housenumber'] = hi
-            points_append(hi_node, attrs.copy(), map_elements_props=map_elements_props)
+            points_append(hi_node, attrs.copy(), filestamp=filestamp, map_elements_props=map_elements_props)
 
             if len(addrs[n]) >= 8:
                 if addrs[n][6] != "-1":
@@ -1318,7 +1323,7 @@ def add_addrinfo(nodes, addrs, street, city, region, right, count, map_elements_
             prev_house = "xx"
 
 
-def points_append(point, attrs, map_elements_props=None):
+def points_append(point, attrs, filestamp=None, map_elements_props=None):
     if map_elements_props is None:
         return
     if point in map_elements_props['points']:
@@ -1330,14 +1335,14 @@ def points_append(point, attrs, map_elements_props=None):
     _pointattrs[_points.get_point_id(point)] = attrs
 
 
-def prepare_line(points_str, closed=False, map_elements_props=None):
+def prepare_line(points_str, filestamp=None, closed=False, map_elements_props=None):
     """Appends new nodes to the points list"""
     points = lats_longs_from_line(points_str)
     # if there is some problem with DataX coordinates, then points is empty
     if not points:
         return 0, tuple()
     for point in points:
-        points_append(point, {}, map_elements_props=map_elements_props)
+        points_append(point, {}, filestamp=filestamp, map_elements_props=map_elements_props)
     try:
         point_indices = list(map(map_elements_props['points'].get_point_id, points))
     except:
@@ -1353,14 +1358,11 @@ def prepare_line(points_str, closed=False, map_elements_props=None):
     return pts, point_indices
 
 
-def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=None, messages_printer=None):
+def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_elements_props=None,
+                            messages_printer=None):
     maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
     levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
-    reftype = {0x02: 'ref', 0x05: 'ref', 0x1d: 'loc_name',  # Abbrevations
-               0x1f: 'ele', 0x2a: 'int_ref',  #  Fixme should differentate the types
-               0x2b: 'int_ref', 0x2c: 'int_ref', 0x2d: 'ref', 0x2e: 'ref', 0x2f: 'ref', 0x1e: 'loc_name',
-               0x01: 'int_ref', 0x02: 'int_ref', 0x04: 'ref', 0x06: 'ref'}
     ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
                      'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
                      'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
@@ -1383,37 +1385,18 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             label = value
             refpos = label.find("~[")
             if refpos > -1:
-                try:
-                    # refstr, sep, right = label[refpos + 2:].partition(' ')            # py_ver >= 2.5 version
-                    label_split = label[refpos + 2:].split(' ', 1)                        # above line in py_ver = 2.4
-                    if len(label_split) == 2:
-                        refstr, right = label[refpos + 2:].split(' ', 1)
-                    else:
-                        refstr = label_split[0]
-                        right = ""
-
-                    code, ref = refstr.split(']')
-                    label = (label[:refpos] + right).strip(' \t')
-                    way[reftype[int(code, 0)]] = ref.replace("/", ";")
-                except:
-                    if code.lower() == '0x06':
-                        label = ref + label
-                        pass
-                    elif code.lower() == '0x1b':
-                        way['loc_name'] = right
-                        label = ref + label
-                    elif code.lower() == '0x1c':
-                        way['loc_name'] = ref
-                        label = ref + label
-                    elif code.lower() == '0x1c':
-                        label = value.replace('~[0x1c]', '')
-                        messages_printer.printerror("1C" + label)
-                    elif code.lower() == '0x1e':
-                        label = value.replace('~[0x1e]', ' ')
-                        messages_printer.printerror("1E" + label)
+                success, code_tag, code_value, label = \
+                    extract_reference_code(label, refpos, messages_printer=messages_printer)
+                if success:
+                    if code_tag and code_value:
+                        way[code_tag] = code_value
+                else:
+                    if ignore_errors:
+                        messages_printer.printerror('Unknown ref code: ' + code_value + ' for label: ' + value +
+                                                    '. Ignoring.')
                     else:
                         raise ParsingError('Problem parsing label ' + value)
-            if 'name' not in way and label != "":
+            if 'name' not in way and label:
                 way['name'] = label.strip()
         elif key.lower() in ('label2',):
             way['loc_name'] = value
@@ -1432,8 +1415,9 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['oneway'] = value
         elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
             num = int(key[4:])
-            count, way['_nodes'] = prepare_line(value, closed=feat == Features.polygon,
+            count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
+            # jesli nie uda sie skonwertowac DataX na cos poprawnego to wtedy zwroc pusty slownik.
             if not way['_nodes']:
                 return {}
             if '_c' in way:
@@ -1442,7 +1426,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
                 way['_c'] = count
             # way['layer'] = num ??
         elif key.startswith('_Inner'):
-            count, nodes = prepare_line(value, closed=feat == Features.polygon, map_elements_props=map_elements_props)
+            count, nodes = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
+                                        map_elements_props=map_elements_props)
             if not nodes:
                 return {}
             if '_innernodes' not in way:
@@ -1475,27 +1460,9 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
         elif key == 'MiscInfo':
-            # wiki => "wikipedia=pl:" fb, url => "website="
-            if '=' in value:
-                misckey, miscvalue = value.split("=", 1)
-                if misckey == 'url':
-                    if miscvalue.startswith('http') or miscvalue.find(':') > 0:
-                        way['website'] = miscvalue
-                    else:
-                        way['website'] = r"http://"+miscvalue
-                elif misckey == 'wiki':
-                    if not miscvalue.startswith('http'):
-                        way['wikipedia'] = "pl:"+miscvalue
-                    else:
-                        way['website'] = miscvalue
-                elif misckey == 'fb':  # 'facebook' tag isn't widely used
-                    if not miscvalue.startswith('http'):
-                        way['website'] = "https://facebook.com/" + miscvalue
-                    else:
-                        way['website'] = miscvalue
-                pass
-            else:
-                messages_printer.printerror("Niewlaciwy format MiscInfo: " + value)
+            misckey, miscvalue = extract_miscinfo(value, messages_printer=messages_printer)
+            if misckey and miscvalue:
+                way[misckey] = miscvalue
         elif key == 'Transit':  # "no thru traffic" / "local traffic only"
             if value.lower().startswith('n'):
                 way['access'] = 'destination'
@@ -1505,18 +1472,15 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             else:
                 way['motorcycle'] = 'no'
         elif key in ('RouteParam', 'Routeparam'):
-            params = value.split(',')
-            way['ump:speed_limit'] = params[0]
-            way['ump:route_class'] = params[1]
-            if params[0] != '0':
-                way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
-            if params[2] == '1':
-                way['oneway'] = 'yes'
-            if params[3] == '1':
-                way['toll'] = 'yes'
-            for i, val in enumerate(params[4:]):
-                if val == '1':
-                    way[exceptions[i]] = 'no'
+            r_params = extract_routeparam(value)
+            if r_params:
+                for rp_key, rp_val in r_params.items():
+                    way[rp_key] = rp_val
+            else:
+                if options.ignore_errors:
+                    messages_printer.printerror('Corrupted RouteParam parameters: %s' % value)
+                else:
+                    raise ParsingError('Corrupted RouteParam parameters: %s' % value)
         elif key == 'RestrParam':
             params = value.split(',')
             excpts = []
@@ -1526,41 +1490,24 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, map_elements_props=N
             way['except'] = ','.join(excpts)
         elif key == 'HLevel0':
             if feat != Features.polyline:
-                raise ParsingError('HLevel0 used on a polygon')
-            curlevel = 0
-            curnode = 0
-            level_list = []
-            for level in value.split(')'):
-                if level == "":
-                    break
-                pair = level.strip(', ()').split(',')
-                start = int(pair[0], 0)
-                level = int(pair[1], 0)
-                if start > curnode and level != curlevel:
-                    level_list.append((curnode, start, curlevel))
-                    curnode = start
-                curlevel = level
-            level_list.append((curnode, -1, curlevel))
-            way['_levels'] = level_list
-        elif key == 'Szlak':
-            ref = []
-            for colour in value.split(','):
-                if colour.lower() == 'zolty':
-                    ref.append('Żółty szlak')
-                    way['marked_trail_yellow'] = 'yes'
-                elif colour.lower() == 'zielony':
-                    ref.append('Zielony szlak')
-                    way['marked_trail_green'] = 'yes'
-                elif colour.lower() == 'czerwony':
-                    ref.append('Czerwony szlak')
-                    way['marked_trail_red'] = 'yes'
-                elif colour.lower() == 'niebieski':
-                    ref.append('Niebieski szlak')
-                    way['marked_trail_blue'] = 'yes'
+                if options.ignore_errors:
+                    messages_printer.printerror('HLevel0 used on a polygon')
                 else:
-                    ref.append(colour)
-                    messages_printer.printerror("Unknown 'Szlak' colour: " + colour)
-            way['ref'] = ";".join(ref)
+                    raise ParsingError('HLevel0 used on a polygon')
+            else:
+                level_list = extract_hlevel(value)
+                if level_list:
+                    way['_levels'] = level_list
+                else:
+                    messages_printer.printerror('HLevel0 value corrupted. Ignoring')
+        elif key == 'Szlak':
+            # czy to jest w ogole gdzies wykorzystywane?
+            trial_tag, trial_refs, unknown_refs = extract_szlak(value)
+            for t_tag in trial_tag:
+                way[t_tag] = 'yes'
+            way['ref'] = ";".join(trial_refs)
+            for u_ref in unknown_refs:
+                messages_printer.printerror("Unknown 'Szlak' colour: " + u_ref)
         elif key.startswith('NumbersExt'):
             messages_printer.printerror("warning: " + key + " tag discarded")
         elif key.startswith('Numbers'):
@@ -1719,7 +1666,7 @@ def postprocess_poi_tags(way):
     return way
 
 
-def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None):
+def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None, filestamp=None):
     if border_points is None:
         border_points = []
     otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
@@ -1750,8 +1697,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
-            way = convert_tags_return_way(polyline, feat, options.ignore_errors, map_elements_props=map_elements_props,
-                                          messages_printer=messages_printer)
+            way = convert_tags_return_way(polyline, feat, options.ignore_errors, filestamp=filestamp,
+                                          map_elements_props=map_elements_props, messages_printer=messages_printer)
             # w przypadku gdy nie uda sie skonwertowac punktow z DataX, wtedy way bedzie pustym slownikiem, musimy
             # takie cos obsluzyc, albo ignorujemy takie wpisy albo wywalamy program.
             if not way:
@@ -1766,48 +1713,26 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                     raise ParsingError("Corrupted DataX values for poi/polyline/polygon: " + string_polyline)
 
             if feat == Features.polygon:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umpshape_types:
-                        t = umpshape_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umpshape_types)
+                if u_type in shape_types:
+                    tag(way, shape_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                if t in shape_types:
-                    tag(way, shape_types[t])
-                else:
-                    messages_printer.printerror("Unknown shape type " + hex(t))
+                    messages_printer.printerror("Unknown shape type " + hex(u_type))
 
             elif feat == Features.poi:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umppoi_types:
-                        t = umppoi_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umppoi_types)
+                if u_type in poi_types:
+                    tag(way, poi_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                # obsluga bledow Type=
-                if t in poi_types:
-                    tag(way, poi_types[t])
-                else:
-                    messages_printer.printerror("Unknown poi type " + hex(t))
+                    messages_printer.printerror("Unknown poi type " + hex(u_type))
                 way = postprocess_poi_tags(way)
 
             elif feat == Features.polyline:
-                if 'ump:typ' in way:
-                    utyp = way['ump:typ']
-                    if utyp in umppline_types:
-                        t = umppline_types[utyp]
-                    else:
-                        t = int(way['ump:type'], 0)
+                u_type = get_type_from_umptyp(way, umppline_types)
+                if u_type in pline_types:
+                    tag(way, pline_types[u_type])
                 else:
-                    t = int(way['ump:type'], 0)
-                if t in pline_types:
-                    tag(way, pline_types[t])
-                else:
-                    messages_printer.printerror("Unknown line type " + hex(t))
+                    messages_printer.printerror("Unknown line type " + hex(u_type))
                 # TxF: tu potrzebna do wlasciwego indeksowania obsluga przedrostkow
                 if 'name' in way and cut_prefix(way['name']) != way['name']:
                     way['short_name'] = cut_prefix(way['name'])
@@ -1880,8 +1805,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                 except:
                     region = ""
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 0, way['_c'], map_elements_props)
-                add_addrinfo(way['_nodes'], addrinfo, street, m, region, 1, way['_c'], map_elements_props)
+                add_addrinfo(way, addrinfo, street, m, region, 0, map_elements_props)
+                add_addrinfo(way, addrinfo, street, m, region, 1, map_elements_props)
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
@@ -1902,11 +1827,14 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             # rule picks up something interesting, e.g. a polyline
             pass
         elif polyline is not None and line != '':
-            try:
+            if '=' in line:
                 key, value = line.split('=', 1)
-            except:
-                messages_printer.printerror(line)
-                raise ParsingError('Can\'t split the thing')
+            else:
+                if options.ignore_errors:
+                    messages_printer.printerror('Line:' + str(linenum) + ':Missing = in line: %s. Ignoring' % line)
+                else:
+                    messages_printer.printerror('Line:' + str(linenum) + 'Missing = in line: %s' % line)
+                    raise ParsingError('Can\'t split the thing')
             key = key.strip()
             if key in polyline:
                 if key.startswith('Data'):
@@ -1942,7 +1870,7 @@ def create_node_ways_relation(all_ways):
         if '_innernodes' in way and '_join' not in way:
             for node in way["_nodes"]:
                 tmp_node_ways_rel_multipolygon[node].add(way_no)
-    # lets return simple dictionary, as defaultdict resulted in creating empty entry in case of list
+    # let's return simple dictionary, as defaultdict resulted in creating empty entry in case of list
     # comprehension
     return {a: tmp_node_ways_rel[a] for a in tmp_node_ways_rel}, \
            {a: tmp_node_ways_rel_multipolygon[a] for a in tmp_node_ways_rel_multipolygon}
@@ -2134,7 +2062,7 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     return nodes
 
 
-def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=None):
+def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
     ways = map_elements_props['ways']
     if node_ways_relation is None:
         outer_index = ways.index(outer)
@@ -2179,22 +2107,197 @@ def make_multipolygon(outer, holes, node_ways_relation=None, map_elements_props=
     return rel
 
 
-def index_to_nodeid(index):
-    return index + 1
-
-
-def index_to_wayid(index, points):
-    return index_to_nodeid(len(points) + index)
-
-
-def index_to_relationid(index,  map_elements_props):
-    points = map_elements_props['points']
-    ways = map_elements_props['ways']
-    return index_to_wayid(len(ways) + index, points)
-
-
 def xmlize(xml_str):
     return saxutils.escape(xml_str, {'\'': '&apos;'})
+
+
+def extract_reference_code(label, refpos, messages_printer=None):
+    """
+    Extracting reference numbers, abbreviations and elevations inserted into map sources by special codes: ~[0x01]XXX
+    Parameters
+    ----------
+    label: map object label
+    refpos: location of ~[ in the label
+    messages_printer: reference to message printer class, for error printing
+
+    Returns
+    -------
+    tuple(conversion_result, name_of_way_key, value of reference, new label)
+    """
+    reftype = {
+        # interstate symbol, name can consist only digits, allowed only at beginning of label
+        0x01: 'int_ref', 0x2a: 'int_ref',
+        # US Highway – shield, name can consist only from digits, allowed only at beginning of label
+        0x02: 'int_ref',  0x2b: 'int_ref',
+        # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
+        0x03: 'ref', 0x2c: 'ref',
+        # Highway – big, allowed only at beginning of label
+        0x04: 'ref', 0x2d: 'ref',
+        # Main road – middle, allowed only at beginning of label
+        0x05: 'ref', 0x2e: 'ref',
+        # Main road – small, allowed only at beginning of label
+        0x06: 'ref', 0x2f: 'ref',
+        # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
+        0x1d: 'loc_name',
+        # elevation
+        0x1f: 'ele'
+    }
+
+    label_split = label[refpos + 2:].split(' ', 1)
+    if len(label_split) == 2:
+        refstr, right = label[refpos + 2:].split(' ', 1)
+    else:
+        refstr = label_split[0]
+        right = ""
+
+    code, ref = refstr.split(']')
+    label = (label[:refpos] + right).strip(' \t')
+    try:
+        reference_code = int(code, 0)
+    except ValueError:
+        if messages_printer is not None:
+            messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
+        return False, code.lower(), ref, label
+
+    if reference_code in reftype:
+        return True, reftype[reference_code], ref.replace("/", ";"), label
+        # way[reftype[int(code, 0)]] = ref.replace("/", ";")
+    else:
+        # Used before a letter forces it to be a lower case
+        if code.lower() == '0x1b':
+            # way['loc_name'] = right
+            label = ref + label
+            return True, 'loc_name', right, label
+        # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
+        # one the word completely, not separated
+        elif code.lower() == '0x1c':
+            # way['loc_name'] = ref
+            label = ref + label
+            return True, 'loc_name', ref, label
+        # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
+        # word completely, by blank separated
+        elif code.lower() == '0x1e':
+            label = label.replace('~[0x1e]', '')
+            if messages_printer is not None:
+                messages_printer.printerror("1E" + label)
+            return True, '', '', label
+        else:
+            if messages_printer is not None:
+                messages_printer.printerror("Unknown reference code: " + code)
+            return False, code.lower(), ref, label
+            # raise ParsingError('Problem parsing label ' + label)
+
+
+def extract_miscinfo(value, messages_printer=None):
+    # wiki => "wikipedia=pl:" fb, url => "website="
+    if '=' in value:
+        misckey, miscvalue = value.split("=", 1)
+        if misckey == 'url':
+            if miscvalue.startswith('http') or miscvalue.find(':') > 0:
+                return 'website', miscvalue
+            else:
+                return 'website', r"http://" + miscvalue
+        elif misckey == 'wiki':
+            if miscvalue.startswith('http'):
+                return 'website', miscvalue
+            else:
+                return 'wikipedia', "pl:" + miscvalue
+        elif misckey == 'fb':  # 'facebook' tag isn't widely used
+            if miscvalue.startswith('http'):
+                return 'website', miscvalue
+            else:
+                return 'website', "https://facebook.com/" + miscvalue
+        elif misckey in ('idOrlen', 'idLotos', 'vid', 'MoyaID', 'ZabkaID', 'idPNI', 'id', 'BilID', 'nest'):
+            messages_printer.printwarn('Ignoring MiscInfo: ' + value)
+        else:
+            if messages_printer is not None:
+                messages_printer.printerror("Unknown MiscInfo: " + value)
+            return '', ''
+    else:
+        if messages_printer is not None:
+            messages_printer.printerror("Improper format MiscInfo: " + value)
+    return '', ''
+
+
+def extract_hlevel(value):
+    """
+    converts mp-type HLevel to segment type of levels. Each segment is tuple in a form
+    (start_node_num, end_node_num, level), node -1 is to the end of the road. The nodes with the same level are
+    joined if possible
+    :param value: string: hlevel string
+    :return: (start_node_num, end_node_num, level), (end_node_num, end_node_num2, level) ... (end_node_numX, -1, level)
+    """
+    curlevel = 0
+    curnode = 0
+    level_list = []
+    for level in value.split(')'):
+        if level == "":
+            break
+        pair = level.strip(', ()').split(',')
+        start = int(pair[0], 0)
+        level = int(pair[1], 0)
+        if start > curnode and level != curlevel:
+            level_list.append((curnode, start, curlevel))
+            curnode = start
+        curlevel = level
+    level_list.append((curnode, -1, curlevel))
+    return level_list
+
+
+def extract_szlak(value):
+    ref = []
+    unknonw_ref = []
+    trial_tag = []
+    for colour in value.split(','):
+        if colour.lower() == 'zolty':
+            ref.append('Żółty szlak')
+            trial_tag.append('marked_trail_yellow')
+        elif colour.lower() == 'zielony':
+            ref.append('Zielony szlak')
+            trial_tag.append('marked_trail_green')
+        elif colour.lower() == 'czerwony':
+            ref.append('Czerwony szlak')
+            trial_tag.append('marked_trail_red')
+        elif colour.lower() == 'niebieski':
+            ref.append('Niebieski szlak')
+            trial_tag('marked_trail_blue')
+        else:
+            ref.append(colour)
+            unknonw_ref.append(colour)
+    return trial_tag, ref, unknonw_ref
+
+
+def extract_routeparam(value):
+    """
+    extracts routeparam values from RouteParam string
+    Parameters
+    ----------
+    value: str: coma seperated values of route param: speed limit, route class, one way, route is toll, no emergency,
+    no delivery, no car/motocycle, no bus, no taxi, no pedestrian, no bicycle, no truck, eg: 0,0,0,1,0,0,0,0,0,0,0,0
+
+    Returns
+    -------
+    dict: {key, value}, empty dict in case of failure
+    """
+    maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '108', 7: '128'}
+    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    try:
+        params = tuple(int(a) for a in value.split(','))
+    except ValueError:
+        return {}
+    _way = dict()
+    _way['ump:speed_limit'] = str(params[0])
+    _way['ump:route_class'] = str(params[1])
+    if params[0] != 0:
+        _way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+    if params[2] != 0:
+        _way['oneway'] = 'yes'
+    if params[3] != 0:
+        _way['toll'] = 'yes'
+    for i, val in enumerate(params[4:]):
+        if val != 0:
+            _way[exceptions[i]] = 'no'
+    return _way
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
@@ -2218,14 +2321,14 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
         timestamp = pointattr['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp for point %r\n" % pointattr)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_point_id(task_id, orig_id)
     idstring = str(currid)
     head = ''.join(("<node id='", idstring, "' timestamp='", str(timestamp), "' visible='true' ", extra_tags,
                     "lat='", str(point[0]), "' lon='", str(point[1]), "'>\n"))
     ostr.write(head)
-    if '_src' in pointattr:
-        src = pointattr.pop('_src')
+    # if '_src' in pointattr:
+    #     src = pointattr.pop('_src')
     for key in pointattr:
         if key.startswith('_'):
             continue
@@ -2250,7 +2353,7 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
         timestamp = way['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp in way %r\n" % way)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_way_id(task_id, orig_id)
     idstring = str(currid)
     ostr.write("<way id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
@@ -2258,8 +2361,8 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
         refstring = node_generalizator.get_point_id(task_id, nindex)
         ostr.write("\t<nd ref='%s' />\n" % refstring)
 
-    if '_src' in way:
-        src = way.pop('_src')
+    # if '_src' in way:
+    #     src = way.pop('_src')
     for key in way:
         if key.startswith('_'):
             continue
@@ -2277,14 +2380,14 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
             return
         rel.pop('_c')
     if "_members" not in rel:
-        sys.stderr.write("warning: Unable to print relation not having memebers: %r\n" % rel)
+        sys.stderr.write("warning: Unable to print relation not having members: %r\n" % rel)
         return
 
     if '_timestamp' in rel:
         timestamp = rel['_timestamp']
     else:
         sys.stderr.write("warning: no timestamp in relation: %r\n" % rel)
-        timestamp = runstamp
+        timestamp = get_runstamp()
     currid = node_generalizator.get_relation_id(task_id, orig_id)
     idstring = str(currid)
     ostr.write("<relation id='%s' timestamp='%s' %s visible='true'>\n" % (idstring, str(timestamp), extra_tags))
@@ -2300,8 +2403,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
             refstring = str(_id)
             ostr.write("\t<member type='%s' ref='%s' role='%s' />\n" % (_type, refstring, role))
 
-    if '_src' in rel:
-        src = rel.pop('_src')
+    # if '_src' in rel:
+    #     src = rel.pop('_src')
     for key in rel:
         if key.startswith('_'):
             continue
@@ -2309,7 +2412,8 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
-def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, messages_printer=None):
+def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, filestamp=None,
+                         messages_printer=None):
     # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
     if maxtypes is None:
         maxtypes = {}
@@ -2366,7 +2470,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                                        map_elements_props=map_elements_props)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
+                                            % rel)
     # Way level:  split ways on level changes
     # TODO: possibly emit a relation to group the ways
     for way_id, way in levelledways.items():
@@ -2397,7 +2502,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     for node in ways[-1]['_nodes']:
                         node_ways_relation[node].add(new_way_id)
 
-    # we have to transfer relations ordeded dict into the list, as it is easier to add elements to the end
+    # we have to transfer relations ordered dict into the list, as it is easier to add elements to the end
     map_elements_props['relations'] = [relations[road_id] for road_id in relations]
     for way in ways:
         _line_num += 1
@@ -2413,6 +2518,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     ways.append(subway)
             else:
                 map_elements_props['relations'].append(make_multipolygon(way, way.pop('_innernodes'),
+                                                                         filestamp=filestamp,
                                                                          node_ways_relation=node_multipolygon_relation,
                                                                          map_elements_props=map_elements_props))
 
@@ -2425,7 +2531,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
             try:
                 prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
     for rel in map_elements_props['relations']:
         _line_num += 1
@@ -2437,7 +2543,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
             except NodesToWayNotFound:
-                sys.stderr.write("warning: Unable to find nodes to preprepare restriction from rel: %r\n" % rel)
+                messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
+                                            % rel)
 
     # Quirks, but do not overwrite specific values
     for way in ways:
@@ -2657,14 +2764,11 @@ def output_nominatim_points_ways_preprocessing(file_g_name, points_fname, pointa
     -------
 
     """
-    filestamp = None
     l_ways = list()
     streets_counter = defaultdict(list)
     elapsed = datetime.now().replace(microsecond=0)
-
     # wczytaujemy wszystkie pointy
-    if filestamp is None:
-        filestamp = datetime.fromtimestamp(os.path.getmtime(points_fname)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    nominatim_filestamp = datetime.fromtimestamp(os.path.getmtime(points_fname)).strftime("%Y-%m-%dT%H:%M:%SZ")
     with open(points_fname, 'rb') as p_file:
         local_points = pickle.load(p_file)
 
@@ -2778,12 +2882,12 @@ def output_nominatim_points_ways_preprocessing(file_g_name, points_fname, pointa
                 pind0 = len(local_points)
                 local_points.append(pt0)
                 pt0_point_id = local_points.get_point_id(pt0)
-                local_pointattrs[pt0_point_id] = {'_timestamp': filestamp}
+                local_pointattrs[pt0_point_id] = {'_timestamp': nominatim_filestamp}
                 pind1 = len(local_points)
                 local_points.append(pt1)
                 pt1_point_id = local_points.get_point_id(pt1)
-                local_pointattrs[pt1_point_id] = {'_timestamp': filestamp}
-                way = {'_timestamp': filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
+                local_pointattrs[pt1_point_id] = {'_timestamp': nominatim_filestamp}
+                way = {'_timestamp': nominatim_filestamp, '_nodes': [pind0, pind1], '_c': 2, 'is_in': miasto,
                        'name': miasto, 'addr:city': miasto, 'highway': "residental"}
                 local_ways.append(way)
     messages_printer.printdebug("City=>Streets scan stop: " + str(datetime.now()))
@@ -2884,15 +2988,11 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
 
 
 def worker(task, options, border_points=None):
-    global working_thread
-    global workid
-    global filestamp
     global glob_progress_bar_queue
     if border_points is None:
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
-    workid = task['idx']
-    num_lines_to_process = 0
+    filestamp = task['filestamp']
 
     try:
         if sys.platform.startswith('linux'):
@@ -2908,20 +3008,14 @@ def worker(task, options, border_points=None):
         sys.exit()
     messages_printer.printinfo("Loading " + task['file'])
 
-    filestamp = datetime.fromtimestamp(os.path.getmtime(task['file'])).strftime("%Y-%m-%dT%H:%M:%SZ")
-    try:
-        filestamp
-    except:
-        filestamp = runstamp
-
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
     progress_bar.start(num_lines_to_process, 'mp')
     maxtypes, map_elements_props = parse_txt(infile, options, progress_bar=progress_bar, border_points=border_points,
-                                             messages_printer=messages_printer)
+                                             messages_printer=messages_printer, filestamp=filestamp)
     progress_bar.set_done('mp')
     infile.close()
-    post_load_processing(maxtypes=maxtypes, map_elements_props=map_elements_props,
-                         progress_bar=progress_bar, messages_printer=messages_printer)
+    post_load_processing(maxtypes=maxtypes, progress_bar=progress_bar, map_elements_props=map_elements_props,
+                         filestamp=filestamp, messages_printer=messages_printer)
     progress_bar.set_done('drp')
 
     pickled_files_names = {'points': create_pickled_file_name('points', str(task['idx'])),
@@ -2930,11 +3024,10 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
-    l_warns = str(messages_printer.get_worning_num())
+    l_warns = str(messages_printer.get_warning_num())
     l_errors = str(messages_printer.get_error_num())
-    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num ) + " ids)" + ', Warnings: ' + l_warns +
+    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num) + " ids)" + ', Warnings: ' + l_warns +
                                ', Errors: ' + l_errors + '.')
-    task['ids']		# ale main korzysta z result (ze wzg. na pool.map)
     return task['ids']
 
 
@@ -2943,7 +3036,6 @@ def main(options, args):
         parser.print_help()
         sys.exit()
     global glob_progress_bar_queue
-    global runstamp
     if hasattr(options, 'progress_bar_queue'):
         glob_progress_bar_queue = options.progress_bar_queue
     else:
@@ -2952,11 +3044,11 @@ def main(options, args):
     messages_printer = MessagePrinters(workid='main thread', verbose=options.verbose)
     node_generalizator = NodeGeneralizator()
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
-    runstamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    set_runstamp(time.strftime("%Y-%m-%dT%H:%M:%SZ"))
     runtime = datetime.now().replace(microsecond=0)
     bpoints = None
 
-    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + runstamp + "\n")
+    sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + get_runstamp() + "\n")
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -2991,19 +3083,20 @@ def main(options, args):
             except IOError:
                 sys.stderr.write("\tERROR: Can't open border input file " + border_filename + "!\n")
                 sys.exit()
-            borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            try:
-                borderstamp
-            except:
-                borderstamp = runstamp
-
+            if options.force_timestamp is None:
+                borderstamp = datetime.fromtimestamp(os.path.getmtime(border_filename)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                borderstamp = options.force_timestamp
             bpoints = parse_borders_return_bpoints(borderf, options, borderstamp)
             borderf.close()
             node_generalizator.insert_borders(bpoints)
             elapsed = datetime.now().replace(microsecond=0) - elapsed
             sys.stderr.write("\tINFO: " + str(len(bpoints)) + " ids of border points (took " + str(elapsed) + ").\n")
         else:
-            borderstamp = runstamp
+            if options.force_timestamp is None:
+                borderstamp = get_runstamp()
+            else:
+                borderstamp = options.force_timestamp
             sys.stderr.write("\tINFO: Running without border file.\n")
 
         worklist = []
@@ -3020,7 +3113,11 @@ def main(options, args):
                 sys.exit()
             sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
-            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0}
+            if options.force_timestamp is None:
+                f_stamp = datetime.fromtimestamp(os.path.getmtime(f)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                f_stamp = options.force_timestamp
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'filestamp': f_stamp}
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:
@@ -3178,7 +3275,7 @@ if __name__ == '__main__':
                       help="obsolete")
     parser.add_option("--normalize_ids",
                       action="store_true", dest="normalize_ids", default=False,
-                      help="remove gaps in id usage")
+                      help="obsolete, remove gaps in id usage")
     parser.add_option("--ignore_errors",
                       action="store_true", dest="ignore_errors", default=False,
                       help="try to ignore errors in .mp file")
@@ -3187,5 +3284,8 @@ if __name__ == '__main__':
                       help="attach regions to cities in the index file")
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
+    parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
+                      help='Force given timestamp for map elements, useful for testing. '
+                           'Proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
     (options, args) = parser.parse_args()
     main(options, args)

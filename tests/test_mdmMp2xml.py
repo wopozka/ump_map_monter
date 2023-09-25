@@ -124,15 +124,72 @@ def test_normalization_ids(target, answer):
 TEST_LATS_LONGS_FROM_LINE = (
     ('(51.11111,21.11111),(52.11111,22.11111),(53.11111,23.11111),(54.11111,24.11111)', (('51.111110', '21.111110'), ('52.111110', '22.111110'), ('53.111110', '23.111110'), ('54.111110', '24.111110')),),
     ('(51.111111,21.111111),(52.111111,22.111111)', (('51.111111', '21.111111'), ('52.111111', '22.111111')),),
-    ('(51.1111111,21.1111111),(52.1111111,22.1111111)', (('51.1111111', '21.1111111'), ('52.1111111', '22.1111111')),),
+    ('(51.1111111,21.1111111),(52.1111111,22.1111111)', (('51.111111', '21.111111'), ('52.111111', '22.111111')),),
     ('(5.11111,2.11111),(5.11111,2.11111)', (('5.111110', '2.111110'), ('5.111110','2.111110')),),
     ('(-5.11111,-2.11111),(-5.11111,-2.11111)', (('-5.111110', '-2.111110'), ('-5.111110', '-2.111110')),),
     ('(-51.11111,-25.11111),(-51.11111,-25.11111)', (('-51.111110', '-25.111110'), ('-51.111110', '-25.111110')),),
     ('(-51.11111,-25.11111)', (('-51.111110', '-25.111110'),),),
-    ('(-51,-25)', (('-51000000', '-25000000'),),),
+    ('(-51,-25)', (('-51.000000', '-25.000000'),),),
 
 )
 
 @pytest.mark.parametrize('target, answer', TEST_LATS_LONGS_FROM_LINE)
 def test_lats_longs_from_string(target, answer):
     assert mdmMp2xml.lats_longs_from_line(target) == answer
+
+TEST_EXTRACT_REF_CODE = (
+    ('~[0x01]123', (True, 'int_ref', '123', '')),
+    ('~[0x01]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
+    ('~[0x2a]123', (True, 'int_ref', '123', '')),
+    ('~[0x2a]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
+    ('~[0x03]123', (True, 'ref', '123', '')),
+    ('~[0x03]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
+    ('~[0x2c]123', (True, 'ref', '123', '')),
+    ('~[0x2c]123 Mazowiecka', (True, 'ref', '123', 'Mazowiecka')),
+    ('Polska~[0x1d]Pl', (True, 'loc_name', 'Pl', 'Polska')),
+    ('Kasprowy Wierch~[0x1f]1987', (True, 'ele', '1987', 'Kasprowy Wierch')),
+    ('~[0x1f]1987', (True, 'ele', '1987', '')),
+    ('Kasprowy Wierch~[0z1f]1987', (False, '0z1f', '1987', 'Kasprowy Wierch')),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_REF_CODE)
+def test_extract_reference_code(target, answer):
+    refpos = target.find('~[')
+    assert mdmMp2xml.extract_reference_code(target, refpos, messages_printer=None) == answer
+
+TEST_EXTRACT_MISC_INFO = (
+    ('url=https://ump.waw.pl', ('website', 'https://ump.waw.pl')),
+    ('url=http://ump.waw.pl', ('website', 'http://ump.waw.pl')),
+    ('url=ump.waw.pl', ('website', r'http://ump.waw.pl')),
+    ('wiki=https://pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski', ('website', 'https://pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski')),
+    ('wiki=pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski', ('wikipedia', 'pl:pl.wikipedia.org/wiki/Uzupe%C5%82niaj%C4%85ca_Mapa_Polski')),
+    ('fb=https://www.facebook.com/UMPpcPL/', ('website', 'https://www.facebook.com/UMPpcPL/')),
+    ('fb=UMPpcPL', ('website', 'https://facebook.com/UMPpcPL')),
+    ('rurl=http://www.alchemia.gda.pl/', ('', '')),
+    ('urlhttps://ump.waw.pl', ('', '')),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
+def test_extrace_miscinfo(target, answer):
+    assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
+
+TEST_EXTRACT_HLEVEL = (
+    ('(15,0),(16,2),(18,2),(19,0),(44,0),(45,1),(46,0)', [(0,16,0),(16,19,2),(19,45,0),(45,46,1),(46,-1,0)]),
+    ('(4,0),(5,2)', [(0,5,0),(5,-1,2)]),
+    ('(3,0),(6,2),(12,2)', [(0,6,0),(6,-1,2)]),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
+def test_extrace_miscinfo(target, answer):
+    assert mdmMp2xml.extract_hlevel(target) == answer
+
+TEST_EXTRACT_ROUTEPARAM = (
+    ('0,0,0,1,0,0,0,0,0,0,0,0', {'ump:speed_limit': '0', 'ump:route_class': '0', 'toll': 'yes'}),
+    ('0,0,0,0,1,1,1,1,1,1,1,1', {'ump:speed_limit': '0', 'ump:route_class': '0', 'emergency': 'no', 'goods': 'no', 'motorcar': 'no', 'psv': 'no', 'taxi': 'no', 'foot': 'no', 'bicycle': 'no', 'hgv': 'no'}),
+    ('0,0,0,a,0,0,0,0,0,0,0,0', {}),
+
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_ROUTEPARAM)
+def test_extract_routeparam(target, answer):
+    assert mdmMp2xml.extract_routeparam(target) == answer
