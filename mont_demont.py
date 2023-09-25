@@ -1005,7 +1005,7 @@ class tabelaKonwersjiTypow(object):
             '0x2e09': ["meble", "wnetrza"],
             '0x2e0a': ["rowerowy", "sportowy", "turystyczny"],
             '0x2e0b': ["rtv", "komputery"],
-            '0x2f01': ["benzyna", "fuel", "lpg", "cng", "stacje", "paliwo", "elektryczne", "bp", "prad"],
+            '0x2f01': ["benzyna", "fuel", "lpg", "cng", "stacje", "paliwo", "elektryczne", "bp", "prad", "wodor"],
             '0x2f02': ["rentacar", "rent_a_bike", "rowery", "rent_a_boat", "lodki"],
             '0x2f03': ["auto", "car", "carrepair", "carservice"],
             '0x2f04': ["lotnisko", "airport"],
