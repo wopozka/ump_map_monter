@@ -8,6 +8,7 @@ import tkinter.filedialog
 import tkinter.scrolledtext
 import tkinter.messagebox
 import sys
+import re
 
 DownloadEverything = 0
 try:
@@ -132,6 +133,251 @@ def createToolTip(widget, text):
 
     widget.bind('<Enter>', enter)
     widget.bind('<Leave>', leave)
+
+
+class CvsAnnotate(tkinter.Toplevel):
+    def __init__(self, parent, zmienne, *args, **kwargs):
+        self.log_annotate_file = os.path.join(os.path.expanduser('~'), '.log_annotate_file')
+        self.parent = parent
+        self.zmienne = zmienne
+        self.annotate_log_content = list()
+        self.log_content = list()
+        self.cursor_index = '1.0'
+        self.text_widgets = {'annotate': None, 'revision_log': None, 'log': None}
+        self.annotate_log_content = {'annotate': [], 'log': []}
+        self.revision_log = None
+        super().__init__(parent, *args, **kwargs)
+        body = tkinter.Frame(self)
+        body.pack(padx=5, pady=5, fill='both', expand=1)
+        buttons_frame = tkinter.Frame(body)
+        buttons_frame.pack(fill='x')
+        self.cvs_f_name_var = tkinter.StringVar()
+        # self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=60, bg='ivory2')
+        self.cvs_f_name = tkinter.ttk.Combobox(buttons_frame, textvariable=self.cvs_f_name_var, width=60)
+        self.cvs_f_name.pack(side='left')
+        self.cvs_f_name['values'] = self.wczytaj_log_annotate()
+        if self.cvs_f_name['values']:
+            self.cvs_f_name_var.set(self.cvs_f_name['values'][0])
+        sel_file_button = tkinter.ttk.Button(buttons_frame, text=u'Wybierz plik', command=self.wybierz_plik)
+        sel_file_button.pack(side='left')
+        rev_label = tkinter.Label(buttons_frame, text=u'Numer rewizji/tag')
+        rev_label.pack(side='left')
+        self.rev_var = tkinter.StringVar()
+        rev_entry = tkinter.Entry(buttons_frame, textvariable=self.rev_var)
+        rev_entry.pack(side='left')
+        date_label = tkinter.Label(buttons_frame, text=u'Data commitu')
+        date_label.pack(side='left')
+        self.date_var = tkinter.StringVar()
+        date_entry = tkinter.Entry(buttons_frame, textvariable=self.date_var)
+        date_entry.pack(side='left')
+        annotate_log_button = tkinter.ttk.Button(buttons_frame, text=u'Annotate/Log', command=self.run_cvs_log_cvs_annotate_save_results)
+        annotate_log_button.pack(side='left')
+        close_button = tkinter.ttk.Button(buttons_frame, text=u'Zamknij', command=self.destroy)
+        close_button.pack(side='left')
+        self.log_annotate_nbook = tkinter.ttk.Notebook(body)
+        self.log_annotate_nbook.pack(fill='both', expand=1)
+        annotate_text_frame = tkinter.Frame(self.log_annotate_nbook)
+        annotate_text_frame.pack(fill='both', expand=1)
+        log_text_frame = tkinter.Frame(self.log_annotate_nbook)
+        log_text_frame.pack(fill='both', expand=1)
+        self.text_widgets['annotate'] = tkinter.scrolledtext.ScrolledText(annotate_text_frame)
+        self.text_widgets['annotate'].pack(fill='both', expand=1)
+        revision_log_diff_frame = tkinter.Frame(annotate_text_frame)
+        revision_log_diff_frame.pack(expand=1, fill='x')
+        self.text_widgets['revision_log'] = tkinter.scrolledtext.ScrolledText(revision_log_diff_frame, height=10)
+        self.text_widgets['revision_log'].pack(fill='x', side='left', expand=1)
+        self.text_widgets['diff_log'] = tkinter.scrolledtext.ScrolledText(revision_log_diff_frame, height=10)
+        self.text_widgets['diff_log'].pack(fill='x', side='left', expand=1)
+        self.text_widgets['log'] = tkinter.scrolledtext.ScrolledText(log_text_frame)
+        self.text_widgets['log'].pack(fill='both', expand=1)
+        self.log_annotate_nbook.add(annotate_text_frame, text='annotate')
+        self.log_annotate_nbook.add(log_text_frame, text='log')
+        wysz_filtracja_frame = tkinter.ttk.LabelFrame(body, text=u'Wyszukiwanie i filtracja')
+        wysz_filtracja_frame.pack(fill='x')
+        wysz_label = tkinter.Label(wysz_filtracja_frame, text=u'Szukaj')
+        wysz_label.pack(side='left')
+        self.wyszukaj_var = tkinter.StringVar()
+        wyszukaj_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.wyszukaj_var)
+        wyszukaj_entry.pack(side='left', fill='x', expand=1)
+        wyszukaj_entry.bind('<Return>', self.wyszukaj_w_dol_bind)
+        wyszukaj_entry.bind('<Up>', self.wyszukaj_w_gore_bind)
+        wyszukaj_entry.bind('<Down>', self.wyszukaj_w_dol_bind)
+        szukaj_w_gore = tkinter.ttk.Button(wysz_filtracja_frame, text='<<', command=self.wyszukaj_w_gore)
+        szukaj_w_gore.pack(side='left')
+        szukaj_w_dol = tkinter.ttk.Button(wysz_filtracja_frame, text='>>', command=self.wyszukaj_w_dol)
+        szukaj_w_dol.pack(side='left')
+        pokaz_zawierajace_label = tkinter.Label(wysz_filtracja_frame, text=u'Pokaż linie zawierające tylko (RegEx)')
+        pokaz_zawierajace_label.pack(side='left')
+        self.pokaz_zawierajace_var = tkinter.StringVar()
+        pokaz_zawierajace_entry = tkinter.Entry(wysz_filtracja_frame, textvariable=self.pokaz_zawierajace_var)
+        pokaz_zawierajace_entry.pack(side='left', expand=1, fill='x')
+        pokaz_zawierajace_entry.bind('<Return>', self.filtruj_bind)
+        filtruj_button = tkinter.ttk.Button(wysz_filtracja_frame, text=u'Filtruj', command=self.filtruj)
+        filtruj_button.pack(side='left')
+        self.text_widgets['annotate'].tag_config('revision', foreground='red')
+        self.text_widgets['annotate'].tag_bind('revision', '<Button-1>', self.revision_clicked)
+        self.text_widgets['annotate'].tag_bind('revision', '<Double-Button-1>', self.revision_double_clicked)
+        self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
+        self.text_widgets['log'].tag_config('podswietl', background='yellow')
+        self.transient(self.parent)
+        self.focus_set()
+        self.grab_set()
+        self.wait_window(self)
+
+    def wczytaj_log_annotate(self):
+        try:
+            with open(self.log_annotate_file, 'r') as logfile:
+                return [a.strip() for a in logfile.readlines()]
+        except (FileNotFoundError, IOError):
+            return []
+
+    def zapisz_log_annotate(self):
+        try:
+            with open(self.log_annotate_file, 'w') as logfile:
+                for no, file_n in enumerate(self.cvs_f_name['values']):
+                    logfile.write(file_n + '\n')
+                    if no > 20:
+                        break
+        except IOError:
+            return
+
+
+    def wybierz_plik(self):
+        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji',
+                                                              initialdir=self.zmienne.KatalogzUMP)
+        if plik_do_annotate:
+            if self.cvs_f_name['values']:
+                if plik_do_annotate not in self.cvs_f_name['values']:
+                    self.cvs_f_name['values'] = [plik_do_annotate] + list(self.cvs_f_name['values'])
+            else:
+                self.cvs_f_name['values'] = [plik_do_annotate]
+            self.cvs_f_name_var.set(plik_do_annotate)
+            self.zapisz_log_annotate()
+
+    def cvs_command(self, cvs_command, revision1, revision2):
+        f_name = self.cvs_f_name_var.get()
+        if not f_name:
+            return
+        else:
+            f_name = os.path.relpath(f_name, self.zmienne.KatalogzUMP)
+        CVSROOT = '-d:pserver:' + self.zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
+        os.chdir(self.zmienne.KatalogzUMP)
+        cvs_commandline = ['cvs', CVSROOT, cvs_command]
+        if cvs_command == 'annotate' and self.rev_var.get():
+            cvs_commandline += ['-r', self.rev_var.get()]
+        if cvs_command == 'annotate' and self.date_var.get():
+            cvs_commandline += ['-d', self.date_var.get()]
+        if cvs_command == 'diff':
+            cvs_commandline += ['-u', '-r', revision1, '-r', revision2]
+        process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        if stdout:
+            lines_to_print = stdout.decode(self.zmienne.Kodowanie, errors='backslashreplace')
+        elif stderr:
+            lines_to_print = stderr.decode(self.zmienne.Kodowanie, errors='backslashreplace')
+        else:
+            lines_to_print = []
+        output_str = ''
+        log_list = []
+        for literka in lines_to_print:
+            output_str += literka
+            if literka == '\n':
+                log_list.append(output_str)
+                output_str = ''
+        return log_list
+
+
+    def run_cvs_log_cvs_annotate_save_results(self):
+        self.annotate_log_content['annotate'] = self.cvs_command('annotate', '', '')
+        self.annotate_log_content['log'] = self.cvs_command('log', '', '')
+        self.wypelnij_okno_annotate('')
+        self.wypelnij_okno_log('')
+
+    def wypelnij_okno_annotate(self, reg_expr):
+        self.text_widgets['annotate'].delete('1.0', 'end')
+        for l_no, line in enumerate(self.annotate_log_content['annotate']):
+            if not reg_expr or reg_expr and re.search(reg_expr, line) is not None:
+                ind_start = self.text_widgets['annotate'].index('insert')
+                ind_end = ind_start.split('.', 1)[0] + '.' + str(line.find(' '))
+                self.text_widgets['annotate'].insert('insert', line)
+                self.text_widgets['annotate'].tag_add('revision', ind_start, ind_end)
+
+    def wypelnij_okno_log(self, reg_expr):
+        self.text_widgets['log'].delete('1.0', 'end')
+        revision = ''
+        revision_log = defaultdict(str)
+        for line in self.annotate_log_content['log']:
+            if not reg_expr or reg_expr and re.search(reg_expr, line) is not None:
+                self.text_widgets['log'].insert('insert', line)
+            if line.startswith('revision'):
+                revision = line.rstrip()
+            elif line.startswith('-----') or line.startswith('====='):
+                revision = ''
+            if revision:
+                revision_log[revision] += line
+        self.revision_log = {a: revision_log[a] for a in revision_log}
+
+    def wyszukaj_w_gore_bind(self, event):
+        self.wyszukaj(forwards=False, backwards=True)
+
+    def wyszukaj_w_gore(self):
+        self.wyszukaj(forwards=False, backwards=True)
+
+    def wyszukaj_w_dol_bind(self, event):
+        self.wyszukaj(forwards=True, backwards=False)
+
+    def wyszukaj_w_dol(self):
+        self.wyszukaj(forwards=True, backwards=False)
+
+    def wyszukaj(self, forwards=None, backwards=None):
+        tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
+        if self.wyszukaj_var.get():
+            found_index = self.text_widgets[tabname].search(self.wyszukaj_var.get(), self.cursor_index,
+                                                            backwards=backwards, forwards=forwards, nocase=True)
+            if found_index:
+                self.text_widgets[tabname].tag_remove('podswietl', '1.0', 'end')
+                line_n, char_n = found_index.split('.', 1)
+                found_end_index = line_n + '.' + str(int(char_n) + len(self.wyszukaj_var.get()))
+                self.text_widgets[tabname].tag_add('podswietl', found_index, found_end_index)
+                self.text_widgets[tabname].see(found_index)
+                if forwards:
+                    self.cursor_index = found_end_index
+                else:
+                    self.cursor_index = found_index
+            else:
+                if forwards:
+                    self.cursor_index = '1.0'
+                else:
+                    self.cursor_index = 'end'
+
+    def filtruj_bind(self, event):
+        tabname = self.log_annotate_nbook.tab(self.log_annotate_nbook.select(), option='text')
+        reg_expr = self.pokaz_zawierajace_var.get()
+        if tabname == 'annotate':
+            self.wypelnij_okno_annotate(reg_expr)
+        else:
+            self.wypelnij_okno_log(reg_expr)
+
+    def filtruj(self):
+        self.filtruj_bind(None)
+
+    def revision_clicked(self, event):
+        row = self.text_widgets['annotate'].index('current').split('.')[0]
+        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        self.text_widgets['revision_log'].delete('1.0', 'end')
+        self.text_widgets['revision_log'].insert('insert', self.revision_log['revision ' + revision])
+
+    def revision_double_clicked(self, event):
+        self.revision_clicked(event)
+        row = self.text_widgets['annotate'].index('current').split('.')[0]
+        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        if revision.count('.') == 1:
+            rev_main, rev_side = revision.split('.')
+            if rev_side not in ('0', '1'):
+                revision0 = rev_main + '.' + str(int(rev_side) - 1)
+                self.text_widgets['diff_log'].delete('1.0', 'end')
+                for line in self.cvs_command('diff', revision0, revision):
+                    self.text_widgets['diff_log'].insert('insert', line)
 
 
 class PaczujResult(tkinter.Toplevel):
@@ -601,7 +847,7 @@ class HelpWindow(tkinter.Toplevel):
                     ]
 
         for a in listaSkrotowKlawiaturowych:
-            okienko.insert('end', a)
+            okienko.insert('insert', a)
 
         okienko.config(state='disabled')
 
@@ -885,6 +1131,7 @@ class mdmConfig(object):
         args.normalize_ids = False
         args.ignore_errors = False
         args.regions = False
+        args.no_osm = True
         return args
 
     def zwroc_args_dla_rozdzialu_klas(self):
@@ -1239,7 +1486,7 @@ class cvsDialog(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog = tkinter.Label(self, text='AAAAA')
+        katalog = tkinter.Label(self, text='Pliki do CVSa')
         katalog.pack()
         logwindowsFrame = tkinter.ttk.Labelframe(self, text='Komentarz')
         logwindowsFrame.pack()
@@ -1407,7 +1654,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
     def body(self, master):
         # create dialog body.  return widget that should have
         # initial focus.  this method should be overridden
-        katalog = tkinter.Label(self, text='AAAAA')
+        katalog = tkinter.Label(self, text=u'Wyjście z CVSa')
         katalog.pack(fill='x', expand=0)
         logwindowsFrame = tkinter.ttk.Labelframe(self, text=u'Dane wyjściowe')
         logwindowsFrame.pack(fill='both', expand=1)
@@ -1605,7 +1852,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         progreststartstopqueue.put('start')
         Zmienne = mont_demont_py.UstawieniaPoczatkowe('wynik.mp')
         CVSROOT = '-d:pserver:' + Zmienne.CvsUserName + '@cvs.ump.waw.pl:/home/cvsroot'
-        string = ''
+        stop_string = ''
         czyzatrzymac = 0
 
         os.chdir(Zmienne.KatalogzUMP)
@@ -1620,33 +1867,42 @@ class cvsOutputReceaver(tkinter.Toplevel):
 
             while processexitstatus is None:
                 try:
-                    string = stopthreadqueue.get_nowait()
-                    if string == 'stop':
+                    stop_string = stopthreadqueue.get_nowait()
+                    if stop_string == 'stop':
                         process.terminate()
                         czyzatrzymac = 1
                         break
                     #
                 except queue.Empty:
                     pass
-                line = process.stdout.readline()
-                if line.decode(Zmienne.Kodowanie) != '':
-                    self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
-
+                try:
+                    line, errs = process.communicate(timeout=1)
+                    if line.decode(Zmienne.Kodowanie) != '':
+                        self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+                except subprocess.TimeoutExpired:
+                    pass
                 # time.sleep(0.1)
                 processexitstatus = process.poll()
 
             if czyzatrzymac:
                 break
 
-        if string == 'stop':
+        if stop_string == 'stop':
             self.outputwindow.inputqueue.put(u'Proces uaktualniania przerwany na żądanie użytkownika!\n')
 
         else:
             # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
             # trzeba doczytać tutaj.
-            while line.decode(Zmienne.Kodowanie) != '':
-                line = process.stdout.readline()
-                self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+            try:
+                line = ''
+                errs = ''
+                self.outputwindow.inputqueue.put('doczytuje!')
+                line, errs = process.communicate()
+                line, errs = process.communicate()
+                if line.decode(Zmienne.Kodowanie):
+                    self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
+            except subprocess.TimeoutExpired:
+                pass
         self.outputwindow.inputqueue.put('Gotowe\n')
         progreststartstopqueue.put('stop')
 
@@ -2106,6 +2362,11 @@ class mdm_gui_py(tkinter.Tk):
                                             variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('autopolypoly'),
                                             command=lambda: self.selectUnselect_aol(None))
         menubar.add_cascade(label=u'Opcje', menu=menu_opcje)
+
+        # menu CVS
+        menu_cvs = tkinter.Menu(menubar, tearoff=0)
+        menu_cvs.add_command(label='cvs annotate/log', command=self.cvs_annotate)
+        menubar.add_cascade(label='CVS', menu=menu_cvs)
 
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
@@ -2737,6 +2998,10 @@ class mdm_gui_py(tkinter.Tk):
         self.args.katrob = self.Zmienne.KatalogRoboczy
         a = mont_demont_py.patch(self.args)
         return a
+
+    # obsluga menu CVS
+    def cvs_annotate(self):
+        aaa = CvsAnnotate(self, self.Zmienne)
 
     def OnButtonClickCvsUp(self):
         obszary = [aaa for aaa in self.regionVariableDictionary if self.regionVariableDictionary[aaa].get()]
