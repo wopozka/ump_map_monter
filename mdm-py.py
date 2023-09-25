@@ -1894,10 +1894,6 @@ class cvsOutputReceaver(tkinter.Toplevel):
             # okazuje sie, że trzeba jeszcze sprawdzić czy całe stdout zostało odczytane. Bywa że nie i
             # trzeba doczytać tutaj.
             try:
-                line = ''
-                errs = ''
-                self.outputwindow.inputqueue.put('doczytuje!')
-                line, errs = process.communicate()
                 line, errs = process.communicate()
                 if line.decode(Zmienne.Kodowanie):
                     self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
