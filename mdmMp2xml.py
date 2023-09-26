@@ -1777,11 +1777,10 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             polyline = None
 
             if '_addr' in way:
-                adr_success, adr_street = extract_street_for_addr(way)
-                if not adr_success:
+                adr_error_msg, adr_street = extract_street_for_addr(way)
+                if adr_error_msg:
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak poprawnej nazwy ulicy: '"
-                                                + adr_street + "'.")
-                    adr_street = 'STREET_missing'
+                                                + adr_error_msg + "'.")
                 if 'addr:city' in way:
                     adr_miasto = way['addr:city']
                 else:
@@ -2258,22 +2257,19 @@ def extract_szlak(value):
 def extract_street_for_addr(way):
     p = re.compile(r'\{.*\}')  # dowolny string otoczony klamrami
     if 'alt_name' in way:
-        return True, way['alt_name']
+        return '', way['alt_name']
     # klamry w nazwie eliminuja wpis jako wlasciwa nazwe dla adresacji
     elif ('name' in way) and (not p.search(way['name'])):
-        return True, way['name']
+        return '', way['name']
     elif 'loc_name' in way:
-        return True, way['loc_name']
+        return '', way['loc_name']
     elif 'short_name' in way:
-        return True, way['short_name']
+        return '', way['short_name']
     else:
         if 'name' in way:
-            return False, way['name']
+            return way['name'], 'STREET_missing'
         else:
-            return False, "<empty>"
-        messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak poprawnej nazwy ulicy: '" +
-                                    street + "'.")
-        street = 'STREET_missing'
+            return "<empty>", 'STREET_missing'
 
 def extract_routeparam(value):
     """
