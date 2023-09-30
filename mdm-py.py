@@ -9,6 +9,7 @@ import tkinter.scrolledtext
 import tkinter.messagebox
 import sys
 import re
+import mdmEdytorPlikow
 
 DownloadEverything = 0
 try:
@@ -152,7 +153,6 @@ class CvsAnnotate(tkinter.Toplevel):
         buttons_frame = tkinter.Frame(body)
         buttons_frame.pack(fill='x')
         self.cvs_f_name_var = tkinter.StringVar()
-        # self.cvs_f_name = tkinter.Label(buttons_frame, textvariable=self.cvs_f_name_var, width=60, bg='ivory2')
         self.cvs_f_name = tkinter.ttk.Combobox(buttons_frame, textvariable=self.cvs_f_name_var, width=60)
         self.cvs_f_name.pack(side='left')
         self.cvs_f_name['values'] = self.wczytaj_log_annotate()
@@ -2250,6 +2250,8 @@ class mdm_gui_py(tkinter.Tk):
             else:
                 tkinter.messagebox.showwarning(message=u'Nie wybrano żadnego obszaru.')
 
+    def edytor_tekstu(self):
+        txt_edytor = mdmEdytorPlikow.MdmEdytorPlikow(self, self.Zmienne)
 
     def cvs_co(self, obszar):
         cvs_status = sprawdz_czy_cvs_obecny()
@@ -2347,6 +2349,11 @@ class mdm_gui_py(tkinter.Tk):
         menu_cvs = tkinter.Menu(menubar, tearoff=0)
         menu_cvs.add_command(label='cvs annotate/log', command=self.cvs_annotate)
         menubar.add_cascade(label='CVS', menu=menu_cvs)
+
+        # menu edytor
+        menu_edytor = tkinter.Menu(menubar, tearoff=0)
+        menu_edytor.add_command(label='Edytor tekstu', command=self.edytor_tekstu)
+        menubar.add_cascade(label='Edytor tekstu', menu=menu_edytor)
 
         # menu Pomoc
         menuPomoc = tkinter.Menu(menubar, tearoff=0)
