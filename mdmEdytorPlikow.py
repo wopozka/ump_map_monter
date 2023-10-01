@@ -15,21 +15,29 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         ramka_glowna = tkinter.Frame(self)
         ramka_glowna.pack(fill='both', expand=1)
 
-        otworz_zapisz_frame = tkinter.Frame(ramka_glowna)
-        otworz_zapisz_frame.pack(fill='x')
-        wybierz_plik_label = tkinter.Label(otworz_zapisz_frame)
-        wybierz_plik_label.pack(side='left')
+        wskaz_wczytaj_zapisz_zamknij_frame = tkinter.Frame(ramka_glowna, pady=4)
+        wskaz_wczytaj_zapisz_zamknij_frame.pack(fill='x')
+        wskaz_sciezke_frame = tkinter.Frame(wskaz_wczytaj_zapisz_zamknij_frame, padx=4)
+        wskaz_sciezke_frame.pack(side='left')
         self.wybierz_plik_var = tkinter.StringVar()
-        self.wybierz_plik_box = tkinter.ttk.Combobox(otworz_zapisz_frame, width=55, textvariable=self.wybierz_plik_var)
+        self.wybierz_plik_box = tkinter.ttk.Combobox(wskaz_sciezke_frame, width=55, textvariable=self.wybierz_plik_var)
         self.wybierz_plik_box.pack(side='left')
-        wybierz_plik_button = tkinter.ttk.Button(otworz_zapisz_frame, text=u'Wskaż ścieżkę do pliku',
+        wybierz_plik_button = tkinter.ttk.Button(wskaz_sciezke_frame, text=u'Wskaż ścieżkę do pliku',
                                                  command=self.wybierz_plik)
         wybierz_plik_button.pack(side='left')
+
+        otworz_zapisz_frame = tkinter.Frame(wskaz_wczytaj_zapisz_zamknij_frame, padx=4)
+        otworz_zapisz_frame.pack(side='left', fill='x')
+        wybierz_plik_label = tkinter.Label(otworz_zapisz_frame)
+        wybierz_plik_label.pack(side='left')
         otworz_button = tkinter.ttk.Button(otworz_zapisz_frame, text='Wczytaj plik', command=self.wczytaj_plik)
         otworz_button.pack(side='left')
         zapisz_button = tkinter.ttk.Button(otworz_zapisz_frame, text='Zapisz plik', command=self.zapisz_plik)
         zapisz_button.pack(side='left')
-        zamknij_button = tkinter.ttk.Button(otworz_zapisz_frame, text='Zamknij edytor', command=self.zamknij_edytor)
+
+
+        zamknij_button = tkinter.ttk.Button(wskaz_wczytaj_zapisz_zamknij_frame, text='Zamknij edytor',
+                                            command=self.zamknij_edytor)
         zamknij_button.pack(side='right')
 
         # poprawny edytor
@@ -45,8 +53,10 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         b_sidebar_poziomy.pack(fill='x')
         self.edytor.config(yscrollcommand=r_sidebar_pionowy.set, xscrollcommand=b_sidebar_poziomy.set)
 
-        ramka_znajdz = tkinter.ttk.LabelFrame(ramka_glowna, text=u'Znajdz')
-        ramka_znajdz.pack(fill='x')
+        ramka_znajdz_idz_do_linii = tkinter.Frame(ramka_glowna, pady=4)
+        ramka_znajdz_idz_do_linii.pack(fill='x')
+        ramka_znajdz = tkinter.Frame(ramka_znajdz_idz_do_linii, padx=4)
+        ramka_znajdz.pack(side='left', fill='x', expand=1)
         znajdz_label = tkinter.Label(ramka_znajdz, text=u'Znajdź')
         znajdz_label.pack(side='left')
         self.znajdz_var = tkinter.StringVar()
@@ -56,12 +66,15 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         znajdz_button_up.pack(side='left')
         znajdz_button_down = tkinter.ttk.Button(ramka_znajdz, text='>>', command=self.wyszukaj_w_dol)
         znajdz_button_down.pack(side='left')
-        idz_do_linii_label = tkinter.Label(ramka_znajdz, text='Numer linii')
+
+        ramka_idz_do_linii = tkinter.Frame(ramka_znajdz_idz_do_linii, padx=4)
+        ramka_idz_do_linii.pack(side='left', fill='x', expand=1)
+        idz_do_linii_label = tkinter.Label(ramka_idz_do_linii, text='Numer linii')
         idz_do_linii_label.pack(side='left')
         self.idz_do_linii_var = tkinter.StringVar()
-        idz_do_linii_entry = tkinter.Entry(ramka_znajdz, textvariable=self.idz_do_linii_var)
+        idz_do_linii_entry = tkinter.Entry(ramka_idz_do_linii, textvariable=self.idz_do_linii_var)
         idz_do_linii_entry.pack(side='left', fill='x', expand=1)
-        idz_do_linii_button = tkinter.ttk.Button(ramka_znajdz, text=u'Idz do linii', command=self.idz_do_linii_numer)
+        idz_do_linii_button = tkinter.ttk.Button(ramka_idz_do_linii, text=u'Idz do linii', command=self.idz_do_linii_numer)
         idz_do_linii_button.pack(side='left')
 
     def zamknij_edytor(self):
@@ -74,6 +87,8 @@ class MdmEdytorPlikow(tkinter.Toplevel):
                 self.destroy()
 
     def wczytaj_plik(self):
+        if not self.wybierz_plik_var.get():
+            return
         if self.edytor.edit_modified():
             if not tkinter.messagebox.askyesno(u'Plik niezapisany',
                                                message=u'Plik nie został zapisany. Czy kontynuować?', parent=self):
@@ -91,6 +106,8 @@ class MdmEdytorPlikow(tkinter.Toplevel):
             tkinter.messagebox.showinfo(parent=self, title='Problem z plikiem', message=u'Nie mogłem otworzyć pliku')
 
     def zapisz_plik(self):
+        if not self.wybierz_plik_box.get():
+            return
         plik_tymczasowy = tempfile.NamedTemporaryFile(mode='w', encoding='cp1250', delete=False)
         try:
             plik_tymczasowy.write(self.edytor.get('1.0', 'end').rstrip('\n'))
@@ -104,8 +121,9 @@ class MdmEdytorPlikow(tkinter.Toplevel):
             tkinter.messagebox.showinfo(parent=self, title='Problem z plikiem',
                                         message=u'Nie mogłem zapisać pliku. Brak uprawnień')
         else:
-            os.remove(plik_tymczasowy.name)
             self.edytor.edit_modified(False)
+        if os.path.exists(plik_tymczasowy.name):
+            os.remove(plik_tymczasowy.name)
 
     def wybierz_plik(self):
         plik_do_otwarcia = tkinter.filedialog.askopenfilename(title=u'Plik cvs do otwarcia',
