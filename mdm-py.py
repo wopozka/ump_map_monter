@@ -363,14 +363,14 @@ class CvsAnnotate(tkinter.Toplevel):
 
     def revision_clicked(self, event):
         row = self.text_widgets['annotate'].index('current').split('.')[0]
-        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        revision = self.text_widgets['annotate'].get(row + '.0', row + '.end').split(' ', 1)[0]
         self.text_widgets['revision_log'].delete('1.0', 'end')
         self.text_widgets['revision_log'].insert('insert', self.revision_log['revision ' + revision])
 
     def revision_double_clicked(self, event):
         self.revision_clicked(event)
         row = self.text_widgets['annotate'].index('current').split('.')[0]
-        revision = self.annotate_log_content['annotate'][int(row) - 1].split(' ', 1)[0]
+        revision = self.text_widgets['annotate'].get(row + '.0', row + '.end').split(' ', 1)[0]
         if revision.count('.') == 1:
             rev_main, rev_side = revision.split('.')
             if rev_side not in ('0', '1'):
