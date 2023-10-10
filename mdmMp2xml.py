@@ -1213,10 +1213,11 @@ def polygon_make_ccw(shape, c_points):
         shape['fixme'] = "Weird shape"
 
 
-def add_addrinfo(f_way, addrs, street, city, region, right, map_elements_props):
+def add_addrinfo(f_way, street, city, region, right, map_elements_props):
     nodes = f_way['_nodes']
     count = f_way['_c']
     filestamp = f_way['_timestamp']
+    addrs = f_way['_addr']
     interp_types = {"o": "odd", "e": "even", "b": "all"}
     prev_house = "xx"
     prev_node = None
@@ -1776,37 +1777,23 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             polyline = None
 
             if '_addr' in way:
-                addrinfo = way.pop('_addr')
-                p = re.compile(r'\{.*\}')                        # dowolny string otoczony klamrami
-                if 'alt_name' in way:
-                    street = way['alt_name']
-                # klamry w nazwie eliminuja wpis jako wlasciwa nazwe dla adresacji
-                elif ('name' in way) and (not p.search(way['name'])):
-                    street = way['name']
-                elif 'loc_name' in way:
-                    street = way['loc_name']
-                elif 'short_name' in way:
-                    street = way['short_name']
+                adr_error_msg, adr_street = extract_street_for_addr(way)
+                if adr_error_msg:
+                    messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak poprawnej nazwy ulicy: '"
+                                                + adr_error_msg + "'.")
+                if 'addr:city' in way:
+                    adr_miasto = way['addr:city']
                 else:
-                    if'name' in way:
-                        street = way['name']
-                    else:
-                        street = "<empty>"
-                    messages_printer.printerror("Line:" + str(linenum)+":Numeracja - brak poprawnej nazwy ulicy: '" +
-                                                street + "'.")
-                    street = 'STREET_missing'
-                try:
-                    m = way['addr:city']
-                except:
-                    m = 'MIASTO_missing'
+                    adr_miasto = 'MIASTO_missing'
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak Miasto=!")
-                try:
-                    region = way['is_in:state']
-                except:
-                    region = ""
+                if 'is_in:state' in way:
+                    adr_region = way['is_in:state']
+                else:
+                    adr_region = ""
                     messages_printer.printerror("Line:" + str(linenum) + ":Numeracja - brak RegionName=!")
-                add_addrinfo(way, addrinfo, street, m, region, 0, map_elements_props)
-                add_addrinfo(way, addrinfo, street, m, region, 1, map_elements_props)
+                add_addrinfo(way, adr_street, adr_miasto, adr_region, 0, map_elements_props)
+                add_addrinfo(way, adr_street, adr_miasto, adr_region, 1, map_elements_props)
+                del way['_addr']
             if 'ele' in way and 'name' in way and way['ele'] == '_name':
                 way['ele'] = way.pop('name').replace(',', '.')
             if 'depth' in way and 'name' in way and way['depth'] == '_name':
@@ -2266,6 +2253,23 @@ def extract_szlak(value):
             unknonw_ref.append(colour)
     return trial_tag, ref, unknonw_ref
 
+
+def extract_street_for_addr(way):
+    p = re.compile(r'\{.*\}')  # dowolny string otoczony klamrami
+    if 'alt_name' in way:
+        return '', way['alt_name']
+    # klamry w nazwie eliminuja wpis jako wlasciwa nazwe dla adresacji
+    elif ('name' in way) and (not p.search(way['name'])):
+        return '', way['name']
+    elif 'loc_name' in way:
+        return '', way['loc_name']
+    elif 'short_name' in way:
+        return '', way['short_name']
+    else:
+        if 'name' in way:
+            return way['name'], 'STREET_missing'
+        else:
+            return "<empty>", 'STREET_missing'
 
 def extract_routeparam(value):
     """
