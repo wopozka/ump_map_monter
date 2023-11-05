@@ -564,6 +564,7 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_kierunki_dla_drog(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]' or 'Type' not in dane_do_zapisu:
             return ''
+        # drogi ktore kierunki miec powinny, alle ich nie maja. Sprawdzic czy Twoway albo TwoWay w komentarzu
         if dane_do_zapisu['Type'] in self.TYPY_DROG_Z_KIERUNKIEM and 'DirIndicator' not in dane_do_zapisu:
             if 'Komentarz' in dane_do_zapisu:
                 polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
@@ -573,6 +574,16 @@ class TestyPoprawnosciDanych(object):
             self.error_out_writer.stderrorwrite('Brak kierunkowosci dla drogi: %s. '
                                                 'Dodaj kierunek albo Twoway w komentarzu.' % coords)
             return 'brak_kierunku_dla_drogi'
+        # drogi ktore powinny miec kierunek ale maja razem DirIndicator i Twoway w komentarzu
+        elif dane_do_zapisu['Type'] in self.TYPY_DROG_Z_KIERUNKIEM and 'DirIndicator' in dane_do_zapisu and \
+                'Komentarz' in dane_do_zapisu:
+            polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
+            if 'TwoWay' in polaczony_kom or 'Twoway' in polaczony_kom:
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                self.error_out_writer.stderrorwrite('DirIndicator i Twoway dla jednej drogi: %s. '
+                                                    'Usun Dirindicator albo Twoway z komentarza.' % coords)
+                return 'twoway_dirindicator_razem'
+        # drogi ktore nie powinny posiadac Twoway w komentarzu
         elif dane_do_zapisu['Type'] not in self.TYPY_DROG_Z_KIERUNKIEM and 'Komentarz' in dane_do_zapisu:
             polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
             if 'TwoWay' in polaczony_kom or 'Twoway' in polaczony_kom:
