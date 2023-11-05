@@ -483,6 +483,30 @@ def test_testy_poprawnosci_danych_kierukowosc_ronda(target, answer):
     tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
     assert tester_poprawnosci_danych.testuj_kierunkowosc_ronda(target) == answer
 
+TEST_KIERUNKOWOSC_DROG_TWOWAY = (
+    ({'POIPOLY': '[POLYGON]', 'Komentarz': [';Twoway'], 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'DirIndicator': 1, 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'twoway_dirindicator_razem'),
+    ({'POIPOLY': '[POLYLINE]', 'DirIndicator': 1, 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x2', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x8', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x9', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'DirIndicator': 1, 'Type': '0x1', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x2', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x8', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x9', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x3', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'Twoway_dla_nieuprawnionej_drogi'),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_KIERUNKOWOSC_DROG_TWOWAY)
+def test_testy_poprawnosci_danych_sprawdz_kierunki_dla_drog(target, answer):
+    args = Args()
+    stderr_stdout_writer = mont_demont.ErrOutWriter(args)
+    tester_poprawnosci_danych = mont_demont.TestyPoprawnosciDanych(stderr_stdout_writer)
+    assert tester_poprawnosci_danych.sprawdz_kierunki_dla_drog(target) == answer
+
 
 TEST_DATA_0_ONLY = (
 ({'POIPOLY': '[POI]', 'Type': '0x2f06', 'Label': 'ATM', 'HouseNumber': '43', 'StreetDesc': 'Wyki',
