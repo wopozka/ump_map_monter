@@ -132,6 +132,7 @@ class TestyPoprawnosciDanych(object):
     # ponizsze klucze pojawiaja sie wielokrotnie w rekordzie, dlatego monter dodaje numery na koncu, aby je
     # rozroznic. Z tego powodu sa traktowane inaczej
     DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
+    TYPY_DROG_Z_KIERUNKIEM = {'0x1', '0x2', '0x8', '0x9'}
 
     def __init__(self, error_out_writer):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
@@ -560,6 +561,26 @@ class TestyPoprawnosciDanych(object):
                     return 'cp1250_nie_ok'
         return 'cp1250_ok'
 
+    def sprawdz_kierunki_dla_drog(self, dane_do_zapisu):
+        if dane_do_zapisu['POIPOLY'] == '[POLYGON]' or 'Type' not in dane_do_zapisu:
+            return ''
+        if dane_do_zapisu['Type'] in self.TYPY_DROG_Z_KIERUNKIEM and 'DirIndicator' not in dane_do_zapisu:
+            if 'Komentarz' in dane_do_zapisu:
+                polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
+                if 'TwoWay' in polaczony_kom or 'Twoway' in polaczony_kom:
+                    return ''
+            coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+            self.error_out_writer.stderrorwrite('Brak kierunkowosci dla drogi: %s. '
+                                                'Dodaj kierunek albo Twoway w komentarzu.' % coords)
+            return 'brak_kierunku_dla_drogi'
+        elif dane_do_zapisu['Type'] not in self.TYPY_DROG_Z_KIERUNKIEM and 'Komentarz' in dane_do_zapisu:
+            polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
+            if 'TwoWay' in polaczony_kom or 'Twoway' in polaczony_kom:
+                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+                self.error_out_writer.stderrorwrite('Twoway dozwolony tylko dla typow: %s %s' %
+                                                    (', '.join(self.TYPY_DROG_Z_KIERUNKIEM), coords))
+                return 'Twoway_dla_nieuprawnionej_drogi'
+        return ''
 
     def testy_poprawnosci_danych_poi(self, dane_do_zapisu):
         self.sprawdzData0Only(dane_do_zapisu)
@@ -573,6 +594,7 @@ class TestyPoprawnosciDanych(object):
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
         wyniki_testow = list()
         wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_kierunki_dla_drog(dane_do_zapisu))
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_join_zamiast_merge(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_poly(dane_do_zapisu))
