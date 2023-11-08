@@ -133,6 +133,8 @@ class TestyPoprawnosciDanych(object):
     # rozroznic. Z tego powodu sa traktowane inaczej
     DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
     TYPY_DROG_Z_KIERUNKIEM = {'0x1', '0x2', '0x8', '0x9'}
+    TYPY_DROG_BEZ_TWOWAY = {'0x3', '0x4', '0x5', '0x6', '0x7', '0xa', '0xb', '0xc', '0xd', '0xe', '0xf', '0x16',
+                            '0x1a', '0x1b'}
 
     def __init__(self, error_out_writer):
         # Typ dla roznych drog, ktore powinny posiadac wpis Miasto=
@@ -564,7 +566,7 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_kierunki_dla_drog(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] == '[POLYGON]' or 'Type' not in dane_do_zapisu:
             return ''
-        # drogi ktore kierunki miec powinny, alle ich nie maja. Sprawdzic czy Twoway albo TwoWay w komentarzu
+        # drogi ktore kierunki miec powinny, ale ich nie maja. Sprawdzic czy Twoway albo TwoWay w komentarzu
         if dane_do_zapisu['Type'] in self.TYPY_DROG_Z_KIERUNKIEM and 'DirIndicator' not in dane_do_zapisu:
             if 'Komentarz' in dane_do_zapisu:
                 polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
@@ -584,7 +586,7 @@ class TestyPoprawnosciDanych(object):
                                                     'Usun Dirindicator albo Twoway z komentarza.' % coords)
                 return 'twoway_dirindicator_razem'
         # drogi ktore nie powinny posiadac Twoway w komentarzu
-        elif dane_do_zapisu['Type'] not in self.TYPY_DROG_Z_KIERUNKIEM and 'Komentarz' in dane_do_zapisu:
+        elif dane_do_zapisu['Type'] in self.TYPY_DROG_BEZ_TWOWAY and 'Komentarz' in dane_do_zapisu:
             polaczony_kom = ' '.join(dane_do_zapisu['Komentarz'])
             if 'TwoWay' in polaczony_kom or 'Twoway' in polaczony_kom:
                 coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
