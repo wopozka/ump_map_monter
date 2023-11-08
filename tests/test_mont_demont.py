@@ -498,6 +498,8 @@ TEST_KIERUNKOWOSC_DROG_TWOWAY = (
     ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x8', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
     ({'POIPOLY': '[POLYLINE]', 'Komentarz': ['jeden', 'dwa', 'trzy', 'cztery'], 'Type': '0x9', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'brak_kierunku_dla_drogi'),
     ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x3', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, 'Twoway_dla_nieuprawnionej_drogi'),
+    ({'POIPOLY': '[POLYLINE]', 'Komentarz': [';Twoway'], 'Type': '0x10e13', 'Data0': '(51.82457,17.57944),(51.82457,17.57944)'}, ''),
+
 )
 
 @pytest.mark.parametrize('target, answer', TEST_KIERUNKOWOSC_DROG_TWOWAY)
