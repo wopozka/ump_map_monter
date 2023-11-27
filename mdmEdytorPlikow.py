@@ -22,8 +22,7 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         self.wybierz_plik_var = tkinter.StringVar()
         self.wybierz_plik_box = tkinter.ttk.Combobox(wskaz_sciezke_frame, width=55, textvariable=self.wybierz_plik_var)
         self.wybierz_plik_box.pack(side='left')
-        self.wybierz_plik_box['values'] = [os.path.join(zmienne.KatalogRoboczy, zmienne.OutputFile)] + \
-                                          self.wybierz_plik_box['values']
+        self.wybierz_plik_box['values'] = [os.path.join(zmienne.KatalogRoboczy, zmienne.OutputFile)]
         wybierz_plik_button = tkinter.ttk.Button(wskaz_sciezke_frame, text=u'Wskaż ścieżkę do pliku',
                                                  command=self.wybierz_plik)
         wybierz_plik_button.pack(side='left')
