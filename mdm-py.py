@@ -1295,28 +1295,38 @@ class cvsOutText(tkinter.scrolledtext.ScrolledText):
     def update_me(self):
         try:
             while 1:
-                string = self.inputqueue.get_nowait()
-                if string.startswith('P '):
-                    self.insert('end', string.lstrip(), 'P')
-                elif string.startswith('U '):
-                    self.insert('end', string.lstrip(), 'U')
-                elif string.startswith('? '):
-                    self.insert('end', string.lstrip(), 'questionmark')
-                elif string.startswith('C '):
-                    self.insert('end', string.lstrip(), 'C')
-                    self.insert('end', u'Uwaga! Łączenie zmian się nie powiodło. W pliku występują konflikty!\n', 'error')
-                    self.insert('end', u'Otwórz plik w edytorze i usuń konflikty ręcznie.\n\n', 'wskazowka')
-                elif string.startswith('M '):
-                    self.insert('end', string.lstrip(), 'M')
-                elif string.startswith(u'Błąd'):
-                    self.insert('end', string.lstrip(), 'error')
-                elif string.startswith(u'>'):
-                    self.insert('end', string.lstrip('>'), 'wskazowka')
-                elif string.startswith(u'nieprzeslane'):
-                    self.insert('end', string.lstrip('nieprzeslane'), 'error')
-
-                else:
-                    self.insert('end', string.lstrip(), 'normal')
+                for string in self.inputqueue.get_nowait().split('\n'):
+                    string = string.strip()
+                    if not string:
+                        continue
+                    string += '\n'
+                    if string.startswith('P '):
+                        self.insert('end', string, 'P')
+                    elif string.startswith('U '):
+                        self.insert('end', string, 'U')
+                    elif string.startswith('? '):
+                        self.insert('end', string, 'questionmark')
+                    elif string.startswith('C '):
+                        self.insert('end', string, 'C')
+                        self.insert('end', u'Uwaga! Łączenie zmian się nie powiodło. W pliku występują konflikty!\n', 'error')
+                        self.insert('end', u'Otwórz plik w edytorze i usuń konflikty ręcznie.\n\n', 'wskazowka')
+                    elif string.startswith('M '):
+                        self.insert('end', string, 'M')
+                    elif string.startswith(u'Błąd'):
+                        self.insert('end', string, 'error')
+                    elif string.startswith(u'>'):
+                        self.insert('end', string.lstrip('>'), 'wskazowka')
+                    elif string.startswith(u'nieprzeslane'):
+                        self.insert('end', string.lstrip('nieprzeslane'), 'error')
+                    elif string.startswith(u'cvs [update aborted]'):
+                        nazwa_pliku = string.split(' ')[-1].split(',')[0]
+                        nazwa_pliku = nazwa_pliku.split('cvsroot/')[-1]
+                        self.insert('end', string, 'error')
+                        self.insert('end', u'Uwaga! Błąd w pliku: ' + nazwa_pliku + ' blokuje update całego obszaru!\n',
+                                    'error')
+                        self.insert('end', u'Usuń plik: ' + nazwa_pliku + ' i zrób cvs update ponownie.\n\n', 'wskazowka')
+                    else:
+                        self.insert('end', string, 'normal')
                 self.see(tkinter.END)
 
         except queue.Empty:
