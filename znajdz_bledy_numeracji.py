@@ -351,6 +351,12 @@ class Mapa(object):
         for zakaz_id in self.Zakazy:
             if self.Zakazy[zakaz_id] is None:
                 continue
+            elif not 3 <= len(self.Zakazy[zakaz_id].Nody) <= 4:
+                self.stderr_stdout_writer.stderrorwrite('Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma '
+                                                        '%s : %s %s' % (len(self.Zakazy[zakaz_id].Nody),
+                                                                        self.Zakazy[zakaz_id].Nody[0],
+                                                                        self.Zakazy[zakaz_id].Nody[1]))
+                continue
             else:
                 self.Zakazy[zakaz_id].ustawFromViaTo1(self.WszystkieNody, self.Drogi)
 
@@ -956,10 +962,6 @@ class Zakaz(object):
 
     def sprawdz_zakaz1(self):
         # zakaz musi mieć przynajmniej 3 a maksymalnie 4 punkty, pozostale przypadki do blad
-        if not 3 <= len(self.Nody) <= 4:
-            self.stderr_stdout_writer.stderrorwrite('Błąd zakazu!\nZakaz może mieć tylko 3 lub 4 węzły a ma %s : %s %s'
-                                                    % (len(self.Nody), self.Nody[0], self.Nody[1]))
-
         from_via_to = (self.FromRoadId, self.ViaRoadId, self.ToRoadId) if len(self.Nody) == 4 else \
             (self.FromRoadId, self.ToRoadId)
         for numer, from_via_to_item in enumerate(from_via_to):
