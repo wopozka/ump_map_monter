@@ -303,7 +303,7 @@ class MessagePrinters(object):
 
 
 # some global constants
-__version__ = '0.8.1'
+__version__ = '0.8.3'
 extra_tags = " version='1' changeset='1' "
 runstamp = ''
 
@@ -2500,11 +2500,12 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     subway['bridge'] = 'yes'
                 if segment[2] < 0:
                     subway['tunnel'] = 'yes'
-                ways.append(subway)
-                if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
-                    new_way_id = len(ways) - 1
-                    for node in ways[-1]['_nodes']:
-                        node_ways_relation[node].add(new_way_id)
+                if len(subway['_nodes']) > 1:          # not for the last single node
+                    ways.append(subway)
+                    if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
+                        new_way_id = len(ways) - 1
+                        for node in ways[-1]['_nodes']:
+                            node_ways_relation[node].add(new_way_id)
 
     # we have to transfer relations ordered dict into the list, as it is easier to add elements to the end
     map_elements_props['relations'] = [relations[road_id] for road_id in relations]
