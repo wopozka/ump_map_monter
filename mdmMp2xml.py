@@ -2206,6 +2206,34 @@ def extract_miscinfo(value, messages_printer=None):
     return '', ''
 
 
+def extract_hlevel_v2(value):
+    """
+        converts mp-type HLevel to segment type of levels. Each segment is tuple in a form
+        (start_node_num, end_node_num, level), node -1 is to the end of the road. The nodes with the same level are
+        joined if possible
+        :param value: string: hlevel string
+        :return: (start_node_num, end_node_num, level), (end_node_num, end_node_num2, level) ... (end_node_numX, -1, level)
+        """
+    curlevel = 0
+    curnode = 0
+    level_list = []
+    for level in value.split(')'):
+        if level == "":
+            break
+        pair = level.strip(', ()').split(',')
+        try:
+            start = int(pair[0], 0)
+            level = int(pair[1], 0)
+        except ValueError:
+            continue
+        if start > curnode and level != curlevel:
+            level_list.append((curnode, start, curlevel))
+            curnode = start
+        curlevel = level
+    level_list.append((curnode, -1, curlevel))
+    return tuple(level_list)
+
+
 def extract_hlevel(value):
     """
     converts mp-type HLevel to segment type of levels. Each segment is tuple in a form

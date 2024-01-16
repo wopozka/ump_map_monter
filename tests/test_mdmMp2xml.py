@@ -193,3 +193,19 @@ TEST_EXTRACT_ROUTEPARAM = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_ROUTEPARAM)
 def test_extract_routeparam(target, answer):
     assert mdmMp2xml.extract_routeparam(target) == answer
+
+
+TEST_EXTRACT_HLEVEL_V2 = (
+    (('(0,2),(1,2)', ((0, -1, 2),))),
+    (('(0,-1),(10,-1)', ((0, -1, -1),))),
+    (('(0,0),(1,1),(2,0)', ((0, 3, 1),(0, -1, 0),))),
+    (('(0,0),(1,1),(2,1),(3,0)', ((0, 4, 1), (0, -1, 0),))),
+
+    # ('(15,0),(16,2),(18,2),(19,0),(44,0),(45,1),(46,0)', ((0, 16, 0),(16, 19, 2),(19, 45, 0),(45, 46, 1),(46, -1, 0))),
+    # ('(4,0),(5,2)', ((0, 5, 0),(5, -1, 2))),
+    # ('(3,0),(6,2),(12,2)', ((0, 6, 0),(6, -1, 2))),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL_V2)
+def test_extract_hlevelv2(target, answer):
+    assert mdmMp2xml.extract_hlevel_v2(target) == answer
