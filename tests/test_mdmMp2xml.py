@@ -170,7 +170,7 @@ TEST_EXTRACT_MISC_INFO = (
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
-def test_extrace_miscinfo(target, answer):
+def test_extract_miscinfo(target, answer):
     assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
 
 TEST_EXTRACT_HLEVEL = (
@@ -180,7 +180,7 @@ TEST_EXTRACT_HLEVEL = (
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
-def test_extrace_miscinfo(target, answer):
+def test_extract_hlevel(target, answer):
     assert mdmMp2xml.extract_hlevel(target) == answer
 
 TEST_EXTRACT_ROUTEPARAM = (
