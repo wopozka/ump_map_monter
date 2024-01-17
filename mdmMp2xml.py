@@ -2216,21 +2216,31 @@ def extract_hlevel_v2(value):
         """
     curlevel = 0
     curnode = 0
+    previous_node = None
+    previous_level = None
+    node_0_defined = False
     level_list = []
+    # _levels = [sl for sl in value.strip().split(')') if sl]
+    # levels = [(sl[0], sl[1],) for sl in _levels.strip(', ()').split(',')]
     for level in value.split(')'):
         if level == "":
             break
         pair = level.strip(', ()').split(',')
         try:
-            start = int(pair[0], 0)
+            node_num = int(pair[0], 0)
             level = int(pair[1], 0)
         except ValueError:
             continue
-        if start > curnode and level != curlevel:
-            level_list.append((curnode, start, curlevel))
-            curnode = start
-        curlevel = level
-    level_list.append((curnode, -1, curlevel))
+        if previous_node is not None:
+            if previous_node == 0 and not level_list:
+                level_list.append((0, node_num, level,))
+            else:
+                if not level_list:
+                    level_list.append((0, previous_node, 0,))
+                level_list.append((previous_node, node_num, level,))
+        previous_node = node_num
+        previous_level = level
+    level_list.append((node_num, -1, 0))
     return tuple(level_list)
 
 
