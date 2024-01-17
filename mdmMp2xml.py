@@ -2221,11 +2221,11 @@ def extract_hlevel_v2(value):
     node_0_defined = False
     level_list = []
     # _levels = [sl for sl in value.strip().split(')') if sl]
-    # levels = [(sl[0], sl[1],) for sl in _levels.strip(', ()').split(',')]
-    for level in value.split(')'):
-        if level == "":
+    levels = value.strip('()').split('),(')
+    for elem_num, level in enumerate(levels):
+        if not level:
             break
-        pair = level.strip(', ()').split(',')
+        pair = level.split(',')
         try:
             node_num = int(pair[0], 0)
             level = int(pair[1], 0)
