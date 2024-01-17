@@ -2214,34 +2214,32 @@ def extract_hlevel_v2(value):
         :param value: string: hlevel string
         :return: (start_node_num, end_node_num, level), (end_node_num, end_node_num2, level) ... (end_node_numX, -1, level)
         """
-    curlevel = 0
-    curnode = 0
-    previous_node = None
-    previous_level = None
-    node_0_defined = False
     level_list = []
-    # _levels = [sl for sl in value.strip().split(')') if sl]
-    levels = value.strip('()').split('),(')
-    for elem_num, level in enumerate(levels):
-        if not level:
-            break
-        pair = level.split(',')
-        try:
-            node_num = int(pair[0], 0)
-            level = int(pair[1], 0)
-        except ValueError:
+    try:
+        levels = [(int(b[0]), int(b[1]),) for b in [a.split(',') for a in value.strip('()').split('),(')]]
+    except ValueError:
+        return tuple()
+    if levels[0][0] != 0:
+        levels = [(0, 0,)] + levels
+    for elem_num in range(len(levels) - 1):
+        start_node_num = levels[elem_num][0]
+        end_node_num = levels[elem_num + 1][0]
+        cur_level = max(levels[elem_num][1], levels[elem_num + 1][1])
+        level_list.append((start_node_num, end_node_num, cur_level))
+    level_list.append((levels[-1][0], -1, levels[-1][1]))
+    deduplicated_level_list = []
+    for elem in level_list:
+        if not deduplicated_level_list:
+            deduplicated_level_list.append(elem)
             continue
-        if previous_node is not None:
-            if previous_node == 0 and not level_list:
-                level_list.append((0, node_num, level,))
-            else:
-                if not level_list:
-                    level_list.append((0, previous_node, 0,))
-                level_list.append((previous_node, node_num, level,))
-        previous_node = node_num
-        previous_level = level
-    level_list.append((node_num, -1, 0))
-    return tuple(level_list)
+        if elem[2] == deduplicated_level_list[-1][2]:
+            start_node_num = deduplicated_level_list[-1][0]
+            end_node_num = elem[1]
+            cur_level = elem[2]
+            deduplicated_level_list[-1] = (start_node_num, end_node_num, cur_level,)
+        else:
+            deduplicated_level_list.append(elem)
+    return tuple(deduplicated_level_list)
 
 
 def extract_hlevel(value):
