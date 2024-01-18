@@ -2228,7 +2228,14 @@ def extract_hlevel_v2(value):
         end_node_num = levels[elem_num + 1][0]
         if start_node_num < 0 or end_node_num < 0:
             return tuple()
-        cur_level = max(levels[elem_num][1], levels[elem_num + 1][1])
+        if levels[elem_num][1] == 0 and levels[elem_num + 1][1] != 0:
+            cur_level = levels[elem_num + 1][1]
+        elif levels[elem_num][1] != 0 and levels[elem_num + 1][1] == 0:
+            cur_level = levels[elem_num][1]
+        elif levels[elem_num][1] < 0 and levels[elem_num + 1][1] < 0:
+            cur_level = min(levels[elem_num][1], levels[elem_num + 1][1])
+        else:
+            cur_level = max(levels[elem_num][1], levels[elem_num + 1][1])
         level_list.append((start_node_num, end_node_num, cur_level))
     level_list.append((levels[-1][0], -1, levels[-1][1]))
     deduplicated_level_list = []
