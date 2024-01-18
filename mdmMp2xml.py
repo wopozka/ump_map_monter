@@ -2219,11 +2219,15 @@ def extract_hlevel_v2(value):
         levels = [(int(b[0]), int(b[1]),) for b in [a.split(',') for a in value.strip('()').split('),(')]]
     except ValueError:
         return tuple()
+    except IndexError:
+        return tuple()
     if levels[0][0] != 0:
         levels = [(0, 0,)] + levels
     for elem_num in range(len(levels) - 1):
         start_node_num = levels[elem_num][0]
         end_node_num = levels[elem_num + 1][0]
+        if start_node_num < 0 or end_node_num < 0:
+            return tuple()
         cur_level = max(levels[elem_num][1], levels[elem_num + 1][1])
         level_list.append((start_node_num, end_node_num, cur_level))
     level_list.append((levels[-1][0], -1, levels[-1][1]))
