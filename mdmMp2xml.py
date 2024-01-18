@@ -1496,7 +1496,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 else:
                     raise ParsingError('HLevel0 used on a polygon')
             else:
-                level_list = extract_hlevel(value)
+                level_list = extract_hlevel_v2(value)
                 if level_list:
                     way['_levels'] = level_list
                 else:
@@ -2485,7 +2485,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for way in ways:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if 'junction' in way and way['junction'] == 'roundabout':
+        if ('junction' in way and way['junction'] == 'roundabout') or \
+                ('highway' in way and 'ump:type' in way and int(way['ump:type'], 0) == int('0xe', 0)):
             maxtype = 0x7  # service
             for i in way['_nodes']:
                 if maxtypes[i] < maxtype:
