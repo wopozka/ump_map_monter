@@ -2733,8 +2733,8 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
         sys.exit()
     messages_printer = MessagePrinters(workid='1', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids."
-                               % ids_to_process)
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) +
+                               " output(s). Processing {:,} ids.".format(ids_to_process))
     # printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
@@ -2988,7 +2988,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
         border_points = []
     messages_printer = MessagePrinters(workid='2', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
+    messages_printer.printinfo("Generating nominatim output. Processing {:,} ids".format(ids_to_process))
     node_generalizator = NodeGeneralizator()
     node_generalizator.insert_borders(border_points)
     post_nom_picle_files = {'points': [], 'pointattrs': [], 'ways': []}
@@ -3077,10 +3077,11 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
-    l_warns = str(messages_printer.get_warning_num())
-    l_errors = str(messages_printer.get_error_num())
-    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num) + " ids)" + ', Warnings: ' + l_warns +
-                               ', Errors: ' + l_errors + '.')
+    l_warns = messages_printer.get_warning_num()
+    l_errors = messages_printer.get_error_num()
+    messages_printer.printinfo("Finished " + task['file'] + " (" + '{:,}'.format(ids_num) + " ids)" +
+                               ', Warnings: ' + '{:,}'.format(messages_printer.get_warning_num()) +
+                               ', Errors: ' + '{:,}'.format(messages_printer.get_error_num()) + '.')
     return task['ids']
 
 
