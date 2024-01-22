@@ -3077,8 +3077,6 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
-    l_warns = messages_printer.get_warning_num()
-    l_errors = messages_printer.get_error_num()
     messages_printer.printinfo("Finished " + task['file'] + " (" + '{:,}'.format(ids_num) + " ids)" +
                                ', Warnings: ' + '{:,}'.format(messages_printer.get_warning_num()) +
                                ', Errors: ' + '{:,}'.format(messages_printer.get_error_num()) + '.')
