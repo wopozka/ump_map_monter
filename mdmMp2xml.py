@@ -2492,7 +2492,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                 if maxtypes[i] < maxtype:
                     maxtype = maxtypes[i]
             tag(way, pline_types[maxtype])
-            if 'oneway' in way:
+            if 'junction' in way and way['junction'] == 'roundabout' and 'oneway' in way:
                 del way['oneway']
             # TODO make sure nodes are ordered counter-clockwise
 

@@ -220,9 +220,20 @@ class CvsAnnotate(tkinter.Toplevel):
         self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
         self.text_widgets['log'].tag_config('podswietl', background='yellow')
         self.transient(self.parent)
+        self.bind('<FocusIn>', self.focus_in)
+        self.bind('<FocusOut>, self.focus_out')
+        self.bind('<Configure>', self.conf_event)
         self.focus_set()
         self.grab_set()
         self.wait_window(self)
+
+    def conf_event(self, event):
+        print(event)
+    def focus_in(self, event):
+        print('focus_in')
+
+    def focus_out(self, event):
+        print('focus_out')
 
     def wczytaj_log_annotate(self):
         try:
