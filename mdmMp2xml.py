@@ -1496,7 +1496,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 else:
                     raise ParsingError('HLevel0 used on a polygon')
             else:
-                level_list = extract_hlevel(value)
+                level_list = extract_hlevel_v2(value)
                 if level_list:
                     way['_levels'] = level_list
                 else:
@@ -2206,6 +2206,53 @@ def extract_miscinfo(value, messages_printer=None):
     return '', ''
 
 
+def extract_hlevel_v2(value):
+    """
+        converts mp-type HLevel to segment type of levels. Each segment is tuple in a form
+        (start_node_num, end_node_num, level), node -1 is to the end of the road. The nodes with the same level are
+        joined if possible
+        :param value: string: hlevel string
+        :return: (start_node_num, end_node_num, level), (end_node_num, end_node_num2, level) ... (end_node_numX, -1, level)
+        """
+    level_list = []
+    try:
+        levels = [(int(b[0]), int(b[1]),) for b in [a.split(',') for a in value.strip('()').split('),(')]]
+    except ValueError:
+        return tuple()
+    except IndexError:
+        return tuple()
+    if levels[0][0] != 0:
+        levels = [(0, 0,)] + levels
+    for elem_num in range(len(levels) - 1):
+        start_node_num = levels[elem_num][0]
+        end_node_num = levels[elem_num + 1][0]
+        if start_node_num < 0 or end_node_num < 0:
+            return tuple()
+        if levels[elem_num][1] == 0 and levels[elem_num + 1][1] != 0:
+            cur_level = levels[elem_num + 1][1]
+        elif levels[elem_num][1] != 0 and levels[elem_num + 1][1] == 0:
+            cur_level = levels[elem_num][1]
+        elif levels[elem_num][1] < 0 and levels[elem_num + 1][1] < 0:
+            cur_level = min(levels[elem_num][1], levels[elem_num + 1][1])
+        else:
+            cur_level = max(levels[elem_num][1], levels[elem_num + 1][1])
+        level_list.append((start_node_num, end_node_num, cur_level))
+    level_list.append((levels[-1][0], -1, levels[-1][1]))
+    deduplicated_level_list = []
+    for elem in level_list:
+        if not deduplicated_level_list:
+            deduplicated_level_list.append(elem)
+            continue
+        if elem[2] == deduplicated_level_list[-1][2]:
+            start_node_num = deduplicated_level_list[-1][0]
+            end_node_num = elem[1]
+            cur_level = elem[2]
+            deduplicated_level_list[-1] = (start_node_num, end_node_num, cur_level,)
+        else:
+            deduplicated_level_list.append(elem)
+    return tuple(deduplicated_level_list)
+
+
 def extract_hlevel(value):
     """
     converts mp-type HLevel to segment type of levels. Each segment is tuple in a form
@@ -2438,7 +2485,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for way in ways:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if 'junction' in way and way['junction'] == 'roundabout':
+        if ('junction' in way and way['junction'] == 'roundabout') or \
+                ('highway' in way and 'ump:type' in way and int(way['ump:type'], 0) == int('0xe', 0)):
             maxtype = 0x7  # service
             for i in way['_nodes']:
                 if maxtypes[i] < maxtype:
@@ -2685,8 +2733,8 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
         sys.exit()
     messages_printer = MessagePrinters(workid='1', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) + " output(s). Processing %s ids."
-                               % ids_to_process)
+    messages_printer.printinfo("Generating " + ', '.join(filenames_to_gen) +
+                               " output(s). Processing {:,} ids.".format(ids_to_process))
     # printed_points = set()
     for task_id, pickled_point in enumerate(pickled_filenames['points']):
         with open(pickled_point, 'rb') as p_file:
@@ -2940,7 +2988,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
         border_points = []
     messages_printer = MessagePrinters(workid='2', working_file='', verbose=options.verbose)
     elapsed = datetime.now().replace(microsecond=0)
-    messages_printer.printinfo("Generating nominatim output. Processing %s ids" % ids_to_process)
+    messages_printer.printinfo("Generating nominatim output. Processing {:,} ids".format(ids_to_process))
     node_generalizator = NodeGeneralizator()
     node_generalizator.insert_borders(border_points)
     post_nom_picle_files = {'points': [], 'pointattrs': [], 'ways': []}
@@ -3029,10 +3077,9 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
-    l_warns = str(messages_printer.get_warning_num())
-    l_errors = str(messages_printer.get_error_num())
-    messages_printer.printinfo("Finished " + task['file'] + " (" + str(ids_num) + " ids)" + ', Warnings: ' + l_warns +
-                               ', Errors: ' + l_errors + '.')
+    messages_printer.printinfo("Finished " + task['file'] + " (" + '{:,}'.format(ids_num) + " ids)" +
+                               ', Warnings: ' + '{:,}'.format(messages_printer.get_warning_num()) +
+                               ', Errors: ' + '{:,}'.format(messages_printer.get_error_num()) + '.')
     return task['ids']
 
 
