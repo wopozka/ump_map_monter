@@ -170,7 +170,7 @@ TEST_EXTRACT_MISC_INFO = (
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_MISC_INFO)
-def test_extrace_miscinfo(target, answer):
+def test_extract_miscinfo(target, answer):
     assert mdmMp2xml.extract_miscinfo(target, messages_printer=None) == answer
 
 TEST_EXTRACT_HLEVEL = (
@@ -180,7 +180,7 @@ TEST_EXTRACT_HLEVEL = (
 )
 
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL)
-def test_extrace_miscinfo(target, answer):
+def test_extract_hlevel(target, answer):
     assert mdmMp2xml.extract_hlevel(target) == answer
 
 TEST_EXTRACT_ROUTEPARAM = (
@@ -193,3 +193,33 @@ TEST_EXTRACT_ROUTEPARAM = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_ROUTEPARAM)
 def test_extract_routeparam(target, answer):
     assert mdmMp2xml.extract_routeparam(target) == answer
+
+
+TEST_EXTRACT_HLEVEL_V2 = (
+    ('(2,2)', ((0, -1, 2),)),
+    ('(2,-1)', ((0, -1, -1),)),
+    ('(0,a),(1,2)', ()),
+    ('(a,1),(1,2)', ()),
+    ('(02),(1,2)', ()),
+    ('(0,2)(1,2),(3,0)', ()),
+    ('(-1,2),(-2,2)', ()),
+    ('(0,2),(1,2)', ((0, -1, 2), )),
+    ('(10,2),(11,2)', ((0, -1, 2),)),
+    ('(0,-1),(10,-1)', ((0, -1, -1), )),
+    ('(0,0),(1,1),(2,0)', ((0, 2, 1), (2, -1, 0),)),
+    ('(0,0),(1,1),(2,1),(3,0)', ((0, 3, 1), (3, -1, 0),)),
+    ('(0,0),(1,-1),(2,-1),(3,0)', ((0, 3, -1), (3, -1, 0),)),
+    ('(0,0),(1,-1),(2,-1),(3,-1),(4,0)', ((0, 4, -1), (4, -1, 0),)),
+    ('(0,0),(1,-1),(2,-2),(3,-1),(4,0)', ((0, 1, -1), (1, 3, -2), (3, 4, -1), (4, -1, 0),)),
+    ('(15,0),(16,2),(18,2),(19,0),(44,0),(45,1),(46,0)', ((0, 15, 0), (15, 19, 2), (19, 44, 0), (44, 46, 1), (46, -1, 0),)),
+    ('(4,0),(5,2)', ((0, 4, 0), (4, -1, 2),)),
+    ('(3,0),(6,2),(12,2)', ((0, 3, 0), (3, -1, 2),)),
+    ('(5,0),(6,2),(7,3),(8,2),(9,0)', ((0, 5, 0), (5, 6, 2), (6, 8, 3), (8, 9, 2), (9, -1, 0),)),
+    ('(1,0),(2,2),(3,2),(4,2),(5,0)', ((0, 1, 0), (1, 5, 2), (5, -1, 0),)),
+    ('(1,0),(2,0),(6,0),(7,2),(8,0)', ((0, 6, 0), (6, 8, 2), (8, -1, 0),))
+
+)
+
+@pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL_V2)
+def test_extract_hlevelv2(target, answer):
+    assert mdmMp2xml.extract_hlevel_v2(target) == answer
