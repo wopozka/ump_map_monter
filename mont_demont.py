@@ -449,6 +449,20 @@ class TestyPoprawnosciDanych(object):
         else:
             return ''
 
+    def sprawdz_czy_miasto_i_label_dla_topo(self, dane_do_zapisu):
+        if 'Plik' not in dane_do_zapisu:
+            return
+        if 'topo.txt' not in dane_do_zapisu['Plik']:
+            return ''
+        if 'Type' in dane_do_zapisu and dane_do_zapisu['Type'] not in self.typy_label_z_miastem:
+            return ''
+        if 'Miasto' in dane_do_zapisu and ('Label' in dane_do_zapisu or 'Label2' in dane_do_zapisu or 'Label3'
+                                           in dane_do_zapisu or 'adrLabel' in dane_do_zapisu):
+            coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+            self.error_out_writer.stderrorwrite('Nazwana droga w pliku topo.txt: {!s}'.format(coords))
+            return 'Miasto i label w topo'
+        return ''
+
     def sprawdz_krotkie_remonty(self, dane_do_zapisu):
         if dane_do_zapisu['POIPOLY'] != '[POLYLINE]':
             return ''
@@ -611,6 +625,7 @@ class TestyPoprawnosciDanych(object):
         wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_join_zamiast_merge(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_poly(dane_do_zapisu))
+        wyniki_testow.append(self.sprawdz_czy_miasto_i_label_dla_topo(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
         wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
