@@ -2351,6 +2351,40 @@ def extract_routeparam(value):
     return _way
 
 
+def get_maxspeed_for_road(_way):
+    maxpeeds = ['8', '20', '40', '56', '72', '93', '108', '128']
+    class_vs_maxspeeds = {0x1: {'normal': 6, 'faster': 0, 'slower': 0, 'named': 0},
+                          0x2: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},
+                          0x3: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
+                          0x4: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},
+                          0x5: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},
+                          0x6: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},
+                          0x7: {'normal': 1, 'faster': 1, 'slower': -1, 'named': 0},
+                          0x8: {'normal': 2, 'faster': 1, 'slower': -1, 'named': 0},
+                          0x9: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
+                          0xa: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},
+                          0xb: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},
+                          0xc: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
+                          0xd: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
+                          0xe: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
+                          0xf: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},
+                          0x10: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
+                          0x16: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},
+                          0x1a: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},
+                          0x1b: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0}
+                          }
+    if 'ump:type' not in _way:
+        return None
+    if 'ump:type' in _way and _way['ump:type'] not in class_vs_maxspeeds:
+        return None
+    if 'ump:ForceSpeed' in _way:
+        _type = _way['ump:type']
+        fs = _way['ump:ForceSpeed'].lower()
+        if fs in ('slower', 'faster'):
+            return maxpeeds[class_vs_maxspeeds[_type]['normal'] + class_vs_maxspeeds[_type][fs]]
+    return maxpeeds[class_vs_maxspeeds[_type]['normal']]
+
+
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
     """
     Funkcja drukuje punkt do postaci xmlowej
