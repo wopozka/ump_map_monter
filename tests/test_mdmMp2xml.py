@@ -223,3 +223,24 @@ TEST_EXTRACT_HLEVEL_V2 = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL_V2)
 def test_extract_hlevelv2(target, answer):
     assert mdmMp2xml.extract_hlevel_v2(target) == answer
+
+TEST_MAXSPEED = (
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka',}, None),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': 'aaa'}, None),
+    ({'highway': 'tertiary', 'ump:type': '0x5'}, '72'),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5'}, '50'),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': 'faster'}, '72'),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': 'slower'}, '40'),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '4'}, '72'),
+    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '5'}, '93'),
+    ({'highway': 'primary', 'is_in': 'Kraków', 'ump:type': '0xe'}, '93'),
+    ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe'}, '72'),
+    ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': 'faster'}, '72'),
+    ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': 'slower'}, '50'),
+    ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': '0'}, '8'),
+
+)
+
+@pytest.mark.parametrize('target, answer', TEST_MAXSPEED)
+def test_maxspeed(target, answer):
+    assert mdmMp2xml.get_maxspeed_for_road(target) == answer

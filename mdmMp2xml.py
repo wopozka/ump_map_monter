@@ -1544,7 +1544,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
         elif key == 'Rozmiar':
             way['Rozmiar'] = value
         elif key == 'ForceSpeed':
-            fspeed = value  # Routing helper
+              # Routing helper
+              way['_ForceSpeed'] = value
         elif key == 'ForceClass':
             fclass = value  # Routing helper
             # Ignore it for the moment, seems to be used mainly for temporary setups
@@ -2330,7 +2331,7 @@ def extract_routeparam(value):
     -------
     dict: {key, value}, empty dict in case of failure
     """
-    maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '108', 7: '128'}
+    maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '120', 7: '140'}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
     try:
         params = tuple(int(a) for a in value.split(','))
@@ -2352,37 +2353,50 @@ def extract_routeparam(value):
 
 
 def get_maxspeed_for_road(_way):
-    maxpeeds = ['8', '20', '40', '56', '72', '93', '108', '128']
-    class_vs_maxspeeds = {0x1: {'normal': 6, 'faster': 0, 'slower': 0, 'named': 0},
-                          0x2: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},
-                          0x3: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
-                          0x4: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},
-                          0x5: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},
-                          0x6: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},
-                          0x7: {'normal': 1, 'faster': 1, 'slower': -1, 'named': 0},
-                          0x8: {'normal': 2, 'faster': 1, 'slower': -1, 'named': 0},
-                          0x9: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
-                          0xa: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},
-                          0xb: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},
-                          0xc: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
-                          0xd: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
-                          0xe: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},
-                          0xf: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},
+    maxspeeds = ('8', '20', '40', '50', '72', '93', '120', '140')
+    class_vs_maxspeeds = {0x1: {'normal': 7, 'faster': 0, 'slower': -1, 'named': 0},  # highway:motorway
+                          0x2: {'normal': 6, 'faster': 0, 'slower': -1, 'named': -1},  # highway:trunk
+                          0x3: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},  # highway:primary
+                          0x4: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},  # highway:secondary
+                          0x5: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},  # highway:tertiary
+                          0x6: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},  # highway:residential
+                          0x7: {'normal': 1, 'faster': 1, 'slower': -1, 'named': 0},  # highway:living_street
+                          0x8: {'normal': 2, 'faster': 1, 'slower': -1, 'named': 0},  # highway:trunk_link
+                          0x9: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},  # highway:motorway_link
+                          0xa: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},  # highway:track
+                          0xb: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},  # highway:primary_link
+                          0xc: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # junction:roundabout
+                          0xd: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # highway:cycleway
+                          0xe: {'normal': 5, 'faster': 0, 'slower': -1, 'named': -1},   # highway:tertiary tunnel:yes
+                          0xf: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},   # highway:track tracktype:grade4
                           0x10: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
-                          0x16: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},
-                          0x1a: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},
-                          0x1b: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0}
+                          0x16: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},   # highway:path
+                          0x1a: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},  # route:ferry
+                          0x1b: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0}  # route:ferry
                           }
     if 'ump:type' not in _way:
         return None
-    if 'ump:type' in _way and _way['ump:type'] not in class_vs_maxspeeds:
+    try:
+        _type = int(_way['ump:type'], 0)
+    except ValueError:
         return None
-    if 'ump:ForceSpeed' in _way:
-        _type = _way['ump:type']
-        fs = _way['ump:ForceSpeed'].lower()
-        if fs in ('slower', 'faster'):
-            return maxpeeds[class_vs_maxspeeds[_type]['normal'] + class_vs_maxspeeds[_type][fs]]
-    return maxpeeds[class_vs_maxspeeds[_type]['normal']]
+    if 'ump:type' in _way and _type not in class_vs_maxspeeds:
+        return None
+    speed_index = class_vs_maxspeeds[_type]['normal']
+    if 'is_in' in _way and 'name' in _way:
+        speed_index += class_vs_maxspeeds[_type]['named']
+    if '_ForceSpeed' in _way:
+        fs = _way['_ForceSpeed'].lower()
+        try:
+            speed_index = int(fs)
+        except ValueError:
+            if fs in ('slower', 'faster'):
+                speed_index += class_vs_maxspeeds[_type][fs]
+            else:
+                return None
+    if speed_index < len(maxspeeds):
+        return maxspeeds[speed_index]
+    return None
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
@@ -2640,10 +2654,14 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
             continue
         progress_bar.set_val(_line_num, 'drp')
         if 'highway' in way and 'maxspeed' not in way:
-            if way['highway'] == 'motorway':
-                way['maxspeed'] = '140'
-            if way['highway'] == 'trunk':
-                way['maxspeed'] = '120'
+            maxspeed = get_maxspeed_for_road(way)
+            if maxspeed is None:
+                continue
+            way['maxspeed'] = maxspeed
+            # if way['highway'] == 'motorway':
+            #     way['maxspeed'] = '140'
+            # if way['highway'] == 'trunk':
+            #     way['maxspeed'] = '120'
 
     for index, point in pointattrs.items():
         _line_num += 1
@@ -3327,7 +3345,8 @@ def main(options, args):
                 messages_printer.printinfo_nlf("\n\tERROR: Normal output failed!\n")
                 sys.exit()
         elapsed = datetime.now().replace(microsecond=0) - runtime
-        messages_printer.printinfo("mdmMp2xml.py finished after " + str(elapsed) + ".\n")
+        messages_printer.printinfo("mdmMp2xml.py finished at " + time.strftime("%Y-%m-%dT%H:%M:%SZ") +
+                                   " after: " + str(elapsed) + ".\n")
     else:
         sys.stderr.write("\tINFO: Border file required when more than one area given: --border \n")
 
