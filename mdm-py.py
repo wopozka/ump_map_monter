@@ -10,7 +10,11 @@ import tkinter.messagebox
 import sys
 import re
 import mdmEdytorPlikow
-from ctypes import windll
+try:
+    from ctypes import windll
+    ctypes_importet = True
+except ImportError:
+    ctype_importet = False
 
 DownloadEverything = 0
 try:
@@ -3155,7 +3159,7 @@ if __name__ == "__main__":
         app = mdm_gui_py(None)
         app.title(u'mdm-py')
 
-        if platform.system() == 'Windows':
+        if platform.system() == 'Windows' and ctype_imported:
             #minimize log window when opend from the icon
             hwnd = windll.user32.FindWindowW(None, u"mdm-py.py - shortcut")
             res = windll.user32.ShowWindow(hwnd, 6)
