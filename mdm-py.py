@@ -3159,7 +3159,7 @@ if __name__ == "__main__":
         app = mdm_gui_py(None)
         app.title(u'mdm-py')
 
-        if platform.system() == 'Windows' and ctypes_imported:f
+        if platform.system() == 'Windows' and ctypes_imported:
             #minimize log window when opend from the icon
             hwnd = windll.user32.FindWindowW(None, u"mdm-py.py - shortcut")
             res = windll.user32.ShowWindow(hwnd, 6)
