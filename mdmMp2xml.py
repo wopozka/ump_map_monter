@@ -2364,7 +2364,7 @@ def get_maxspeed_for_road(_way):
                           0x8: {'normal': 2, 'faster': 1, 'slower': -1, 'named': 0},  # highway:trunk_link
                           0x9: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},  # highway:motorway_link
                           0xa: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},  # highway:track
-                          0xb: {'normal': 2, 'faster': 1, 'slower': -1, 'named': -1},  # highway:primary_link
+                          0xb: {'normal': 3, 'faster': 1, 'slower': -1, 'named': 0},  # highway:primary_link
                           0xc: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # junction:roundabout
                           0xd: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # highway:cycleway
                           0xe: {'normal': 5, 'faster': 0, 'slower': -1, 'named': -1},   # highway:tertiary tunnel:yes
@@ -2394,9 +2394,11 @@ def get_maxspeed_for_road(_way):
                 speed_index += class_vs_maxspeeds[_type][fs]
             else:
                 return None
-    if speed_index < len(maxspeeds):
-        return maxspeeds[speed_index]
-    return None
+    if speed_index < 0:
+        speed_index = 0
+    elif speed_index >= len(maxspeeds):
+        speed_index = len(maxspeeds) - 1
+    return maxspeeds[speed_index]
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
