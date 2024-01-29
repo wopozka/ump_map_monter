@@ -2655,15 +2655,18 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         if way is None:
             continue
         progress_bar.set_val(_line_num, 'drp')
-        if 'highway' in way and 'maxspeed' not in way:
-            maxspeed = get_maxspeed_for_road(way)
-            if maxspeed is None:
-                continue
-            way['maxspeed'] = maxspeed
-            # if way['highway'] == 'motorway':
-            #     way['maxspeed'] = '140'
-            # if way['highway'] == 'trunk':
-            #     way['maxspeed'] = '120'
+        if 'highway' in way:
+            # maxspeed = get_maxspeed_for_road(way)
+            # if maxspeed is None:
+            #     continue
+            # way['maxspeed'] = maxspeed
+            if '_ForceSpeed' in way and way['_ForceSpeed'].lower() == 'slower':
+                way['surface'] = 'gravel'
+            if 'maxspeed' not in way:
+                if way['highway'] == 'motorway':
+                    way['maxspeed'] = '140'
+                if way['highway'] == 'trunk':
+                    way['maxspeed'] = '120'
 
     for index, point in pointattrs.items():
         _line_num += 1
