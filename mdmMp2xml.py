@@ -311,29 +311,29 @@ runstamp = ''
 umppline_types = dict()
 
 pline_types = {
-    0x1:  ["highway",  "motorway"],
-    0x2:  ["highway",  "trunk"],
-    0x3:  ["highway",  "primary"],
-    0x4:  ["highway",  "secondary"],
-    0x5:  ["highway",  "tertiary"],
-    0x6:  ["highway",  "residential"],
-    0x7:  ["highway",  "living_street", "note", "FIXME: select one of: living_street, service, residential"],
-    0x8:  ["highway",  "trunk_link"],
-    0x9:  ["highway",  "motorway_link"],
-    0xa:  ["highway",  "track", "tracktype", "grade2", "access", "yes"],
-    0xb:  ["highway",  "primary_link"],
-    0xc:  ["junction", "roundabout"],
+    0x1:  ["highway",  "motorway", "ump:osmandpri", "1.1"],
+    0x2:  ["highway",  "trunk", "ump:osmandpri", "1.0"],
+    0x3:  ["highway",  "primary", "ump:osmandpri", "1.0"],
+    0x4:  ["highway",  "secondary", "ump:osmandpri", "0.95"],
+    0x5:  ["highway",  "tertiary", "ump:osmandpri", "0.9"],
+    0x6:  ["highway",  "residential", "ump:osmandpri", "0.7"],
+    0x7:  ["highway",  "living_street", "ump:osmandpri", "0.5", "note", "FIXME: select one of: living_street, service, residential"],
+    0x8:  ["highway",  "trunk_link", "ump:osmandpri", "0.7"],
+    0x9:  ["highway",  "motorway_link", "ump:osmandpri", "0.7"],
+    0xa:  ["highway",  "track", "tracktype", "grade2", "access", "yes", "ump:osmandpri", "0.5"],
+    0xb:  ["highway",  "primary_link", "ump:osmandpri", "0.95"],
+    0xc:  ["junction", "roundabout", "ump:osmandpri", "0.7"],
     0xd:  ["highway",  "cycleway"],
-    0xe:  ["highway",  "tertiary", "tunnel", "yes"],
-    0xf:  ["highway",  "track", "tracktype", "grade4"],
+    0xe:  ["highway",  "tertiary", "tunnel", "yes", "ump:osmandpri", "0.9"],
+    0xf:  ["highway",  "track", "tracktype", "grade4", "ump:osmandpri", "0.5"],
     0x14: ["railway",  "rail"],
     0x15: ["note", "morskie"],  # TODO
     0x16: ["highway",  "path"],
     # 0x16: ["highway",  "pedestrian"],
     0x18: ["waterway", "stream"],
     0x19: ["_rel",     "restriction"],
-    0x1a: ["route",    "ferry"],
-    0x1b: ["route",    "ferry"],
+    0x1a: ["route",    "ferry", "ump:osmandpri", "1.0"],
+    0x1b: ["route",    "ferry", "ump:osmandpri", "1.0"],
     0x1c: ["boundary", "administrative", "admin_level", "8"],
     0x1d: ["boundary", "administrative", "admin_level", "4"],
     0x1e: ["boundary", "administrative", "admin_level", "2"],
@@ -2353,47 +2353,58 @@ def extract_routeparam(value):
 
 
 def get_maxspeed_for_road(_way):
-    maxspeeds = ('8', '20', '40', '50', '72', '93', '120', '140')
-    class_vs_maxspeeds = {0x1: {'normal': 7, 'faster': 0, 'slower': -1, 'named': 0},  # highway:motorway
-                          0x2: {'normal': 6, 'faster': 0, 'slower': -1, 'named': -1},  # highway:trunk
-                          0x3: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},  # highway:primary
-                          0x4: {'normal': 5, 'faster': 1, 'slower': -1, 'named': -1},  # highway:secondary
-                          0x5: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},  # highway:tertiary
-                          0x6: {'normal': 3, 'faster': 1, 'slower': -1, 'named': -1},  # highway:residential
-                          0x7: {'normal': 1, 'faster': 1, 'slower': -1, 'named': 0},  # highway:living_street
-                          0x8: {'normal': 2, 'faster': 1, 'slower': -1, 'named': 0},  # highway:trunk_link
-                          0x9: {'normal': 4, 'faster': 1, 'slower': -1, 'named': -1},  # highway:motorway_link
-                          0xa: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},  # highway:track
-                          0xb: {'normal': 3, 'faster': 1, 'slower': -1, 'named': 0},  # highway:primary_link
-                          0xc: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # junction:roundabout
-                          0xd: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},  # highway:cycleway
-                          0xe: {'normal': 5, 'faster': 0, 'slower': -1, 'named': -1},   # highway:tertiary tunnel:yes
-                          0xf: {'normal': 0, 'faster': 1, 'slower': 0, 'named': 0},   # highway:track tracktype:grade4
-                          0x10: {'normal': 1, 'faster': 1, 'slower': 0, 'named': 0},
-                          0x16: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},   # highway:path
-                          0x1a: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0},  # route:ferry
-                          0x1b: {'normal': 0, 'faster': 0, 'slower': 0, 'named': 0}  # route:ferry
+    speed_down = 0.8
+    speed_up = 1.2
+    class_vs_peeds = {0x1:  6,  # highway:motorway
+                          0x2:  5,  # highway:trunk
+                          0x3:  4,  # highway:primary
+                          0x4:  3,  # highway:secondary
+                          0x5:  3,  # highway:tertiary
+                          0x6:  2,  # highway:residential
+                          0x7:  1,  # highway:living_street
+                          0x8:  2,  # highway:trunk_link
+                          0x9:  4,  # highway:motorway_link
+                          0xa:  0,  # highway:track
+                          0xb:  2,  # highway:primary_link
+                          0xc:  1,  # junction:roundabout
+                          0xd:  1,  # highway:cycleway
+                          0xe:  5,   # highway:tertiary tunnel:yes
+                          0xf:  0,   # highway:track tracktype:grade4
+                          0x10:  1,
+                          0x16:  0,   # highway:path
+                          0x1a:  0,  # route:ferry
+                          0x1b:  0,  # route:ferry
                           }
     if 'ump:type' not in _way:
+        return None
+    if 'ump:osmandpri' not in _way:
         return None
     try:
         _type = int(_way['ump:type'], 0)
     except ValueError:
         return None
-    if 'ump:type' in _way and _type not in class_vs_maxspeeds:
+    if 'ump:type' in _way and _type not in class_vs_speeds:
         return None
-    speed_index = class_vs_maxspeeds[_type]['normal']
-    if 'is_in' in _way and 'name' in _way:
-        speed_index += class_vs_maxspeeds[_type]['named']
+    ump_osmandpri = float(_way['ump:osmandpri'])
     if '_ForceSpeed' in _way:
         fs = _way['_ForceSpeed'].lower()
         try:
             speed_index = int(fs)
-        except ValueError:
-            if fs in ('slower', 'faster'):
-                speed_index += class_vs_maxspeeds[_type][fs]
+            if speed_index > class_vs_peeds[_type]:
+                for aaa in range(speed_index - class_vs_peeds[_type]):
+                    ump_osmandpri *= speed_up
+            elif speed_index < class_vs_peeds[_type]:
+                for aaa in range(class_vs_peeds[_type] - speed_index):
+                    ump_osmandpri *= speed_down
             else:
                 return None
+        except ValueError:
+            if fs == 'slower':
+                ump_osmandpri *= speed_up
+            elif fs == 'faster':
+                ump_osmandpri *= speed_down
+    # if 'is_in' in _way and 'name' in _way:
+    #     speed_index += class_vs_maxspeeds[_type]['named']
     if speed_index < 0:
         speed_index = 0
     elif speed_index >= len(maxspeeds):
