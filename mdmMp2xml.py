@@ -1531,9 +1531,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['phone'] = value
         elif key == 'HouseNumber':
             way['addr:housenumber'] = value
-        elif key == 'KodPoczt':
-            way['addr:postcode'] = value
-        elif key == 'ZIP':
+        elif key == 'KodPoczt' or key == 'ZIP' or key == 'ZipCode':
             way['addr:postcode'] = value
         elif key == 'Zip':
             pass
@@ -2352,29 +2350,28 @@ def extract_routeparam(value):
     return _way
 
 
-def get_maxspeed_for_road(_way):
-    speed_down = 0.8
-    speed_up = 1.2
-    class_vs_peeds = {0x1:  6,  # highway:motorway
-                          0x2:  5,  # highway:trunk
-                          0x3:  4,  # highway:primary
-                          0x4:  3,  # highway:secondary
-                          0x5:  3,  # highway:tertiary
-                          0x6:  2,  # highway:residential
-                          0x7:  1,  # highway:living_street
-                          0x8:  2,  # highway:trunk_link
-                          0x9:  4,  # highway:motorway_link
-                          0xa:  0,  # highway:track
-                          0xb:  2,  # highway:primary_link
-                          0xc:  1,  # junction:roundabout
-                          0xd:  1,  # highway:cycleway
-                          0xe:  5,   # highway:tertiary tunnel:yes
-                          0xf:  0,   # highway:track tracktype:grade4
-                          0x10:  1,
-                          0x16:  0,   # highway:path
-                          0x1a:  0,  # route:ferry
-                          0x1b:  0,  # route:ferry
-                          }
+def get_ump_osmandpri(_way):
+    osmand_pri_modifier = 0.1
+    class_vs_speeds = {0x1:  6,  # highway:motorway
+                      0x2:  5,  # highway:trunk
+                      0x3:  4,  # highway:primary
+                      0x4:  3,  # highway:secondary
+                      0x5:  3,  # highway:tertiary
+                      0x6:  2,  # highway:residential
+                      0x7:  1,  # highway:living_street
+                      0x8:  2,  # highway:trunk_link
+                      0x9:  4,  # highway:motorway_link
+                      0xa:  0,  # highway:track
+                      0xb:  2,  # highway:primary_link
+                      0xc:  1,  # junction:roundabout
+                      0xd:  1,  # highway:cycleway
+                      0xe:  5,   # highway:tertiary tunnel:yes
+                      0xf:  0,   # highway:track tracktype:grade4
+                      0x10:  1,
+                      0x16:  0,   # highway:path
+                      0x1a:  0,  # route:ferry
+                      0x1b:  0,  # route:ferry
+                      }
     if 'ump:type' not in _way:
         return None
     if 'ump:osmandpri' not in _way:
@@ -2389,27 +2386,18 @@ def get_maxspeed_for_road(_way):
     if '_ForceSpeed' in _way:
         fs = _way['_ForceSpeed'].lower()
         try:
-            speed_index = int(fs)
-            if speed_index > class_vs_peeds[_type]:
-                for aaa in range(speed_index - class_vs_peeds[_type]):
-                    ump_osmandpri *= speed_up
-            elif speed_index < class_vs_peeds[_type]:
-                for aaa in range(class_vs_peeds[_type] - speed_index):
-                    ump_osmandpri *= speed_down
-            else:
-                return None
+            speed_modifier = int(fs) - class_vs_speeds[_type]
+            ump_osmandpri = ump_osmandpri + ump_osmandpri * speed_modifier * osmand_pri_modifier
         except ValueError:
             if fs == 'slower':
-                ump_osmandpri *= speed_up
+                ump_osmandpri = ump_osmandpri - ump_osmandpri * osmand_pri_modifier
             elif fs == 'faster':
-                ump_osmandpri *= speed_down
-    # if 'is_in' in _way and 'name' in _way:
-    #     speed_index += class_vs_maxspeeds[_type]['named']
-    if speed_index < 0:
-        speed_index = 0
-    elif speed_index >= len(maxspeeds):
-        speed_index = len(maxspeeds) - 1
-    return maxspeeds[speed_index]
+                ump_osmandpri = ump_osmandpri + ump_osmandpri * osmand_pri_modifier
+    if ump_osmandpri < 0.4:
+        ump_osmandpri = 0.4
+    elif ump_osmandpri > 1.4:
+        ump_osmandpri = 1.4
+    return str(round(0.05 * round(ump_osmandpri / 0.05), 2))
 
 
 def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, ostr):
@@ -2663,14 +2651,15 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     # Quirks, but do not overwrite specific values
     for way in ways:
         _line_num += 1
+        progress_bar.set_val(_line_num, 'drp')
         if way is None:
             continue
-        progress_bar.set_val(_line_num, 'drp')
         if 'highway' in way:
+            ump_osmandpri = get_ump_osmandpri(way)
             # maxspeed = get_maxspeed_for_road(way)
-            # if maxspeed is None:
-            #     continue
-            # way['maxspeed'] = maxspeed
+            if ump_osmandpri is None:
+                continue
+            way['ump:osmandpri'] = ump_osmandpri
             if '_ForceSpeed' in way and way['_ForceSpeed'].lower() == 'slower':
                 way['surface'] = 'gravel'
             if 'maxspeed' not in way:
