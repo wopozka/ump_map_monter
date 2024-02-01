@@ -1930,7 +1930,7 @@ def signbit(x):
         return -1
 
 
-def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None):
+def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
     return either next or previous node relative to the pivot point. In some cases does not do anything as the next
     point is the only one
@@ -1941,7 +1941,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
-                             map_elements_props=map_elements_props)['_nodes']
+                             map_elements_props=map_elements_props, messages_printer=messages_printer)['_nodes']
     pivotidx = way_nodes.index(pivot)
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
@@ -1993,7 +1993,7 @@ def name_turn_restriction(rel, nodes, points):
         rel['restriction'] = 'no_u_turn'
 
 
-def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
+def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
     modification of relation nodes so, that it starts and ends one node after and one node before central point
     called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
@@ -2003,25 +2003,27 @@ def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None
     :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
-                                   node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                                   node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                   messages_printer=messages_printer)
     new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1],
-                                  node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                                  node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                  messages_printer=messages_printer)
     rel['_nodes'][0] = new_rel_node_first
     rel['_nodes'][-1] = new_rel_node_last
 
 
-def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
+def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
     split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation,
-                               map_elements_props=map_elements_props),
+                               map_elements_props=map_elements_props, messages_printer=messages_printer),
               splitting_point=fromvia, node_ways_relation=node_ways_relation,
               map_elements_props=map_elements_props)
     split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation,
-                               map_elements_props=map_elements_props),
+                               map_elements_props=map_elements_props, messages_printer=messages_printer),
               splitting_point=tovia, node_ways_relation=node_ways_relation,
               map_elements_props=map_elements_props)
 
@@ -2049,7 +2051,6 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
 
 
 def make_direction_tag(direction_sign):
-    print(direction_sign)
     if 'name' in direction_sign and direction_sign['name']:
         return direction_sign['name']
     return ''
@@ -2057,11 +2058,12 @@ def make_direction_tag(direction_sign):
 
 def add_direction_tag_to_way(direction_label, direction_sign, ways):
     # 'to': ('way', [to_way_index]),
-    roadsign_to_way = ways[direction_sign['to']['way'][0]]
-    if 'direction' not in roadsign_to_way:
-        roadsign_to_way['direction'] = direction_label
+    roadsign_to_member = direction_sign['_members']['to']
+    to_wayid = roadsign_to_member[1][0]
+    if 'direction' not in ways[to_wayid]:
+        ways[to_wayid]['direction'] = direction_label
     else:
-        roadsign_to_way['direction'] = roadsign_to_way['direction'] + ',' + direction_label
+        ways[to_wayid]['direction'] = ways[to_wayid]['direction'] + ',' + direction_label
 
 
 def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
@@ -2539,6 +2541,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     pointattrs = map_elements_props['pointattrs']
     relations = OrderedDict()
     levelledways = OrderedDict()
+    rel_vals_for_restrictions = ('restriction', 'lane_restriction', 'roadsign')
     for way_no, way in enumerate(ways):
         if '_rel' in way:
             relations[way_no] = way
@@ -2583,10 +2586,10 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
                 preprepare_restriction(rel, node_ways_relation=node_ways_relation,
-                                       map_elements_props=map_elements_props)
+                                       map_elements_props=map_elements_props, messages_printer=messages_printer)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
@@ -2647,9 +2650,10 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for rel in map_elements_props['relations']:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction', 'roadsign'):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
-                prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                    messages_printer=messages_printer)
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
@@ -2657,7 +2661,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         # rel = map_elements_props['relations'][rel_num]
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction', 'roadsign'):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
                                                     map_elements_props=map_elements_props, )
