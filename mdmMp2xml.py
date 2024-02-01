@@ -2048,6 +2048,22 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     return nodes
 
 
+def make_direction_tag(direction_sign):
+    print(direction_sign)
+    if 'name' in direction_sign and direction_sign['name']:
+        return direction_sign['name']
+    return ''
+
+
+def add_direction_tag_to_way(direction_label, direction_sign, ways):
+    # 'to': ('way', [to_way_index]),
+    roadsign_to_way = ways[direction_sign['to']['way'][0]]
+    if 'direction' not in roadsign_to_way:
+        roadsign_to_way['direction'] = direction_label
+    else:
+        roadsign_to_way['direction'] = roadsign_to_way['direction'] + ',' + direction_label
+
+
 def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
     ways = map_elements_props['ways']
     if node_ways_relation is None:
@@ -2475,6 +2491,8 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
 
 def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     """Prints a relation given by rel together with its ID to stdout as XML"""
+    if rel is None:
+        return
     if '_c' in rel:
         if rel['_c'] <= 0:
             return
@@ -2629,21 +2647,27 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for rel in map_elements_props['relations']:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in ('restriction', 'lane_restriction', 'roadsign'):
             try:
                 prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
-    for rel in map_elements_props['relations']:
+    for rel_num, rel in enumerate(map_elements_props['relations']):
+        # rel = map_elements_props['relations'][rel_num]
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in ('restriction', 'lane_restriction', 'roadsign'):
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
                                                     map_elements_props=map_elements_props, )
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
+                elif rel['type'] == 'roadsign':
+                    dir_tag = make_direction_tag(rel)
+                    if dir_tag:
+                        add_direction_tag_to_way(dir_tag, rel, ways)
+                    map_elements_props['relations'][rel_num] = None
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
                                             % rel)
@@ -3158,6 +3182,8 @@ def main(options, args):
     bpoints = None
 
     sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + get_runstamp() + "\n")
+    if options.road_signs:
+        pline_types[0x2f] = ["_rel", "roadsign"]
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -3392,6 +3418,8 @@ if __name__ == '__main__':
     parser.add_option("--regions",
                       action="store_true", dest="regions", default=False,
                       help="attach regions to cities in the index file")
+    parser.add_option("--add-roadsigns", dest="road_signs", default=False, action="store_true",
+                      help="create roadsigns from 0x2f lines")
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
