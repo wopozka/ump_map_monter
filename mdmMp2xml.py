@@ -2050,20 +2050,41 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     return nodes
 
 
-def make_direction_tag(direction_sign):
+def make_destination_tag_value(direction_sign):
     if 'name' in direction_sign and direction_sign['name']:
         return direction_sign['name']
     return ''
 
 
-def add_direction_tag_to_way(direction_label, direction_sign, ways):
+def add_destination_tag_to_way(direction_label, direction_sign, ways, messages_printer=None):
+    # https://wiki.openstreetmap.org/wiki/Key:destination
     # 'to': ('way', [to_way_index]),
     roadsign_to_member = direction_sign['_members']['to']
+    roadsign_via_member = direction_sign['_members']['via']
+    via_node = roadsign_via_member[1][0]
     to_wayid = roadsign_to_member[1][0]
-    if 'direction' not in ways[to_wayid]:
-        ways[to_wayid]['direction'] = direction_label
+    # if the road is oneway road, then we just add destination tag
+    if 'oneway' in ways[to_wayid] and ways[to_wayid]['oneway'] == 'yes':
+        if 'destination' not in ways[to_wayid]:
+            ways[to_wayid]['destination'] = direction_label
+        else:
+            ways[to_wayid]['destination'] = ways[to_wayid]['destination'] + ',' + direction_label
     else:
-        ways[to_wayid]['direction'] = ways[to_wayid]['direction'] + ',' + direction_label
+        # if the via_node is the first node of way, then the destination goes into forward direction
+        if via_node == ways[to_wayid]['_nodes'][0]:
+            if 'destination:forward' not in ways[to_wayid]:
+                ways[to_wayid]['destination:forward'] = direction_label
+            else:
+                ways[to_wayid]['destination:forward'] = ways[to_wayid]['destination:forward'] + ',' + direction_label
+        # if the via_node is the last node of way, then the destination goes into forward direction
+        elif via_node == ways[to_wayid]['_nodes'][-1]:
+            if 'destination:backward' not in ways[to_wayid]:
+                ways[to_wayid]['destination:backward'] = direction_label
+            else:
+                ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + direction_label
+        # otherwise print error
+        else:
+            messages_printer.printerror('Something went wrong, the via_nod is not the first nor last node of a way')
 
 
 def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
@@ -2668,9 +2689,9 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
                 elif rel['type'] == 'roadsign':
-                    dir_tag = make_direction_tag(rel)
+                    dir_tag = make_destination_tag_value(rel)
                     if dir_tag:
-                        add_direction_tag_to_way(dir_tag, rel, ways)
+                        add_destination_tag_to_way(dir_tag, rel, ways, messages_printer=messages_printer)
                     map_elements_props['relations'][rel_num] = None
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
