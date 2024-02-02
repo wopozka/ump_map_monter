@@ -2059,6 +2059,8 @@ def make_destination_tag_value(direction_sign):
 def add_destination_tag_to_way(direction_label, direction_sign, ways, messages_printer=None):
     # https://wiki.openstreetmap.org/wiki/Key:destination
     # 'to': ('way', [to_way_index]),
+    if direction_label.startswith('T,') or direction_label.startswith('E,') or direction_label.startswith('O,'):
+        direction_label = direction_label.split(',', 1)[-1]
     roadsign_to_member = direction_sign['_members']['to']
     roadsign_via_member = direction_sign['_members']['via']
     via_node = roadsign_via_member[1][0]
