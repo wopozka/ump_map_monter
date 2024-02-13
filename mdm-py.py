@@ -224,21 +224,15 @@ class CvsAnnotate(tkinter.Toplevel):
         self.text_widgets['annotate'].tag_bind('revision', '<Double-Button-1>', self.revision_double_clicked)
         self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
         self.text_widgets['log'].tag_config('podswietl', background='yellow')
-        self.transient(self.parent)
-        self.bind('<FocusIn>', self.focus_in)
-        self.bind('<FocusOut>, self.focus_out')
-        self.bind('<Configure>', self.conf_event)
+        # self.bind('<FocusIn>', self._unlock_on_focus_in)
         self.focus_set()
-        self.grab_set()
-        self.wait_window(self)
 
-    def conf_event(self, event):
-        print(event)
-    def focus_in(self, event):
-        print('focus_in')
-
-    def focus_out(self, event):
-        print('focus_out')
+    def _unlock_on_focus_in(self, event):
+        if not self.winfo_ismapped():
+            focussed_widget = self.focus_get()
+            self.deiconify()
+            if focussed_widget:
+                focussed_widget.focus_set()
 
     def wczytaj_log_annotate(self):
         try:
@@ -259,7 +253,7 @@ class CvsAnnotate(tkinter.Toplevel):
 
 
     def wybierz_plik(self):
-        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji',
+        plik_do_annotate = tkinter.filedialog.askopenfilename(title=u'Plik cvs do adnotacji', parent=self,
                                                               initialdir=self.zmienne.KatalogzUMP)
         if plik_do_annotate:
             if self.cvs_f_name['values']:
@@ -983,12 +977,20 @@ class ConfigWindow(tkinter.Toplevel):
         umpmdmmodeRadio2.grid(column=1, row=0)
 
         self.buttonbox()
+        self.bind('<FocusIn>', self._unlock_on_focus_in)
         self.grab_set()
         # if not self.initial_focus:
         #   self.initial_focus = self
         # self.initial_focus.focus_set()
         self.focus_set()
         self.wait_window(self)
+
+    def _unlock_on_focus_in(self, event):
+        if not self.winfo_ismapped():
+            focussed_widget = self.focus_get()
+            self.deiconify()
+            if focussed_widget:
+                focussed_widget.focus_set()
 
     def buttonbox(self):
         box = tkinter.Frame(self, padx=10, pady=10)
@@ -1496,6 +1498,7 @@ class cvsDialog(tkinter.Toplevel):
 
         self.buttonbox()
         self.keyboardShortcuts()
+        self.bind('<FocusIn>', self._unlock_on_focus_in)
 
         self.grab_set()
 
@@ -1508,6 +1511,13 @@ class cvsDialog(tkinter.Toplevel):
         # ustawiamy focus na okienko do wpisywania logu, tak aby kursor do wpisywania od razu tam był.
         self.logwindow.focus_set()
         self.wait_window(self)
+
+    def _unlock_on_focus_in(self, event):
+        if not self.winfo_ismapped():
+            focussed_widget = self.focus_get()
+            self.deiconify()
+            if focussed_widget:
+                focussed_widget.focus_set()
 
     def body(self, master):
         # create dialog body.  return widget that should have
@@ -1536,6 +1546,7 @@ class cvsDialog(tkinter.Toplevel):
             commitedFiles.insert('insert', a)
             commitedFiles.insert('insert', '\n')
         commitedFiles.configure(state='disabled')
+        return commitedFiles
 
     def buttonbox(self):
         # add standard button box. override if you don't want the
@@ -1627,7 +1638,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         body.pack(padx=5, pady=5, fill='both', expand=0)
 
         self.buttonbox()
-
+        self.bind('<FocusIn', self._unlock_on_focus_in)
         self.grab_set()
 
         if not self.initial_focus:
@@ -1656,6 +1667,13 @@ class cvsOutputReceaver(tkinter.Toplevel):
         # mont_demont_py.cvsup(self.args)
         self.progres_start_stop_check()
         self.wait_window(self)
+
+    def _unlock_on_focus_in(self, event):
+        if not self.winfo_ismapped():
+            focussed_widget = self.focus_get()
+            self.deiconify()
+            if focussed_widget:
+                focussed_widget.focus_set()
 
     def progres_start_stop_check(self):
         try:
@@ -1687,6 +1705,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         self.outputwindow = cvsOutText(logwindowsFrame, width=80, height=10, font='Arial 10')
         self.outputwindow.config(wrap='none')
         self.outputwindow.pack(fill='both', expand=1)
+        return self.outputwindow
 
     def buttonbox(self):
         # add standard button box. override if you don't want the
