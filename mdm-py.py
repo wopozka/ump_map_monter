@@ -1638,7 +1638,7 @@ class cvsOutputReceaver(tkinter.Toplevel):
         body.pack(padx=5, pady=5, fill='both', expand=0)
 
         self.buttonbox()
-        self.bind('<FocusIn', self._unlock_on_focus_in)
+        self.bind('<FocusIn>', self._unlock_on_focus_in)
         self.grab_set()
 
         if not self.initial_focus:
