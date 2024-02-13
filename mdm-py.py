@@ -276,7 +276,7 @@ class CvsAnnotate(tkinter.Toplevel):
         if cvs_command == 'annotate' and self.rev_var.get():
             cvs_commandline += ['-r', self.rev_var.get()]
         if cvs_command == 'annotate' and self.date_var.get():
-            cvs_commandline += ['-d', self.date_var.get()]
+            cvs_commandline += ['-D', self.date_var.get()]
         if cvs_command == 'diff':
             cvs_commandline += ['-u', '-r', revision1, '-r', revision2]
         process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
