@@ -12,9 +12,9 @@ import re
 import mdmEdytorPlikow
 try:
     from ctypes import windll
-    ctypes_importet = True
+    ctypes_imported = True
 except ImportError:
-    ctype_importet = False
+    ctypes_imported  = False
 
 DownloadEverything = 0
 try:
@@ -225,9 +225,20 @@ class CvsAnnotate(tkinter.Toplevel):
         self.text_widgets['annotate'].tag_config('podswietl', background='yellow')
         self.text_widgets['log'].tag_config('podswietl', background='yellow')
         self.transient(self.parent)
+        self.bind('<FocusIn>', self.focus_in)
+        self.bind('<FocusOut>, self.focus_out')
+        self.bind('<Configure>', self.conf_event)
         self.focus_set()
         self.grab_set()
         self.wait_window(self)
+
+    def conf_event(self, event):
+        print(event)
+    def focus_in(self, event):
+        print('focus_in')
+
+    def focus_out(self, event):
+        print('focus_out')
 
     def wczytaj_log_annotate(self):
         try:
@@ -271,7 +282,7 @@ class CvsAnnotate(tkinter.Toplevel):
         if cvs_command == 'annotate' and self.rev_var.get():
             cvs_commandline += ['-r', self.rev_var.get()]
         if cvs_command == 'annotate' and self.date_var.get():
-            cvs_commandline += ['-d', self.date_var.get()]
+            cvs_commandline += ['-D', self.date_var.get()]
         if cvs_command == 'diff':
             cvs_commandline += ['-u', '-r', revision1, '-r', revision2]
         process = subprocess.Popen(cvs_commandline + [f_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -3148,7 +3159,7 @@ if __name__ == "__main__":
         app = mdm_gui_py(None)
         app.title(u'mdm-py')
 
-        if platform.system() == 'Windows' and ctype_imported:
+        if platform.system() == 'Windows' and ctypes_imported:
             #minimize log window when opend from the icon
             hwnd = windll.user32.FindWindowW(None, u"mdm-py.py - shortcut")
             res = windll.user32.ShowWindow(hwnd, 6)
