@@ -1930,7 +1930,7 @@ def signbit(x):
         return -1
 
 
-def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None):
+def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
     return either next or previous node relative to the pivot point. In some cases does not do anything as the next
     point is the only one
@@ -1941,7 +1941,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
-                             map_elements_props=map_elements_props)['_nodes']
+                             map_elements_props=map_elements_props, messages_printer=messages_printer)['_nodes']
     pivotidx = way_nodes.index(pivot)
     return way_nodes[pivotidx + signbit(way_nodes.index(direction) - pivotidx)]
 
@@ -1993,7 +1993,7 @@ def name_turn_restriction(rel, nodes, points):
         rel['restriction'] = 'no_u_turn'
 
 
-def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
+def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
     modification of relation nodes so, that it starts and ends one node after and one node before central point
     called pivot here. It simplifies calculations as in some cases ways are split then, eg when there are levels.
@@ -2003,25 +2003,27 @@ def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None
     :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
-                                   node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                                   node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                   messages_printer=messages_printer)
     new_rel_node_last = next_node(pivot=rel['_nodes'][-2], direction=rel['_nodes'][-1],
-                                  node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                                  node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                  messages_printer=messages_printer)
     rel['_nodes'][0] = new_rel_node_first
     rel['_nodes'][-1] = new_rel_node_last
 
 
-def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None):
+def prepare_restriction(rel, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     fromnode = rel['_nodes'][0]
     fromvia = rel['_nodes'][1]
     tonode = rel['_nodes'][-1]
     tovia = rel['_nodes'][-2]
     # The "from" and "to" members must start/end at the Role via node or the Role via way(s), otherwise split it!
     split_way(way=nodes_to_way(fromnode, fromvia, node_ways_relation=node_ways_relation,
-                               map_elements_props=map_elements_props),
+                               map_elements_props=map_elements_props, messages_printer=messages_printer),
               splitting_point=fromvia, node_ways_relation=node_ways_relation,
               map_elements_props=map_elements_props)
     split_way(way=nodes_to_way(tonode, tovia, node_ways_relation=node_ways_relation,
-                               map_elements_props=map_elements_props),
+                               map_elements_props=map_elements_props, messages_printer=messages_printer),
               splitting_point=tovia, node_ways_relation=node_ways_relation,
               map_elements_props=map_elements_props)
 
@@ -2046,6 +2048,45 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
         ways[rel['_members']['from'][1][0]]['_c'] += 1
         ways[rel['_members']['to'][1][0]]['_c'] += 1
     return nodes
+
+
+def make_destination_tag_value(direction_sign):
+    if 'name' in direction_sign and direction_sign['name']:
+        return direction_sign['name']
+    return ''
+
+
+def add_destination_tag_to_way(direction_label, direction_sign, ways, messages_printer=None):
+    # https://wiki.openstreetmap.org/wiki/Key:destination
+    # 'to': ('way', [to_way_index]),
+    if direction_label.startswith('T,') or direction_label.startswith('E,') or direction_label.startswith('O,'):
+        direction_label = direction_label.split(',', 1)[-1]
+    roadsign_to_member = direction_sign['_members']['to']
+    roadsign_via_member = direction_sign['_members']['via']
+    via_node = roadsign_via_member[1][0]
+    to_wayid = roadsign_to_member[1][0]
+    # if the road is oneway road, then we just add destination tag
+    if 'oneway' in ways[to_wayid] and ways[to_wayid]['oneway'] == 'yes':
+        if 'destination' not in ways[to_wayid]:
+            ways[to_wayid]['destination'] = direction_label
+        else:
+            ways[to_wayid]['destination'] = ways[to_wayid]['destination'] + ',' + direction_label
+    else:
+        # if the via_node is the first node of way, then the destination goes into forward direction
+        if via_node == ways[to_wayid]['_nodes'][0]:
+            if 'destination:forward' not in ways[to_wayid]:
+                ways[to_wayid]['destination:forward'] = direction_label
+            else:
+                ways[to_wayid]['destination:forward'] = ways[to_wayid]['destination:forward'] + ',' + direction_label
+        # if the via_node is the last node of way, then the destination goes into forward direction
+        elif via_node == ways[to_wayid]['_nodes'][-1]:
+            if 'destination:backward' not in ways[to_wayid]:
+                ways[to_wayid]['destination:backward'] = direction_label
+            else:
+                ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + direction_label
+        # otherwise print error
+        else:
+            messages_printer.printerror('Something went wrong, the via_nod is not the first nor last node of a way')
 
 
 def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map_elements_props=None):
@@ -2475,6 +2516,8 @@ def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
 
 def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     """Prints a relation given by rel together with its ID to stdout as XML"""
+    if rel is None:
+        return
     if '_c' in rel:
         if rel['_c'] <= 0:
             return
@@ -2537,6 +2580,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     pointattrs = map_elements_props['pointattrs']
     relations = OrderedDict()
     levelledways = OrderedDict()
+    rel_vals_for_restrictions = ('restriction', 'lane_restriction', 'roadsign')
     for way_no, way in enumerate(ways):
         if '_rel' in way:
             relations[way_no] = way
@@ -2581,10 +2625,10 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for way_id, rel in relations.items():
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
                 preprepare_restriction(rel, node_ways_relation=node_ways_relation,
-                                       map_elements_props=map_elements_props)
+                                       map_elements_props=map_elements_props, messages_printer=messages_printer)
                 # print "DEBUG: preprepare_restriction(rel:%r) OK." % (rel,)
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
@@ -2645,21 +2689,28 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
     for rel in map_elements_props['relations']:
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
-                prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props)
+                prepare_restriction(rel, node_ways_relation=node_ways_relation, map_elements_props=map_elements_props,
+                                    messages_printer=messages_printer)
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to prepare restriction from rel: %r\n" % rel)
 
-    for rel in map_elements_props['relations']:
+    for rel_num, rel in enumerate(map_elements_props['relations']):
+        # rel = map_elements_props['relations'][rel_num]
         _line_num += 1
         progress_bar.set_val(_line_num, 'drp')
-        if rel['type'] in ('restriction', 'lane_restriction',):
+        if rel['type'] in rel_vals_for_restrictions:
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
                                                     map_elements_props=map_elements_props, )
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
+                elif rel['type'] == 'roadsign':
+                    dir_tag = make_destination_tag_value(rel)
+                    if dir_tag:
+                        add_destination_tag_to_way(dir_tag, rel, ways, messages_printer=messages_printer)
+                    map_elements_props['relations'][rel_num] = None
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
                                             % rel)
@@ -3180,6 +3231,8 @@ def main(options, args):
     bpoints = None
 
     sys.stderr.write("INFO: mdmMp2xml.py ver:" + __version__ + " ran at " + get_runstamp() + "\n")
+    if options.road_signs:
+        pline_types[0x2f] = ["_rel", "roadsign"]
     if options.threadnum > 32:
         options.threadnum = 32
     if options.threadnum < 1:
@@ -3414,6 +3467,8 @@ if __name__ == '__main__':
     parser.add_option("--regions",
                       action="store_true", dest="regions", default=False,
                       help="attach regions to cities in the index file")
+    parser.add_option("--add-roadsigns", dest="road_signs", default=False, action="store_true",
+                      help="create roadsigns from 0x2f lines")
     parser.add_option('--monoprocess_outputs', dest="monoprocess_outputs", default=False, action='store_true',
                       help="generate outputs in single process, do not use multiprocessing")
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
