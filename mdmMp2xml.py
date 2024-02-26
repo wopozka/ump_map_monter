@@ -2512,6 +2512,22 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
     ostr.write("</relation>\n")
 
 
+def post_load_addr_checker(map_elements_props=None):
+    if map_elements_props is None:
+        return set()
+    cities_towns_cities_file = set()
+    cities_towns_from_addr_file = set()
+
+    for point_id, pointattr in map_elements_props['pointattrs'].items():
+        if 'ump:typ' in pointattr and pointattr['ump:typ'] == 'ADR':
+            if 'addr:city' in pointattr:
+                cities_towns_from_addr_file.add(pointattr['addr:city'])
+        elif 'place' in pointattr and pointattr['place'] in ('city', 'town', 'village'):
+            if 'addr:city' in pointattr:
+                cities_towns_cities_file.add(pointattr['addr:city'])
+    return cities_towns_from_addr_file - cities_towns_cities_file
+
+
 def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, filestamp=None,
                          messages_printer=None):
     # Roundabouts: Use the road class of the most important (lowest numbered) road that meets the roundabout.
@@ -3099,6 +3115,7 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
 
 def worker(task, options, border_points=None):
     global glob_progress_bar_queue
+    non_searchable_addresses = None
     if border_points is None:
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
@@ -3124,6 +3141,8 @@ def worker(task, options, border_points=None):
                                              messages_printer=messages_printer, filestamp=filestamp)
     progress_bar.set_done('mp')
     infile.close()
+    if options.show_nonsearchable_addresses:
+        non_searchable_addresses = post_load_addr_checker(map_elements_props=map_elements_props)
     post_load_processing(maxtypes=maxtypes, progress_bar=progress_bar, map_elements_props=map_elements_props,
                          filestamp=filestamp, messages_printer=messages_printer)
     progress_bar.set_done('drp')
@@ -3134,6 +3153,9 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
+    if non_searchable_addresses is not None and non_searchable_addresses:
+        messages_printer.printerror('Missing villages/cities points. Addresses will not be found: '
+                                    + ', '.join(non_searchable_addresses) + '.')
     messages_printer.printinfo("Finished " + task['file'] + " (" + '{:,}'.format(ids_num) + " ids)" +
                                ', Warnings: ' + '{:,}'.format(messages_printer.get_warning_num()) +
                                ', Errors: ' + '{:,}'.format(messages_printer.get_error_num()) + '.')
@@ -3397,5 +3419,8 @@ if __name__ == '__main__':
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
                       help='Force given timestamp for map elements, useful for testing. '
                            'Proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
+    parser.add_option('--show_nonsearchable_addresses', dest='show_nonsearchable_addresses', default=False,
+                      action='store_true', help='show addresses for which citi/town is not present. '
+                                                'These addresses will not be searchable.')
     (options, args) = parser.parse_args()
     main(options, args)
