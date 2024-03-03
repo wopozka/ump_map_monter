@@ -3482,5 +3482,7 @@ if __name__ == '__main__':
     parser.add_option('--show_nonsearchable_addresses', dest='show_nonsearchable_addresses', default=False,
                       action='store_true', help='show addresses for which citi/town is not present. '
                                                 'These addresses will not be searchable.')
+    parser.add_option('--input_file_encoding', dest='input_file_encoding', type='string', action='store',
+                      help='Input file encoding. Select from: utf8, cp1250, latin2')
     (options, args) = parser.parse_args()
     main(options, args)
