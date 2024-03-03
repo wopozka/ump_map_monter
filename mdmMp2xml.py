@@ -603,7 +603,7 @@ poi_types = {
     0x1615: ["man_made", "beacon", "mark_type", "blue"],
     0x1616: ["man_made", "beacon", "mark_type", "multicolored"],
     0x1708: ["note",     "deadend"],
-    0x1709: ["bridge",   "yes"],
+    0x1709: ["note",   "flyover"],
     0x170b: ["note",     "verify!"],
     0x170f: ["man_made", "beacon", "mark_type", "white"],
     0x1710: ["barrier",  "gate"],
