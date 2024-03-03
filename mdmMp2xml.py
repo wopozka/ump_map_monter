@@ -3182,7 +3182,7 @@ def worker(task, options, border_points=None):
             file_encoding = 'cp1250'
         else:
             file_encoding = 'cp1250'
-        infile = open(task['file'], "r", encoding=file_encoding)
+        infile = open(task['file'], "r", encoding=file_encoding, errors='replace')
         num_lines_to_process = len(infile.readlines())
         infile.seek(0)
 
