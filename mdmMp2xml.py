@@ -3176,19 +3176,32 @@ def worker(task, options, border_points=None):
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
     filestamp = task['filestamp']
-
+    if options.mp_file_encoding is not None:
+        file_encoding = options.mp_file_encoding
+    else:
+        file_encoding = 'cp1250'
     try:
-        if sys.platform.startswith('linux'):
-            file_encoding = 'cp1250'
-        else:
-            file_encoding = 'cp1250'
-        infile = open(task['file'], "r", encoding=file_encoding, errors='replace')
-        num_lines_to_process = len(infile.readlines())
-        infile.seek(0)
-
-    except IOError:
+        infile = open(task['file'], "r", encoding=file_encoding)
+    except (IOError, PermissionError):
         messages_printer.printerror("Can't open file " + task['file'])
         sys.exit()
+    try:
+        num_lines_to_process = len(infile.readlines())
+    except UnicodeDecodeError:
+        infile.close()
+        if options.ignore_errors:
+            messages_printer.printerror('File ' + task['file'] + ' contains characters not from ' + file_encoding + ',')
+            messages_printer.printerror('Replacing wrong characters with ?')
+            try:
+                infile = open(task['file'], "r", encoding=file_encoding, errors='replace')
+            except (IOError, PermissionError):
+                messages_printer.printerror("Can't open file " + task['file'])
+                sys.exit()
+            num_lines_to_process = len(infile.readlines())
+        else:
+            messages_printer.printerror('File ' + task['file'] + ' can not be red using ' + file_encoding + '.')
+            sys.exit()
+    infile.seek(0)
     messages_printer.printinfo("Loading " + task['file'])
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
@@ -3261,6 +3274,10 @@ def main(options, args):
         sys.stderr.write("\tINFO: The --positive-ids option is obsolete.\n")
     if options.ignore_errors:
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
+    if options.mp_file_encoding is not None and options.mp_file_encoding not in ('cp1250', 'latin2', 'utf8'):
+        sys.stderr.write("Only cp1250, latin2 and utf8 encodings allowed for option --mp_file_encoding.\n")
+        sys.stderr.write("Setting to cp1250.\n")
+        options.mp_file_encoding = 'cp1250'
 
     if options.borders_file is not None or len(args) == 1:
         if options.borders_file is not None:
@@ -3482,7 +3499,7 @@ if __name__ == '__main__':
     parser.add_option('--show_nonsearchable_addresses', dest='show_nonsearchable_addresses', default=False,
                       action='store_true', help='show addresses for which citi/town is not present. '
                                                 'These addresses will not be searchable.')
-    parser.add_option('--input_file_encoding', dest='input_file_encoding', type='string', action='store',
+    parser.add_option('--mp_file_encoding', dest='mp_file_encoding', type='string', action='store',
                       help='Input file encoding. Select from: utf8, cp1250, latin2')
     (options, args) = parser.parse_args()
     main(options, args)
