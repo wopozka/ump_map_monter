@@ -303,7 +303,7 @@ class MessagePrinters(object):
 
 
 # some global constants
-__version__ = '0.8.3'
+__version__ = '1.0.0'
 extra_tags = " version='1' changeset='1' "
 runstamp = ''
 
