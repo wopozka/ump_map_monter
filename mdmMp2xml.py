@@ -1849,6 +1849,9 @@ def create_node_ways_relation(all_ways):
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
+        # in some cases of osm import, there were lines without nodes, avoid this problem
+        if '_nodes' not in way:
+            continue
         if 'ump:type' in way and int(way['ump:type'], 16) <= 0x16 and int(way['ump:type'], 0) in pline_types and \
                 pline_types[int(way['ump:type'], 0)][0] in way:
             for node in way["_nodes"]:
@@ -2486,6 +2489,8 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
 def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     if way is None:
         return
+    if '_nodes' not in way:
+        return
     if '_c' in way:
         if way['_c'] <= 0:
             return
@@ -2765,7 +2770,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         if way is None:
             continue
         progress_bar.set_val(_line_num, 'drp')
-        if way['_c'] > 0:
+        if '_c' in way and way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
