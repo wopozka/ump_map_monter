@@ -223,3 +223,18 @@ TEST_EXTRACT_HLEVEL_V2 = (
 @pytest.mark.parametrize('target, answer', TEST_EXTRACT_HLEVEL_V2)
 def test_extract_hlevelv2(target, answer):
     assert mdmMp2xml.extract_hlevel_v2(target) == answer
+
+
+TEST_DESTINATIOM_REF = (
+    (('[123] Skierniewice', '', ''), ('123', 'Skierniewice',)),
+    (('[123] Skierniewice', '123', 'Skierniewice'), ('123', 'Skierniewice',)),
+    (('[123] Skierniewice', '123', 'Lowicz'), ('123', 'Lowicz;Skierniewice',)),
+    (('[122] Skierniewice', '123', 'Lowicz'), ('123;122', 'Lowicz;Skierniewice',)),
+    (('Skierniewice', '', ''), ('', 'Skierniewice',)),
+)
+
+@pytest.mark.parametrize('target, answer', TEST_DESTINATIOM_REF)
+def test_get_destination_ref_and_destination_from_label(target, answer):
+    label_from_dir_sign, ref_from_way, destination_from_way = target
+    assert mdmMp2xml.get_destination_ref_and_destination_from_label(label_from_dir_sign, ref_from_way,
+                                                                    destination_from_way) == answer
