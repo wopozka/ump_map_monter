@@ -1611,8 +1611,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                         way['destination'] = sign[1:].replace("\\", ";")
                     else:
                         way['destination:forward'] = sign[1:].replace("\\", ";")
+                    way['_forward_sign_present'] = 'yes'
                 elif sign[0] == '-':
                     way['destination:backward'] = sign[1:].replace("\\", ";")
+                    way['_backward_sign_present'] = 'yes'
         elif key in ('TLanes', 'Rodzaj', 'Weight_t',):
             # experymenty Ar't
             pass
@@ -2053,40 +2055,110 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
     return nodes
 
 
-def make_destination_tag_value(direction_sign):
+def destination_line_label_value_is_correct(direction_sign):
     if 'name' in direction_sign and direction_sign['name']:
-        return direction_sign['name']
-    return ''
+        return True
+    return False
 
 
-def add_destination_tag_to_way(direction_label, direction_sign, ways, messages_printer=None):
+def get_destination_ref_and_destination_from_label(label_from_dir_sign, ref_from_way, destination_from_way):
+    destination_ref = ref_from_way.split(';') if ref_from_way else list()
+    destination_label = destination_from_way.split(';') if destination_from_way else list()
+    road_ref = ''
+    if label_from_dir_sign.startswith('E,') or label_from_dir_sign.startswith('T,') \
+            or label_from_dir_sign.startswith('O,'):
+        label_from_dir_sign = label_from_dir_sign.split(',', 1)[-1]
+    if label_from_dir_sign.startswith('['):
+        correct_ref = False
+        for label_pos in range(1, len(label_from_dir_sign)):
+            if label_from_dir_sign[label_pos] == ']':
+                correct_ref = True
+                break
+            road_ref += label_from_dir_sign[label_pos]
+        if correct_ref:
+            label_from_dir_sign = label_from_dir_sign.split(']', 1)[-1]
+        else:
+            road_ref = ''
+    for dest in label_from_dir_sign.split('/'):
+        dest = dest.strip()
+        if dest not in destination_label:
+            destination_label.append(dest)
+    for dest_ref in road_ref.split('/'):
+        dest_ref = dest_ref.strip()
+        if dest_ref not in destination_ref:
+            destination_ref.append(dest_ref)
+    return ';'.join(destination_ref), ';'.join(destination_label)
+
+
+def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
+    """
+    Parameters
+    ----------
+    direction_sign: 0x2f line content
+    ways: all ways
+    messages_printer: messager printer
+    Returns
+    -------
+
+    """
     # https://wiki.openstreetmap.org/wiki/Key:destination
     # 'to': ('way', [to_way_index]),
-    if direction_label.startswith('T,') or direction_label.startswith('E,') or direction_label.startswith('O,'):
-        direction_label = direction_label.split(',', 1)[-1]
+    direction_label = direction_sign['name']
+    # in UMP 0x2f line is used both as a direction sign or as a line assistant mockup. When 0x2f is used as direction
+    # sign then it either starts from "T,", "E,", "O," or from [XXX], where XXX is road number. In this case
+    # process the direction sign normally, othervise treat the line as line assistant and do nothing
+    if not (direction_label.startswith('T,') or direction_label.startswith('E,') or direction_label.startswith('O,')
+            or direction_label.startswith('[')):
+        return
+    # direction_label = direction_label.split(',', 1)[-1]
+
     roadsign_to_member = direction_sign['_members']['to']
     roadsign_via_member = direction_sign['_members']['via']
     via_node = roadsign_via_member[1][0]
     to_wayid = roadsign_to_member[1][0]
     # if the road is oneway road, then we just add destination tag
     if 'oneway' in ways[to_wayid] and ways[to_wayid]['oneway'] == 'yes':
-        if 'destination' not in ways[to_wayid]:
-            ways[to_wayid]['destination'] = direction_label
-        else:
-            ways[to_wayid]['destination'] = ways[to_wayid]['destination'] + ',' + direction_label
+        ref_from_way = ways[to_wayid]['destination:ref'] if 'destination:ref' in ways[to_wayid] else ''
+        destination_from_way = ways[to_wayid]['destination'] if 'destination' in ways[to_wayid] else ''
+        ref, destination = get_destination_ref_and_destination_from_label(direction_label, ref_from_way,
+                                                                          destination_from_way)
+        if ref:
+            ways[to_wayid]['destination:ref'] = ref
+        if destination:
+            ways[to_wayid]['destination'] = destination
     else:
         # if the via_node is the first node of way, then the destination goes into forward direction
         if via_node == ways[to_wayid]['_nodes'][0]:
-            if 'destination:forward' not in ways[to_wayid]:
-                ways[to_wayid]['destination:forward'] = direction_label
-            else:
-                ways[to_wayid]['destination:forward'] = ways[to_wayid]['destination:forward'] + ',' + direction_label
+            # if '_forward_sign_present' is in way, then it was already defined SignLabel tag in way.
+            if '_forward_sign_present' not in ways[to_wayid]:
+                ref_from_way = ways[to_wayid]['destination:ref:forward'] \
+                    if 'destination:ref:forward' in ways[to_wayid] else ''
+                destination_from_way = ways[to_wayid]['destination:forward'] \
+                    if 'destination:forward' in ways[to_wayid] else ''
+                ref, destination = get_destination_ref_and_destination_from_label(direction_label, ref_from_way,
+                                                                                  destination_from_way)
+                if ref:
+                    ways[to_wayid]['destination:ref:forward'] = ref
+                if destination:
+                    ways[to_wayid]['destination:forward'] = destination
         # if the via_node is the last node of way, then the destination goes into forward direction
         elif via_node == ways[to_wayid]['_nodes'][-1]:
-            if 'destination:backward' not in ways[to_wayid]:
-                ways[to_wayid]['destination:backward'] = direction_label
-            else:
-                ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + direction_label
+            # if _backward_sign_present' is in way, then it was already defined SignLabel tag in way.
+            if '_backward_sign_present' not in ways[to_wayid]:
+                ref_from_way = ways[to_wayid]['destination:ref:backward'] \
+                    if 'destination:ref:backward' in ways[to_wayid] else ''
+                destination_from_way = ways[to_wayid]['destination:backward'] \
+                    if 'destination:backward' in ways[to_wayid] else ''
+                ref, destination = get_destination_ref_and_destination_from_label(direction_label, ref_from_way,
+                                                                                  destination_from_way)
+                if ref:
+                    ways[to_wayid]['destination:ref:backward'] = ref
+                if destination:
+                    ways[to_wayid]['destination:backward'] = destination
+                if 'destination:backward' not in ways[to_wayid]:
+                    ways[to_wayid]['destination:backward'] = direction_label
+                else:
+                    ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + direction_label
         # otherwise print error
         else:
             messages_printer.printerror('Something went wrong, the via_nod is not the first nor last node of a way')
@@ -2712,9 +2784,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
                 elif rel['type'] == 'roadsign':
-                    dir_tag = make_destination_tag_value(rel)
-                    if dir_tag:
-                        add_destination_tag_to_way(dir_tag, rel, ways, messages_printer=messages_printer)
+                    if destination_line_label_value_is_correct(rel):
+                        add_destination_tag_to_way(rel, ways, messages_printer=messages_printer)
                     map_elements_props['relations'][rel_num] = None
             except NodesToWayNotFound:
                 messages_printer.printerror("warning: Unable to find nodes to preprepare restriction from rel: %r\n"
