@@ -1462,6 +1462,7 @@ class AutoPlikDlaPolylinePolygone(object):
         # zmienne z nazwami plikow, tak aby w razie czego zmieniac w jedny miejscu, a nie w wielu
         WODA = 'woda.txt'
         ZAKAZY = 'zakazy.txt'
+        ZNAKI = 'znaki.txt'
         GRANICE = 'granice.txt'
         SZLAKI = 'szlaki.topo.txt'
         TRAMWAJE = 'tramwaje.txt'
@@ -1472,7 +1473,7 @@ class AutoPlikDlaPolylinePolygone(object):
         self.Zmienne = Zmienne
         self.plik_nowosci_txt = plik_nowosci_txt
         self.wykluczonePliki = ['BIALYSTOK.BPN.szlaki.topo.txt', 'BIALYSTOK.SDGN.szlaki.topo.txt']
-        self.dozwolonePliki = [WODA, ZAKAZY, GRANICE, SZLAKI, TRAMWAJE, KOLEJ, OBSZARY, BUDYNKI, ZIELONE]
+        self.dozwolonePliki = [WODA, ZNAKI, ZAKAZY, GRANICE, SZLAKI, TRAMWAJE, KOLEJ, OBSZARY, BUDYNKI, ZIELONE]
 
         # zmienna bedzie zawierac slownik z obszarami. Klucze slownika beda wskazywaly na inny slownik w ktorym beda
         # pliki wraz z ich wspolrzednymi w postaci kd-tree
@@ -1490,7 +1491,7 @@ class AutoPlikDlaPolylinePolygone(object):
                                  '0x1e': [GRANICE],  # granice miedzynarodowe
                                  '0x1f': [WODA],  # rzeka
                                  '0x26': [WODA],  # strumien sezonowy
-                                 '0x2f': [ZAKAZY],  # podpowiedzi
+                                 '0x2f': [ZNAKI, ZAKAZY],  # podpowiedzi
                                  '0x10e00': [SZLAKI],  # szlak pieszy czerwony
                                  '0x10e01': [SZLAKI],  # szlak pieszy zolty
                                  '0x10e02': [SZLAKI],  # szlak pieszy zielony
