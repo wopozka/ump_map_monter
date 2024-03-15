@@ -255,6 +255,8 @@ TEST_DESTINATIOM_REF = (
     (('[123] Skierniewice', '123', 'Skierniewice'), ('123', 'Skierniewice',)),
     (('[123] Skierniewice', '123', 'Lowicz'), ('123', 'Lowicz;Skierniewice',)),
     (('[122] Skierniewice', '123', 'Lowicz'), ('123;122', 'Lowicz;Skierniewice',)),
+    (('[122] Skierniewice', '123;124', 'Rawa Mazowiecka;Lowicz'), ('123;124;122', 'Rawa Mazowiecka;Lowicz;Skierniewice',)),
+    (('[122/123] Skierniewice/Lowicz', '124', 'Rawa Mazowiecka'), ('124;122;123', 'Rawa Mazowiecka;Skierniewice;Lowicz',)),
     (('Skierniewice', '', ''), ('', 'Skierniewice',)),
     (('[123 Skierniewice', '', ''), ('', '[123 Skierniewice',)),
 )
