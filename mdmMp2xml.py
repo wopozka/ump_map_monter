@@ -2780,7 +2780,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         if rel['type'] in rel_vals_for_restrictions:
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
-                                                    map_elements_props=map_elements_props, )
+                                                    map_elements_props=map_elements_props,
+                                                    messages_printer= messages_printer)
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
                 elif rel['type'] == 'roadsign':
