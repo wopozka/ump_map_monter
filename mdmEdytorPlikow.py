@@ -129,12 +129,12 @@ class MdmEdytorPlikow(tkinter.Toplevel):
     def wybierz_plik(self):
         plik_do_otwarcia = tkinter.filedialog.askopenfilename(title=u'Plik cvs do otwarcia',
                                                               initialdir=self.katalog_ostatniego_pliku, parent=self,
-                                                              filetypes=[('pliki tekstowe', '*.txt'),
+                                                              filetypes=[('wszystkie', '*.*'),
+                                                                         ('pliki tekstowe', '*.txt'),
                                                                          ('pliki adresowe', '*.adr'),
                                                                          (u'pliki punktów', '*.pnt'),
                                                                          (u'pliki mp', '*.mp'),
-                                                                         (u'pliki diff', '*.diff'),
-                                                                         ('wszystkie', '*.*')])
+                                                                         (u'pliki diff', '*.diff')])
         if plik_do_otwarcia:
             if self.wybierz_plik_box['values']:
                 if plik_do_otwarcia not in self.wybierz_plik_box['values']:
