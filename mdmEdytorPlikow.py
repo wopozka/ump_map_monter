@@ -121,7 +121,9 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         plik_tymczasowy = tempfile.NamedTemporaryFile(mode='w', encoding='cp1250', delete=False)
         try:
             plik_tymczasowy.write(self.edytor.get('1.0', 'end').rstrip('\n'))
-            plik_tymczasowy.write('\n\n')
+            plik_tymczasowy.write('\n')
+            if self.otwarty_plik_variable.get().edswith('.txt'):
+                plik_tymczasowy.write('\n')
         except IOError:
             pass
         plik_tymczasowy.close()
