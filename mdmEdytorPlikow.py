@@ -122,7 +122,7 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         try:
             plik_tymczasowy.write(self.edytor.get('1.0', 'end').rstrip('\n'))
             plik_tymczasowy.write('\n')
-            if self.otwarty_plik_variable.get().edswith('.txt'):
+            if self.otwarty_plik_variable.get().endswith('.txt'):
                 plik_tymczasowy.write('\n')
         except IOError:
             pass
