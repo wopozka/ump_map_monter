@@ -303,7 +303,7 @@ class MessagePrinters(object):
 
 
 # some global constants
-__version__ = '0.8.3'
+__version__ = '1.0.0'
 extra_tags = " version='1' changeset='1' "
 runstamp = ''
 
@@ -602,19 +602,19 @@ poi_types = {
     0x1614: ["man_made", "beacon", "mark_type", "magenta"],
     0x1615: ["man_made", "beacon", "mark_type", "blue"],
     0x1616: ["man_made", "beacon", "mark_type", "multicolored"],
-    0x1708: ["note",     "deadend"],
-    0x1709: ["note",     "flyover"],
-    0x170b: ["note",     "verify!"],
+    0x1708: ["note", "deadend"],
+    0x1709: ["note", "flyover"],
+    0x170b: ["note", "verify!"],
     0x170f: ["man_made", "beacon", "mark_type", "white"],
-    0x1710: ["barrier",  "gate"],
-    0x17105: ["highway",  "stop"],
-    0x1711: ["note",     "FIXME"],
+    0x1710: ["barrier", "gate"],
+    0x17105: ["highway", "stop"],
+    0x1711: ["note", "FIXME"],
     0x1712: ["landuse",  "construction"],
     0x1714: ["traffic_sign",  "maxweight"],
     0x1715: ["traffic_sign",  "maxwight"],
     0x1716: ["traffic_sign",  "maxheight"],
-    0x170a: ["note",     "FIXME: verify"],
-    0x170d: ["note",     "FIXME"],
+    0x170a: ["note", "FIXME: verify"],
+    0x170d: ["note", "FIXME"],
     0x1805: ["man_made", "beacon", "traffic_signals"],
     0x1806: ["man_made", "beacon", "mark_type", "beacon_red"],
     0x1807: ["man_made", "beacon", "mark_type", "beacon_north"],
@@ -1851,6 +1851,9 @@ def create_node_ways_relation(all_ways):
     for way_no, way in enumerate(all_ways):
         if way is None:
             continue
+        # in some cases of osm import, there were lines without nodes, avoid this problem
+        if '_nodes' not in way:
+            continue
         if 'ump:type' in way and int(way['ump:type'], 16) <= 0x16 and int(way['ump:type'], 0) in pline_types and \
                 pline_types[int(way['ump:type'], 0)][0] in way:
             for node in way["_nodes"]:
@@ -2558,6 +2561,8 @@ def print_point_pickled(point, pointattr, task_id, orig_id, node_generalizator, 
 def print_way_pickled(way, task_id, orig_id, node_generalizator, ostr):
     if way is None:
         return
+    if '_nodes' not in way:
+        return
     if '_c' in way:
         if way['_c'] <= 0:
             return
@@ -2625,6 +2630,22 @@ def print_relation_pickled(rel, task_id, orig_id, node_generalizator, ostr):
             continue
         ostr.write("\t<tag k='%s' v='%s' />\n" % (key, xmlize(rel[key])))
     ostr.write("</relation>\n")
+
+
+def post_load_addr_checker(map_elements_props=None):
+    if map_elements_props is None:
+        return set()
+    cities_towns_cities_file = set()
+    cities_towns_from_addr_file = set()
+
+    for point_id, pointattr in map_elements_props['pointattrs'].items():
+        if 'ump:typ' in pointattr and pointattr['ump:typ'] == 'ADR':
+            if 'addr:city' in pointattr:
+                cities_towns_from_addr_file.add(pointattr['addr:city'])
+        elif 'place' in pointattr and pointattr['place'] in ('city', 'town', 'village'):
+            if 'addr:city' in pointattr:
+                cities_towns_cities_file.add(pointattr['addr:city'])
+    return cities_towns_from_addr_file - cities_towns_cities_file
 
 
 def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=None, filestamp=None,
@@ -2759,7 +2780,8 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         if rel['type'] in rel_vals_for_restrictions:
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
-                                                    map_elements_props=map_elements_props, )
+                                                    map_elements_props=map_elements_props,
+                                                    messages_printer= messages_printer)
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
                 elif rel['type'] == 'roadsign':
@@ -2820,7 +2842,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
         if way is None:
             continue
         progress_bar.set_val(_line_num, 'drp')
-        if way['_c'] > 0:
+        if '_c' in way and way['_c'] > 0:
             for node in way['_nodes']:
                 if '_out' in pointattrs[node]:
                     del pointattrs[node]['_out']
@@ -3221,23 +3243,37 @@ def output_nominatim_pickled(options, nominatim_filename, pickled_filenames=None
 
 def worker(task, options, border_points=None):
     global glob_progress_bar_queue
+    non_searchable_addresses = None
     if border_points is None:
         border_points = list()
     messages_printer = MessagePrinters(workid=task['idx'], working_file=task['file'], verbose=options.verbose)
     filestamp = task['filestamp']
-
+    if options.mp_file_encoding is not None:
+        file_encoding = options.mp_file_encoding
+    else:
+        file_encoding = 'cp1250'
     try:
-        if sys.platform.startswith('linux'):
-            file_encoding = 'cp1250'
-        else:
-            file_encoding = 'cp1250'
         infile = open(task['file'], "r", encoding=file_encoding)
-        num_lines_to_process = len(infile.readlines())
-        infile.seek(0)
-
-    except IOError:
+    except (IOError, PermissionError):
         messages_printer.printerror("Can't open file " + task['file'])
         sys.exit()
+    try:
+        num_lines_to_process = len(infile.readlines())
+    except UnicodeDecodeError:
+        infile.close()
+        if options.ignore_errors:
+            messages_printer.printerror('File ' + task['file'] + ' contains characters not from ' + file_encoding + ',')
+            messages_printer.printerror('Replacing wrong characters with ?')
+            try:
+                infile = open(task['file'], "r", encoding=file_encoding, errors='replace')
+            except (IOError, PermissionError):
+                messages_printer.printerror("Can't open file " + task['file'])
+                sys.exit()
+            num_lines_to_process = len(infile.readlines())
+        else:
+            messages_printer.printerror('File ' + task['file'] + ' can not be red using ' + file_encoding + '.')
+            sys.exit()
+    infile.seek(0)
     messages_printer.printinfo("Loading " + task['file'])
 
     progress_bar = ProgressBar(options, obszar=task['file'], glob_progress_bar_queue=glob_progress_bar_queue)
@@ -3246,6 +3282,8 @@ def worker(task, options, border_points=None):
                                              messages_printer=messages_printer, filestamp=filestamp)
     progress_bar.set_done('mp')
     infile.close()
+    if options.show_nonsearchable_addresses:
+        non_searchable_addresses = post_load_addr_checker(map_elements_props=map_elements_props)
     post_load_processing(maxtypes=maxtypes, progress_bar=progress_bar, map_elements_props=map_elements_props,
                          filestamp=filestamp, messages_printer=messages_printer)
     progress_bar.set_done('drp')
@@ -3256,6 +3294,9 @@ def worker(task, options, border_points=None):
                            'relations': create_pickled_file_name('relations', str(task['idx']))}
     save_pickled_data(pickled_files_names, map_elements_props=map_elements_props)
     ids_num = sum(len(map_elements_props[a]) for a in ('points', 'ways', 'relations')) - len(border_points)
+    if non_searchable_addresses is not None and non_searchable_addresses:
+        messages_printer.printerror('Missing villages/cities points. Addresses will not be found: '
+                                    + ', '.join(non_searchable_addresses) + '.')
     messages_printer.printinfo("Finished " + task['file'] + " (" + '{:,}'.format(ids_num) + " ids)" +
                                ', Warnings: ' + '{:,}'.format(messages_printer.get_warning_num()) +
                                ', Errors: ' + '{:,}'.format(messages_printer.get_error_num()) + '.')
@@ -3305,6 +3346,10 @@ def main(options, args):
         sys.stderr.write("\tINFO: The --positive-ids option is obsolete.\n")
     if options.ignore_errors:
         sys.stderr.write("\tINFO: All errors will be ignored.\n")
+    if options.mp_file_encoding is not None and options.mp_file_encoding not in ('cp1250', 'latin2', 'utf8'):
+        sys.stderr.write("Only cp1250, latin2 and utf8 encodings allowed for option --mp_file_encoding.\n")
+        sys.stderr.write("Setting to cp1250.\n")
+        options.mp_file_encoding = 'cp1250'
 
     if options.borders_file is not None or len(args) == 1:
         if options.borders_file is not None:
@@ -3523,5 +3568,10 @@ if __name__ == '__main__':
     parser.add_option('--force_timestamp', dest='force_timestamp', type='string', action='store',
                       help='Force given timestamp for map elements, useful for testing. '
                            'Proper format: YYYY-MM-DDTHH:MM:SSZ, eg.: 2023-11-03T09:26:40Z')
+    parser.add_option('--show_nonsearchable_addresses', dest='show_nonsearchable_addresses', default=False,
+                      action='store_true', help='show addresses for which citi/town is not present. '
+                                                'These addresses will not be searchable.')
+    parser.add_option('--mp_file_encoding', dest='mp_file_encoding', type='string', action='store',
+                      help='Input file encoding. Select from: utf8, cp1250, latin2')
     (options, args) = parser.parse_args()
     main(options, args)

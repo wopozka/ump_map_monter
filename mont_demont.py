@@ -1462,6 +1462,7 @@ class AutoPlikDlaPolylinePolygone(object):
         # zmienne z nazwami plikow, tak aby w razie czego zmieniac w jedny miejscu, a nie w wielu
         WODA = 'woda.txt'
         ZAKAZY = 'zakazy.txt'
+        ZNAKI = 'znaki.txt'
         GRANICE = 'granice.txt'
         SZLAKI = 'szlaki.topo.txt'
         TRAMWAJE = 'tramwaje.txt'
@@ -1472,7 +1473,7 @@ class AutoPlikDlaPolylinePolygone(object):
         self.Zmienne = Zmienne
         self.plik_nowosci_txt = plik_nowosci_txt
         self.wykluczonePliki = ['BIALYSTOK.BPN.szlaki.topo.txt', 'BIALYSTOK.SDGN.szlaki.topo.txt']
-        self.dozwolonePliki = [WODA, ZAKAZY, GRANICE, SZLAKI, TRAMWAJE, KOLEJ, OBSZARY, BUDYNKI, ZIELONE]
+        self.dozwolonePliki = [WODA, ZNAKI, ZAKAZY, GRANICE, SZLAKI, TRAMWAJE, KOLEJ, OBSZARY, BUDYNKI, ZIELONE]
 
         # zmienna bedzie zawierac slownik z obszarami. Klucze slownika beda wskazywaly na inny slownik w ktorym beda
         # pliki wraz z ich wspolrzednymi w postaci kd-tree
@@ -1490,7 +1491,7 @@ class AutoPlikDlaPolylinePolygone(object):
                                  '0x1e': [GRANICE],  # granice miedzynarodowe
                                  '0x1f': [WODA],  # rzeka
                                  '0x26': [WODA],  # strumien sezonowy
-                                 '0x2f': [ZAKAZY],  # podpowiedzi
+                                 '0x2f': [ZNAKI, ZAKAZY],  # podpowiedzi
                                  '0x10e00': [SZLAKI],  # szlak pieszy czerwony
                                  '0x10e01': [SZLAKI],  # szlak pieszy zolty
                                  '0x10e02': [SZLAKI],  # szlak pieszy zielony
@@ -2550,6 +2551,28 @@ class PlikiDoMontowania(object):
         if 'granice' in self.Pliki[0]:
             self.Pliki = self.Pliki[1:]
 
+    def pobierz_pliki_do_montowania(self):
+        pliki_do_m = list()
+        for plik in self.Pliki:
+            if plik.find('granice-czesciowe.txt') > 0:
+                pliki_do_m.append((plik, plik,))
+            else:
+                pliki_do_m.append((plik, os.path.join(self.zmienne.KatalogzUMP, plik)),)
+        return tuple(pliki_do_m)
+
+    def sprawdz_czy_pliki_bez_utf8(self):
+        self.errOutWriter.stdoutwrite('Sprawdzam poprawnosc kodowania plikow w cp1250.')
+        for _plik, plik in self.pobierz_pliki_do_montowania():
+            with open(plik, 'r', encoding='cp1250') as plik_do_czyt:
+                try:
+                    plik_zaw = plik_do_czyt.readlines()
+                except UnicodeDecodeError:
+                    self.errOutWriter.stderrorwrite('Kodowanie pliku %s [NOK]. Prawdopodobnie znaki UTF8 w pliku.'
+                                                    % _plik)
+                else:
+                    self.errOutWriter.stdoutwrite('Kodowanie pliku %s [OK].' % _plik)
+        return
+
 
 class ObiektNaMapie(object):
     """
@@ -3274,59 +3297,52 @@ def montujpliki(args, naglowek_mapy=''):
     globalneIndeksy = IndeksyMiast()
     zawartoscPlikuMp = PlikMP1(Zmienne, args, tabKonw, stderr_stdout_writer, Montuj=1, naglowek_mapy=naglowek_mapy)
     # ListaObiektowDoMontowania=[]
-    for pliki in plikidomont.Pliki:
+    plikidomont.sprawdz_czy_pliki_bez_utf8()
+    for pliki_w_ump, plik_ze_sciezka_pelna in plikidomont.pobierz_pliki_do_montowania():
         try:
-            if pliki.find('granice-czesciowe.txt') > 0:
-                # print('granice czesciowe')
-                plikPNTTXT = open(pliki, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors)
-            else:
-                plikPNTTXT = open(os.path.join(Zmienne.KatalogzUMP, pliki), encoding=Zmienne.Kodowanie,
-                                  errors=Zmienne.ReadErrors)
+            plikPNTTXT = open(plik_ze_sciezka_pelna, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors)
         except IOError:
-            stderr_stdout_writer.stderrorwrite('Nie moge otworzyæ pliku %s' % os.path.join(Zmienne.KatalogzUMP, pliki))
+            stderr_stdout_writer.stderrorwrite('Nie moge otworzyæ pliku %s' % plik_ze_sciezka_pelna)
         else:
-            zawartoscPlikuMp.dodajplik(pliki)
+            zawartoscPlikuMp.dodajplik(pliki_w_ump)
             if args.monthash:
-                zawartoscPlikuMp.plikHash[pliki] = ''
+                zawartoscPlikuMp.plikHash[pliki_w_ump] = ''
             else:
-                if pliki.find('granice-czesciowe.txt') > 0:
-                    zawartoscPlikuMp.plikHash[pliki] = hashlib.md5(open(pliki, 'rb').read()).hexdigest()
-                else:
-                    zawartoscPlikuMp.plikHash[pliki] = hashlib.md5(open(os.path.join(Zmienne.KatalogzUMP, pliki),
-                                                                        'rb').read()).hexdigest()
-
+                zawartoscPlikuMp.plikHash[pliki_w_ump] = \
+                    hashlib.md5(open(plik_ze_sciezka_pelna, 'rb').read()).hexdigest()
             # print('Udalo sie otworzyc pliku %s'%(pliki))
 
             ############################################################################################################
-            typ_pliku, informacja = zwroc_typ_komentarz(pliki)
+            typ_pliku, informacja = zwroc_typ_komentarz(pliki_w_ump)
             # montowanie plikow cities
             if typ_pliku in ('pnt', 'adr', 'cities'):
                 if typ_pliku == 'cities':
-                    punktzpnt = City(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+                    punktzpnt = City(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
                 else:
-                    punktzpnt = Poi(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer, typ_obj=typ_pliku)
-                punktzpnt.stdoutwrite((informacja % pliki))
-                przetwarzanyPlik = plikPNT(pliki, stderr_stdout_writer, punktzpnt)
+                    punktzpnt = Poi(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer,
+                                    typ_obj=typ_pliku)
+                punktzpnt.stdoutwrite((informacja % pliki_w_ump))
+                przetwarzanyPlik = plikPNT(pliki_w_ump, stderr_stdout_writer, punktzpnt)
                 # komentarz=''
                 zawartosc_pliku_pnt = plikPNTTXT.readlines()
                 if not zawartosc_pliku_pnt:
-                    punktzpnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki)
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, '-1')
+                    punktzpnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki_w_ump)
+                    zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, '-1')
                 else:
                     zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_pnt))
-                    zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
+                    zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, przetwarzanyPlik.Dokladnosc)
                 del przetwarzanyPlik
                 del punktzpnt
 
             ###########################################################################################################
             # montowanie plikow txt
             elif typ_pliku == 'txt':
-                punktzTXT = PolylinePolygone(pliki, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
-                punktzTXT.stdoutwrite(informacja % pliki)
-                przetwarzanyPlik = plikTXT(pliki, punktzTXT,  stderr_stdout_writer)
+                punktzTXT = PolylinePolygone(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+                punktzTXT.stdoutwrite(informacja % pliki_w_ump)
+                przetwarzanyPlik = plikTXT(pliki_w_ump, punktzTXT,  stderr_stdout_writer)
                 zawartosc_pliku_txt = plikPNTTXT.read()
                 zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
-                zawartoscPlikuMp.ustawDokladnosc(pliki, przetwarzanyPlik.Dokladnosc)
+                zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, przetwarzanyPlik.Dokladnosc)
                 _nazwapliku, _miasto = przetwarzanyPlik.zwrocDomyslneMiasto()
                 if _miasto:
                     zawartoscPlikuMp.domyslneMiasta2[_nazwapliku] = _miasto
@@ -3334,7 +3350,7 @@ def montujpliki(args, naglowek_mapy=''):
                 del punktzTXT
 
             else:
-                print('nieznany typ pliku %s' % pliki)
+                print('nieznany typ pliku %s' % pliki_w_ump)
                 continue
             plikPNTTXT.close()
 
