@@ -40,6 +40,14 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         zamknij_button = tkinter.ttk.Button(wskaz_wczytaj_zapisz_zamknij_frame, text='Zamknij edytor',
                                             command=self.zamknij_edytor)
         zamknij_button.pack(side='right')
+        # informacja o pliku ktory jest otwarty i ktory zostanie zapisany
+        otwarty_plik_frame = tkinter.Frame(ramka_glowna, pady=4)
+        otwarty_plik_frame.pack(fill='x', expand=1)
+        wybrany_plik_text = tkinter.Label(otwarty_plik_frame, text='Otwarty plik:')
+        wybrany_plik_text.pack(side='left')
+        self.otwarty_plik_variable = tkinter.StringVar()
+        otwarty_plik = tkinter.Label(otwarty_plik_frame, textvariable=self.otwarty_plik_variable, bg='sky blue')
+        otwarty_plik.pack(side='left', fill='x', expand=1)
 
         # poprawny edytor
         edytor_frame = tkinter.Frame(ramka_glowna)
@@ -103,21 +111,24 @@ class MdmEdytorPlikow(tkinter.Toplevel):
                     self.edytor.insert('insert', linijka)
                 self.edytor.see('1.0')
                 self.edytor.edit_modified(False)
+            self.otwarty_plik_variable.set(self.wybierz_plik_var.get())
         except IOError:
             tkinter.messagebox.showinfo(parent=self, title='Problem z plikiem', message=u'Nie mogłem otworzyć pliku')
 
     def zapisz_plik(self):
-        if not self.wybierz_plik_box.get():
+        if not self.otwarty_plik_variable.get():
             return
         plik_tymczasowy = tempfile.NamedTemporaryFile(mode='w', encoding='cp1250', delete=False)
         try:
             plik_tymczasowy.write(self.edytor.get('1.0', 'end').rstrip('\n'))
-            plik_tymczasowy.write('\n\n')
+            plik_tymczasowy.write('\n')
+            if self.otwarty_plik_variable.get().endswith('.txt'):
+                plik_tymczasowy.write('\n')
         except IOError:
             pass
         plik_tymczasowy.close()
         try:
-            shutil.copy(plik_tymczasowy.name, self.wybierz_plik_box.get())
+            shutil.copy(plik_tymczasowy.name, self.otwarty_plik_variable.get())
         except PermissionError:
             tkinter.messagebox.showinfo(parent=self, title='Problem z plikiem',
                                         message=u'Nie mogłem zapisać pliku. Brak uprawnień')
@@ -129,12 +140,12 @@ class MdmEdytorPlikow(tkinter.Toplevel):
     def wybierz_plik(self):
         plik_do_otwarcia = tkinter.filedialog.askopenfilename(title=u'Plik cvs do otwarcia',
                                                               initialdir=self.katalog_ostatniego_pliku, parent=self,
-                                                              filetypes=[('pliki tekstowe', '*.txt'),
+                                                              filetypes=[('wszystkie', '*.*'),
+                                                                         ('pliki tekstowe', '*.txt'),
                                                                          ('pliki adresowe', '*.adr'),
                                                                          (u'pliki punktów', '*.pnt'),
                                                                          (u'pliki mp', '*.mp'),
-                                                                         (u'pliki diff', '*.diff'),
-                                                                         ('wszystkie', '*.*')])
+                                                                         (u'pliki diff', '*.diff')])
         if plik_do_otwarcia:
             if self.wybierz_plik_box['values']:
                 if plik_do_otwarcia not in self.wybierz_plik_box['values']:
