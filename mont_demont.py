@@ -1409,8 +1409,7 @@ class AutoPlikDlaPoi(object):
         self.typ_plik = defaultdict(lambda: defaultdict(lambda: 0))
         self.autopoiWykluczoneWartosciPlik = ('.BP.paliwo.pnt', '.PGP.pnt', '.ORLEN.paliwo.pnt', '.MPK.pnt',
                                               '.ZTM.pnt', '.ZKM.pnt', 'POI-Baltyk.pnt', '.MOYA.paliwo.pnt',
-                                              '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',
-                                              '.paczkomaty.pnt',)
+                                              '.nextbike.pnt', '.poczta-polska.pnt', '.ZABKA.sklepy.pnt',)
         self.wykluczone_dozwolone_pliki = defaultdict(lambda: False)
 
     def czy_plik_jest_wykluczony(self, plik):
