@@ -452,7 +452,7 @@ shape_types = {
     0xb:  ["amenity",  "hospital"],
     0xc:  ["landuse",  "industrial"],  # a wild guess
     0xd:  ["landuse",  "construction"],
-    0xe:  ["landuse",  "industrial"],  # runway na lotniskach
+    0xe:  ["aeroway",  "taxiway"],  # runway na lotniskach
     0x13: ["building", "yes"],
     0x14: ["natural",  "wood"],  # sometimes landuse=military
     0x15: ["natural",  "wood"],
@@ -609,7 +609,7 @@ poi_types = {
     0x1710: ["barrier", "gate"],
     0x17105: ["highway", "stop"],
     0x1711: ["note", "FIXME"],
-    0x1712: ["landuse",  "construction"],
+    0x1712: ["hazard",  "roadworks"],
     0x1714: ["traffic_sign",  "maxweight"],
     0x1715: ["traffic_sign",  "maxwight"],
     0x1716: ["traffic_sign",  "maxheight"],
