@@ -2461,6 +2461,11 @@ class PlikiDoMontowania(object):
         self.Pliki = list()
         if not args.trybosmand:
             self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
+        if hasattr('mapa_wojka', args) and args.mapka_woj and hasattr('mapawojka_nazwa', args):
+            plik_wojka = self.przygotuj_plik_wojka(args.mapkawojka_nazwa)
+            if plik_wojka:
+                self.Pliki.append(plik_wojka)
+
         for aaa in obszary:
             if os.path.isdir(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src')):
                 self.Pliki += [os.path.join(aaa, 'src', os.path.split(a)[1])
@@ -2572,6 +2577,17 @@ class PlikiDoMontowania(object):
                     self.errOutWriter.stdoutwrite('Kodowanie pliku %s [OK].' % _plik)
         return
 
+    def przygotuj_plik_wojka(self, mapkawojka_nazwa):
+        plik_wojka = os.path.join('narzedzia', mapkawojka_nazwa)
+        roboczy_plik_wojka = os.path.join(self.zmienne.KatalogRoboczy, 'plik_wojka_' + plik_wojka)
+        try:
+            with open(plik_wojka, 'r') as p_wojka:
+                zaw_pliku_wojka = p_wojka.readlines()
+        except (FileNotFoundError, IOError):
+            self.errOutWriter.stdoutwrite('Nie moglem otworzyc pliku wojka: .' + plik_wojka + ' .Ignoruje!')
+            return ''
+
+        return ''
 
 class ObiektNaMapie(object):
     """
@@ -4305,7 +4321,11 @@ def main(argumenty):
                                help='Przenosi otarte i entrypoints z komentarza do extras. Uwaga, u¿ywaæ '
                                     'ostro¿nie')
     parser_montuj.add_argument('-sep', '--sprytne-entrypoints', action='store_true', default=False,
-                               help='Ustaw EntryPoints jako Data0, dziêki czemu ³atwiej siê dodaje EP dla punktó?')
+                               help='Ustaw EntryPoints jako Data0, dziêki czemu ³atwiej siê dodaje EP dla punktow')
+    parser_montuj.add_argument('-mw', '--mapa-wojka', action='store_true', default=False,
+                               help='Montuj dane z mapy wojka. Wojek na jej podstawie przypisuje wojewodztwo.')
+    parser_montuj.add_argument('-mn', '--mapawojka-nazwa', action='store', default='mapka_woj.mp',
+                               help='Nazwa pliku z mapka wojka. Domyslnie mapka_woj.mp')
     parser_montuj.set_defaults(func=montujpliki)
 
     # parser dla komendy montuj_mkgmap
