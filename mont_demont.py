@@ -2459,12 +2459,17 @@ class PlikiDoMontowania(object):
         self.zmienne = zmienne
         self.Obszary = obszary
         self.Pliki = list()
+        self.wojek_map_filename_position = None
         if not args.trybosmand:
             self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
-        if hasattr('mapa_wojka', args) and args.mapka_woj and hasattr('mapawojka_nazwa', args):
-            plik_wojka = self.przygotuj_plik_wojka(args.mapkawojka_nazwa)
-            if plik_wojka:
-                self.Pliki.append(plik_wojka)
+
+        if hasattr(args, 'mapa_wojka') and args.mapa_wojka and hasattr(args, 'mapawojka_nazwa'):
+            naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
+                                                     tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
+
+            if naglowek and zawartosc:
+                self.Pliki += [os.path.join('narzedzia', args.mapawojka_nazwa)]
+                self.wojek_map_filename_position = len(self.Pliki) - 1
 
         for aaa in obszary:
             if os.path.isdir(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src')):
@@ -2551,6 +2556,14 @@ class PlikiDoMontowania(object):
         gr_czesciowe.close()
         self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, gr_czesciowe.name)
 
+    def zamien_plik_wojek_narzedzia_na_wojek_lokalny(self, nazwa_wojka_lokalny):
+        self.Pliki[self.wojek_map_filename_position] = nazwa_wojka_lokalny
+
+    def czy_zamontowac_pliki_wojka(self):
+        if self.wojek_map_filename_position is not None:
+            return True
+        return False
+
     def usun_plik_z_granicami(self):
         if 'granice' in self.Pliki[0]:
             self.Pliki = self.Pliki[1:]
@@ -2577,17 +2590,6 @@ class PlikiDoMontowania(object):
                     self.errOutWriter.stdoutwrite('Kodowanie pliku %s [OK].' % _plik)
         return
 
-    def przygotuj_plik_wojka(self, mapkawojka_nazwa):
-        plik_wojka = os.path.join('narzedzia', mapkawojka_nazwa)
-        roboczy_plik_wojka = os.path.join(self.zmienne.KatalogRoboczy, 'plik_wojka_' + plik_wojka)
-        try:
-            with open(plik_wojka, 'r') as p_wojka:
-                zaw_pliku_wojka = p_wojka.readlines()
-        except (FileNotFoundError, IOError):
-            self.errOutWriter.stdoutwrite('Nie moglem otworzyc pliku wojka: .' + plik_wojka + ' .Ignoruje!')
-            return ''
-
-        return ''
 
 class ObiektNaMapie(object):
     """
@@ -3083,6 +3085,40 @@ class plikPNT(object):
         return self.Dane1
 
 
+def wczytaj_mape_wojka(plik_wojka, tylko_naglowek=False, err_out_writer=None):
+    """
+    Wczytaj plik wojka i zwroc naglowek oraz zawartosc
+    Parameters
+    ----------
+    plik_wojka: string: sciezka do pliku mapki wojka
+    tylko_naglowek: bool: czy zwrocic tylko naglowek, przydatne w demontazu
+
+    Returns:
+    -------
+    tuple(string: naglowek, string: zawartosc)
+
+    """
+    naglowek = list()
+    zawartosc = list()
+    try:
+        with open(plik_wojka, 'r', encoding='cp1250') as p_wojka:
+            zaw_pliku_wojka = p_wojka.readlines()
+    except (FileNotFoundError, IOError):
+        err_out_writer.stdoutwrite('Nie moglem otworzyc pliku wojka: .' + plik_wojka + ' .Ignoruje!')
+        return '', ''
+    w_naglowku = True
+    for linia in zaw_pliku_wojka:
+        if w_naglowku:
+            naglowek.append(linia)
+        else:
+            zawartosc.append(linia)
+        if linia.startswith('[END-IMG ID]'):
+            w_naglowku = False
+            if tylko_naglowek:
+                return ''.join(naglowek), ''
+    return ''.join(naglowek), ''.join(zawartosc)
+
+
 def cp1250_to_ascii(cp1250_string):
     zamien_co = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåû'
     zamien_na_co = 'oacelnszzaaeeioucsayaenor¾coulu'
@@ -3292,6 +3328,21 @@ def montujpliki(args, naglowek_mapy=''):
     if hasattr(args, 'graniceczesciowe') and not args.tylkodrogi and not args.trybosmand:
         if args.graniceczesciowe:
             plikidomont.zamien_granice_na_granice_czesciowe()
+
+    # montowanie granic wojka
+    if plikidomont.czy_zamontowac_pliki_wojka():
+        nazwa_mapy_wojka_w_roboczym = os.path.join(Zmienne.KatalogRoboczy, 'wojek_plik_mp___' +
+                                                   os.path.splitext(args.mapawojka_nazwa)[0] + '.txt')
+        try:
+            with open(nazwa_mapy_wojka_w_roboczym, 'w', encoding='cp1250') as f_wojek:
+                naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
+                                                         tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
+                f_wojek.write(zawartosc)
+        except IOError:
+            stderr_stdout_writer.stderrorwrite('Nie moglem wczytac pliku wojka: ' + args.mapawojka_nazwa)
+        else:
+            plikidomont.zamien_plik_wojek_narzedzia_na_wojek_lokalny(nazwa_mapy_wojka_w_roboczym)
+
     # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
     if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
         plikidomont.usun_plik_z_granicami()
