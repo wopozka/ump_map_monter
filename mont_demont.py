@@ -1803,6 +1803,9 @@ class PlikMP1(object):
         if 'granice-czesciowe' in sciezka or 'narzedzia' + os.sep + 'granice.txt' in sciezka:
             self.sciezka_zwalidowana.add(sciezka)
             return 0
+        if sciezka.endswith('.mp') and os.path.isfile(os.path.join(self.Zmienne.KatalogzUMP, sciezka)):
+            self.sciezka_zwalidowana.add(sciezka)
+            return 0
         skladowe = sciezka.split(os.sep)
         if len(skladowe) != 3:
             return 1
@@ -1906,7 +1909,7 @@ class PlikMP1(object):
     def zapiszPOI(self, daneDoZapisu):
         komentarz_w_pliku_pnt = list()
         rekord_danych_do_mp = list()
-        if daneDoZapisu['Plik'].endswith('.txt'):
+        if daneDoZapisu['Plik'].endswith('.txt') or daneDoZapisu['Plik'].endswith('.mp'):
             for klucz_danych_do_zapisu in (klucze for klucze in daneDoZapisu if not klucze.startswith('Plik')):
                 if klucz_danych_do_zapisu == 'Komentarz':
                     for tmpbbb in daneDoZapisu['Komentarz']:
@@ -2358,6 +2361,9 @@ class PlikMP1(object):
                 dane_do_zapisu['Plik'] = self.plik_nowosci_pnt
             return dane_do_zapisu
 
+        # jesli nazwa pliku konczy sie na .mp to wtedy mamy plik wojka. Nie rob absolutnie nic
+        if dane_do_zapisu['Plik'].endswith('.mp'):
+            return dane_do_zapisu
         # jesli mamy miasto i plik nie jest cities wtedy zamien na nowosci.pnt
         if 'Type' in dane_do_zapisu and dane_do_zapisu['Type'] in City.rozmiar2Type:
             if 'cities-' not in dane_do_zapisu['Plik']:
@@ -2449,6 +2455,30 @@ class PlikMP1(object):
             del dane_do_zapisu['OrigData0']
         return dane_do_zapisu
 
+    def zwroc_naglowek_dla_pliku(self, nazwa_pliku):
+        if nazwa_pliku.endswith('.txt'):
+            return tuple()
+        if nazwa_pliku.endswith('.pnt') or nazwa_pliku.endswith('.adr'):
+            naglowek = ['OziExplorer Point File Version 1.0\n', 'WGS 84\n', 'Reserved 1\n', 'Reserved 2\n']
+            if nazwa_pliku.find('cities-') >= 0:
+                naglowek.append('255,65535,3,8,0,0,CITY ' + nazwa_pliku.split('cities-')[1].split('.')[0] + '\n')
+            else:
+                naglowek.append('255,65535,3,8,0,0,' + nazwa_pliku.split(os.sep)[-1] + '\n')
+            return naglowek
+        elif nazwa_pliku.endswith('.mp'):
+            try:
+                with open(os.path.join(self.Zmienne.KatalogzUMP, nazwa_pliku), 'r', encoding=self.Zmienne.Kodowanie,
+                          errors=self.Zmienne.ReadErrors) as mp_file:
+                    naglowek = list()
+                    for linijka in mp_file.readlines():
+                        if '[END-IMG ID]' in linijka:
+                            # naglowek += ['[END-IMG ID]\n', '\n']
+                            return naglowek + ['[END-IMG ID]\n', '\n']
+                        naglowek.append(linijka)
+            except (FileNotFoundError, IOError):
+                self.errOutWriter.stderrorwrite('Nie moglem wczytac pliku wojka, ignoruje.')
+        return tuple()
+
 
 class PlikiDoMontowania(object):
     def __init__(self, zmienne, args, stderr_stdout_writer):
@@ -2459,17 +2489,11 @@ class PlikiDoMontowania(object):
         self.zmienne = zmienne
         self.Obszary = obszary
         self.Pliki = list()
-        self.wojek_map_filename_position = None
         if not args.trybosmand:
             self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
 
         if hasattr(args, 'mapa_wojka') and args.mapa_wojka and hasattr(args, 'mapawojka_nazwa'):
-            naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
-                                                     tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
-
-            if naglowek and zawartosc:
-                self.Pliki += [os.path.join('narzedzia', args.mapawojka_nazwa)]
-                self.wojek_map_filename_position = len(self.Pliki) - 1
+            self.Pliki += [os.path.join('narzedzia', args.mapawojka_nazwa)]
 
         for aaa in obszary:
             if os.path.isdir(os.path.join(self.zmienne.KatalogzUMP, aaa, 'src')):
@@ -2555,14 +2579,6 @@ class PlikiDoMontowania(object):
             gr_czesciowe.write(a)
         gr_czesciowe.close()
         self.Pliki[0] = os.path.join(self.zmienne.KatalogRoboczy, gr_czesciowe.name)
-
-    def zamien_plik_wojek_narzedzia_na_wojek_lokalny(self, nazwa_wojka_lokalny):
-        self.Pliki[self.wojek_map_filename_position] = nazwa_wojka_lokalny
-
-    def czy_zamontowac_pliki_wojka(self):
-        if self.wojek_map_filename_position is not None:
-            return True
-        return False
 
     def usun_plik_z_granicami(self):
         if 'granice' in self.Pliki[0]:
@@ -3094,40 +3110,6 @@ class plikPNT(object):
                     self.Dane1.extend(self.punktzPntAdrCiti.Dane1)
                     self.punktzPntAdrCiti.wyczyscRekordy()
         return self.Dane1
-
-
-def wczytaj_mape_wojka(plik_wojka, tylko_naglowek=False, err_out_writer=None):
-    """
-    Wczytaj plik wojka i zwroc naglowek oraz zawartosc
-    Parameters
-    ----------
-    plik_wojka: string: sciezka do pliku mapki wojka
-    tylko_naglowek: bool: czy zwrocic tylko naglowek, przydatne w demontazu
-
-    Returns:
-    -------
-    tuple(string: naglowek, string: zawartosc)
-
-    """
-    naglowek = list()
-    zawartosc = list()
-    try:
-        with open(plik_wojka, 'r', encoding='cp1250') as p_wojka:
-            zaw_pliku_wojka = p_wojka.readlines()
-    except (FileNotFoundError, IOError):
-        err_out_writer.stdoutwrite('Nie moglem otworzyc pliku wojka: .' + plik_wojka + ' .Ignoruje!')
-        return '', ''
-    w_naglowku = True
-    for linia in zaw_pliku_wojka:
-        if w_naglowku:
-            naglowek.append(linia)
-        else:
-            zawartosc.append(linia)
-        if linia.startswith('[END-IMG ID]'):
-            w_naglowku = False
-            if tylko_naglowek:
-                return ''.join(naglowek), ''
-    return ''.join(naglowek), ''.join(zawartosc)
 
 
 def cp1250_to_ascii(cp1250_string):
@@ -3662,12 +3644,14 @@ def demontuj(args):
                 slownikHash[nazwa_pliku] = 'MD5HASH=NOWY_PLIK'
 
         # dodajemy naglowek do pliku pnt i adr
-        if nazwa_pliku[-4:] == '.pnt' or nazwa_pliku[-4:] == '.adr':
-            naglowek = ['OziExplorer Point File Version 1.0\n', 'WGS 84\n', 'Reserved 1\n', 'Reserved 2\n']
-            if nazwa_pliku.find('cities-') >= 0:
-                naglowek.append('255,65535,3,8,0,0,CITY ' + nazwa_pliku.split('cities-')[1].split('.')[0] + '\n')
-            else:
-                naglowek.append('255,65535,3,8,0,0,' + nazwa_pliku.split(os.sep)[-1] + '\n')
+        # if nazwa_pliku[-4:] == '.pnt' or nazwa_pliku[-4:] == '.adr':
+        #     naglowek = ['OziExplorer Point File Version 1.0\n', 'WGS 84\n', 'Reserved 1\n', 'Reserved 2\n']
+        #     if nazwa_pliku.find('cities-') >= 0:
+        #         naglowek.append('255,65535,3,8,0,0,CITY ' + nazwa_pliku.split('cities-')[1].split('.')[0] + '\n')
+        #     else:
+        #         naglowek.append('255,65535,3,8,0,0,' + nazwa_pliku.split(os.sep)[-1] + '\n')
+        naglowek = plikMp.zwroc_naglowek_dla_pliku(nazwa_pliku)
+        if naglowek:
             plikMp.plikizMp[nazwa_pliku] = naglowek + plikMp.plikizMp[nazwa_pliku]
 
         if nazwa_pliku in ('_nowosci.txt', '_nowosci.pnt'):
