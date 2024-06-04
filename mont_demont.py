@@ -3342,19 +3342,6 @@ def montujpliki(args, naglowek_mapy=''):
         if args.graniceczesciowe:
             plikidomont.zamien_granice_na_granice_czesciowe()
 
-    # # montowanie granic wojka
-    # if plikidomont.czy_zamontowac_pliki_wojka():
-    #     nazwa_mapy_wojka_w_roboczym = os.path.join(Zmienne.KatalogRoboczy, 'wojek_plik_mp___' +
-    #                                                os.path.splitext(args.mapawojka_nazwa)[0] + '.txt')
-    #     try:
-    #         with open(nazwa_mapy_wojka_w_roboczym, 'w', encoding='cp1250') as f_wojek:
-    #             naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
-    #                                                      tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
-    #             f_wojek.write(zawartosc)
-    #     except IOError:
-    #         stderr_stdout_writer.stderrorwrite('Nie moglem wczytac pliku wojka: ' + args.mapawojka_nazwa)
-    #     else:
-    #         plikidomont.zamien_plik_wojek_narzedzia_na_wojek_lokalny(nazwa_mapy_wojka_w_roboczym)
 
     # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
     if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
