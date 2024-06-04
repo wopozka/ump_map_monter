@@ -2908,7 +2908,7 @@ class PolylinePolygone(ObiektNaMapie):
 
 
 class plikTXT(object):
-    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer):
+    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer, typ_pliku = None):
         self.domyslneMiasto = ''
         self.Dokladnosc = ''
         self.NazwaPliku = os.path.basename(NazwaPliku)
@@ -2916,6 +2916,17 @@ class plikTXT(object):
         self.errOutWriter = stderr_stdout_writer
         self.Dane1 = []
         self.punktzTXT = punktzTXT
+        self.typ_pliku = typ_pliku
+
+    def usun_naglowek(self, zawartoscPliku):
+        """
+        usuwa naglowek pliku mp - do mmentu wystapienia '[END-IMG ID]'
+        :param zawartoscPliku: pojedynczy string z zawartoscia pliku
+        :return: string po odcieciu '[END-IMG ID]'
+        """
+        if self.typ_pliku == 'mp' and '[END-IMG ID]' in zawartoscPliku:
+            return zawartoscPliku.split('[END-IMG ID]', 1)[-1].lstrip()
+        return zawartoscPliku
 
     def txt2rekordy(self, zawartoscPliku):
         """funkcja pobiera zawartosc pliku w postaci stringa, dzieli go na liste stringow
@@ -2979,7 +2990,7 @@ class plikTXT(object):
             self.Dokladnosc = '0'
             self.errOutWriter.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % self.NazwaPliku)
             return []
-        for tmpaaa in self.txt2rekordy(zawartoscPlikuTXT):
+        for tmpaaa in self.txt2rekordy(self.usun_naglowek(zawartoscPlikuTXT)):
             self.punktzTXT.rekord2Dane(tmpaaa, self.domyslneMiasto)
             if self.Dokladnosc not in ('5', '6') and self.punktzTXT.DataX:
                 if self.ustalDokladnosc(self.punktzTXT.DataX):
@@ -3286,6 +3297,8 @@ def zwroc_typ_komentarz(nazwa_pliku):
             return 'cities', '....[CITY] %s'
         else:
             return 'pnt', '....[PNT] %s'
+    if nazwa_pliku.endwith('.mp'):
+        return 'mp', '....[MP] %s'
     return '', ''
 
 
@@ -3329,19 +3342,19 @@ def montujpliki(args, naglowek_mapy=''):
         if args.graniceczesciowe:
             plikidomont.zamien_granice_na_granice_czesciowe()
 
-    # montowanie granic wojka
-    if plikidomont.czy_zamontowac_pliki_wojka():
-        nazwa_mapy_wojka_w_roboczym = os.path.join(Zmienne.KatalogRoboczy, 'wojek_plik_mp___' +
-                                                   os.path.splitext(args.mapawojka_nazwa)[0] + '.txt')
-        try:
-            with open(nazwa_mapy_wojka_w_roboczym, 'w', encoding='cp1250') as f_wojek:
-                naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
-                                                         tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
-                f_wojek.write(zawartosc)
-        except IOError:
-            stderr_stdout_writer.stderrorwrite('Nie moglem wczytac pliku wojka: ' + args.mapawojka_nazwa)
-        else:
-            plikidomont.zamien_plik_wojek_narzedzia_na_wojek_lokalny(nazwa_mapy_wojka_w_roboczym)
+    # # montowanie granic wojka
+    # if plikidomont.czy_zamontowac_pliki_wojka():
+    #     nazwa_mapy_wojka_w_roboczym = os.path.join(Zmienne.KatalogRoboczy, 'wojek_plik_mp___' +
+    #                                                os.path.splitext(args.mapawojka_nazwa)[0] + '.txt')
+    #     try:
+    #         with open(nazwa_mapy_wojka_w_roboczym, 'w', encoding='cp1250') as f_wojek:
+    #             naglowek, zawartosc = wczytaj_mape_wojka(os.path.join('narzedzia', args.mapawojka_nazwa),
+    #                                                      tylko_naglowek=False, err_out_writer=stderr_stdout_writer)
+    #             f_wojek.write(zawartosc)
+    #     except IOError:
+    #         stderr_stdout_writer.stderrorwrite('Nie moglem wczytac pliku wojka: ' + args.mapawojka_nazwa)
+    #     else:
+    #         plikidomont.zamien_plik_wojek_narzedzia_na_wojek_lokalny(nazwa_mapy_wojka_w_roboczym)
 
     # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
     if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
@@ -3402,10 +3415,10 @@ def montujpliki(args, naglowek_mapy=''):
 
             ###########################################################################################################
             # montowanie plikow txt
-            elif typ_pliku == 'txt':
+            elif typ_pliku in ('txt', 'mp'):
                 punktzTXT = PolylinePolygone(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
                 punktzTXT.stdoutwrite(informacja % pliki_w_ump)
-                przetwarzanyPlik = plikTXT(pliki_w_ump, punktzTXT,  stderr_stdout_writer)
+                przetwarzanyPlik = plikTXT(pliki_w_ump, punktzTXT,  stderr_stdout_writer, typ_pliku=typ_pliku)
                 zawartosc_pliku_txt = plikPNTTXT.read()
                 zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
                 zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, przetwarzanyPlik.Dokladnosc)
