@@ -3297,7 +3297,7 @@ def zwroc_typ_komentarz(nazwa_pliku):
             return 'cities', '....[CITY] %s'
         else:
             return 'pnt', '....[PNT] %s'
-    if nazwa_pliku.endwith('.mp'):
+    if nazwa_pliku.endswith('.mp'):
         return 'mp', '....[MP] %s'
     return '', ''
 
