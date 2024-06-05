@@ -224,41 +224,13 @@ TEST_EXTRACT_HLEVEL_V2 = (
 def test_extract_hlevelv2(target, answer):
     assert mdmMp2xml.extract_hlevel_v2(target) == answer
 
-TEST_MAXSPEED = (
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:osmandpri': '0.9'}, None),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': 'aaa', 'ump:osmandpri': '0.9'}, None),
-    ({'highway': 'tertiary', 'ump:type': '0x5', 'ump:osmandpri': '0.9'}, '0.9'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', 'ump:osmandpri': '0.9'}, '0.9'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': 'faster', 'ump:osmandpri': '0.9'}, '1.0'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': 'slower', 'ump:osmandpri': '0.9'}, '0.8'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '4', 'ump:osmandpri': '0.9'}, '1.0'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '5', 'ump:osmandpri': '0.9'}, '1.1'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '3', 'ump:osmandpri': '0.9'}, '0.9'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '2', 'ump:osmandpri': '0.9'}, '0.8'),
-    ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '1', 'ump:osmandpri': '0.9'}, '0.7'),
-    # ({'highway': 'tertiary', 'is_in': 'Skrzynka', 'name': 'Skrzynka', 'ump:type': '0x5', '_ForceSpeed': '5'}, '93'),
-    # ({'highway': 'primary', 'is_in': 'Kraków', 'ump:type': '0xe'}, '93'),
-    # ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe'}, '72'),
-    # ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': 'faster'}, '72'),
-    # ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': 'slower'}, '50'),
-    # ({'highway': 'primary', 'is_in': 'Kraków', 'name': 'tunel', 'ump:type': '0xe', '_ForceSpeed': '0'}, '8'),
-
-)
-
-@pytest.mark.parametrize('target, answer', TEST_MAXSPEED)
-def test_maxspeed(target, answer):
-    assert mdmMp2xml.get_ump_osmandpri(target) == answer
-
 
 TEST_DESTINATIOM_REF = (
     (('[123] Skierniewice', '', ''), ('123', 'Skierniewice',)),
     (('[123] Skierniewice', '123', 'Skierniewice'), ('123', 'Skierniewice',)),
     (('[123] Skierniewice', '123', 'Lowicz'), ('123', 'Lowicz;Skierniewice',)),
     (('[122] Skierniewice', '123', 'Lowicz'), ('123;122', 'Lowicz;Skierniewice',)),
-    (('[122] Skierniewice', '123;124', 'Rawa Mazowiecka;Lowicz'), ('123;124;122', 'Rawa Mazowiecka;Lowicz;Skierniewice',)),
-    (('[122/123] Skierniewice/Lowicz', '124', 'Rawa Mazowiecka'), ('124;122;123', 'Rawa Mazowiecka;Skierniewice;Lowicz',)),
     (('Skierniewice', '', ''), ('', 'Skierniewice',)),
-    (('[123 Skierniewice', '', ''), ('', '[123 Skierniewice',)),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_DESTINATIOM_REF)

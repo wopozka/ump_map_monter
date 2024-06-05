@@ -1081,8 +1081,9 @@ class mdmConfig(object):
     def __init__(self):
         self.montDemontOptions = {}
         self.mont_opcje = {'adrfile': False, 'noszlaki': False, 'nocity': False, 'nopnt': False, 'no_osm': False,
-                           'monthash': False, 'graniceczesciowe': False,
-                           'entry_otwarte_do_extras': False, 'format_indeksow': 'cityidx', 'sprytne_entrypoints': False}
+                           'monthash': False, 'graniceczesciowe': False, 'entry_otwarte_do_extras': False,
+                           'format_indeksow': 'cityidx', 'sprytne_entrypoints': False, 'mapa_wojka': False,
+                            'mapawojka_nazwa': 'mapka_woj.mp'}
         self.demont_opcje = {'demonthash': False, 'autopoi': False, 'X': '0', 'autopolypoly': False,
                              'standaryzuj_komentarz': False, 'usun_puste_numery': False}
         self.mont_demont_opcje = {'savememory': False, 'cityidx': False, 'extratypes': False}
@@ -2371,6 +2372,8 @@ class mdm_gui_py(tkinter.Tk):
                                           variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('savememory'))
         menu_montuj_opcje.add_checkbutton(label=u'Bez danych OSM',
                                           variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('no_osm'))
+        menu_montuj_opcje.add_checkbutton(label=u'Montuj plik wojka',
+                                          variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('mapa_wojka'))
         menu_montuj_format_indeksow = tkinter.Menu(menu_montuj_opcje, tearoff=0)
         menu_montuj_format_indeksow.add_radiobutton(label=u'cityidx',
                                                     variable=self.mdmMontDemontOptions.zwroc_zmienna_opcji('format_indeksow'))
