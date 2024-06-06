@@ -107,7 +107,7 @@ class ErrOutWriter(object):
 
 class TestyPoprawnosciDanych(object):
     DOZWOLONE_ZNAKI_CP1250 = 'ó±æê³ñ¶¼¿áäéëíöüè¹âýãìòõø¾çôúåûß'
-    DOZWOLONE_KLUCZE = {'adrLabel',
+    DOZWOLONE_KLUCZE = {'adrLabel', 'Background',
                         'City', 'CityIdx', 'Czas',
                         'dekLabel', 'DirIndicator', 'DontDisplayAdr', 'DontFind',
                         'EndLevel',
@@ -3581,10 +3581,8 @@ def montuj_obszary_txt(args):
     with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
         plik_mp_zawartosc = plik_mp.read()
     # zamieniamy Type=0x4b na Type=0x14
-    print('Zamieniam Type=0x4b na Type=0x14')
     plik_mp_zawartosc = plik_mp_zawartosc.replace('Type=0x4b\n', 'Type=0x14\n')
     # usuwamy Background=yes
-    print('Usuwam Background=yes')
     plik_mp_zawartosc = plik_mp_zawartosc.replace('Background=Y\n', '')
     with open(zamontowany_plik_obszary_txt, 'w', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
         plik_mp.write(plik_mp_zawartosc)
@@ -3597,7 +3595,7 @@ def demontuj(args):
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Pracuje')
     if hasattr(args, 'demontuj_obszary_txt') and args.demontuj_obszary_txt:
-        Zmienne = UstawieniaPoczatkowe('wynik_obszary_txt.mp')
+        Zmienne = UstawieniaPoczatkowe(args.demontuj_obszary_txt)
     else:
         Zmienne = UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer = ErrOutWriter(args)
@@ -3804,41 +3802,27 @@ def demontuj_obszary_txt(args):
     zmienne = UstawieniaPoczatkowe('wynik_obszary_txt.mp')
 
     args.plikmp = None
-    args.verbose = False
-    args.umphome = ''
-    args.katrob = ''
-    args.savememory = False
     args.cityidx = False
-    args.format_indeksow = 'cityname'
-    args.adrfile = False
-    args.notopo = False
-    args.noszlaki = False
-    args.nocity = False
-    args.nopnt = False
-    args.monthash = False
-    args.graniceczesciowe = False
     args.extratypes = False
-    args.trybosmand = False
-    args.tryb_mkgmap = False
-    args.entry_otwarte_do_extras = False
-    args.no_osm = True
     args.demontuj_obszary_txt = True
     args.X = '0'
     args.demonthash = True
     args.autopolypoly = False
     args.usun_puste_numery = False
-    # args.obszary = ['obszary.txt']
 
     # musimy pozamieniac niektore wpisy, tak aby dalo sie to sensownie wyedytowac
     zamontowany_plik_obszary_txt = os.path.join(zmienne.KatalogRoboczy, 'wynik_obszary_txt.mp')
     with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
         plik_mp_zawartosc = plik_mp.read()
     # zamieniamy Type=0x4b na Type=0x14
-    print('Zamieniam Type=0x4b na Type=0x14')
     plik_mp_zawartosc = plik_mp_zawartosc.replace('Type=0x14\n', 'Type=0x4b\nBackground=Y\n')
-    with open(zamontowany_plik_obszary_txt, 'w', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
-        plik_mp.write(plik_mp_zawartosc)
+    zamontowany_plik_obszary_txt_tmp = tempfile.NamedTemporaryFile('w', encoding=zmienne.Kodowanie,
+                                                                   dir=zmienne.KatalogRoboczy, delete=False)
+    zamontowany_plik_obszary_txt_tmp.write(plik_mp_zawartosc)
+    zamontowany_plik_obszary_txt_tmp.close()
+    args.demontuj_obszary_txt = zamontowany_plik_obszary_txt_tmp.name
     demontuj(args)
+    os.remove(os.path.join(zmienne.KatalogRoboczy, zamontowany_plik_obszary_txt_tmp.name))
 
 
 def edytuj(args):
