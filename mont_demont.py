@@ -1806,6 +1806,9 @@ class PlikMP1(object):
         if sciezka.endswith('.mp') and os.path.isfile(os.path.join(self.Zmienne.KatalogzUMP, sciezka)):
             self.sciezka_zwalidowana.add(sciezka)
             return 0
+        if sciezka.endswith('obszary.txt'):
+            self.sciezka_zwalidowana.add(sciezka)
+            return 0
         skladowe = sciezka.split(os.sep)
         if len(skladowe) != 3:
             return 1
@@ -2490,7 +2493,11 @@ class PlikiDoMontowania(object):
         self.Obszary = obszary
         self.Pliki = list()
         if not args.trybosmand:
-            self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
+            if obszary[0] == 'obszary.txt':
+                self.Pliki += ['narzedzia' + os.sep + 'obszary.txt']
+                obszary = []
+            else:
+                self.Pliki += ['narzedzia' + os.sep + 'granice.txt']
 
         if hasattr(args, 'mapa_wojka') and args.mapa_wojka and hasattr(args, 'mapawojka_nazwa'):
             self.Pliki += [os.path.join('narzedzia', args.mapawojka_nazwa)]
@@ -3416,7 +3423,8 @@ def montujpliki(args, naglowek_mapy=''):
             plikMP.write('\n'.join(globalneIndeksy.sekcja_cityidx))
         plikMP.write('\n[END-Cities]\n\n')
 
-    if not args.trybosmand and not hasattr(args, 'tryb_mkgmap'):
+    # jesli tryb osmand i tryb mkgmap to zapisz pliki, domyslne miasta i dokladnosc plikow
+    if not (hasattr(args, 'trybosmand') and args.trybosmand or hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap):
         # zapisujemy dokladnosc
         stderr_stdout_writer.stdoutwrite('zapisuje pliki, domyslne miasta i dokladnosc plikow')
         plikMP.write('[CYFRY]\n')
@@ -3541,13 +3549,57 @@ def montuj_mkgmap(args):
             dodaj_dane_routingowe(args)
 
 
+def montuj_obszary_txt(args):
+    stderr_stdout_writer = ErrOutWriter(args)
+    # wczytaj liste map
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
+
+    args.plikmp = 'wynik_obszary_txt.mp'
+    args.verbose = False
+    args.umphome = ''
+    args.katrob = ''
+    args.savememory = False
+    args.cityidx = True
+    args.format_indeksow = 'cityname'
+    args.adrfile = False
+    args.notopo = False
+    args.noszlaki = False
+    args.nocity = False
+    args.nopnt = False
+    args.monthash = True
+    args.graniceczesciowe = False
+    args.extratypes = False
+    args.trybosmand = False
+    args.tryb_mkgmap = False
+    args.entry_otwarte_do_extras = False
+    args.no_osm = True
+    args.obszary = ['obszary.txt']
+    montujpliki(args)
+
+    # musimy pozamieniac niektore wpisy, tak aby dalo sie to sensownie wyedytowac
+    zamontowany_plik_obszary_txt = os.path.join(zmienne.KatalogRoboczy, 'wynik_obszary_txt.mp')
+    with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
+        plik_mp_zawartosc = plik_mp.read()
+    # zamieniamy Type=0x4b na Type=0x14
+    print('Zamieniam Type=0x4b na Type=0x14')
+    plik_mp_zawartosc = plik_mp_zawartosc.replace('Type=0x4b\n', 'Type=0x14\n')
+    # usuwamy Background=yes
+    print('Usuwam Background=yes')
+    plik_mp_zawartosc = plik_mp_zawartosc.replace('Background=Y\n', '')
+    with open(zamontowany_plik_obszary_txt, 'w', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
+        plik_mp.write(plik_mp_zawartosc)
+
+
 ###############################################################################
 # Demontaz
 ###############################################################################
 def demontuj(args):
     if hasattr(args, 'buttonqueue'):
         args.buttonqueue.put('Pracuje')
-    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    if hasattr(args, 'demontuj_obszary_txt') and args.demontuj_obszary_txt:
+        Zmienne = UstawieniaPoczatkowe('wynik_obszary_txt.mp')
+    else:
+        Zmienne = UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
@@ -3745,6 +3797,48 @@ def demontuj(args):
     stderr_stdout_writer.stdoutwrite('Gotowe!')
     del plikMp
     return zwroc_dane_do_gui(args, listaDiffow, slownikHash)
+
+def demontuj_obszary_txt(args):
+    stderr_stdout_writer = ErrOutWriter(args)
+    # wczytaj liste map
+    zmienne = UstawieniaPoczatkowe('wynik_obszary_txt.mp')
+
+    args.plikmp = None
+    args.verbose = False
+    args.umphome = ''
+    args.katrob = ''
+    args.savememory = False
+    args.cityidx = False
+    args.format_indeksow = 'cityname'
+    args.adrfile = False
+    args.notopo = False
+    args.noszlaki = False
+    args.nocity = False
+    args.nopnt = False
+    args.monthash = False
+    args.graniceczesciowe = False
+    args.extratypes = False
+    args.trybosmand = False
+    args.tryb_mkgmap = False
+    args.entry_otwarte_do_extras = False
+    args.no_osm = True
+    args.demontuj_obszary_txt = True
+    args.X = '0'
+    args.demonthash = True
+    args.autopolypoly = False
+    args.usun_puste_numery = False
+    # args.obszary = ['obszary.txt']
+
+    # musimy pozamieniac niektore wpisy, tak aby dalo sie to sensownie wyedytowac
+    zamontowany_plik_obszary_txt = os.path.join(zmienne.KatalogRoboczy, 'wynik_obszary_txt.mp')
+    with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
+        plik_mp_zawartosc = plik_mp.read()
+    # zamieniamy Type=0x4b na Type=0x14
+    print('Zamieniam Type=0x4b na Type=0x14')
+    plik_mp_zawartosc = plik_mp_zawartosc.replace('Type=0x14\n', 'Type=0x4b\nBackground=Y\n')
+    with open(zamontowany_plik_obszary_txt, 'w', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
+        plik_mp.write(plik_mp_zawartosc)
+    demontuj(args)
 
 
 def edytuj(args):
@@ -4379,6 +4473,10 @@ def main(argumenty):
                                            'reguly zmiany Label')
     parser_montuj_mkgmap.set_defaults(func=montuj_mkgmap)
 
+    # parser dla komendy montuj-obszary-txt
+    parser_montuj_obszary_txt = subparsers.add_parser('montuj-obszary-txt', help='Montowanie pliku obszary.txt')
+    parser_montuj_obszary_txt.set_defaults(func=montuj_obszary_txt)
+
     # parser dla komendy demontuj/demont
     parser_demontuj = subparsers.add_parser('demont', help='demontaz pliku mp')
     parser_demontuj.add_argument('-i', '--input-file', dest='plikmp',
@@ -4399,6 +4497,9 @@ def main(argumenty):
                                                                                              'i EntryPoints')
     parser_demontuj.add_argument('-upn', '--usun-puste-numery', action='store_true', help='Usun pusta numeracje')
     parser_demontuj.set_defaults(func=demontuj)
+
+    parser_demontuj_obszary_txt = subparsers.add_parser('demontuj-obszary-txt', help='Demontowanie pliku obszary.txt')
+    parser_demontuj_obszary_txt.set_defaults(func=demontuj_obszary_txt)
 
     # parser dla komendy listuj
     parsers_listuj = subparsers.add_parser('list', help='listuj obszary do montowania')
