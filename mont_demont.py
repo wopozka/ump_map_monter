@@ -3600,13 +3600,13 @@ def demontuj(args):
         Zmienne = UstawieniaPoczatkowe('wynik.mp')
     stderr_stdout_writer = ErrOutWriter(args)
 
-    if args.umphome:
+    if args.umphome is not None and args.umphome:
         Zmienne.ustaw_katalog_home(args.umphome)
 
-    if args.katrob:
+    if args.katrob is not None and args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
 
-    if args.plikmp:
+    if args.plikmp is not None and args.plikmp:
         Zmienne.KatalogRoboczy = os.getcwd()
     # print(Zmienne.KatalogRoboczy)
     tabKonw = tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
