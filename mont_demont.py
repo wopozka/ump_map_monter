@@ -3812,8 +3812,12 @@ def demontuj_obszary_txt(args):
 
     # musimy pozamieniac niektore wpisy, tak aby dalo sie to sensownie wyedytowac
     zamontowany_plik_obszary_txt = os.path.join(zmienne.KatalogRoboczy, 'wynik_obszary_txt.mp')
-    with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
-        plik_mp_zawartosc = plik_mp.read()
+    try:
+        with open(zamontowany_plik_obszary_txt, 'r', encoding=zmienne.Kodowanie, errors=zmienne.ReadErrors) as plik_mp:
+            plik_mp_zawartosc = plik_mp.read()
+    except (IOError, FileNotFoundError, PermissionError):
+        print('Nie moglem odczytac pliku: ' + zamontowany_plik_obszary_txt)
+        sys.exit()
     # zamieniamy Type=0x4b na Type=0x14
     plik_mp_zawartosc = plik_mp_zawartosc.replace('Type=0x14\n', 'Type=0x4b\nBackground=Y\n')
     zamontowany_plik_obszary_txt_tmp = tempfile.NamedTemporaryFile('w', encoding=zmienne.Kodowanie,
