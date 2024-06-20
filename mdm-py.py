@@ -1798,7 +1798,6 @@ class cvsOutputReceaver(tkinter.Toplevel):
                 time.sleep(1)
             stderr = process.stderr.readlines()
             stdout = process.stdout.readlines()
-
             if len(stderr) > 0:
                 if stderr[0].decode(Zmienne.Kodowanie).find('Up-to-date check failed') >= 0:
                     for line in stderr:
@@ -1816,7 +1815,8 @@ class cvsOutputReceaver(tkinter.Toplevel):
                 if len(stdout) > 0:
                     for line in stdout:
                         self.outputwindow.inputqueue.put(line.decode(Zmienne.Kodowanie))
-                        if line.decode(Zmienne.Kodowanie).find('<--  ' + os.path.basename(a)) >= 0:
+                        decoded_line = line.decode(Zmienne.Kodowanie)
+                        if '<--  ' in decoded_line and os.path.basename(a) in decoded_line:
                             self.commitedfiles.add(a)
                     if cvs_string == 'stop':
                         self.outputwindow.inputqueue.put(u'Commit przerwany na żądanie użytkownika!\n')
