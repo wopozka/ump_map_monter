@@ -320,12 +320,12 @@ pline_types = {
     0x7:  ["highway",  "living_street", "ump:osmandpri", "0.5", "note", "FIXME: select one of: living_street, service, residential"],
     0x8:  ["highway",  "trunk_link", "ump:osmandpri", "0.7"],
     0x9:  ["highway",  "motorway_link", "ump:osmandpri", "0.7"],
-    0xa:  ["highway",  "track", "tracktype", "grade2", "access", "yes", "ump:osmandpri", "0.5"],
+    0xa:  ["highway",  "track", "tracktype", "grade1", "access", "yes", "ump:osmandpri", "0.5"],
     0xb:  ["highway",  "primary_link", "ump:osmandpri", "0.95"],
     0xc:  ["junction", "roundabout", "ump:osmandpri", "0.7"],
     0xd:  ["highway",  "cycleway"],
     0xe:  ["highway",  "tertiary", "tunnel", "yes", "ump:osmandpri", "0.9"],
-    0xf:  ["highway",  "track", "tracktype", "grade4", "ump:osmandpri", "0.5"],
+    0xf:  ["highway",  "track", "tracktype", "grade4", "access", "no", "foot", "yes", "bicycle", "yes", "ump:osmandpri", "0.5"],
     0x14: ["railway",  "rail"],
     0x15: ["note", "morskie"],  # TODO
     0x16: ["highway",  "path"],
@@ -543,6 +543,7 @@ umppoi_types = {
 
                 'ZABYTEK': 0x64001,
 
+                'CMENTARZ': 0x64030,
                 'KIRKUT': 0x64031,
 }
 
@@ -895,7 +896,7 @@ poi_types = {
     0x593f: ["aeroway",  "aerodrome"],
     0x5a00: ["highway",  "milestone"],
     0x5a01: ["boundary", "marker"],
-    0x5a02: ["waterway",  "milestone"],
+    0x5a02: ["highway",  "milestone"],   # ["waterway",  "milestone"]
     0x5c00: ["place",    "hamlet"],
     0x5d00: ["tourism",  "information"],
     0x5f00: ["natural",  "scree"],
@@ -911,7 +912,7 @@ poi_types = {
     0x6403: ["landuse",  "cemetery"],
     0x64030: ["landuse",  "cemetery", "religion", "christian"],
     0x64031: ["landuse",  "cemetery", "religion", "jewish"],
-    0x6404: ["amenity",  "place_of_worship", "religion", "christian", "historic", "wayside_cross"],
+    0x6404: ["historic", "wayside_cross", "religion", "christian"],
     0x6405: ["amenity",  "public_building"],
     0x6406: ["amenity",  "ferry_terminal"],
     0x6407: ["waterway", "dam"],  #  Map_Features requires a way
@@ -2467,7 +2468,7 @@ def extract_routeparam(value):
 
 
 def get_ump_osmandpri(_way):
-    osmand_pri_modifier = 0.1
+    osmand_pri_modifier = 0.15
     class_vs_speeds = {0x1:  6,  # highway:motorway
                       0x2:  5,  # highway:trunk
                       0x3:  4,  # highway:primary
