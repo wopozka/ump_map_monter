@@ -2079,11 +2079,19 @@ def get_destination_ref_and_destination_from_label(label_from_dir_sign, ref_from
             label_from_dir_sign = label_from_dir_sign.split(']', 1)[-1]
         else:
             road_ref = ''
-    for dest in label_from_dir_sign.split('/'):
+    # there are two possible separators for ref and direction label: slash and colon, check which is used, and if both
+    # pick slash
+    separator = '/'
+    if ',' in label_from_dir_sign and '/' not in label_from_dir_sign:
+        separator = ','
+    for dest in label_from_dir_sign.split(separator):
         dest = dest.strip()
         if dest not in destination_label:
             destination_label.append(dest)
-    for dest_ref in road_ref.split('/'):
+    separator = '/'
+    if ',' in road_ref and '/' not in road_ref:
+        separator = ','
+    for dest_ref in road_ref.split(separator):
         dest_ref = dest_ref.strip()
         if dest_ref not in destination_ref:
             destination_ref.append(dest_ref)
@@ -2106,7 +2114,7 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
     direction_label = direction_sign['name']
     # in UMP 0x2f line is used both as a direction sign or as a line assistant mockup. When 0x2f is used as direction
     # sign then it either starts from "T,", "E,", "O," or from [XXX], where XXX is road number. In this case
-    # process the direction sign normally, othervise treat the line as line assistant and do nothing
+    # process the direction sign normally, otherwise treat the line as line assistant and do nothing
     if not (direction_label.startswith('T,') or direction_label.startswith('E,') or direction_label.startswith('O,')
             or direction_label.startswith('[')):
         return
