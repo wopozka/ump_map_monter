@@ -238,7 +238,8 @@ TEST_DESTINATIOM_REF = (
     (('[123,124] Skierniewice/Lowicz', '', ''), ('123;124', 'Skierniewice;Lowicz',)),
     (('[123/124] Skierniewice,Lowicz/Kutno', '', ''), ('123;124', 'Skierniewice,Lowicz;Kutno',)),
     (('[123,124/125] Skierniewice,Lowicz/Kutno', '', ''), ('123,124;125', 'Skierniewice,Lowicz;Kutno',)),
-
+    (('T,Skierniewice,Lowicz,Kutno', '', ''), ('', 'Skierniewice;Lowicz;Kutno',)),
+    (('T,Skierniewice/Lowicz/Kutno', '', ''), ('', 'Skierniewice;Lowicz;Kutno',)),
 )
 
 @pytest.mark.parametrize('target, answer', TEST_DESTINATIOM_REF)
