@@ -34,7 +34,6 @@ if sys.version_info[0] < 3:
 # import	locale
 import os
 import hashlib
-import difflib
 import threading
 import queue
 import shutil

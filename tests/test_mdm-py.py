@@ -12,6 +12,11 @@ CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW = (
     ('Data7=aaa\nLabel=2', ({'Data7'}, set()),),
     ('Data0=aaa\nLabel=aaa\nMaxWeight=7', (set(), set()),),
     ('Data0=aaa\nLabel=aaa\nMaxWeight=7\n=======', (set(), {True},)),
+    ('Data0=aaa\nLabel=aaa\nMaxWeight=7\n>>>>>>>', (set(), {True},)),
+    ('Data0=aaa\nLabel=aaa\nMaxWeight=7\n<<<<<<<', (set(), {True},)),
+    ('Data0=aaa\nLabel=aaa\n>>>>>>>\nMaxWeight=7\n=======\nLabel2=abcde\n<<<<<<<\n', (set(), {True},)),
+    ('Data9=aaa\nLabel4=aaa\nMaxWeight=7\n<<<<<<<', ({'Data9', 'Label4'}, {True},)),
+
 )
 
 @pytest.mark.parametrize('target, answer', CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW)
