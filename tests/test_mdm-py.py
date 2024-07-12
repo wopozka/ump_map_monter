@@ -1,8 +1,9 @@
 import pytest
 import sys
 import os.path
+import importlib
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-# from mdm-py import cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow
+mdm_py = importlib.import_module('mdm-py')
 
 CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW = (
     ()
