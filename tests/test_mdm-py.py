@@ -8,9 +8,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 mdm_py = importlib.import_module('mdm-py')
 
 CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW = (
-    # ('Data0=aaa\nLabel=', (set(), set()),),
-    # ('Data7=aaa\nLabel=', ({'Data7'}, set()),),
-    # ('Data0=aaa\nLabel=aaa\nMaxWeight=7', (set(), set()),),
+    ('Data0=aaa\nLabel=1', (set(), set()),),
+    ('Data7=aaa\nLabel=2', ({'Data7'}, set()),),
+    ('Data0=aaa\nLabel=aaa\nMaxWeight=7', (set(), set()),),
     ('Data0=aaa\nLabel=aaa\nMaxWeight=7\n=======', (set(), {True},)),
 )
 
