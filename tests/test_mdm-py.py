@@ -8,7 +8,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 mdm_py = importlib.import_module('mdm-py')
 
 CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW = (
-    ('Data0=aaa\nLabel=', (set(), set()),),
+    # ('Data0=aaa\nLabel=', (set(), set()),),
+    # ('Data7=aaa\nLabel=', ({'Data7'}, set()),),
+    # ('Data0=aaa\nLabel=aaa\nMaxWeight=7', (set(), set()),),
+    ('Data0=aaa\nLabel=aaa\nMaxWeight=7\n=======', (set(), {True},)),
 )
 
 @pytest.mark.parametrize('target, answer', CZY_KLUCZE_OK_I_BRAK_KONFLIKTOW)
@@ -21,10 +24,12 @@ def test_cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(target, answer
     if answer[0]:
         _answer0 = {nazwa_pliku: answer[0]}
     else:
-        answer0 = {}
+        _answer0 = {}
     if answer[1]:
-        answer1 = {nazwa_pliku}
+        _answer1 = {nazwa_pliku}
     else:
-        answer1 = set()
-    assert mdm_py.cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow([nazwa_pliku], zmienne) == (answer0, answer1)
+        _answer1 = set()
+    cdk_answer = mdm_py.cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow([nazwa_pliku], zmienne)
     os.remove(tmp_file.name)
+    assert cdk_answer == (_answer0, _answer1)
+
