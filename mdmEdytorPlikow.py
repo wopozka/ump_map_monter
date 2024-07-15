@@ -42,7 +42,7 @@ class MdmEdytorPlikow(tkinter.Toplevel):
         zamknij_button.pack(side='right')
         # informacja o pliku ktory jest otwarty i ktory zostanie zapisany
         otwarty_plik_frame = tkinter.Frame(ramka_glowna, pady=4)
-        otwarty_plik_frame.pack(fill='x', expand=1)
+        otwarty_plik_frame.pack(fill='x')
         wybrany_plik_text = tkinter.Label(otwarty_plik_frame, text='Otwarty plik:')
         wybrany_plik_text.pack(side='left')
         self.otwarty_plik_variable = tkinter.StringVar()
