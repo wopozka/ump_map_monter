@@ -192,7 +192,8 @@ class TestyPoprawnosciDanych(object):
                                               'SignAngle': self.dozwolona_wartosc_dla_SignAngle,
                                               'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
                                               'ForceClass': self.dozwolona_wartosc_dla_ForceClass,
-                                              'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight
+                                              'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight,
+                                              'MaxHeight': self.dozwolona_wartosc_dla_MaxHeight
                                               }
         self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak',  # brak zakazu
                                             'B-1', 'B1', 'ZAKAZ', 'RESTRYKCJA',  # inna restrykcja
@@ -337,6 +338,14 @@ class TestyPoprawnosciDanych(object):
         except ValueError:
             return False, 'dozwolone tylko liczby w zakresie 0-100'
         return 0 < maks_masa < 100, 'dozwolone tylko liczby w zakresie 0-100'
+
+    @staticmethod
+    def dozwolona_wartosc_dla_MaxHeight(wartosc):
+        try:
+            maks_wys = float(wartosc)
+        except ValueError:
+            return False, 'dozwolone tylko liczby w zakresie 0-4'
+        return 0 < maks_wys <= 4, 'dozwolone tylko liczby w zakresie 0-4'
 
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
         if self.wspolrzedne_obiektu:
