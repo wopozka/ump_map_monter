@@ -2110,7 +2110,7 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
     ----------
     direction_sign: OrderedDict() - 0x2f line content
     ways: list() - all ways
-    messages_printer: MessagePriters() - message printer
+    messages_printer: MessagePrinters() - message printer
     Returns
     -------
 
