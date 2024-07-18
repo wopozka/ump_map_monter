@@ -252,8 +252,8 @@ class NodeGeneralizator(object):
                 if a == file_group_name:
                     break
                 self.relations_offset[file_group_name] += self.t_table_relations[a]
-        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + \
-               self.sum_points + self.borders_point_len
+        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + \
+            self.borders_point_len
 
 
 class NodesToWayNotFound(ValueError):
