@@ -2940,7 +2940,7 @@ class PolylinePolygone(ObiektNaMapie):
 
 
 class plikTXT(object):
-    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer, typ_pliku = None):
+    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer, typ_pliku=None):
         self.domyslneMiasto = ''
         self.Dokladnosc = ''
         self.NazwaPliku = os.path.basename(NazwaPliku)
@@ -3385,12 +3385,12 @@ def montujpliki(args, naglowek_mapy=''):
                 else:
                     punktzpnt = Poi(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer,
                                     typ_obj=typ_pliku)
-                punktzpnt.stdoutwrite((informacja % pliki_w_ump))
+                stderr_stdout_writer.stdoutwrite((informacja % pliki_w_ump))
                 przetwarzanyPlik = plikPNT(pliki_w_ump, stderr_stdout_writer, punktzpnt)
                 # komentarz=''
                 zawartosc_pliku_pnt = plikPNTTXT.readlines()
                 if not zawartosc_pliku_pnt:
-                    punktzpnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki_w_ump)
+                    stderr_stdout_writer.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki_w_ump)
                     zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, '-1')
                 else:
                     zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_pnt))
@@ -3402,7 +3402,7 @@ def montujpliki(args, naglowek_mapy=''):
             # montowanie plikow txt
             elif typ_pliku in ('txt', 'mp'):
                 punktzTXT = PolylinePolygone(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
-                punktzTXT.stdoutwrite(informacja % pliki_w_ump)
+                stderr_stdout_writer.stdoutwrite((informacja % pliki_w_ump))
                 przetwarzanyPlik = plikTXT(pliki_w_ump, punktzTXT,  stderr_stdout_writer, typ_pliku=typ_pliku)
                 zawartosc_pliku_txt = plikPNTTXT.read()
                 zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
