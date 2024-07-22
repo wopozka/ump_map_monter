@@ -128,16 +128,17 @@ class PolygonyObszarow:
     # funkcja sprawdzajaca czy dany punkt jest polozony wewnatrz wielokata obszaru
     def is_inside(self, x, y, nazwaobszaru=None):
         # najpierw znajdz obszar
+        szukany_obszar = self.nazwa_obszaru
         if nazwaobszaru is not None:
-            szukany_obszar = None
-            for obszar in self.wspolrzedne:
-                if nazwaobszaru in obszar:
-                    szukany_obszar = obszar
-                    break
-        else:
             szukany_obszar = nazwaobszaru
-        if szukany_obszar is None:
+
+        for obszar in self.wspolrzedne:
+            if szukany_obszar in obszar:
+                szukany_obszar = obszar
+                break
+        else:
             return None
+
         # najpierw sprawdzmy czy dany punkt nie lezy przypadkiem na linii granicznej
 
         if x in self.liniaGraniczna_constXvariableY[szukany_obszar]:
