@@ -245,8 +245,10 @@ def test_plik_pnt_procesuj(target, answer):
     Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
     tabKonw = mont_demont.tabelaKonwersjiTypow(Zmienne, stderr_stdout_writer)
     globalneIndeksy = mont_demont.IndeksyMiast()
-    punkt_z_adr = mont_demont.Poi('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args, stderr_stdout_writer)
-    przetwarzanyPlik = mont_demont.plikPNT('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', stderr_stdout_writer, punkt_z_adr)
+    # punkt_z_adr = mont_demont.Poi('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+    # nazwa_pliku, stderr_stdout_writer, typ_pliku, args, tab_konwersji, globalne_indeksy
+    przetwarzanyPlik = mont_demont.plikPNT('UMP-PL-Leszno/src/gRozdrazew_2017i.adr', stderr_stdout_writer, 'adr', args,
+                                           tabKonw, globalneIndeksy)
     zawartoscPlikuADR = target
     assert przetwarzanyPlik.procesuj(zawartoscPlikuADR) == answer
 
@@ -676,4 +678,4 @@ TEST_USUN_NAGLOWEK = (
 
 @pytest.mark.parametrize('target, answer', TEST_USUN_NAGLOWEK)
 def testuj_usun_naglowek_pnt(target, answer):
-    assert mont_demont.plikPNT.usunNaglowek(target) == answer
+    assert mont_demont.plikPNT.usun_naglowek(target) == answer
