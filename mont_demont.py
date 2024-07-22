@@ -3042,7 +3042,7 @@ class plikPNT(object):
         self.Dane1 = []
 
     @staticmethod
-    def usunNaglowek(zawartoscPliku):
+    def usun_naglowek(zawartoscPliku):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         # pomijaj wszystko od poczatku do wystapienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
@@ -3101,7 +3101,7 @@ class plikPNT(object):
 
     def procesuj(self, zawartoscPlikuPNTlubADR):
         komentarz = ''
-        for liniaPliku in self.usunNaglowek(zawartoscPlikuPNTlubADR):
+        for liniaPliku in self.usun_naglowek(zawartoscPlikuPNTlubADR):
             liniaPliku = liniaPliku.strip()
             if not liniaPliku:
                 pass
