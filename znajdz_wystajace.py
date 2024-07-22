@@ -4,9 +4,10 @@
 import sys
 import os
 import argparse
+from collections import defaultdict
 
 
-class polygonObszaru:
+class PolygonyObszarow:
     # klasa przechowujaca wspolrzedne obszaru ograniczajacego
     # oraz zawieraj¹ca funkcje sprawdzaj¹ce czy punkt w obszarze
     
@@ -23,9 +24,9 @@ class polygonObszaru:
         self.umphome = umphome
         self.clockwise = 1
         # wspolrzedne obszaru w postaci par string: NS,EW
-        self.wspolrzedne = []
-        self.liniaGraniczna_constXvariableY = dict()
-        self.liniaGraniczna_constYvariableX = dict()
+        self.wspolrzedne = defaultdict(lambda: [])
+        self.liniaGraniczna_constXvariableY = defaultdict(lambda: {})
+        self.liniaGraniczna_constYvariableX = defaultdict(lambda: {})
         self.wczytajobszarytxt(nazwaobszaru)
         
         # aby sprawdzanie dzialalo poprawnie obszar musi byc zgodny z ruchem wskazowek zegara jesli nie
@@ -77,8 +78,9 @@ class polygonObszaru:
                             encoding=self.Kodowanie, errors='ignore')
         linia = plik_obszary.readline()
         while not koniecpliku:
-            if linia.find(nazwaobszaru) >= 0:
-                czyznalazlemobszar = 1
+            if linia.startswith('; '):
+                nazwa_obszaru = linia.split('; ', 1)[-1]
+                # czyznalazlemobszar = 1
                 while not linia.startswith('Data0='):
                     linia = plik_obszary.readline()
                 linia = linia.split('=')[-1].strip()
@@ -91,31 +93,35 @@ class polygonObszaru:
                     xxx, yyy = aa.split(',')
                     x = float(xxx)
                     y = float(yyy)
-                    if self.wspolrzedne:
-                        if x == self.wspolrzedne[-2]:
-                            if x not in self.liniaGraniczna_constXvariableY:
-                                self.liniaGraniczna_constXvariableY[x] = [(min(y, self.wspolrzedne[-1]),
-                                                                           max(y, self.wspolrzedne[-1]),)]
+                    if self.wspolrzedne[nazwa_obszaru]:
+                        if x == self.wspolrzedne[nazwa_obszaru][-2]:
+                            if x not in self.liniaGraniczna_constXvariableY[nazwa_obszaru]:
+                                self.liniaGraniczna_constXvariableY[nazwa_obszaru][x] = \
+                                    [(min(y, self.wspolrzedne[nazwa_obszaru][-1]),
+                                      max(y, self.wspolrzedne[nazwa_obszaru][-1]),)]
                             else:
-                                self.liniaGraniczna_constXvariableY[x].append((min(y, self.wspolrzedne[-1]),
-                                                                               max(y, self.wspolrzedne[-1]),))
-                        if y == self.wspolrzedne[-1]:
-                            if y not in self.liniaGraniczna_constYvariableX:
-                                self.liniaGraniczna_constYvariableX[y] = [(min(x, self.wspolrzedne[-2]),
-                                                                          max(x, self.wspolrzedne[-2]),)]
+                                _min = min(y, self.wspolrzedne[nazwa_obszaru][-1])
+                                _max = max(y, self.wspolrzedne[nazwa_obszaru][-1])
+                                self.liniaGraniczna_constXvariableY[nazwa_obszaru][x].append((_min, _max,))
+                        if y == self.wspolrzedne[nazwa_obszaru][-1]:
+                            if y not in self.liniaGraniczna_constYvariableX[nazwa_obszaru]:
+                                self.liniaGraniczna_constYvariableX[nazwa_obszaru][y] = \
+                                    [(min(x, self.wspolrzedne[nazwa_obszaru][-2]),
+                                      max(x, self.wspolrzedne[nazwa_obszaru][-2]),)]
                             else:
-                                self.liniaGraniczna_constYvariableX[y].append((min(x, self.wspolrzedne[-2]),
-                                                                               max(x, self.wspolrzedne[-2]),))
-                    self.wspolrzedne.append(x)
-                    self.wspolrzedne.append(y)
+                                _min = min(y, self.wspolrzedne[nazwa_obszaru][-2])
+                                _max = max(y, self.wspolrzedne[nazwa_obszaru][-2])
+                                self.liniaGraniczna_constYvariableX[nazwa_obszaru][y].append((_min, _max,))
+                    self.wspolrzedne[nazwa_obszaru].append(x)
+                    self.wspolrzedne[nazwa_obszaru].append(y)
                 print(self.wspolrzedne, file=sys.stderr)
                 koniecpliku = 1
             linia = plik_obszary.readline()
         plik_obszary.close()
-        if czyznalazlemobszar == 1:
-            return 1
-        else:
-            return 0
+        # if czyznalazlemobszar == 1:
+        return 1
+        # else:
+        #     return 0
 
     # funkcja sprawdzajaca czy dany punkt jest polozony wewnatrz wielokata obszaru
     def is_inside(self, x, y):
@@ -236,7 +242,7 @@ def main(argumenty):
     # argument[0].split... - wycina z UMP-PL-Lodz samo Lodz, z UMP-PL-Wroclaw samo Wrocal,
     # bo w obszary.txt jest sam ten drugi czlon
     # argument[1] to katalog domowy ump
-    aaa = polygonObszaru(argumenty[0].split('-')[-1], argumenty[1])
+    aaa = PolygonyObszarow(argumenty[0].split('-')[-1], argumenty[1])
 
     sys.stderr.write('\nWczytuje wspolrzedne punktow dla '+argumenty[0]+'\n')
 
