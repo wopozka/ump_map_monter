@@ -27,28 +27,30 @@ class PolygonyObszarow:
         self.wspolrzedne = defaultdict(lambda: [])
         self.liniaGraniczna_constXvariableY = defaultdict(lambda: {})
         self.liniaGraniczna_constYvariableX = defaultdict(lambda: {})
-        self.wczytajobszarytxt(nazwaobszaru)
+        self.wczytajobszarytxt()
+        self.nazwa_obszaru = nazwaobszaru
         
         # aby sprawdzanie dzialalo poprawnie obszar musi byc zgodny z ruchem wskazowek zegara jesli nie
         # to zamieniamy wspolrzedne
-        if not self.clockwisecheck():
-            # print('dlugosc przed odwroceniem',aaabbb+1)
-            self.wspolrzedne.reverse()
-            tymczasowy_x = self.wspolrzedne[0::2]
-            tymczasowy_y = self.wspolrzedne[1::2]
-            del self.wspolrzedne[:]
-            for aa in range(len(tymczasowy_x)-1):
-                self.wspolrzedne.append(tymczasowy_y[aa])
-                self.wspolrzedne.append(tymczasowy_x[aa])
+        for obszar in self.wspolrzedne:
+            if not self.clockwisecheck(obszar):
+                # print('dlugosc przed odwroceniem',aaabbb+1)
+                self.wspolrzedne[obszar].reverse()
+                tymczasowy_x = self.wspolrzedne[obszar][0::2]
+                tymczasowy_y = self.wspolrzedne[obszar][1::2]
+                del self.wspolrzedne[obszar][:]
+                for aa in range(len(tymczasowy_x)-1):
+                    self.wspolrzedne[obszar].append(tymczasowy_y[aa])
+                    self.wspolrzedne[obszar].append(tymczasowy_x[aa])
 
             # print('odwrocilem wsp num',self.clockwisecheck(self.wspolrzednenumeryczne),self.clockwise)
             # print('dlugosc po odwroceniu',len(self.wspolrzednenumeryczne))
             # self.porzadkujwspolrzedne(a5)
     
-    def clockwisecheck(self):
+    def clockwisecheck(self, obszar):
         """funkcja sprawdzajaca czy obszar prawo czy lewoskretny"""
         # https://www.geeksforgeeks.org/orientation-3-ordered-points/
-        p = self.wspolrzedne
+        p = self.wspolrzedne[obszar]
         count = 0
         n = int(len(p) / 2 - 1)
         for i in range(n):
@@ -71,7 +73,7 @@ class PolygonyObszarow:
             return True
 
     # funkcja wczytuje dany obszar z pliku narzedzia/obszary.txt
-    def wczytajobszarytxt(self, nazwaobszaru):
+    def wczytajobszarytxt(self):
         koniecpliku = 0
         czyznalazlemobszar = 0
         plik_obszary = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'),
@@ -124,19 +126,31 @@ class PolygonyObszarow:
         #     return 0
 
     # funkcja sprawdzajaca czy dany punkt jest polozony wewnatrz wielokata obszaru
-    def is_inside(self, x, y):
+    def is_inside(self, x, y, nazwaobszaru=None):
+        # najpierw znajdz obszar
+        if nazwaobszaru is not None:
+            szukany_obszar = None
+            for obszar in self.wspolrzedne:
+                if nazwaobszaru in obszar:
+                    szukany_obszar = obszar
+                    break
+        else:
+            szukany_obszar = nazwaobszaru
+        if szukany_obszar is None:
+            return None
         # najpierw sprawdzmy czy dany punkt nie lezy przypadkiem na linii granicznej
-        if x in self.liniaGraniczna_constXvariableY:
-            for iterator in self.liniaGraniczna_constXvariableY[x]:
+
+        if x in self.liniaGraniczna_constXvariableY[szukany_obszar]:
+            for iterator in self.liniaGraniczna_constXvariableY[szukany_obszar][x]:
                 if iterator[0] <= y <= iterator[1]:
                     return True
-        if y in self.liniaGraniczna_constYvariableX:
-            for iterator in self.liniaGraniczna_constYvariableX[y]:
+        if y in self.liniaGraniczna_constYvariableX[szukany_obszar]:
+            for iterator in self.liniaGraniczna_constYvariableX[szukany_obszar][y]:
                 if iterator[0] <= x <= iterator[1]:
                     return True
 
-        polyx = self.wspolrzedne[0::2]
-        polyy = self.wspolrzedne[1::2]
+        polyx = self.wspolrzedne[szukany_obszar][0::2]
+        polyy = self.wspolrzedne[szukany_obszar][1::2]
         n = len(polyx)
         inside = False
 
@@ -154,6 +168,11 @@ class PolygonyObszarow:
                                 inside = not inside
             p1x, p1y = p2x, p2y
         return inside
+
+    def zwroc_obszar_dla_wsp(self, x, y):
+        for obszar in self.wspolrzedne:
+            if self.is_inside(x, y, obszar):
+                return obszar
 
 
 class wspolrzedne:
@@ -278,13 +297,15 @@ def main(argumenty):
 
         # print(a, bbb.listawspolrzednych[2 * a ], bbb.listawspolrzednych[2 * a +1])
         # sprawdzamy czy punkt w srodku
-        if not aaa.is_inside(bbb.listawspolrzednych[2 * a], bbb.listawspolrzednych[2 * a + 1]):
+        wsp_x = bbb.listawspolrzednych[2 * a]
+        wsp_y = bbb.listawspolrzednych[2 * a + 1]
+        if not aaa.is_inside(wsp_x, wsp_y):
             # print('nie w srodku')
             # sprawdzamy czy punkt nie lezy przypadkiem na granicy obszaru
             # najpierw sprawdz czy dany punkt nie ma swojego odpowiednika we wspolrzednych obszaru, niby tylko kilkanascie punktow
             # ale po co je sprawdzac jesli nie trzeba. Sprawdzamy czy dany string x,y jest we wspolrzednych obszaru -> x,y
             if not (bbb.listawspolrzednychstring[a] in aaa.wspolrzedne):
-                print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a])
+                print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a], aaa.zwroc_obszar_dla_wsp(wsp_x, wsp_y))
                 lista_wystajacych.append(str(bbb.listawspolrzednych[2 * a]) + ',' + str(bbb.listawspolrzednych[2 * a + 1]))
 
     update_progress(100 / 100)
