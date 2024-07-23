@@ -16,20 +16,20 @@ class PolygonyObszarow:
     # ; Przemysl uproszczony PL -> Przemysl, ; Wroclaw PL -> Wroclaw itd
     #            umphome - katalog ze zrodlami do ump, np u mnie: c:\ump\
     #
-    def __init__(self, nazwaobszaru, umphome):
+    def __init__(self, umphome):
         if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             self.Kodowanie = 'latin2'
         else:
             self.Kodowanie = 'cp1250'
         self.umphome = umphome
-        self.clockwise = 1
+        # self.clockwise = 1
         # wspolrzedne obszaru w postaci par string: NS,EW
         self.wspolrzedne = defaultdict(lambda: [])
         self.liniaGraniczna_constXvariableY = defaultdict(lambda: {})
         self.liniaGraniczna_constYvariableX = defaultdict(lambda: {})
         self.wczytajobszarytxt()
-        self.nazwa_obszaru = nazwaobszaru
-        
+        self.nazwa_obszaru = None
+
         # aby sprawdzanie dzialalo poprawnie obszar musi byc zgodny z ruchem wskazowek zegara jesli nie
         # to zamieniamy wspolrzedne
         for obszar in self.wspolrzedne:
@@ -66,7 +66,7 @@ class PolygonyObszarow:
             elif z > 0:
                 count += 1
         if count > 0:
-            sys.stderr.write('Obszar lewoskretny, odwracam.')
+            # sys.stderr.write('Obszar lewoskretny, odwracam.')
             return False
         elif count < 0:
             # print('Obszar prawoskretny, pozostawiam jak jest.')
@@ -79,9 +79,9 @@ class PolygonyObszarow:
         plik_obszary = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'),
                             encoding=self.Kodowanie, errors='ignore')
         linia = plik_obszary.readline()
-        while not koniecpliku:
+        while linia:
             if linia.startswith('; '):
-                nazwa_obszaru = linia.split('; ', 1)[-1]
+                nazwa_obszaru = linia.split('; ', 1)[-1].strip()
                 # czyznalazlemobszar = 1
                 while not linia.startswith('Data0='):
                     linia = plik_obszary.readline()
@@ -116,28 +116,26 @@ class PolygonyObszarow:
                                 self.liniaGraniczna_constYvariableX[nazwa_obszaru][y].append((_min, _max,))
                     self.wspolrzedne[nazwa_obszaru].append(x)
                     self.wspolrzedne[nazwa_obszaru].append(y)
-                print(self.wspolrzedne, file=sys.stderr)
-                koniecpliku = 1
+                # print(self.wspolrzedne, file=sys.stderr)
             linia = plik_obszary.readline()
         plik_obszary.close()
-        # if czyznalazlemobszar == 1:
         return 1
-        # else:
-        #     return 0
 
     # funkcja sprawdzajaca czy dany punkt jest polozony wewnatrz wielokata obszaru
     def is_inside(self, x, y, nazwaobszaru=None):
         # najpierw znajdz obszar
-        szukany_obszar = self.nazwa_obszaru
-        if nazwaobszaru is not None:
-            szukany_obszar = nazwaobszaru
-
-        for obszar in self.wspolrzedne:
-            if szukany_obszar in obszar:
-                szukany_obszar = obszar
-                break
+        # print('aaa', self.nazwa_obszaru, nazwaobszaru)
+        if self.nazwa_obszaru is None or nazwaobszaru not in self.nazwa_obszaru:
+            for obszar in self.wspolrzedne:
+                if nazwaobszaru in obszar:
+                    szukany_obszar = obszar
+                    self.nazwa_obszaru = obszar
+                    # print(obszar, szukany_obszar)
+                    break
+            else:
+                return None
         else:
-            return None
+            szukany_obszar = self.nazwa_obszaru
 
         # najpierw sprawdzmy czy dany punkt nie lezy przypadkiem na linii granicznej
 
@@ -262,7 +260,8 @@ def main(argumenty):
     # argument[0].split... - wycina z UMP-PL-Lodz samo Lodz, z UMP-PL-Wroclaw samo Wrocal,
     # bo w obszary.txt jest sam ten drugi czlon
     # argument[1] to katalog domowy ump
-    aaa = PolygonyObszarow(argumenty[0].split('-')[-1], argumenty[1])
+    obszar_do_zbadania = argumenty[0].split('-')[-1]
+    aaa = PolygonyObszarow(argumenty[1])
 
     sys.stderr.write('\nWczytuje wspolrzedne punktow dla '+argumenty[0]+'\n')
 
@@ -300,14 +299,16 @@ def main(argumenty):
         # sprawdzamy czy punkt w srodku
         wsp_x = bbb.listawspolrzednych[2 * a]
         wsp_y = bbb.listawspolrzednych[2 * a + 1]
-        if not aaa.is_inside(wsp_x, wsp_y):
+        if not aaa.is_inside(wsp_x, wsp_y, nazwaobszaru=obszar_do_zbadania):
             # print('nie w srodku')
             # sprawdzamy czy punkt nie lezy przypadkiem na granicy obszaru
             # najpierw sprawdz czy dany punkt nie ma swojego odpowiednika we wspolrzednych obszaru, niby tylko kilkanascie punktow
             # ale po co je sprawdzac jesli nie trzeba. Sprawdzamy czy dany string x,y jest we wspolrzednych obszaru -> x,y
             if not (bbb.listawspolrzednychstring[a] in aaa.wspolrzedne):
-                print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a], aaa.zwroc_obszar_dla_wsp(wsp_x, wsp_y))
-                lista_wystajacych.append(str(bbb.listawspolrzednych[2 * a]) + ',' + str(bbb.listawspolrzednych[2 * a + 1]))
+                print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a])
+                lista_wystajacych.append((str(bbb.listawspolrzednych[2 * a]) + ',' +
+                                         str(bbb.listawspolrzednych[2 * a + 1]),
+                                         'w obszarze: ' + aaa.zwroc_obszar_dla_wsp(wsp_x, wsp_y),))
 
     update_progress(100 / 100)
 
@@ -324,8 +325,8 @@ def main(argumenty):
         plik.write("Reserved 3\n")
         for tmp_aaa in lista_wystajacych:
             plik.write("-1,wystaje,")
-            plik.write(tmp_aaa)
-            print(tmp_aaa)
+            plik.write(tmp_aaa[0])
+            print(' '.join(tmp_aaa))
             plik.write(",,0,1,3,255,65535,,,0,0,0,6,0,19\n")
         plik.close()
         sys.stderr.write('zapisuje plik z wystajacymi ' + os.path.join(argumenty[2], 'wystajace.wpt'))
