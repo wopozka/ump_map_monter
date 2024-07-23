@@ -172,7 +172,8 @@ class PolygonyObszarow:
         for obszar in self.wspolrzedne:
             if self.is_inside(x, y, obszar):
                 return obszar
-
+        print('Nic nie znalazlem dla %s, %s' % (x, y))
+        return ''
 
 class wspolrzedne:
     # klasa przechowuje liste wszystkich wspolrzednych w postaci tablicy
