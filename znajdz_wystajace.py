@@ -289,6 +289,7 @@ def main(argumenty):
     progres_previous = 0
     
     # iterujemy po kazdej drugiej wspolrzednej. Musimy powiedzlic przez 2 bo lista zawiera ciag, szer, dl, szer, dl itd.
+    obszary_z_wystajacymi = set()
     for a in range(int(ilosc_punktow_do_sprawdzenia / 2)):
         # poniewa¿ progressbar ma przeskakiwaæ tylko co pe³ny procent robimy ma³y trick przed uaktualnieniem
         # i sprawdzamy czy zmieni³o siê o 1%.
@@ -307,9 +308,11 @@ def main(argumenty):
             # ale po co je sprawdzac jesli nie trzeba. Sprawdzamy czy dany string x,y jest we wspolrzednych obszaru -> x,y
             if not (bbb.listawspolrzednychstring[a] in aaa.wspolrzedne):
                 print(bbb.listawspolrzednychstring[a], bbb.lista_plikow[a])
+                _obszar = aaa.zwroc_obszar_dla_wsp(wsp_x, wsp_y)
+                obszary_z_wystajacymi.add(_obszar)
                 lista_wystajacych.append((str(bbb.listawspolrzednych[2 * a]) + ',' +
                                          str(bbb.listawspolrzednych[2 * a + 1]),
-                                         'w obszarze: ' + aaa.zwroc_obszar_dla_wsp(wsp_x, wsp_y),))
+                                         'w obszarze: ' + _obszar,))
 
     update_progress(100 / 100)
 
@@ -330,6 +333,7 @@ def main(argumenty):
             print(' '.join(tmp_aaa))
             plik.write(",,0,1,3,255,65535,,,0,0,0,6,0,19\n")
         plik.close()
+        print(', '.join(obszary_z_wystajacymi))
         sys.stderr.write('zapisuje plik z wystajacymi ' + os.path.join(argumenty[2], 'wystajace.wpt'))
     sys.stderr.write('\nKoniec\n')
     sys.stderr.flush()
