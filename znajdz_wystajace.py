@@ -16,12 +16,13 @@ class PolygonyObszarow:
     # ; Przemysl uproszczony PL -> Przemysl, ; Wroclaw PL -> Wroclaw itd
     #            umphome - katalog ze zrodlami do ump, np u mnie: c:\ump\
     #
-    def __init__(self, umphome):
+    def __init__(self, umphome, test_mode=False):
         if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             self.Kodowanie = 'latin2'
         else:
             self.Kodowanie = 'cp1250'
         self.umphome = umphome
+        self.test_mode = test_mode
         # self.clockwise = 1
         # wspolrzedne obszaru w postaci par string: NS,EW
         self.wspolrzedne = defaultdict(lambda: [])
@@ -76,8 +77,11 @@ class PolygonyObszarow:
     def wczytajobszarytxt(self):
         koniecpliku = 0
         czyznalazlemobszar = 0
-        plik_obszary = open(os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt'),
-                            encoding=self.Kodowanie, errors='ignore')
+        if self.test_mode:
+            plik_obszarow_txt = self.umphome
+        else:
+            plik_obszarow_txt = os.path.join(os.path.join(self.umphome, 'narzedzia'), 'obszary.txt')
+        plik_obszary = open(plik_obszarow_txt, encoding=self.Kodowanie, errors='ignore')
         linia = plik_obszary.readline()
         while linia:
             if linia.startswith('; '):
@@ -111,8 +115,8 @@ class PolygonyObszarow:
                                     [(min(x, self.wspolrzedne[nazwa_obszaru][-2]),
                                       max(x, self.wspolrzedne[nazwa_obszaru][-2]),)]
                             else:
-                                _min = min(y, self.wspolrzedne[nazwa_obszaru][-2])
-                                _max = max(y, self.wspolrzedne[nazwa_obszaru][-2])
+                                _min = min(x, self.wspolrzedne[nazwa_obszaru][-2])
+                                _max = max(x, self.wspolrzedne[nazwa_obszaru][-2])
                                 self.liniaGraniczna_constYvariableX[nazwa_obszaru][y].append((_min, _max,))
                     self.wspolrzedne[nazwa_obszaru].append(x)
                     self.wspolrzedne[nazwa_obszaru].append(y)
