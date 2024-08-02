@@ -34,7 +34,6 @@ if sys.version_info[0] < 3:
 # import	locale
 import os
 import hashlib
-import difflib
 import threading
 import queue
 import shutil
@@ -77,7 +76,7 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
                 if zawartosc.startswith("<<<<<<<") or zawartosc.startswith("=======") \
                         or zawartosc.startswith(">>>>>>>"):
                     pliki_z_konfliktami.add(n_pliku)
-                if n_pliku.endswith('.txt') and '=' in zawartosc:
+                elif n_pliku.endswith('.txt') and '=' in zawartosc:
                     klucz, wartosc = zawartosc.split('=', 1)
                     if klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE or \
                             klucz in mont_demont_py.TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_PRZESTARZALE:
@@ -90,7 +89,7 @@ def cvs_sprawdz_czy_tylko_dozwolone_klucze_i_brak_konfliktow(pliki_do_sprawdzeni
                                 break
                         if not klucz_z_numerem_znaleziony:
                             pliki_z_niepoprawnymi_kluczami[n_pliku].add(klucz)
-    return pliki_z_niepoprawnymi_kluczami, pliki_z_konfliktami
+    return {key: val for key, val in pliki_z_niepoprawnymi_kluczami.items()}, pliki_z_konfliktami
 
 
 def pobierz_pliki_z_internetu(temporary_file, url, inputqueue):
