@@ -2476,7 +2476,7 @@ def extract_routeparam(value):
 
 
 def get_ump_osmandpri(_way):
-    osmand_pri_modifier = 0.15
+    osmand_pri_modifier = 0.1
     class_vs_speeds = {0x1:  6,  # highway:motorway
                       0x2:  5,  # highway:trunk
                       0x3:  4,  # highway:primary
@@ -2741,8 +2741,9 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     subway['layer'] = str(segment[2])
                 if segment[2] > 0:
                     subway['bridge'] = 'yes'
-                if segment[2] < 0:
-                    subway['tunnel'] = 'yes'
+# tunnel for tunnel type line only
+#                if segment[2] < 0:
+#                    subway['tunnel'] = 'yes'
                 if len(subway['_nodes']) > 1:          # not for the last single node
                     ways.append(subway)
                     if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
