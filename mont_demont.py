@@ -192,7 +192,8 @@ class TestyPoprawnosciDanych(object):
                                               'SignAngle': self.dozwolona_wartosc_dla_SignAngle,
                                               'ForceSpeed': self.dozwolona_wartosc_dla_ForceSpeed,
                                               'ForceClass': self.dozwolona_wartosc_dla_ForceClass,
-                                              'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight
+                                              'MaxWeight': self.dozwolona_wartosc_dla_MaxWeight,
+                                              'MaxHeight': self.dozwolona_wartosc_dla_MaxHeight
                                               }
         self.dozwolone_wartosci_dla_sign = {'BRAK', 'NAKAZ_BRAK', 'brak',  # brak zakazu
                                             'B-1', 'B1', 'ZAKAZ', 'RESTRYKCJA',  # inna restrykcja
@@ -337,6 +338,14 @@ class TestyPoprawnosciDanych(object):
         except ValueError:
             return False, 'dozwolone tylko liczby w zakresie 0-100'
         return 0 < maks_masa < 100, 'dozwolone tylko liczby w zakresie 0-100'
+
+    @staticmethod
+    def dozwolona_wartosc_dla_MaxHeight(wartosc):
+        try:
+            maks_wys = float(wartosc)
+        except ValueError:
+            return False, 'dozwolone tylko liczby w zakresie 0-4'
+        return 0 < maks_wys <= 4, 'dozwolone tylko liczby w zakresie 0-4'
 
     def zwroc_wspolrzedne_do_szukania(self, dane_do_zapisu):
         if self.wspolrzedne_obiektu:
@@ -2931,15 +2940,16 @@ class PolylinePolygone(ObiektNaMapie):
 
 
 class plikTXT(object):
-    def __init__(self, NazwaPliku, punktzTXT, stderr_stdout_writer, typ_pliku = None):
+    # self, nazwa_pliku, stderr_stdout_writer, typ_pliku, args, tab_konwersji, globalne_indeksy
+    def __init__(self, nazwa_pliku, stderr_stdout_writer, typ_pliku, args, tabela_konwersji, globalne_indeksy):
         self.domyslneMiasto = ''
         self.Dokladnosc = ''
-        self.NazwaPliku = os.path.basename(NazwaPliku)
-        self.sciezkaNazwa = NazwaPliku
+        self.NazwaPliku = os.path.basename(nazwa_pliku)
+        self.sciezkaNazwa = nazwa_pliku
         self.errOutWriter = stderr_stdout_writer
         self.Dane1 = []
-        self.punktzTXT = punktzTXT
         self.typ_pliku = typ_pliku
+        self.punktzTXT = PolylinePolygone(nazwa_pliku, globalne_indeksy, tabela_konwersji, args, stderr_stdout_writer)
 
     def usun_naglowek(self, zawartoscPliku):
         """
@@ -3024,16 +3034,21 @@ class plikTXT(object):
 
 
 class plikPNT(object):
-    def __init__(self, NazwaPliku, stderr_stdout_writer, punktzPntAdrCiti):
+    def __init__(self, nazwa_pliku, stderr_stdout_writer, typ_pliku, args, tab_konwersji, globalne_indeksy):
         self.Dokladnosc = ''
-        self.NazwaPliku = os.path.basename(NazwaPliku)
-        self.sciezkaNazwa = NazwaPliku
-        self.punktzPntAdrCiti = punktzPntAdrCiti
+        self.NazwaPliku = os.path.basename(nazwa_pliku)
+        self.sciezkaNazwa = nazwa_pliku
         self.errOutWriter = stderr_stdout_writer
         self.Dane1 = []
+        if typ_pliku == 'cities':
+            self.punktzPntAdrCiti = City(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer)
+        else:
+             self.punktzPntAdrCiti = Poi(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer,
+                                         typ_obj=typ_pliku)
+
 
     @staticmethod
-    def usunNaglowek(zawartoscPliku):
+    def usun_naglowek(zawartoscPliku):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         # pomijaj wszystko od poczatku do wystapienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
@@ -3092,7 +3107,7 @@ class plikPNT(object):
 
     def procesuj(self, zawartoscPlikuPNTlubADR):
         komentarz = ''
-        for liniaPliku in self.usunNaglowek(zawartoscPlikuPNTlubADR):
+        for liniaPliku in self.usun_naglowek(zawartoscPlikuPNTlubADR):
             liniaPliku = liniaPliku.strip()
             if not liniaPliku:
                 pass
@@ -3371,30 +3386,29 @@ def montujpliki(args, naglowek_mapy=''):
             typ_pliku, informacja = zwroc_typ_komentarz(pliki_w_ump)
             # montowanie plikow cities
             if typ_pliku in ('pnt', 'adr', 'cities'):
-                if typ_pliku == 'cities':
-                    punktzpnt = City(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
-                else:
-                    punktzpnt = Poi(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer,
-                                    typ_obj=typ_pliku)
-                punktzpnt.stdoutwrite((informacja % pliki_w_ump))
-                przetwarzanyPlik = plikPNT(pliki_w_ump, stderr_stdout_writer, punktzpnt)
+                # if typ_pliku == 'cities':
+                #     punktzpnt = City(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+                # else:
+                #     punktzpnt = Poi(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer,
+                #                     typ_obj=typ_pliku)
+                stderr_stdout_writer.stdoutwrite((informacja % pliki_w_ump))
+                przetwarzanyPlik = plikPNT(pliki_w_ump, stderr_stdout_writer, typ_pliku, args, tabKonw, globalneIndeksy)
                 # komentarz=''
                 zawartosc_pliku_pnt = plikPNTTXT.readlines()
                 if not zawartosc_pliku_pnt:
-                    punktzpnt.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki_w_ump)
+                    stderr_stdout_writer.stderrorwrite('Nie moge ustalic dokladnosci dla pliku %s' % pliki_w_ump)
                     zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, '-1')
                 else:
                     zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_pnt))
                     zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, przetwarzanyPlik.Dokladnosc)
                 del przetwarzanyPlik
-                del punktzpnt
 
             ###########################################################################################################
             # montowanie plikow txt
             elif typ_pliku in ('txt', 'mp'):
-                punktzTXT = PolylinePolygone(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
-                punktzTXT.stdoutwrite(informacja % pliki_w_ump)
-                przetwarzanyPlik = plikTXT(pliki_w_ump, punktzTXT,  stderr_stdout_writer, typ_pliku=typ_pliku)
+                # punktzTXT = PolylinePolygone(pliki_w_ump, globalneIndeksy, tabKonw, args, stderr_stdout_writer)
+                stderr_stdout_writer.stdoutwrite((informacja % pliki_w_ump))
+                przetwarzanyPlik = plikTXT(pliki_w_ump, stderr_stdout_writer, typ_pliku, args, tabKonw, globalneIndeksy)
                 zawartosc_pliku_txt = plikPNTTXT.read()
                 zawartoscPlikuMp.dodaj(przetwarzanyPlik.procesuj(zawartosc_pliku_txt))
                 zawartoscPlikuMp.ustawDokladnosc(pliki_w_ump, przetwarzanyPlik.Dokladnosc)
@@ -3402,7 +3416,7 @@ def montujpliki(args, naglowek_mapy=''):
                 if _miasto:
                     zawartoscPlikuMp.domyslneMiasta2[_nazwapliku] = _miasto
                 del przetwarzanyPlik
-                del punktzTXT
+                # del punktzTXT
 
             else:
                 print('nieznany typ pliku %s' % pliki_w_ump)
