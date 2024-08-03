@@ -28,7 +28,6 @@ import re
 import pprint
 import os
 import shutil
-
 try:
     import cPickle as pickle
 except:
@@ -50,7 +49,6 @@ class MylistB(object):
     """
     The class for storage of borders file data points
     """
-
     def __init__(self):
         # key is node id (v.index(str(lat), str(lon))), value tuple(str(lat), str(lon))
         self.k = {}
@@ -91,7 +89,6 @@ class Mylist(object):
     """
     The modified list bultin type, that support faster return of element index
     """
-
     def __init__(self, borders):
         # key is node id (v.index(str(lat), str(lon))), value tuple(str(lat), str(lon))
         self.k = {}
@@ -108,7 +105,7 @@ class Mylist(object):
             return self.borders[key]
         return self.v[key - self.b]
 
-    def index(self, value):  # OK
+    def index(self, value):          # OK
         if value in self.borders:
             return self.borders.index(value)
         return self.k[value]
@@ -120,16 +117,16 @@ class Mylist(object):
         self.k[value] = key  #
         self.v[key] = value  #
 
-    def __contains__(self, value):  # OK
+    def __contains__(self, value):    # OK
         if value in self.borders:
             return True
         return value in self.k
 
-    def append(self, value):  # OK
+    def append(self, value):          # OK
         self.v.append(value)
-        self.k[value] = len(self.v) + self.b - 1
+        self.k[value] = len(self.v)+self.b-1
 
-    def __iter__(self):  # OK
+    def __iter__(self):               # OK
         # return self.v.__iter__() #
         return self.k.__iter__()
 
@@ -252,8 +249,8 @@ class NodeGeneralizator(object):
                 if a == file_group_name:
                     break
                 self.relations_offset[file_group_name] += self.t_table_relations[a]
-        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + \
-            self.borders_point_len
+        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points \
+            + self.borders_point_len
 
 
 class NodesToWayNotFound(ValueError):
@@ -314,42 +311,43 @@ runstamp = ''
 umppline_types = dict()
 
 pline_types = {
-    0x1: ["highway", "motorway", "ump:osmandpri", "1.1"],
-    0x2: ["highway", "trunk", "ump:osmandpri", "1.0"],
-    0x3: ["highway", "primary", "ump:osmandpri", "1.0"],
-    0x4: ["highway", "secondary", "ump:osmandpri", "0.95"],
-    0x5: ["highway", "tertiary", "ump:osmandpri", "0.9"],
-    0x6: ["highway", "residential", "ump:osmandpri", "0.7"],
-    0x7: ["highway", "living_street", "ump:osmandpri", "0.5", "note",
-          "FIXME: select one of: living_street, service, residential"],
-    0x8: ["highway", "trunk_link", "ump:osmandpri", "0.7"],
-    0x9: ["highway", "motorway_link", "ump:osmandpri", "0.7"],
-    0xa: ["highway", "track", "tracktype", "grade2", "access", "yes", "ump:osmandpri", "0.5"],
-    0xb: ["highway", "primary_link", "ump:osmandpri", "0.95"],
-    0xc: ["junction", "roundabout", "ump:osmandpri", "0.7"],
-    0xd: ["highway", "cycleway"],
-    0xe: ["highway", "tertiary", "tunnel", "yes", "ump:osmandpri", "0.9"],
-    0xf: ["highway", "track", "tracktype", "grade4", "ump:osmandpri", "0.5"],
-    0x14: ["railway", "rail"],
+    0x1:  ["highway",  "motorway", "ump:osmandpri", "1.1"],
+    0x2:  ["highway",  "trunk", "ump:osmandpri", "1.0"],
+    0x3:  ["highway",  "primary", "ump:osmandpri", "1.0"],
+    0x4:  ["highway",  "secondary", "ump:osmandpri", "0.95"],
+    0x5:  ["highway",  "tertiary", "ump:osmandpri", "0.9"],
+    0x6:  ["highway",  "residential", "ump:osmandpri", "0.7"],
+    0x7:  ["highway",  "living_street", "ump:osmandpri", "0.5",
+           "note", "FIXME: select one of: living_street, service, residential"],
+    0x8:  ["highway",  "trunk_link", "ump:osmandpri", "0.7"],
+    0x9:  ["highway",  "motorway_link", "ump:osmandpri", "0.7"],
+    0xa:  ["highway",  "track", "tracktype", "grade1", "access", "yes", "ump:osmandpri", "0.5"],
+    0xb:  ["highway",  "primary_link", "ump:osmandpri", "0.95"],
+    0xc:  ["junction", "roundabout", "ump:osmandpri", "0.7"],
+    0xd:  ["highway",  "cycleway"],
+    0xe:  ["highway",  "tertiary", "tunnel", "yes", "ump:osmandpri", "0.9"],
+    0xf:  ["highway",  "track", "tracktype", "grade4", "access", "no", "foot", "yes", "bicycle", "yes",
+           "ump:osmandpri", "0.5"],
+    0x14: ["railway",  "rail"],
     0x15: ["note", "morskie"],  # TODO
-    0x16: ["highway", "path"],
+    0x16: ["highway",  "path"],
     # 0x16: ["highway",  "pedestrian"],
     0x18: ["waterway", "stream"],
-    0x19: ["_rel", "restriction"],
-    0x1a: ["route", "ferry", "ump:osmandpri", "1.0"],
-    0x1b: ["route", "ferry", "ump:osmandpri", "1.0"],
+    0x19: ["_rel",     "restriction"],
+    0x1a: ["route",    "ferry", "ump:osmandpri", "1.0"],
+    0x1b: ["route",    "ferry", "ump:osmandpri", "1.0"],
     0x1c: ["boundary", "administrative", "admin_level", "8"],
     0x1d: ["boundary", "administrative", "admin_level", "4"],
     0x1e: ["boundary", "administrative", "admin_level", "2"],
     0x1f: ["waterway", "canal"],
-    0x20: ["barrier", "wall"],  # TODO
-    0x21: ["barrier", "wall"],  # TODO
-    0x22: ["barrier", "city_wall"],  # TODO
-    0x23: ["highway", "track", "note", "fixme"],  # TODO
-    0x24: ["highway", "road"],  # TODO
-    0x25: ["barrier", "retaining_wall"],  # TODO
+    0x20: ["barrier",  "wall"],  # TODO
+    0x21: ["barrier",  "wall"],  # TODO
+    0x22: ["barrier",  "city_wall"],  # TODO
+    0x23: ["highway",  "track", "note", "fixme"],  # TODO
+    0x24: ["highway",  "road"],  # TODO
+    0x25: ["barrier",  "retaining_wall"],  # TODO
     0x26: ["waterway", "drain"],
-    0x27: ["aeroway", "runway"],
+    0x27: ["aeroway",  "runway"],
     0x28: ["man_made", "pipeline"],
     0x29: ["power", "line", "barrier", "retaining_wall", "note", "fixme: choose one"],
     0x2a: ["boundary", "area"],
@@ -441,153 +439,155 @@ umpshape_types = {
     # placeholder
 }
 
+
 shape_types = {
-    0x1: ["landuse", "residential"],
-    0x2: ["landuse", "residential"],
-    0x3: ["landuse", "residential"],
-    0x4: ["landuse", "military"],
-    0x5: ["amenity", "parking"],
-    0x6: ["building", "garages"],
-    0x7: ["aeroway", "aerodrome"],
-    0x8: ["landuse", "retail", "building", "shops", "shop", "fixme", "fixme", "Tag manually!"],
-    0x9: ["leisure", "marina"],  # a wild guess
-    0xa: ["building", "university"],
-    0xb: ["amenity", "hospital"],
-    0xc: ["landuse", "industrial"],  # a wild guess
-    0xd: ["landuse", "construction"],
-    0xe: ["aeroway", "taxiway"],  # runway na lotniskach
+    0x1:  ["landuse",  "residential"],
+    0x2:  ["landuse",  "residential"],
+    0x3:  ["landuse",  "residential"],
+    0x4:  ["landuse",  "military"],
+    0x5:  ["amenity",  "parking"],
+    0x6:  ["building", "garages"],
+    0x7:  ["aeroway",  "aerodrome"],
+    0x8:  ["landuse",  "retail", "building", "shops", "shop", "fixme", "fixme", "Tag manually!"],
+    0x9:  ["leisure",  "marina"],  # a wild guess
+    0xa:  ["building", "university"],
+    0xb:  ["amenity",  "hospital"],
+    0xc:  ["landuse",  "industrial"],  # a wild guess
+    0xd:  ["landuse",  "construction"],
+    0xe:  ["aeroway",  "taxiway"],  # runway na lotniskach
     0x13: ["building", "yes"],
-    0x14: ["natural", "wood"],  # sometimes landuse=military
-    0x15: ["natural", "wood"],
-    0x16: ["natural", "wood"],
+    0x14: ["natural",  "wood"],  # sometimes landuse=military
+    0x15: ["natural",  "wood"],
+    0x16: ["natural",  "wood"],
     0x17: ["leisure", "park"],
-    0x18: ["leisure", "pitch", "sport", "tennis"],
-    0x19: ["leisure", "pitch"],  # or stadium...
-    0x1a: ["landuse", "cemetery"],
-    0x1e: ["landuse", "forest", "leisure", "nature_reserve"],
-    0x1f: ["landuse", "forest", "leisure", "nature_reserve"],
-    0x20: ["tourism", "attraction"],  # a wild guess (forest?)
-    0x28: ["natural", "water"],
-    0x29: ["natural", "water"],
-    0x32: ["natural", "water"],
-    0x3b: ["natural", "water"],  # how does this differ from 0x40?
-    0x3c: ["natural", "water"],  # how does this differ from 0x40?
-    0x3d: ["natural", "water"],  # how does this differ from 0x40?
-    0x3e: ["natural", "water"],  # how does this differ from 0x40?
-    0x3f: ["natural", "water"],  # how does this differ from 0x40?
-    0x40: ["natural", "water"],
-    0x41: ["natural", "water", "amenity", "fountain"],
-    0x42: ["landuse", "reservoir"],  # how does this differ from 0x40?
-    0x43: ["landuse", "reservoir"],  # how does this differ from 0x40?
-    0x44: ["landuse", "reservoir"],  # how does this differ from 0x40?
-    0x45: ["landuse", "reservoir"],  # how does this differ from 0x40?
+    0x18: ["leisure",  "pitch", "sport", "tennis"],
+    0x19: ["leisure",  "pitch"],  # or stadium...
+    0x1a: ["landuse",  "cemetery"],
+    0x1e: ["landuse",  "forest", "leisure", "nature_reserve"],
+    0x1f: ["landuse",  "forest", "leisure", "nature_reserve"],
+    0x20: ["tourism",  "attraction"],  # a wild guess (forest?)
+    0x28: ["natural",  "water"],
+    0x29: ["natural",  "water"],
+    0x32: ["natural",  "water"],
+    0x3b: ["natural",  "water"],  # how does this differ from 0x40?
+    0x3c: ["natural",  "water"],  # how does this differ from 0x40?
+    0x3d: ["natural",  "water"],  # how does this differ from 0x40?
+    0x3e: ["natural",  "water"],  # how does this differ from 0x40?
+    0x3f: ["natural",  "water"],  # how does this differ from 0x40?
+    0x40: ["natural",  "water"],
+    0x41: ["natural",  "water", "amenity", "fountain"],
+    0x42: ["landuse",  "reservoir"],  # how does this differ from 0x40?
+    0x43: ["landuse",  "reservoir"],  # how does this differ from 0x40?
+    0x44: ["landuse",  "reservoir"],  # how does this differ from 0x40?
+    0x45: ["landuse",  "reservoir"],  # how does this differ from 0x40?
     0x46: ["waterway", "riverbank"],
     0x47: ["waterway", "riverbank"],  # how does this differ from 0x46?
     0x48: ["waterway", "riverbank"],  # how does this differ from 0x46?
     0x49: ["waterway", "riverbank"],  # how does this differ from 0x46?
-    0x4a: ["highway", "residential", "oneway", "yes"],
-    0x4c: ["natural", "water"],  # how does this differ from 0x40?
-    0x4d: ["natural", "glacier"],
-    0x4e: ["landuse", "allotments"],
-    0x4f: ["natural", "scrub"],
-    0x50: ["natural", "wood"],
-    0x51: ["natural", "wetland"],
-    0x52: ["leisure", "garden", "tourism", "zoo"],
-    0x53: ["landuse", "landfill"],
+    0x4a: ["highway",  "residential", "oneway", "yes"],
+    0x4c: ["natural",  "water"],  # how does this differ from 0x40?
+    0x4d: ["natural",  "glacier"],
+    0x4e: ["landuse",  "allotments"],
+    0x4f: ["natural",  "scrub"],
+    0x50: ["natural",  "wood"],
+    0x51: ["natural",  "wetland"],
+    0x52: ["leisure",  "garden", "tourism", "zoo"],
+    0x53: ["landuse",  "landfill"],
 
-    0x2d0a: ["leisure", "stadium"],
+    0x2d0a: ["leisure",  "stadium"],
 }
 umppoi_types = {
-    'SUSHI': 0x2a025,
-    'GRILL': 0x2a031,
-    'KEBAB': 0x2a032,
-    'THAI': 0x2a041,
-    'MLECZNY': 0x2a121,
-    'LIBANSKA': 0x2a135,
+                'SUSHI': 0x2a025,
+                'GRILL': 0x2a031,
+                'KEBAB': 0x2a032,
+                'THAI': 0x2a041,
+                'MLECZNY': 0x2a121,
+                'LIBANSKA': 0x2a135,
 
-    'UCZELNIA': 0x2c055,
-    'PRZEDSZKOLE': 0x2c056,
-    'ZLOBEK': 0x2c057,
+                'UCZELNIA': 0x2c055,
+                'PRZEDSZKOLE': 0x2c056,
+                'ZLOBEK': 0x2c057,
 
-    'BENZYNA': 0x2f01,
-    'PALIWO': 0x2f01,
-    'PRAD': 0x2f011,
+                'BENZYNA': 0x2f01,
+                'PALIWO': 0x2f01,
+                'PRAD': 0x2f011,
 
-    'RENT_A_BIKE': 0x2f021,
-    'ROWERY': 0x2f021,
-    'RENTACAR': 0x2f022,
-    'RENT_A_BOAT': 0x2f023,
-    'LODKI': 0x2f023,
+                'RENT_A_BIKE': 0x2f021,
+                'ROWERY': 0x2f021,
+                'RENTACAR': 0x2f022,
+                'RENT_A_BOAT': 0x2f023,
+                'LODKI': 0x2f023,
 
-    'BANK': 0x2f06,
-    'ATMBANK': 0x2f061,
-    'ATM': 0x2f062,
-    'KANTOR': 0x2f063,
+                'BANK': 0x2f06,
+                'ATMBANK': 0x2f061,
+                'ATM': 0x2f062,
+                'KANTOR': 0x2f063,
 
-    'BUS': 0x2f080,
-    'TRAM': 0x2f081,
-    'METRO': 0x2f082,
-    'PKS': 0x2f083,
-    'PKP': 0x2f084,
-    'TAXI': 0x2f085,
+                'BUS': 0x2f080,
+                'TRAM': 0x2f081,
+                'METRO': 0x2f082,
+                'PKS': 0x2f083,
+                'PKP': 0x2f084,
+                'TAXI': 0x2f085,
 
-    'PRZYCHODNIA': 0x30025,
-    'WETERYNARZ': 0x30026,
-    'DENTYSTA': 0x30027,
+                'PRZYCHODNIA': 0x30025,
+                'WETERYNARZ': 0x30026,
+                'DENTYSTA': 0x30027,
 
-    'FO': 0x56001,
-    'FP': 0x56002,
-    'FS': 0x56003,
-    'RL': 0x56004,
+                'FO': 0x56001,
+                'FP': 0x56002,
+                'FS': 0x56003,
+                'RL': 0x56004,
 
-    'NM': 0x57001,
-    'NPK': 0x57002,
-    'SPK': 0x57003,
+                'NM': 0x57001,
+                'NPK': 0x57002,
+                'SPK': 0x57003,
 
-    'ZABYTEK': 0x64001,
+                'ZABYTEK': 0x64001,
 
-    'KIRKUT': 0x64031,
+                'CMENTARZ': 0x64030,
+                'KIRKUT': 0x64031,
 }
 
 poi_types = {
-    0x04: ["place", "city"],
-    0x05: ["place", "city"],
-    0x06: ["place", "city"],
-    0x07: ["place", "city"],
-    0x08: ["place", "town"],
-    0x09: ["place", "town"],
-    0x0a: ["place", "town"],
-    0x0b: ["place", "town"],
-    0x0c: ["place", "village"],
-    0x0d: ["place", "village"],
-    0x0e: ["place", "village"],
-    0x2d: ["amenity", "townhall"],
+    0x04:   ["place",    "city"],
+    0x05:   ["place",    "city"],
+    0x06:   ["place",    "city"],
+    0x07:   ["place",    "city"],
+    0x08:   ["place",    "town"],
+    0x09:   ["place",    "town"],
+    0x0a:   ["place",    "town"],
+    0x0b:   ["place",    "town"],
+    0x0c:   ["place",    "village"],
+    0x0d:   ["place",    "village"],
+    0x0e:   ["place",    "village"],
+    0x2d:   ["amenity",  "townhall"],
 
-    0x0100: ["place", "city"],  # Also used for voivodeships, regions
-    0x0200: ["place", "city"],
-    0x0300: ["place", "city"],  # Also used for country nodes, seas
-    0x0400: ["place", "city"],
-    0x0500: ["place", "city"],
-    0x0600: ["place", "city"],
-    0x0700: ["place", "city"],
-    0x0800: ["place", "city"],
-    0x0900: ["place", "city"],
-    0x0a00: ["place", "town"],
-    0x0b00: ["place", "town"],
-    0x0c00: ["place", "town"],
-    0x0d00: ["place", "village"],
-    0x0e00: ["place", "village"],
-    0x0f00: ["place", "village"],
-    0x1000: ["place", "village"],
-    0x1100: ["place", "village"],
-    0x1150: ["landuse", "construction"],
-    0x1200: ["bridge", "yes"],
-    0x1300: ["leisure", "marina"],
-    0x1500: ["place", "locality"],
+    0x0100: ["place",    "city"],  # Also used for voivodeships, regions
+    0x0200: ["place",    "city"],
+    0x0300: ["place",    "city"],  # Also used for country nodes, seas
+    0x0400: ["place",    "city"],
+    0x0500: ["place",    "city"],
+    0x0600: ["place",    "city"],
+    0x0700: ["place",    "city"],
+    0x0800: ["place",    "city"],
+    0x0900: ["place",    "city"],
+    0x0a00: ["place",    "town"],
+    0x0b00: ["place",    "town"],
+    0x0c00: ["place",    "town"],
+    0x0d00: ["place",    "village"],
+    0x0e00: ["place",    "village"],
+    0x0f00: ["place",    "village"],
+    0x1000: ["place",    "village"],
+    0x1100: ["place",    "village"],
+    0x1150: ["landuse",  "construction"],
+    0x1200: ["bridge",   "yes"],
+    0x1300: ["leisure",   "marina"],
+    0x1500: ["place",    "locality"],
     0x1600: ["man_made", "lighthouse"],
     0x1602: ["man_made", "beacon", "mark_type", "ais"],
     0x1603: ["man_made", "beacon", "mark_type", "racon"],
-    0x1605: ["amenity", "citymap_post", "tourism", "information"],
+    0x1605: ["amenity",  "citymap_post", "tourism", "information"],
     0x1606: ["man_made", "beacon", "mark_type", "beacon"],
     0x1607: ["man_made", "beacon", "mark_type", "safe_water"],
     0x1608: ["man_made", "beacon", "mark_type", "lateral_left"],
@@ -596,7 +596,7 @@ poi_types = {
     0x160b: ["man_made", "beacon", "mark_type", "special"],
     0x160c: ["man_made", "beacon", "mark_type", "cardinal"],
     0x160d: ["man_made", "beacon", "mark_type", "other"],
-    0x160e: ["amenity", "signpost"],
+    0x160e: ["amenity",  "signpost"],
     0x160f: ["man_made", "beacon", "mark_type", "white"],
     0x1610: ["man_made", "beacon", "mark_type", "red"],
     0x1611: ["man_made", "beacon", "mark_type", "green"],
@@ -612,10 +612,10 @@ poi_types = {
     0x1710: ["barrier", "gate"],
     0x17105: ["highway", "stop"],
     0x1711: ["note", "FIXME"],
-    0x1712: ["hazard", "roadworks"],
-    0x1714: ["traffic_sign", "maxweight"],
-    0x1715: ["traffic_sign", "maxwight"],
-    0x1716: ["traffic_sign", "maxheight"],
+    0x1712: ["hazard",  "roadworks"],
+    0x1714: ["traffic_sign",  "maxweight"],
+    0x1715: ["traffic_sign",  "maxwight"],
+    0x1716: ["traffic_sign",  "maxheight"],
     0x170a: ["note", "FIXME: verify"],
     0x170d: ["note", "FIXME"],
     0x1805: ["man_made", "beacon", "traffic_signals"],
@@ -645,9 +645,9 @@ poi_types = {
     0x1a0c: ["man_made", "beacon", "mark_type", "cardinal_east"],
     0x1a0d: ["man_made", "beacon", "mark_type", "main_left_B"],
     0x1a10: ["man_made", "beacon"],
-    0x1b00: ["note", "fixme"],
-    0x1b02: ["natural", "peak"],
-    0x1b05: ["amenity", "signpost"],
+    0x1b00: ["note",     "fixme"],
+    0x1b02: ["natural",  "peak"],
+    0x1b05: ["amenity",  "signpost"],
     0x1b06: ["man_made", "beacon", "mark_type", "beacon_white"],
     0x1b07: ["man_made", "beacon", "mark_type", "beacon_west"],
     0x1b08: ["man_made", "beacon", "mark_type", "beacon_white-red"],
@@ -656,227 +656,227 @@ poi_types = {
     0x1b0b: ["man_made", "beacon", "mark_type", "beacon_black"],
     0x1b0c: ["man_made", "beacon", "mark_type", "cardinal_west"],
     0x1b0d: ["man_made", "beacon", "mark_type", "main_right_B"],
-    0x1b0f: ["aeroway", "taxiway"],
-    0x1c00: ["barrier", "obstruction"],
+    0x1b0f: ["aeroway",  "taxiway"],
+    0x1c00: ["barrier",  "obstruction"],
     0x1c01: ["man_made", "ship_wreck", "visibility", "yes"],
     0x1c02: ["man_made", "ship_wreck", "visibility", "no"],
     0x1c03: ["man_made", "ship_wreck", "visibility", "no"],
     0x1c04: ["man_made", "ship_wreck", "visibility", "no"],
-    0x1c05: ["barrier", "obstruction", "visibility", "yes"],
-    0x1c06: ["barrier", "obstruction", "visibility", "no"],
-    0x1c07: ["barrier", "obstruction", "visibility", "no"],
-    0x1c08: ["barrier", "obstruction", "visibility", "no"],
-    0x1c09: ["barrier", "obstruction", "visibility", "no"],
-    0x1c0a: ["barrier", "obstruction", "visibility", "no"],
-    0x1c0b: ["man_made", "obstruction", "visibility", "no"],
-    0x1c0c: ["barrier", "obstruction", "visibility", "no"],
-    0x1c0d: ["barrier", "obstruction", "visibility", "no"],
-    0x1e00: ["place", "region"],
-    0x1f00: ["place", "region"],
-    0x2000: ["highway", "exit"],
-    0x2100: ["highway", "services"],
-    0x210f: ["highway", "services"],
-    0x2110: ["highway", "services"],
-    0x2200: ["highway", "rest_area"],
-    0x2400: ["amenity", "weigh_station"],
-    0x2500: ["highway", "toll"],
-    0x2501: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2502: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2503: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2504: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2505: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2506: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2507: ["highway", "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
-    0x2600: ["highway", "rest_area"],
-    0x2700: ["highway", "exit"],
-    0x2800: ["note", "housenumber"],
-    0x2900: ["landuse", "commercial"],
-    0x2a: ["amenity", "restaurant"],
-    0x2a00: ["amenity", "restaurant"],
-    0x2a01: ["amenity", "restaurant", "cuisine", "american"],
-    0x2a02: ["amenity", "restaurant", "cuisine", "asian"],
-    0x2a025: ["amenity", "restaurant", "cuisine", "sushi"],
-    0x2a03: ["amenity", "restaurant", "cuisine", "barbecue"],
-    0x2a030: ["amenity", "restaurant", "cuisine", "barbecue"],
-    0x2a031: ["amenity", "restaurant", "cuisine", "grill"],
-    0x2a032: ["amenity", "restaurant", "cuisine", "kebab"],
-    0x2a04: ["amenity", "restaurant", "cuisine", "chinese"],
-    0x2a041: ["amenity", "restaurant", "cuisine", "thai"],
-    0x2a05: ["shop", "bakery"],
-    0x2a06: ["amenity", "restaurant", "cuisine", "international"],
-    0x2a07: ["amenity", "fast_food", "cuisine", "burger"],
-    0x2a08: ["amenity", "restaurant", "cuisine", "italian"],
-    0x2a09: ["amenity", "restaurant", "cuisine", "mexican"],
-    0x2a0a: ["amenity", "restaurant", "cuisine", "pizza"],
-    0x2a0b: ["amenity", "restaurant", "cuisine", "sea_food"],
-    0x2a0c: ["amenity", "restaurant", "cuisine", "grill"],
-    0x2a0d: ["shop", "pastry"],
-    0x2a0e: ["amenity", "cafe"],
-    0x2a0f: ["amenity", "restaurant", "cuisine", "french"],
-    0x2a10: ["amenity", "restaurant", "cuisine", "german"],
-    0x2a11: ["amenity", "restaurant", "cuisine", "british"],
-    0x2a12: ["amenity", "restaurant", "cuisine", "vegetarian"],
-    0x2a121: ["amenity", "fast_food", "cuisine", "polish"],
-    0x2a13: ["amenity", "restaurant", "cuisine", "greek"],
-    0x2a135: ["amenity", "restaurant", "cuisine", "lebanese"],
-    0x2a14: ["amenity", "restaurant", "cuisine", "regional"],
-    0x2b00: ["tourism", "hostel"],
-    0x2b01: ["tourism", "hotel"],
-    0x2b015: ["tourism", "motel"],
-    0x2b02: ["tourism", "hostel"],
-    0x2b03: ["tourism", "camp_site"],
-    0x2b04: ["tourism", "hotel"],
-    0x2c00: ["tourism", "attraction"],
-    0x2c005: ["tourism", "viewpoint"],
-    0x2c01: ["tourism", "attraction", "leisure", "park"],
-    0x2c015: ["leisure", "playground"],
-    0x2c02: ["tourism", "museum"],
-    0x2c025: ["tourism", "museum", "amenity", "arts_centre"],
-    0x2c03: ["amenity", "library"],
+    0x1c05: ["barrier",  "obstruction", "visibility", "yes"],
+    0x1c06: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c07: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c08: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c09: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c0a: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c0b: ["man_made",  "obstruction", "visibility", "no"],
+    0x1c0c: ["barrier",  "obstruction", "visibility", "no"],
+    0x1c0d: ["barrier",  "obstruction", "visibility", "no"],
+    0x1e00: ["place",    "region"],
+    0x1f00: ["place",    "region"],
+    0x2000: ["highway",  "exit"],
+    0x2100: ["highway",  "services"],
+    0x210f: ["highway",  "services"],
+    0x2110: ["highway",  "services"],
+    0x2200: ["highway",  "rest_area"],
+    0x2400: ["amenity",  "weigh_station"],
+    0x2500: ["highway",  "toll"],
+    0x2501: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2502: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2503: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2504: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2505: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2506: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2507: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
+    0x2600: ["highway",  "rest_area"],
+    0x2700: ["highway",  "exit"],
+    0x2800: ["note",    "housenumber"],
+    0x2900: ["landuse",  "commercial"],
+    0x2a:   ["amenity",  "restaurant"],
+    0x2a00: ["amenity",  "restaurant"],
+    0x2a01: ["amenity",  "restaurant", "cuisine", "american"],
+    0x2a02: ["amenity",  "restaurant", "cuisine", "asian"],
+    0x2a025: ["amenity",  "restaurant", "cuisine", "sushi"],
+    0x2a03: ["amenity",  "restaurant", "cuisine", "barbecue"],
+    0x2a030: ["amenity",  "restaurant", "cuisine", "barbecue"],
+    0x2a031: ["amenity",  "restaurant", "cuisine", "grill"],
+    0x2a032: ["amenity",  "restaurant", "cuisine", "kebab"],
+    0x2a04: ["amenity",  "restaurant", "cuisine", "chinese"],
+    0x2a041: ["amenity",  "restaurant", "cuisine", "thai"],
+    0x2a05: ["shop",     "bakery"],
+    0x2a06: ["amenity",  "restaurant", "cuisine", "international"],
+    0x2a07: ["amenity",  "fast_food",  "cuisine", "burger"],
+    0x2a08: ["amenity",  "restaurant", "cuisine", "italian"],
+    0x2a09: ["amenity",  "restaurant", "cuisine", "mexican"],
+    0x2a0a: ["amenity",  "restaurant", "cuisine", "pizza"],
+    0x2a0b: ["amenity",  "restaurant", "cuisine", "sea_food"],
+    0x2a0c: ["amenity",  "restaurant", "cuisine", "grill"],
+    0x2a0d: ["shop",  "pastry"],
+    0x2a0e: ["amenity",  "cafe"],
+    0x2a0f: ["amenity",  "restaurant", "cuisine", "french"],
+    0x2a10: ["amenity",  "restaurant", "cuisine", "german"],
+    0x2a11: ["amenity",  "restaurant", "cuisine", "british"],
+    0x2a12: ["amenity",  "restaurant", "cuisine", "vegetarian"],
+    0x2a121: ["amenity",  "fast_food",  "cuisine", "polish"],
+    0x2a13: ["amenity",  "restaurant", "cuisine", "greek"],
+    0x2a135: ["amenity",  "restaurant", "cuisine", "lebanese"],
+    0x2a14: ["amenity",  "restaurant", "cuisine", "regional"],
+    0x2b00: ["tourism",  "hostel"],
+    0x2b01: ["tourism",  "hotel"],
+    0x2b015: ["tourism",  "motel"],
+    0x2b02: ["tourism",  "hostel"],
+    0x2b03: ["tourism",  "camp_site"],
+    0x2b04: ["tourism",  "hotel"],
+    0x2c00: ["tourism",  "attraction"],
+    0x2c005: ["tourism",  "viewpoint"],
+    0x2c01: ["tourism",  "attraction", "leisure", "park"],
+    0x2c015: ["leisure",  "playground"],
+    0x2c02: ["tourism",  "museum"],
+    0x2c025: ["tourism",  "museum", "amenity", "arts_centre"],
+    0x2c03: ["amenity",  "library"],
     0x2c04: ["historic", "castle"],
     0x2c040: ["historic", "castle", "castle_type", "dworek"],
     0x2c041: ["historic", "castle", "castle_type", "palace"],
     0x2c042: ["historic", "castle", "castle_type", "fortress"],
     0x2c043: ["historic", "castle", "castle_type", "fortress"],
-    0x2c05: ["amenity", "school"],
-    0x2c055: ["amenity", "university"],
-    0x2c056: ["amenity", "kindergarten", "note", "Przedszkole"],
-    0x2c057: ["amenity", "kindergarten", "note", "Żłobek"],
-    0x2c06: ["leisure", "park"],
-    0x2c07: ["tourism", "zoo"],
-    0x2c08: ["leisure", "sports_centre"],
-    0x2c080: ["leisure", "pitch"],
-    0x2c081: ["leisure", "stadium"],
-    0x2c09: ["amenity", "theatre", "note", "concert_hall"],
-    0x2c0a: ["amenity", "restaurant", "cuisine", "wine_bar"],
-    0x2c0b: ["amenity", "place_of_worship", "religion", "christian"],
-    0x2c0c: ["natural", "spring", "amenity", "spa"],
+    0x2c05: ["amenity",  "school"],
+    0x2c055: ["amenity",  "university"],
+    0x2c056: ["amenity",  "kindergarten", "note", "Przedszkole"],
+    0x2c057: ["amenity",  "kindergarten", "note", "Żłobek"],
+    0x2c06: ["leisure",  "park"],
+    0x2c07: ["tourism",  "zoo"],
+    0x2c08: ["leisure",  "sports_centre"],
+    0x2c080: ["leisure",  "pitch"],
+    0x2c081: ["leisure",  "stadium"],
+    0x2c09: ["amenity",  "theatre", "note", "concert_hall"],
+    0x2c0a: ["amenity",  "restaurant", "cuisine", "wine_bar"],
+    0x2c0b: ["amenity",  "place_of_worship", "religion", "christian"],
+    0x2c0c: ["natural",  "spring", "amenity", "spa"],
     0x2c10: ["tourism", "artwork", "artwork_type", "mural"],
-    0x2d00: ["leisure", "track"],
-    0x2d01: ["amenity", "theatre"],
-    0x2d02: ["amenity", "pub"],
-    0x2d03: ["amenity", "cinema"],
-    0x2d04: ["amenity", "nightclub"],
-    0x2d045: ["amenity", "casino"],
-    0x2d05: ["sport", "golf", "leisure", "golf_course"],
-    0x2d06: ["sport", "skiing"],
-    0x2d07: ["sport", "9pin"],
-    0x2d08: ["sport", "skating"],
-    0x2d09: ["sport", "swimming"],
-    0x2d0a: ["leisure", "stadium"],
-    0x2d0a0: ["leisure", "sports_centre", "sport", "fitness"],
-    0x2d0a1: ["leisure", "sports_centre", "sport", "tennis"],
-    0x2d0a2: ["leisure", "sports_centre", "sport", "skating"],
-    0x2d0b: ["sport", "sailing"],
-    0x2e: ["shop", "stationery"],
-    0x2e00: ["shop", "mall"],
-    0x2e01: ["shop", "department_store"],
-    0x2e02: ["shop", "convenience"],
-    0x2e025: ["amenity", "marketplace"],
-    0x2e03: ["shop", "supermarket"],
-    0x2e04: ["shop", "mall"],
-    0x2e05: ["amenity", "pharmacy"],
-    0x2e06: ["shop", "convenience"],
-    0x2e07: ["shop", "clothes"],
-    0x2e08: ["shop", "garden_centre"],
-    0x2e09: ["shop", "furniture"],
-    0x2e0a: ["shop", "outdoor"],
-    0x2e0a5: ["shop", "bicycle"],
-    0x2e0b: ["shop", "computer"],
-    0x2e0c: ["shop", "pets"],
-    0x2f00: ["amenity", "miscellaneous"],
-    0x2f01: ["amenity", "fuel"],
+    0x2d00: ["leisure",  "track"],
+    0x2d01: ["amenity",  "theatre"],
+    0x2d02: ["amenity",  "pub"],
+    0x2d03: ["amenity",  "cinema"],
+    0x2d04: ["amenity",  "nightclub"],
+    0x2d045: ["amenity",  "casino"],
+    0x2d05: ["sport",    "golf", "leisure", "golf_course"],
+    0x2d06: ["sport",    "skiing"],
+    0x2d07: ["sport",    "9pin"],
+    0x2d08: ["sport",    "skating"],
+    0x2d09: ["sport",    "swimming"],
+    0x2d0a: ["leisure",  "stadium"],
+    0x2d0a0: ["leisure",  "sports_centre", "sport", "fitness"],
+    0x2d0a1: ["leisure",  "sports_centre", "sport", "tennis"],
+    0x2d0a2: ["leisure",  "sports_centre", "sport", "skating"],
+    0x2d0b: ["sport",    "sailing"],
+    0x2e:   ["shop",     "stationery"],
+    0x2e00: ["shop",     "mall"],
+    0x2e01: ["shop",     "department_store"],
+    0x2e02: ["shop",     "convenience"],
+    0x2e025: ["amenity",  "marketplace"],
+    0x2e03: ["shop",     "supermarket"],
+    0x2e04: ["shop",     "mall"],
+    0x2e05: ["amenity",  "pharmacy"],
+    0x2e06: ["shop",     "convenience"],
+    0x2e07: ["shop",     "clothes"],
+    0x2e08: ["shop",     "garden_centre"],
+    0x2e09: ["shop",     "furniture"],
+    0x2e0a: ["shop",     "outdoor"],
+    0x2e0a5: ["shop",     "bicycle"],
+    0x2e0b: ["shop",     "computer"],
+    0x2e0c: ["shop",     "pets"],
+    0x2f00: ["amenity",  "miscellaneous"],
+    0x2f01: ["amenity",  "fuel"],
     0x2f011: ["amenity", "charging_station"],
-    0x2f02: ["amenity", "car_rental"],
-    0x2f021: ["amenity", "bicycle_rental"],
-    0x2f022: ["amenity", "car_rental"],
-    0x2f023: ["amenity", "boat_rental"],
-    0x2f03: ["shop", "car_repair"],
-    0x2f030: ["shop", "car"],
-    0x2f04: ["aeroway", "aerodrome"],
-    0x2f05: ["amenity", "post_office"],
-    0x2f050: ["amenity", "post_office", "type", "courier"],
-    0x2f051: ["amenity", "post_office", "type", "courier", "operator", "dhl"],
-    0x2f052: ["amenity", "post_office", "type", "courier", "operator", "ups"],
-    0x2f06: ["amenity", "bank"],
-    0x2f061: ["amenity", "bank", "atm", "yes"],
-    0x2f062: ["amenity", "atm"],
-    0x2f063: ["amenity", "bureau_de_change"],
-    0x2f07: ["shop", "car"],
-    0x2f08: ["amenity", "bus_station"],
-    0x2f080: ["highway", "bus_stop"],
-    0x2f081: ["railway", "tram_stop"],
-    0x2f082: ["railway", "station", "station", "subway"],
-    0x2f083: ["highway", "bus_stop", "operator", "PKS"],
-    0x2f084: ["railway", "station", "operator", "PKP"],
-    0x2f085: ["amenity", "taxi"],
+    0x2f02: ["amenity",  "car_rental"],
+    0x2f021: ["amenity",  "bicycle_rental"],
+    0x2f022: ["amenity",  "car_rental"],
+    0x2f023: ["amenity",  "boat_rental"],
+    0x2f03: ["shop",     "car_repair"],
+    0x2f030: ["shop",     "car"],
+    0x2f04: ["aeroway",  "aerodrome"],
+    0x2f05: ["amenity",  "post_office"],
+    0x2f050: ["amenity",  "post_office", "type", "courier"],
+    0x2f051: ["amenity",  "post_office", "type", "courier", "operator", "dhl"],
+    0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "ups"],
+    0x2f06: ["amenity",  "bank"],
+    0x2f061: ["amenity",  "bank", "atm", "yes"],
+    0x2f062: ["amenity",  "atm"],
+    0x2f063: ["amenity",  "bureau_de_change"],
+    0x2f07: ["shop",     "car"],
+    0x2f08: ["amenity",  "bus_station"],
+    0x2f080: ["highway",  "bus_stop"],
+    0x2f081: ["railway",  "tram_stop"],
+    0x2f082: ["railway",  "station", "station", "subway"],
+    0x2f083: ["highway",  "bus_stop", "operator", "PKS"],
+    0x2f084: ["railway",  "station", "operator", "PKP"],
+    0x2f085: ["amenity",  "taxi"],
 
     0x2f09: ["waterway", "boatyard"],
-    0x2f0a: ["shop", "car_wrecker"],
-    0x2f0b: ["amenity", "parking"],
-    0x2f0c: ["tourism", "information"],
-    0x2f0d: ["amenity", "automobile_club"],
-    0x2f0e: ["amenity", "car_wash"],
-    0x2f0f: ["shop", "outdoor", "operator", "Garmin"],
-    0x2f10: ["amenity", "personal_service"],
-    0x2f104: ["amenity", "personal_service", "shop", "hairdresser"],
-    0x2f105: ["amenity", "personal_service", "shop", "tattoo"],
-    0x2f106: ["amenity", "personal_service", "shop", "optician"],
-    0x2f11: ["landuse", "industrial", "amenity", "factory"],
-    0x2f12: ["amenity", "wifi"],
-    0x2f13: ["shop", "bicycle"],
-    0x2f14: ["amenity", "public_building", ],
-    0x2f144: ["amenity", "public_building", "type", "social"],
-    0x2f145: ["amenity", "personal_service", "shop", "laundry"],
-    0x2f15: ["office", "company"],
-    0x2f16: ["amenity", "parking", "truck_stop", "yes"],
-    0x2f17: ["amenity", "travel_agency"],
-    0x2f18: ["amenity", "vending_machine", "vending", "public_transport_tickets"],
-    0x2f1b: ["office", "company"],
-    0x3000: ["amenity", "public_building"],
-    0x3001: ["amenity", "police"],
-    0x3002: ["amenity", "hospital"],
-    0x30025: ["amenity", "doctors"],
-    0x30026: ["amenity", "veterinary"],
-    0x30027: ["amenity", "dentist"],
-    0x3003: ["amenity", "townhall"],
-    0x3004: ["amenity", "courthouse"],
-    0x3005: ["amenity", "nightclub"],
-    0x3006: ["amenity", "border_station"],
-    0x3007: ["amenity", "townhall"],
-    0x3008: ["amenity", "fire_station"],
-    0x4000: ["leisure", "golf_course"],
-    0x4100: ["landuse", "reservoir"],
+    0x2f0a: ["shop",     "car_wrecker"],
+    0x2f0b: ["amenity",  "parking"],
+    0x2f0c: ["tourism",  "information"],
+    0x2f0d: ["amenity",  "automobile_club"],
+    0x2f0e: ["amenity",  "car_wash"],
+    0x2f0f: ["shop",     "outdoor", "operator", "Garmin"],
+    0x2f10: ["amenity",  "personal_service"],
+    0x2f104: ["amenity",  "personal_service", "shop", "hairdresser"],
+    0x2f105: ["amenity",  "personal_service", "shop", "tattoo"],
+    0x2f106: ["amenity",  "personal_service", "shop", "optician"],
+    0x2f11: ["landuse",  "industrial", "amenity", "factory"],
+    0x2f12: ["amenity",  "wifi"],
+    0x2f13: ["shop",     "bicycle"],
+    0x2f14: ["amenity",  "public_building", ],
+    0x2f144: ["amenity",  "public_building", "type", "social"],
+    0x2f145: ["amenity",  "personal_service", "shop", "laundry"],
+    0x2f15: ["office",   "company"],
+    0x2f16: ["amenity",  "parking", "truck_stop", "yes"],
+    0x2f17: ["amenity",  "travel_agency"],
+    0x2f18: ["amenity",  "vending_machine", "vending", "public_transport_tickets"],
+    0x2f1b: ["office",   "company"],
+    0x3000: ["amenity",  "public_building"],
+    0x3001: ["amenity",  "police"],
+    0x3002: ["amenity",  "hospital"],
+    0x30025: ["amenity",  "doctors"],
+    0x30026: ["amenity",  "veterinary"],
+    0x30027: ["amenity",  "dentist"],
+    0x3003: ["amenity",  "townhall"],
+    0x3004: ["amenity",  "courthouse"],
+    0x3005: ["amenity",  "nightclub"],
+    0x3006: ["amenity",  "border_station"],
+    0x3007: ["amenity",  "townhall"],
+    0x3008: ["amenity",  "fire_station"],
+    0x4000: ["leisure",  "golf_course"],
+    0x4100: ["landuse",  "reservoir"],
     0x4200: ["man_made", "ship"],
-    0x4300: ["leisure", "marina"],
-    0x4400: ["amenity", "fuel"],
-    0x4500: ["amenity", "restaurant"],
-    0x4600: ["amenity", "fast_food"],
-    0x4800: ["tourism", "camp_site"],
-    0x4900: ["leisure", "park"],
+    0x4300: ["leisure",  "marina"],
+    0x4400: ["amenity",  "fuel"],
+    0x4500: ["amenity",  "restaurant"],
+    0x4600: ["amenity",  "fast_food"],
+    0x4800: ["tourism",  "camp_site"],
+    0x4900: ["leisure",  "park"],
     0x4700: ["waterway", "dock"],
     0x4701: ["waterway", "boat_ramp"],
-    0x4a00: ["tourism", "picnic_site"],
-    0x4b00: ["amenity", "hospital"],
-    0x4c00: ["tourism", "information"],
-    0x4d00: ["amenity", "parking"],
-    0x4e00: ["amenity", "toilets"],
-    0x4f00: ["amenity", "shower"],
-    0x5000: ["amenity", "drinking_water"],
-    0x5100: ["amenity", "telephone"],
-    0x5200: ["tourism", "viewpoint"],
-    0x5300: ["sport", "skiing"],
-    0x5400: ["sport", "swimming"],
+    0x4a00: ["tourism",  "picnic_site"],
+    0x4b00: ["amenity",  "hospital"],
+    0x4c00: ["tourism",  "information"],
+    0x4d00: ["amenity",  "parking"],
+    0x4e00: ["amenity",  "toilets"],
+    0x4f00: ["amenity",  "shower"],
+    0x5000: ["amenity",  "drinking_water"],
+    0x5100: ["amenity",  "telephone"],
+    0x5200: ["tourism",  "viewpoint"],
+    0x5300: ["sport",    "skiing"],
+    0x5400: ["sport",    "swimming"],
     0x5500: ["waterway", "dam"],  # Map_Features requires a way
-    0x5600: ["highway", "speed_camera"],
-    0x56001: ["highway", "speed_camera", "enforcement", "average_speed"],
-    0x56002: ["highway", "speed_camera", "type", "portable"],
-    0x56003: ["highway", "speed_camera", "type", "permanent"],
-    0x56004: ["highway", "speed_camera", "enforcement", "traffic_signals"],
-    0x5700: ["hazard", "yes"],
-    0x57001: ["hazard", "dangerous_junction"],
-    0x57002: ["railway", "level_crossing"],
-    0x57003: ["railway", "level_crossing", "crossing:barrier", "yes"],
+    0x5600: ["highway",  "speed_camera"],
+    0x56001: ["highway",  "speed_camera", "enforcement", "average_speed"],
+    0x56002: ["highway",  "speed_camera", "type", "portable"],
+    0x56003: ["highway",  "speed_camera", "type", "permanent"],
+    0x56004: ["highway",  "speed_camera", "enforcement", "traffic_signals"],
+    0x5700: ["hazard",   "yes"],
+    0x57001: ["hazard",   "dangerous_junction"],
+    0x57002: ["railway",   "level_crossing"],
+    0x57003: ["railway",   "level_crossing", "crossing:barrier", "yes"],
     0x5800: ["seamark:calling-in_point:traffic_flow", "NS"],
     0x5801: ["seamark:calling-in_point:traffic_flow", "EW"],
     0x5802: ["seamark:calling-in_point:traffic_flow", "NW-SE"],
@@ -889,110 +889,110 @@ poi_types = {
     0x5809: ["seamark:calling-in_point:traffic_flow", "NE"],
     0x580a: ["seamark:calling-in_point:traffic_flow", "SW"],
     0x580b: ["seamark:calling-in_point:traffic_flow", "SE"],
-    0x5900: ["aeroway", "aerodrome"],
-    0x5901: ["aeroway", "aerodrome"],
-    0x5902: ["aeroway", "aerodrome"],
-    0x5903: ["aeroway", "aerodrome"],
-    0x5904: ["aeroway", "helipad"],
-    0x5905: ["aeroway", "aerodrome"],
-    0x593f: ["aeroway", "aerodrome"],
-    0x5a00: ["highway", "milestone"],
+    0x5900: ["aeroway",  "aerodrome"],
+    0x5901: ["aeroway",  "aerodrome"],
+    0x5902: ["aeroway",  "aerodrome"],
+    0x5903: ["aeroway",  "aerodrome"],
+    0x5904: ["aeroway",  "helipad"],
+    0x5905: ["aeroway",  "aerodrome"],
+    0x593f: ["aeroway",  "aerodrome"],
+    0x5a00: ["highway",  "milestone"],
     0x5a01: ["boundary", "marker"],
-    0x5a02: ["waterway", "milestone"],
-    0x5c00: ["place", "hamlet"],
-    0x5d00: ["tourism", "information"],
-    0x5f00: ["natural", "scree"],
+    0x5a02: ["tourism",  "information"],    # water milemarker, tag to be visible in OsmAnd
+    0x5c00: ["place",    "hamlet"],
+    0x5d00: ["tourism",  "information"],
+    0x5f00: ["natural",  "scree"],
     0x5e00: ["highway", "elevator"],
     0x6100: ["military", "bunker", "building", "bunker"],
     0x6101: ["historic", "ruins"],
-    0x6200: ["depth", "_name"],
-    0x6300: ["ele", "_name"],
+    0x6200: ["depth",    "_name"],
+    0x6300: ["ele",      "_name"],
     0x6400: ["historic", "monument", "note", "FIXME"],
     0x64001: ["historic", "building"],
-    0x6401: ["bridge", "yes"],
+    0x6401: ["bridge",   "yes"],
     0x6402: ["building", "residental"],
-    0x6403: ["landuse", "cemetery"],
-    0x64030: ["landuse", "cemetery", "religion", "christian"],
-    0x64031: ["landuse", "cemetery", "religion", "jewish"],
-    0x6404: ["amenity", "place_of_worship", "religion", "christian", "historic", "wayside_cross"],
-    0x6405: ["amenity", "public_building"],
-    0x6406: ["amenity", "ferry_terminal"],
+    0x6403: ["landuse",  "cemetery"],
+    0x64030: ["landuse",  "cemetery", "religion", "christian"],
+    0x64031: ["landuse",  "cemetery", "religion", "jewish"],
+    0x6404: ["historic", "wayside_cross", "religion", "christian"],
+    0x6405: ["amenity",  "public_building"],
+    0x6406: ["amenity",  "ferry_terminal"],
     0x6407: ["waterway", "dam"],  # Map_Features requires a way
-    0x6408: ["amenity", "hospital"],
+    0x6408: ["amenity",  "hospital"],
     0x6409: ["man_made", "water_works"],  # random pick from Map_Features
-    0x640a: ["amenity", "signpost"],
-    0x640b: ["landuse", "military"],
+    0x640a: ["amenity",  "signpost"],
+    0x640b: ["landuse",  "military"],
     0x640c: ["man_made", "mineshaft"],
     0x640d: ["man_made", "works", "waterway", "oil_platform"],
-    0x640e: ["leisure", "park"],
-    0x640f: ["amenity", "post_box"],
-    0x6410: ["amenity", "school"],
+    0x640e: ["leisure",  "park"],
+    0x640f: ["amenity",  "post_box"],
+    0x6410: ["amenity",  "school"],
     0x6411: ["man_made", "tower"],
     0x64110: ["man_made", "tower", "height", "short"],
     0x64111: ["man_made", "tower", "height", "tall"],
-    0x6412: ["highway", "trailhead", "note", "fixme"],
-    0x6413: ["tunnel", "yes", "layer", "-1"],
-    0x64135: ["natural", "cave_entrance"],
-    0x6414: ["amenity", "drinking_water"],
+    0x6412: ["highway",  "trailhead", "note", "fixme"],
+    0x6413: ["tunnel",   "yes", "layer", "-1"],
+    0x64135: ["natural",  "cave_entrance"],
+    0x6414: ["amenity",  "drinking_water"],
     0x6415: ["historic", "fort", "building", "fortress"],
     0x64155: ["historic", "ruins", "building", "bunker"],
-    0x6416: ["tourism", "hotel"],
+    0x6416: ["tourism",  "hotel"],
     0x6500: ["waterway", "other"],
-    0x6502: ["highway", "ford"],
-    0x6503: ["natural", "bay"],
-    0x6504: ["natural", "water", "waterway", "bend"],
+    0x6502: ["highway",  "ford"],
+    0x6503: ["natural",  "bay"],
+    0x6504: ["natural",  "water", "waterway", "bend"],
     0x6505: ["waterway", "lock_gate"],
     0x6506: ["waterway", "lock_gate"],
-    0x6507: ["natural", "spring", "man_made", "water_works"],
+    0x6507: ["natural",  "spring", "man_made", "water_works"],
     0x6508: ["waterway", "waterfall"],
-    0x6509: ["amenity", "fountain", "note", "fixme"],
-    0x650a: ["natural", "glacier"],
+    0x6509: ["amenity",  "fountain", "note", "fixme"],
+    0x650a: ["natural",  "glacier"],
     0x650b: ["waterway", "dock"],
-    0x650c: ["natural", "land"],  # Island as a POI
-    0x650d: ["natural", "water"],  # Lake as a POI
-    0x650e: ["natural", "spring"],  # geyser -> spring or volcano?
+    0x650c: ["natural",  "land"],        # Island as a POI
+    0x650d: ["natural",  "water"],       # Lake as a POI
+    0x650e: ["natural",  "spring"],      # geyser -> spring or volcano?
     # 0x650f: ["natural",  "water"],       # Pond as a POI
-    0x650f: ["amenity", "toilets"],
-    0x6511: ["natural", "spring"],
+    0x650f: ["amenity",  "toilets"],
+    0x6511: ["natural",  "spring"],
     0x6512: ["waterway", "stream"],
-    0x6513: ["natural", "water"],  # Swamp as a POI
-    0x6600: ["place", "locality", "note", "fixme (kurhan?)"],
-    0x6601: ["barrier", "sally_port"],
-    0x6602: ["landuse", "commercial"],
-    0x6603: ["natural", "bay"],
-    0x6604: ["natural", "beach"],
-    0x6605: ["lock", "yes"],
-    0x6606: ["place", "locality", "locality_type", "cape"],
-    0x6607: ["natural", "cliff"],  # Cliff as a POI
-    0x6608: ["natural", "peak"],
-    0x6609: ["natural", "plain"],
-    0x660a: ["natural", "tree"],
-    0x660b: ["place", "locality", "note", "fixme"],
-    0x660c: ["place", "locality", "note", "fixme"],
-    0x660d: ["place", "locality", "note", "fixme"],
-    0x660e: ["natural", "volcano"],
-    0x660f: ["man_made", "windmill"],
+    0x6513: ["natural",  "water"],       # Swamp as a POI
+    0x6600: ["place",    "locality", "note", "fixme (kurhan?)"],
+    0x6601: ["barrier",  "sally_port"],
+    0x6602: ["landuse",  "commercial"],
+    0x6603: ["natural",  "bay"],
+    0x6604: ["natural",  "beach"],
+    0x6605: ["lock",     "yes"],
+    0x6606: ["place",    "locality", "locality_type", "cape"],
+    0x6607: ["natural",  "cliff"],       # Cliff as a POI
+    0x6608: ["natural",  "peak"],
+    0x6609: ["natural",  "plain"],
+    0x660a: ["natural",  "tree"],
+    0x660b: ["place",    "locality", "note", "fixme"],
+    0x660c: ["place",    "locality", "note", "fixme"],
+    0x660d: ["place",    "locality", "note", "fixme"],
+    0x660e: ["natural",  "volcano"],
+    0x660f: ["man_made",  "windmill"],
     0x6610: ["mountain_pass", "yes"],
     0x6611: ["man_made", "tower"],
-    0x6612: ["amenity", "watersports_rental"],
-    0x6613: ["natural", "peak", "place", "region"],
-    0x6614: ["natural", "scree"],
-    0x6615: ["natural", "peak", "place", "locality", "note", "fixme", "sport", "skiing"],
-    0x6616: ["natural", "peak"],
-    0x6617: ["place", "locality", "natural", "valley"],
-    0x6618: ["natural", "wood"],  # Wood as a POI
+    0x6612: ["amenity",  "watersports_rental"],
+    0x6613: ["natural",  "peak", "place", "region"],
+    0x6614: ["natural",  "scree"],
+    0x6615: ["natural",  "peak", "place", "locality", "note", "fixme", "sport", "skiing"],
+    0x6616: ["natural",  "peak"],
+    0x6617: ["place",    "locality", "natural",  "valley"],
+    0x6618: ["natural",  "wood"],        # Wood as a POI
 
-    0x6701: ["highway", "footway", "ref", "Zielony szlak", "marked_trail_green", "yes"],
-    0x6702: ["highway", "footway", "ref", "Czerwony szlak", "marked_trail_red", "yes"],
-    0x6703: ["highway", "footway", "ref", "Niebieski szlak", "marked_trail_blue", "yes"],
-    0x6704: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes"],
-    0x6705: ["highway", "footway", "ref", "Czarny szlak", "marked_trail_black", "yes"],
-    0x6707: ["highway", "cycleway", "ref", "Żółty szlak", "marked_trail_yellow", "yes"],
-    0x6708: ["highway", "cycleway", "ref", "Czerwony szlak", "marked_trail_red", "yes"],
-    0x6709: ["highway", "cycleway", "ref", "Niebieski szlak", "marked_trail_blue", "yes"],
-    0x670a: ["highway", "cycleway", "ref", "Zielony szlak", "marked_trail_green", "yes"],
-    0x670b: ["highway", "cycleway", "ref", "Czarny szlak", "marked_trail_black", "yes"],
-    0xf201: ["highway", "traffic_signals"],
+    0x6701: ["highway",  "footway", "ref", "Zielony szlak", "marked_trail_green", "yes"],
+    0x6702: ["highway",  "footway", "ref", "Czerwony szlak", "marked_trail_red", "yes"],
+    0x6703: ["highway",  "footway", "ref", "Niebieski szlak", "marked_trail_blue", "yes"],
+    0x6704: ["highway",  "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes"],
+    0x6705: ["highway",  "footway", "ref", "Czarny szlak", "marked_trail_black", "yes"],
+    0x6707: ["highway",  "cycleway", "ref", "Żółty szlak", "marked_trail_yellow", "yes"],
+    0x6708: ["highway",  "cycleway", "ref", "Czerwony szlak", "marked_trail_red", "yes"],
+    0x6709: ["highway",  "cycleway", "ref", "Niebieski szlak", "marked_trail_blue", "yes"],
+    0x670a: ["highway",  "cycleway", "ref", "Zielony szlak", "marked_trail_green", "yes"],
+    0x670b: ["highway",  "cycleway", "ref", "Czarny szlak", "marked_trail_black", "yes"],
+    0xf201: ["highway",  "traffic_signals"],
 }
 
 glob_progress_bar_queue = None
@@ -1067,8 +1067,8 @@ def points_from_bline(points_str):
 # TxF: ucinanie przedrostkow
 def cut_prefix(string):
     if string.startswith("aleja ") or string.startswith("Aleja ") or string.startswith("rondo ") or \
-            string.startswith("Rondo ") or string.startswith("osiedle ") or string.startswith("Osiedle ") or \
-            string.startswith("pasaż ") or string.startswith("Pasaż "):
+       string.startswith("Rondo ") or string.startswith("osiedle ") or string.startswith("Osiedle ") or \
+       string.startswith("pasaż ") or string.startswith("Pasaż "):
         string = re.sub(r"^\w+ ", "", string)
     return string
 
@@ -1153,8 +1153,6 @@ def projlon(lon):
 def unproj(lat, lon):
     lat = math.radians(lat)
     return math.degrees(math.atan(math.sinh(lat))), lon
-
-
 # def unproj(lat, lon):
 #    return (lat, lon / math.cos(lat / 180.0 * math.pi))
 # def projlat(lat):
@@ -1228,7 +1226,8 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
     prev_node = None
     points = map_elements_props['points']
     pointattrs = map_elements_props['pointattrs']
-    attrs = {'_timestamp': filestamp, 'addr:street': street, 'NumberX': 'yes'}
+    attrs = {'_timestamp': filestamp, 'addr:street': street}
+    attrs['NumberX'] = 'yes'
     if region:
         attrs['is_in:state'] = region
     if city:
@@ -1468,7 +1467,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             misckey, miscvalue = extract_miscinfo(value, messages_printer=messages_printer)
             if misckey and miscvalue:
                 way[misckey] = miscvalue
-        elif key == 'Transit':  # "no thru traffic" / "local traffic only"
+        elif key == 'Transit':  # "no through traffic" / "local traffic only"
             if value.lower().startswith('n'):
                 way['access'] = 'destination'
         elif key == 'Moto':
@@ -1623,10 +1622,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             # experymenty Ar't
             pass
         elif key in ('RoadID',):
-            # lets omit routing params for maps with routing data
+            # let's omit routing params for maps with routing data
             pass
         elif key.startswith('Nod'):
-            # lets omit routing params for maps with routing data
+            # let's omit routing params for maps with routing data
             pass
         # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
         elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
@@ -1760,10 +1759,10 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                     match = p.search(comment)
                     if match is not None:
                         val = comment[match.end():].strip()
-                        p = re.compile(r'\^', re.IGNORECASE)  # to moze byc wielolinijkowy komentarz
+                        p = re.compile(r'\^', re.IGNORECASE)	 # to moze byc wielolinijkowy komentarz
                         match = p.search(val)
                         if match is not None:
-                            val = val[:match.start()]  # odciecie
+                            val = val[:match.start()]		# odciecie
 
                         # Pn-So 09:00-20:00; Nd 09:30-18:00" => 'Mo-Sa 09:00-20:00; Su 09:30-18:00'
                         for x in otwarteDict:
@@ -1947,7 +1946,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_
     :param direction: in which direction we are looking, according or against nodes order
     :param node_ways_relation: zbiorcze dane dla drog, relacji i punktow
     :param map_elements_props: elementy mapy: points, pointattrs, ways, relatons
-    :param messages_printer: MessagePrinters()
+    :param messages_printer: MessagePrinters: printing messages class
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
@@ -2010,7 +2009,6 @@ def preprepare_restriction(rel, node_ways_relation=None, map_elements_props=None
     :param rel: relaton
     :param node_ways_relation: node numer: way ids reference
     :param map_elements_props, properties of map points, pointattrs, ways, relations
-    :param messages_printer: MessagePrinter()
     :return: None, id modifies nodes by reference
     """
     new_rel_node_first = next_node(pivot=rel['_nodes'][1], direction=rel['_nodes'][0],
@@ -2050,8 +2048,8 @@ def make_restriction_fromviato(rel, node_ways_relation=None, map_elements_props=
                                    map_elements_props=map_elements_props, messages_printer=messages_printer)
     rel['_members'] = {
         'from': ('way', [from_way_index]),
-        'via': ('node', nodes[1:-1]),
-        'to': ('way', [to_way_index]),
+        'via':  ('node', nodes[1:-1]),
+        'to':   ('way', [to_way_index]),
     }
 
     rel['_c'] = ways[rel['_members']['from'][1][0]]['_c'] + ways[rel['_members']['to'][1][0]]['_c']
@@ -2108,9 +2106,9 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
     """
     Parameters
     ----------
-    direction_sign: OrderedDict() - 0x2f line content
-    ways: list() - all ways
-    messages_printer: MessagePrinters() - message printer
+    direction_sign: 0x2f line content
+    ways: all ways
+    messages_printer: messager printer
     Returns
     -------
 
@@ -2172,8 +2170,8 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
                 if 'destination:backward' not in ways[to_wayid]:
                     ways[to_wayid]['destination:backward'] = direction_label
                 else:
-                    ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + \
-                                                             direction_label
+                    ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' \
+                                                             + direction_label
         # otherwise print error
         else:
             messages_printer.printerror('Something went wrong, the via_nod is not the first nor last node of a way')
@@ -2189,9 +2187,9 @@ def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map
         outer_index = ways.index(outer)
     rel = {
         '_timestamp': filestamp,
-        'type': 'multipolygon',
-        'note': 'FIXME: fix roles manually',
-        '_c': outer['_c'],
+        'type':     'multipolygon',
+        'note':     'FIXME: fix roles manually',
+        '_c':       outer['_c'],
         '_members': {
             # 'outer': ('way', [ways.index(outer)]),
             'outer': ('way', [outer_index]),
@@ -2202,7 +2200,7 @@ def make_multipolygon(outer, holes, filestamp=None, node_ways_relation=None, map
     for inner in holes:
         way = {
             '_timestamp': filestamp,
-            '_c': outer['_c'],
+            '_c':     outer['_c'],
             '_nodes': inner,
         }
         map_elements_props['ways'].append(way)
@@ -2245,7 +2243,7 @@ def extract_reference_code(label, refpos, messages_printer=None):
         # interstate symbol, name can consist only digits, allowed only at beginning of label
         0x01: 'int_ref', 0x2a: 'int_ref',
         # US Highway – shield, name can consist only from digits, allowed only at beginning of label
-        0x02: 'int_ref', 0x2b: 'int_ref',
+        0x02: 'int_ref',  0x2b: 'int_ref',
         # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
         0x03: 'ref', 0x2c: 'ref',
         # Highway – big, allowed only at beginning of label
@@ -2484,25 +2482,25 @@ def extract_routeparam(value):
 
 def get_ump_osmandpri(_way):
     osmand_pri_modifier = 0.1
-    class_vs_speeds = {0x1: 6,  # highway:motorway
-                       0x2: 5,  # highway:trunk
-                       0x3: 4,  # highway:primary
-                       0x4: 3,  # highway:secondary
-                       0x5: 3,  # highway:tertiary
-                       0x6: 2,  # highway:residential
-                       0x7: 1,  # highway:living_street
-                       0x8: 2,  # highway:trunk_link
-                       0x9: 4,  # highway:motorway_link
-                       0xa: 0,  # highway:track
-                       0xb: 2,  # highway:primary_link
-                       0xc: 1,  # junction:roundabout
-                       0xd: 1,  # highway:cycleway
-                       0xe: 5,  # highway:tertiary tunnel:yes
-                       0xf: 0,  # highway:track tracktype:grade4
-                       0x10: 1,
-                       0x16: 0,  # highway:path
-                       0x1a: 0,  # route:ferry
-                       0x1b: 0,  # route:ferry
+    class_vs_speeds = {0x1:  6,  # highway:motorway
+                       0x2:  5,  # highway:trunk
+                       0x3:  4,  # highway:primary
+                       0x4:  3,  # highway:secondary
+                       0x5:  3,  # highway:tertiary
+                       0x6:  2,  # highway:residential
+                       0x7:  1,  # highway:living_street
+                       0x8:  2,  # highway:trunk_link
+                       0x9:  4,  # highway:motorway_link
+                       0xa:  0,  # highway:track
+                       0xb:  2,  # highway:primary_link
+                       0xc:  1,  # junction:roundabout
+                       0xd:  1,  # highway:cycleway
+                       0xe:  5,   # highway:tertiary tunnel:yes
+                       0xf:  0,   # highway:track tracktype:grade4
+                       0x10:  1,
+                       0x16:  0,   # highway:path
+                       0x1a:  0,  # route:ferry
+                       0x1b:  0,  # route:ferry
                        }
     if 'ump:type' not in _way:
         return None
@@ -2748,9 +2746,10 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     subway['layer'] = str(segment[2])
                 if segment[2] > 0:
                     subway['bridge'] = 'yes'
-                if segment[2] < 0:
-                    subway['tunnel'] = 'yes'
-                if len(subway['_nodes']) > 1:  # not for the last single node
+# tunnel for tunnel type line only
+#                if segment[2] < 0:
+#                    subway['tunnel'] = 'yes'
+                if len(subway['_nodes']) > 1:          # not for the last single node
                     ways.append(subway)
                     if 'highway' in subway and 'ump:type' in subway and int(subway['ump:type'], 16) <= 0x16:
                         new_way_id = len(ways) - 1
@@ -2837,7 +2836,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
                     del point['shop']
                     point['noexit'] = 'yes'
                     break
-        #   housenumber is used for bus/tram stop ref number
+    #   housenumber is used for bus/tram stop ref number
         if 'railway' in point and (point['railway'] == 'tram_stop' or point['railway'] == 'station'):
             if 'addr:housenumber' in point:
                 del point['addr:housenumber']
@@ -3405,13 +3404,13 @@ def main(options, args):
             except IOError:
                 sys.stderr.write("\tERROR: Can't open file " + f + "!\n")
                 sys.exit()
-            sys.stderr.write("\tINFO: Queuing:" + str(n + 1) + ":" + f + "\n")
+            sys.stderr.write("\tINFO: Queuing:" + str(n+1)+":" + f + "\n")
             infile.close()
             if options.force_timestamp is None:
                 f_stamp = datetime.fromtimestamp(os.path.getmtime(f)).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 f_stamp = options.force_timestamp
-            workelem = {'idx': n + 1, 'file': f, 'ids': 0, 'baseid': 0, 'filestamp': f_stamp}
+            workelem = {'idx': n+1, 'file': f, 'ids': 0, 'baseid': 0, 'filestamp': f_stamp}
             worklist.append(workelem)
         if options.threadnum == 1:
             for workelem in worklist:
@@ -3431,7 +3430,7 @@ def main(options, args):
             result = pool.map(partial(worker, options=copy_options, border_points=bpoints), worklist)
             pool.terminate()
             for workelem in worklist:
-                workelem['ids'] = result[(workelem['idx']) - 1]
+                workelem['ids'] = result[(workelem['idx'])-1]
 
         elapsed = datetime.now().replace(microsecond=0) - elapsed
         messages_printer.printinfo("Area processing done (took " + str(elapsed) + "). Reading pickle files:")
@@ -3548,7 +3547,7 @@ if __name__ == '__main__':
     parser.add_option("--borders", dest="borders_file", type="string", action="store",
                       help="read boarders from FILE", metavar="FILE")
     parser.add_option("--outputfile", dest="outputfile", type="string", action="store",
-                      help="output file filename")
+                     help="output file filename")
     parser.add_option("--threads", dest="threadnum", type="int", action="store", default=1,
                       help="threads number")
     parser.add_option("--index", dest="index_file", type="string", action="store",
