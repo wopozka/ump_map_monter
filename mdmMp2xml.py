@@ -249,8 +249,8 @@ class NodeGeneralizator(object):
                 if a == file_group_name:
                     break
                 self.relations_offset[file_group_name] += self.t_table_relations[a]
-        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points + \
-               self.borders_point_len
+        return self.relations_offset[file_group_name] + orig_id + self.sum_ways + self.sum_points \
+            + self.borders_point_len
 
 
 class NodesToWayNotFound(ValueError):
@@ -317,7 +317,8 @@ pline_types = {
     0x4:  ["highway",  "secondary", "ump:osmandpri", "0.95"],
     0x5:  ["highway",  "tertiary", "ump:osmandpri", "0.9"],
     0x6:  ["highway",  "residential", "ump:osmandpri", "0.7"],
-    0x7:  ["highway",  "living_street", "ump:osmandpri", "0.5", "note", "FIXME: select one of: living_street, service, residential"],
+    0x7:  ["highway",  "living_street", "ump:osmandpri", "0.5",
+           "note", "FIXME: select one of: living_street, service, residential"],
     0x8:  ["highway",  "trunk_link", "ump:osmandpri", "0.7"],
     0x9:  ["highway",  "motorway_link", "ump:osmandpri", "0.7"],
     0xa:  ["highway",  "track", "tracktype", "grade1", "access", "yes", "ump:osmandpri", "0.5"],
@@ -325,7 +326,8 @@ pline_types = {
     0xc:  ["junction", "roundabout", "ump:osmandpri", "0.7"],
     0xd:  ["highway",  "cycleway"],
     0xe:  ["highway",  "tertiary", "tunnel", "yes", "ump:osmandpri", "0.9"],
-    0xf:  ["highway",  "track", "tracktype", "grade4", "access", "no", "foot", "yes", "bicycle", "yes", "ump:osmandpri", "0.5"],
+    0xf:  ["highway",  "track", "tracktype", "grade4", "access", "no", "foot", "yes", "bicycle", "yes",
+           "ump:osmandpri", "0.5"],
     0x14: ["railway",  "rail"],
     0x15: ["note", "morskie"],  # TODO
     0x16: ["highway",  "path"],
@@ -386,9 +388,9 @@ pline_types = {
     0x10e01: ["highway", "footway", "ref", "Żółty szlak", "marked_trail_yellow", "yes", "osmc", "yes", "osmc_color",
               "yellow", "route", "hiking", "access", "no"],
     0x10e02: ["highway", "footway", "ref", "Zielony szlak",
-             "marked_trail_green", "yes", "osmc", "yes", "osmc_color", "green", "route", "hiking", "access", "no"],
+              "marked_trail_green", "yes", "osmc", "yes", "osmc_color", "green", "route", "hiking", "access", "no"],
     0x10e03: ["highway", "footway", "ref", "Niebieski szlak",
-             "marked_trail_blue", "yes", "osmc", "yes", "osmc_color", "blue", "route", "hiking", "access", "no"],
+              "marked_trail_blue", "yes", "osmc", "yes", "osmc_color", "blue", "route", "hiking", "access", "no"],
     0x10e04: ["highway", "footway", "ref", "Czarny szlak",
               "marked_trail_black", "yes", "osmc", "yes", "osmc_color", "black", "route", "hiking", "access", "no"],
     0x10e07: ["highway", "footway", "ref", "Szlak", "note", "FIXME",
@@ -434,7 +436,7 @@ pline_types = {
 }
 
 umpshape_types = {
-# placeholder
+    # placeholder
 }
 
 
@@ -865,7 +867,7 @@ poi_types = {
     0x5200: ["tourism",  "viewpoint"],
     0x5300: ["sport",    "skiing"],
     0x5400: ["sport",    "swimming"],
-    0x5500: ["waterway", "dam"],  #  Map_Features requires a way
+    0x5500: ["waterway", "dam"],  # Map_Features requires a way
     0x5600: ["highway",  "speed_camera"],
     0x56001: ["highway",  "speed_camera", "enforcement", "average_speed"],
     0x56002: ["highway",  "speed_camera", "type", "portable"],
@@ -915,9 +917,9 @@ poi_types = {
     0x6404: ["historic", "wayside_cross", "religion", "christian"],
     0x6405: ["amenity",  "public_building"],
     0x6406: ["amenity",  "ferry_terminal"],
-    0x6407: ["waterway", "dam"],  #  Map_Features requires a way
+    0x6407: ["waterway", "dam"],  # Map_Features requires a way
     0x6408: ["amenity",  "hospital"],
-    0x6409: ["man_made", "water_works"],  #  random pick from Map_Features
+    0x6409: ["man_made", "water_works"],  # random pick from Map_Features
     0x640a: ["amenity",  "signpost"],
     0x640b: ["landuse",  "military"],
     0x640c: ["man_made", "mineshaft"],
@@ -1233,10 +1235,10 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
         attrs['is_in'] = city
     for n, node in enumerate(nodes[:-1]):
         if n in addrs and node != nodes[n + 1]:
-            type = addrs[n][right * 3 + 0].lower()
-            if type not in interp_types:
+            _type = addrs[n][right * 3 + 0].lower()
+            if _type not in interp_types:
                 continue
-            type = interp_types[type]
+            _type = interp_types[_type]
             low = addrs[n][right * 3 + 1]
             hi = addrs[n][right * 3 + 2]
 
@@ -1266,7 +1268,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
                 shortlat = 0
                 shortlon = 0
 
-            if 0: #prev_house == low:
+            if 0:  # prev_house == low:
                 low_node = prev_node
             elif low == hi:
                 shortlat = (nlat - lat) / 2
@@ -1310,7 +1312,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
             way = {
                 '_timestamp': filestamp,
                 '_nodes': [pt0, pt1],
-                'addr:interpolation': type,
+                'addr:interpolation': _type,
                 '_c': count,
                 # '_src': srcidx,
                 'is_in': city,
@@ -1465,7 +1467,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             misckey, miscvalue = extract_miscinfo(value, messages_printer=messages_printer)
             if misckey and miscvalue:
                 way[misckey] = miscvalue
-        elif key == 'Transit':  # "no thru traffic" / "local traffic only"
+        elif key == 'Transit':  # "no through traffic" / "local traffic only"
             if value.lower().startswith('n'):
                 way['access'] = 'destination'
         elif key == 'Moto':
@@ -1543,8 +1545,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
         elif key == 'Rozmiar':
             way['Rozmiar'] = value
         elif key == 'ForceSpeed':
-              # Routing helper
-              way['_ForceSpeed'] = value
+            # Routing helper
+            way['_ForceSpeed'] = value
         elif key == 'ForceClass':
             fclass = value  # Routing helper
             # Ignore it for the moment, seems to be used mainly for temporary setups
@@ -1620,10 +1622,10 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             # experymenty Ar't
             pass
         elif key in ('RoadID',):
-            # lets omit routing params for maps with routing data
+            # let's omit routing params for maps with routing data
             pass
         elif key.startswith('Nod'):
-            # lets omit routing params for maps with routing data
+            # let's omit routing params for maps with routing data
             pass
         # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
         elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
@@ -1944,6 +1946,7 @@ def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_
     :param direction: in which direction we are looking, according or against nodes order
     :param node_ways_relation: zbiorcze dane dla drog, relacji i punktow
     :param map_elements_props: elementy mapy: points, pointattrs, ways, relatons
+    :param messages_printer: MessagePrinters: printing messages class
     :return: one node of given road
     """
     way_nodes = nodes_to_way(direction, pivot, node_ways_relation=node_ways_relation,
@@ -2167,7 +2170,8 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
                 if 'destination:backward' not in ways[to_wayid]:
                     ways[to_wayid]['destination:backward'] = direction_label
                 else:
-                    ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' + direction_label
+                    ways[to_wayid]['destination:backward'] = ways[to_wayid]['destination:backward'] + ',' \
+                                                             + direction_label
         # otherwise print error
         else:
             messages_printer.printerror('Something went wrong, the via_nod is not the first nor last node of a way')
@@ -2418,7 +2422,7 @@ def extract_szlak(value):
             trial_tag.append('marked_trail_red')
         elif colour.lower() == 'niebieski':
             ref.append('Niebieski szlak')
-            trial_tag('marked_trail_blue')
+            trial_tag.append('marked_trail_blue')
         else:
             ref.append(colour)
             unknonw_ref.append(colour)
@@ -2441,6 +2445,7 @@ def extract_street_for_addr(way):
             return way['name'], 'STREET_missing'
         else:
             return "<empty>", 'STREET_missing'
+
 
 def extract_routeparam(value):
     """
@@ -2478,25 +2483,25 @@ def extract_routeparam(value):
 def get_ump_osmandpri(_way):
     osmand_pri_modifier = 0.1
     class_vs_speeds = {0x1:  6,  # highway:motorway
-                      0x2:  5,  # highway:trunk
-                      0x3:  4,  # highway:primary
-                      0x4:  3,  # highway:secondary
-                      0x5:  3,  # highway:tertiary
-                      0x6:  2,  # highway:residential
-                      0x7:  1,  # highway:living_street
-                      0x8:  2,  # highway:trunk_link
-                      0x9:  4,  # highway:motorway_link
-                      0xa:  0,  # highway:track
-                      0xb:  2,  # highway:primary_link
-                      0xc:  1,  # junction:roundabout
-                      0xd:  1,  # highway:cycleway
-                      0xe:  5,   # highway:tertiary tunnel:yes
-                      0xf:  0,   # highway:track tracktype:grade4
-                      0x10:  1,
-                      0x16:  0,   # highway:path
-                      0x1a:  0,  # route:ferry
-                      0x1b:  0,  # route:ferry
-                      }
+                       0x2:  5,  # highway:trunk
+                       0x3:  4,  # highway:primary
+                       0x4:  3,  # highway:secondary
+                       0x5:  3,  # highway:tertiary
+                       0x6:  2,  # highway:residential
+                       0x7:  1,  # highway:living_street
+                       0x8:  2,  # highway:trunk_link
+                       0x9:  4,  # highway:motorway_link
+                       0xa:  0,  # highway:track
+                       0xb:  2,  # highway:primary_link
+                       0xc:  1,  # junction:roundabout
+                       0xd:  1,  # highway:cycleway
+                       0xe:  5,   # highway:tertiary tunnel:yes
+                       0xf:  0,   # highway:track tracktype:grade4
+                       0x10:  1,
+                       0x16:  0,   # highway:path
+                       0x1a:  0,  # route:ferry
+                       0x1b:  0,  # route:ferry
+                       }
     if 'ump:type' not in _way:
         return None
     if 'ump:osmandpri' not in _way:
@@ -2791,7 +2796,7 @@ def post_load_processing(maxtypes=None, progress_bar=None, map_elements_props=No
             try:
                 rnodes = make_restriction_fromviato(rel, node_ways_relation=node_ways_relation,
                                                     map_elements_props=map_elements_props,
-                                                    messages_printer= messages_printer)
+                                                    messages_printer=messages_printer)
                 if rel['type'] == 'restriction':
                     name_turn_restriction(rel, rnodes, map_elements_props['points'])
                 elif rel['type'] == 'roadsign':
