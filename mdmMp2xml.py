@@ -1226,8 +1226,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
     prev_node = None
     points = map_elements_props['points']
     pointattrs = map_elements_props['pointattrs']
-    attrs = {'_timestamp': filestamp, 'addr:street': street}
-    attrs['NumberX'] = 'yes'
+    attrs = {'_timestamp': filestamp, 'addr:street': street, 'NumberX': 'yes'}
     if region:
         attrs['is_in:state'] = region
     if city:
@@ -2106,9 +2105,9 @@ def add_destination_tag_to_way(direction_sign, ways, messages_printer=None):
     """
     Parameters
     ----------
-    direction_sign: 0x2f line content
-    ways: all ways
-    messages_printer: messager printer
+    direction_sign: dict(), 0x2f line content
+    ways: list(), all ways
+    messages_printer: MessagePrinters(), message printer
     Returns
     -------
 
