@@ -225,8 +225,8 @@ class TestyPoprawnosciDanych(object):
                                     }
         self.wspolrzedne_obiektu = ''
         self.dozwolone_znaki_cp1250 = set(TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250 +
-                                      TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250[:-1].upper() +
-                                      string.printable[:-5] + '°')
+                                          TestyPoprawnosciDanych.DOZWOLONE_ZNAKI_CP1250[:-1].upper() +
+                                          string.printable[:-5] + '°')
 
     def sprawdz_czy_forceclass_zabronione(self, dane_do_zapisu):
         if 'ForceClass' not in dane_do_zapisu or dane_do_zapisu['POIPOLY'] != '[POLYLINE]' \
@@ -1331,8 +1331,8 @@ class tabelaKonwersjiTypow(object):
                                 type_ = type_.split('#')[0].strip()
                                 alias = alias.strip()
                                 if alias in self.alias2TypeFromFile:
-                                    self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu %s w pliku ' +
-                                    plik_pnt2poi + '.' % alias)
+                                    self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu '
+                                                                            '%s w pliku ' + plik_pnt2poi + '.' % alias)
                                 self.alias2TypeFromFile[alias] = type_
             # print(self.alias2TypeFromFile)
             return 0
@@ -1878,8 +1878,9 @@ class PlikMP1(object):
                 for skrot in skroty:
                     if linia_komentarza.startswith(skrot):
                         if 'MiscInfo' in dane_do_zapisu:
-                            self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\nPozostawiam niezmienione i zostawiam komentarz!\n' % (
-                                                   linia_komentarza, dane_do_zapisu['MiscInfo'])))
+                            self.stderrorwrite(('Komentarz sugeruje dodanie linka %s,\nale MiscInfo juz istnieje: %s.\n'
+                                                'Pozostawiam niezmienione i zostawiam komentarz!\n'
+                                                % (linia_komentarza, dane_do_zapisu['MiscInfo'])))
                             czy_dodac_linie_do_tmp_komentarz = True
                         else:
                             dane_do_zapisu['MiscInfo'] = przedrostek[skrot] + \
@@ -2109,7 +2110,7 @@ class PlikMP1(object):
             if 'Phone' not in daneDoZapisu:
                 daneDoZapisu['Phone'] = ''
             return daneDoZapisu['StreetDesc'] + ';' + daneDoZapisu['HouseNumber'] + ';' + daneDoZapisu['Phone'] + ';' \
-                   + daneDoZapisu['MiscInfo']
+                + daneDoZapisu['MiscInfo']
         elif 'Phone' in daneDoZapisu:
             if 'StreetDesc' not in daneDoZapisu:
                 daneDoZapisu['StreetDesc'] = ''
@@ -2629,7 +2630,7 @@ class ObiektNaMapie(object):
     dla poi, miast, adresow, polyline, polygone
     """
 
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer, rekordy_max_min=(0, 0)):
+    def __init__(self, Plik, indeksy_miast, tab_konw_typow, args, stderr_stdout_writer, rekordy_max_min=(0, 0)):
         self.Komentarz = []
         self.DataX = []
         self.PoiPolyPoly = ''
@@ -2641,7 +2642,7 @@ class ObiektNaMapie(object):
         self.czyDodacCityIdx = args.cityidx
         self.errOutWriter = stderr_stdout_writer
         # indeksy miast
-        self.IndeksyMiast = IndeksyMiast
+        self.indeksy_miast = indeksy_miast
         self.tryb_mkgmap = False
         if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap:
             self.tryb_mkgmap = True
@@ -2707,7 +2708,7 @@ class ObiektNaMapie(object):
         self.Dane1 = []
 
     def ustaw_wartosc_zmiennej_cityidx(self, nazwa_miasta):
-        self.CityIdx = self.IndeksyMiast.zwroc_indeks_miasta(nazwa_miasta)
+        self.CityIdx = self.indeksy_miast.zwroc_indeks_miasta(nazwa_miasta)
         return 0
 
     def dodaj_indeksy_miast_do_obiektu(self, nazwa_miasta):
@@ -2716,13 +2717,13 @@ class ObiektNaMapie(object):
         else:
             self.Dane1.append('CityName=' + nazwa_miasta)
             if not self.tryb_mkgmap:
-                for c_names in self.IndeksyMiast.sekcja_cityname:
+                for c_names in self.indeksy_miast.sekcja_cityname:
                     self.Dane1.append(c_names)
 
 
 class Poi(ObiektNaMapie):
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer, typ_obj='pnt'):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer,
+    def __init__(self, Plik, indeksy_miast, tab_konw_typow, args, stderr_stdout_writer, typ_obj='pnt'):
+        ObiektNaMapie.__init__(self, Plik, indeksy_miast, tab_konw_typow, args, stderr_stdout_writer,
                                rekordy_max_min=(8, 7))
         self.entry_otwarte_do_extras = False
         if hasattr(args, 'entry_otwarte_do_extras'):
@@ -2843,8 +2844,8 @@ class City(ObiektNaMapie):
                     '0x700': '7', '0x600': '8', '0x500': '9', '0x400': '10'}
     typetoEndlevel = ('0', '1', '1', '2', '2', '3', '3', '3', '4', '4', '4')
 
-    def __init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer):
-        ObiektNaMapie.__init__(self, Plik, IndeksyMiast, tab_konw_typow, args, stderr_stdout_writer,
+    def __init__(self, Plik, indeksy_miast, tab_konw_typow, args, stderr_stdout_writer):
+        ObiektNaMapie.__init__(self, Plik, indeksy_miast, tab_konw_typow, args, stderr_stdout_writer,
                                rekordy_max_min=(4, 4))
 
     def liniaZPliku2Dane(self, LiniaZPliku, orgLinia):
@@ -3045,7 +3046,6 @@ class plikPNT(object):
         else:
              self.punktzPntAdrCiti = Poi(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer,
                                          typ_obj=typ_pliku)
-
 
     @staticmethod
     def usun_naglowek(zawartoscPliku):
@@ -3326,7 +3326,7 @@ def montujpliki(args, naglowek_mapy=''):
 
     # gdy wybierzemy do montowania same radary, wtedy nalezy zamontowac cala polske - tylko drogi i radary.
     if args.obszary[0] == 'UMP-radary' and len(args.obszary) == 1:
-        for a in listujobszary(args, wydruku_obszary=False):
+        for a in listujobszary(args, wydrukuj_obszary=False):
             if a.find('UMP-PL') >= 0:
                 args.obszary.append(a)
         args.tylkodrogi = 1
@@ -3345,7 +3345,6 @@ def montujpliki(args, naglowek_mapy=''):
     if hasattr(args, 'graniceczesciowe') and not args.tylkodrogi and not args.trybosmand:
         if args.graniceczesciowe:
             plikidomont.zamien_granice_na_granice_czesciowe()
-
 
     # jesli montujemy mape dla mkgmap i jest ona bez routingu nie montuj plikow granic bo wtedy kompilacja sie wylozy
     if hasattr(args, 'tryb_mkgmap') and args.tryb_mkgmap and hasattr(args, 'dodaj_routing') and not args.dodaj_routing:
@@ -3810,6 +3809,7 @@ def demontuj(args):
     del plikMp
     return zwroc_dane_do_gui(args, listaDiffow, slownikHash)
 
+
 def demontuj_obszary_txt(args):
     stderr_stdout_writer = ErrOutWriter(args)
     # wczytaj liste map
@@ -3879,7 +3879,8 @@ def edytuj(args):
                 process = subprocess.call([Zmienne.MapEdit2Exe, os.path.join(Zmienne.KatalogRoboczy,
                                                                              Zmienne.InputFile)])
         else:
-            stderr_stdout_writer.stderrorwrite('Nieprawidlowa sciezka do pliku wykonywalnego mapedit.exe.\nNie moge kontynuowac.')
+            stderr_stdout_writer.stderrorwrite('Nieprawidlowa sciezka do pliku wykonywalnego mapedit.exe.\n'
+                                               'Nie moge kontynuowac.')
         return 1
     else:
         if os.path.isfile(Zmienne.MapEditExe):
@@ -3890,7 +3891,8 @@ def edytuj(args):
                 process = subprocess.call([Zmienne.MapEditExe, os.path.join(Zmienne.KatalogRoboczy,
                                                                             Zmienne.InputFile)])
         else:
-            stderr_stdout_writer.stderrorwrite('Nieprawidlowa sciezka do pliku wykonywalnego mapedit.exe.\nNie moge kontynuowac.')
+            stderr_stdout_writer.stderrorwrite('Nieprawidlowa sciezka do pliku wykonywalnego mapedit.exe.\n'
+                                               'Nie moge kontynuowac.')
         return 1
 
 
@@ -3958,7 +3960,8 @@ def sprawdz(args):
             while 1:
                 if linijki_pliku[numer_linii_pliku].startswith('Data'):
                     x, y = linijki_pliku[numer_linii_pliku].split('=')[-1].split('),(')[0].lstrip('(').split(',')
-                    bledy['zapetlona numeracja'].append('-1,zapetlona numeracja,' + x + ',' + y + ',,0,1,3,255,65535,,,0,0,0,6,0,19')
+                    bledy['zapetlona numeracja'].append('-1,zapetlona numeracja,' + x + ',' + y +
+                                                        ',,0,1,3,255,65535,,,0,0,0,6,0,19')
                     break
                 else:
                     numer_linii_pliku -= 1
@@ -4198,7 +4201,7 @@ def wojkuj(args):
     stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe(args.plikmp)
     if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        wojek_exe =  os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
+        wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek')
     else:
         wojek_exe = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek.exe')
     wojek_slownik_txt = os.path.join(os.path.join(Zmienne.KatalogzUMP, 'narzedzia'), 'wojek-slownik-mkgmap.txt')
@@ -4215,8 +4218,8 @@ def wojkuj(args):
     shutil.copy(wynik_mp_wojek.name, wynik_mp)
     os.remove(wynik_mp_wojek.name)
 
-def kompiluj_mape(args):
 
+def kompiluj_mape(args):
     stderr_stdout_writer = ErrOutWriter(args)
     zmienne = UstawieniaPoczatkowe('wynik.mp')
     pliki_do_kompilacji = list()
@@ -4261,7 +4264,7 @@ def kompiluj_mape(args):
     stderr_stdout_writer.stdoutwrite('Kompiluje mape przy pomocy mkgmap')
     stderr_stdout_writer.stdoutwrite(' '.join(java_call_args))
     gmapsupp_img_path = os.path.join(zmienne.KatalogRoboczy, 'gmapsupp.img')
-    gmapi_folder_path =os.path.join(zmienne.KatalogRoboczy, nazwa_map + '.gmap')
+    gmapi_folder_path = os.path.join(zmienne.KatalogRoboczy, nazwa_map + '.gmap')
     if args.format_mapy == 'gmapsupp':
         if os.path.exists(gmapsupp_img_path):
             os.remove(gmapsupp_img_path)
@@ -4309,10 +4312,11 @@ def stworz_plik_typ(args):
     funkcja tworzy plik typ z plikow czastkowych obecnych w
     Parameters
     ----------
-    args: argumenty wywo³ania
+    args: ArgParse(): argumenty linii poleceñ
 
-    Returns: nazwa_pliku sukces, '' blad
+    Returns
     -------
+    tuple(): nazwa_pliku sukces, '' blad
     """
     # z gui przekazywane to jest jako string, dlatego trzeba tak obchodzic.
     stderr_stdout_writer = ErrOutWriter(args)
@@ -4398,7 +4402,7 @@ def stworz_plik_typ(args):
     if os.path.isfile(plik_typ_txt):
         stderr_stdout_writer.stdoutwrite('Zapisalem plik typ: %s' % plik_typ_txt)
     else:
-        stderr_stdout_writer.stdoutwrite('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' %plik_typ_txt)
+        stderr_stdout_writer.stdoutwrite('Nie udalo sie zapisac pliku typ: %s. Nie moge kontynuowac' % plik_typ_txt)
         return ''
     java_call_args = Mkgmap(args, zmienne).java_call_typ()
     stderr_stdout_writer.stdoutwrite('Kompiluje plik typ: ' + ' '.join(java_call_args) + ' ' + plik_typ_txt)
@@ -4618,7 +4622,7 @@ def main(argumenty):
                                      help='rodzaj pliku typ do wyboru')
     parser_kompiluj_typ.add_argument('-m', '--mkgmap-path', default='', help='Sciezka do programu mkgmap')
     parser_kompiluj_typ.add_argument('-Xmx', '--maksymalna-pamiec', default='1G',
-                                      help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
+                                     help='Maksymalna pamiêc dla srodowiska java, np -Xmx 2G gdzie g, G, m, M,')
     parser_kompiluj_typ.add_argument('-f', '--family-id', default='6324', help='Family ID dla pliku typ '
                                                                                '(domyslnie 6324)')
     parser_kompiluj_typ.add_argument('-w', '--uwzglednij-warstwice', default=False, action='store_true',
