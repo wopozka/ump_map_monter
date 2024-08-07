@@ -3044,8 +3044,8 @@ class plikPNT(object):
         if typ_pliku == 'cities':
             self.punktzPntAdrCiti = City(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer)
         else:
-             self.punktzPntAdrCiti = Poi(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer,
-                                         typ_obj=typ_pliku)
+            self.punktzPntAdrCiti = Poi(nazwa_pliku, globalne_indeksy, tab_konwersji, args, stderr_stdout_writer,
+                                        typ_obj=typ_pliku)
 
     @staticmethod
     def usun_naglowek(zawartoscPliku):
@@ -3632,7 +3632,7 @@ def demontuj(args):
 
     try:
         zawartoscPlikuMp = open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
-                              errors=Zmienne.ReadErrors).read()
+                                errors=Zmienne.ReadErrors).read()
     except FileNotFoundError:
         stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.'
                                            % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
