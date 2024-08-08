@@ -1480,7 +1480,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 for rp_key, rp_val in r_params.items():
                     way[rp_key] = rp_val
             else:
-                if options.ignore_errors:
+                if ignore_errors:
                     messages_printer.printerror('Corrupted RouteParam parameters: %s' % value)
                 else:
                     raise ParsingError('Corrupted RouteParam parameters: %s' % value)
@@ -1493,7 +1493,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['except'] = ','.join(excpts)
         elif key == 'HLevel0':
             if feat != Features.polyline:
-                if options.ignore_errors:
+                if ignore_errors:
                     messages_printer.printerror('HLevel0 used on a polygon')
                 else:
                     raise ParsingError('HLevel0 used on a polygon')
@@ -2898,7 +2898,7 @@ def remove_label_braces(local_way):
     return new_way
 
 
-def add_city_region_atm_to_pointsattr(l_pointsattr):
+def add_city_region_atm_to_pointsattr(l_pointsattr, options):
     _pac = l_pointsattr.copy()
     if options.regions and 'is_in:state' in _pac:
         if 'place' in _pac and _pac['place'] in {'city', 'town', 'village'}:
@@ -2971,7 +2971,7 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
                 elif filename == 'no_numbers' and 'NumberX' not in _points_attr:
                     print_point_pickled(_point, _points_attr, task_id, orig_id, node_generalizator, out)
                 elif filename == 'index':
-                    _pac = add_city_region_atm_to_pointsattr(_points_attr)
+                    _pac = add_city_region_atm_to_pointsattr(_points_attr, options)
                     print_point_pickled(_point, _pac, task_id, orig_id, node_generalizator, out)
 
     for task_id, pickled_way in enumerate(pickled_filenames['ways']):
@@ -3587,5 +3587,5 @@ if __name__ == '__main__':
                                                 'These addresses will not be searchable.')
     parser.add_option('--mp_file_encoding', dest='mp_file_encoding', type='string', action='store',
                       help='Input file encoding. Select from: utf8, cp1250, latin2')
-    (options, args) = parser.parse_args()
-    main(options, args)
+    (_options, _args) = parser.parse_args()
+    main(_options, _args)
