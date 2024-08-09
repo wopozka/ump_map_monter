@@ -1822,6 +1822,7 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
             else:
                 if options.ignore_errors:
                     messages_printer.printerror('Line:' + str(linenum) + ':Missing = in line: %s. Ignoring' % line)
+                    continue
                 else:
                     messages_printer.printerror('Line:' + str(linenum) + 'Missing = in line: %s' % line)
                     raise ParsingError('Can\'t split the thing')
