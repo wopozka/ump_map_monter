@@ -863,15 +863,21 @@ class Mapa(object):
 
     @staticmethod
     def sprawdzParzystosc(Numery):
+        # sprawdzamy czy sa poprawnie zefiniowane konce numeraji oraz czy jest poprawna parzystosc liczb, tzn
+        # dla O start i koniec powinien byc nieparzysty, dla E start i koniec powinien byc parzysty
         returnVal = []
         for kol_num in (1, 4):
-            if Numery[kol_num] in ('N', 'B'):
+            # jesli nie ma zdefiniowanej numeracji to idz do nastepnego rekordu
+            if Numery[kol_num] == 'N':
                 continue
             liczba1 = int(Numery[kol_num + 1])
             liczba2 = int(Numery[kol_num + 2])
             if liczba1 <= 0 or liczba2 <= 0:
                 returnVal.append('Numeracja-niezdefiniowany koniec (' + Numery[kol_num] + ',' + (Numery[kol_num + 1]) +
                                  ',' + (Numery[kol_num + 2]) + ')')
+            # jesli numeracja jest both nie sprawdzaj parzystosci tylko kontynuuj
+            if Numery[kol_num] == 'B':
+                continue
             parzystosc = 1 if Numery[kol_num] == 'O' else 0
             if liczba1 % 2 != parzystosc or liczba2 % 2 != parzystosc:
                 returnVal.append('Numeracja-nieprawidłowa parzystość (' + (Numery[kol_num]) + ',' +
