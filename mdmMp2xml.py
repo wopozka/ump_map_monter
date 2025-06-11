@@ -534,6 +534,10 @@ umppoi_types = {
                 'WETERYNARZ': 0x30026,
                 'DENTYSTA': 0x30027,
 
+                'ARESZT': 0x30041,
+                'WIEZIENIE': 0x30041,
+                'ZAKLAD_KARNY': 0x30041,
+
                 'FO': 0x56001,
                 'FP': 0x56002,
                 'FS': 0x56003,
@@ -841,6 +845,7 @@ poi_types = {
     0x30027: ["amenity",  "dentist"],
     0x3003: ["amenity",  "townhall"],
     0x3004: ["amenity",  "courthouse"],
+    0x30041: ["amenity",  "prison"],
     0x3005: ["amenity",  "nightclub"],
     0x3006: ["amenity",  "border_station"],
     0x3007: ["amenity",  "townhall"],
