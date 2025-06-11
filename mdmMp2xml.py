@@ -693,7 +693,7 @@ poi_types = {
     0x2507: ["highway",  "motorway_junction", "barrier", "toll_booth"],  # VIATOLL
     0x2600: ["highway",  "rest_area"],
     0x2700: ["highway",  "exit"],
-    0x2800: ["note",    "housenumber"],
+    0x2800: ["place",    "region"],
     0x2900: ["landuse",  "commercial"],
     0x2a:   ["amenity",  "restaurant"],
     0x2a00: ["amenity",  "restaurant"],
