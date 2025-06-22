@@ -428,6 +428,7 @@ class TestyPoprawnosciDanych(object):
                     '\nBrak nazwy Miasta dla punktu o wspolrzednych %s.' % coords)
                 return 'brak_nazwy_miasta'
             return ''
+        return ''
 
     def sprawdz_label_dla_poly(self, dane_do_zapisu):
         if 'Label' not in dane_do_zapisu:
@@ -1332,7 +1333,7 @@ class tabelaKonwersjiTypow(object):
                                 alias = alias.strip()
                                 if alias in self.alias2TypeFromFile:
                                     self.stderr_stdout_writer.stderrorwrite('Uwaga! Podwojna definicja aliasu '
-                                                                            '%s w pliku ' + plik_pnt2poi + '.' % alias)
+                                                                            '%s w pliku %s.' % (alias, plik_pnt2poi))
                                 self.alias2TypeFromFile[alias] = type_
             # print(self.alias2TypeFromFile)
             return 0
@@ -2458,9 +2459,18 @@ class PlikMP1(object):
                 del(dane_do_zapisu[numeracja])
         return dane_do_zapisu
 
-    @staticmethod
-    def przywroc_data0_i_entrypointy_z_origdata0(dane_do_zapisu):
-        Data0 = list(a for a in dane_do_zapisu if a.startswith('Data0'))[0]
+    def przywroc_data0_i_entrypointy_z_origdata0(self, dane_do_zapisu):
+        data_ = []
+        for data_num, data_name in enumerate(['Data0', 'Data1', 'Data2', 'Data3', 'Data4']):
+            data_ = list(a for a in dane_do_zapisu if a.startswith(data_name))
+            if data_:
+                # if data_num > 0:
+                #     self.stderrorwrite('Poi narysowane na Data%s=%s ' % (data_num, dane_do_zapisu[data_[0]]))
+                break
+        # if not data_:
+        #     self.stderrorwrite('Brak data dla POI')
+        #     return dane_do_zapisu
+        Data0 = data_[0]
         if 'OrigData0' in dane_do_zapisu and Data0:
             if dane_do_zapisu['OrigData0'] != dane_do_zapisu[Data0]:
                 dane_do_zapisu['EntryPoint'] = dane_do_zapisu[Data0]
