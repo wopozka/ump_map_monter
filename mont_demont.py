@@ -1010,7 +1010,7 @@ class tabelaKonwersjiTypow(object):
             '0x2a04': ["chinese"],
             '0x2a05': ["deli", "piekarnia"],
             '0x2a06': ["restauracja", "internationa", "international", "restaurant"],
-            '0x2a07': ["fastfood", "food", "burger"],
+            '0x2a07': ["fastfood", "burger"],
             '0x2a08': ["italian"],
             '0x2a09': ["mexican"],
             '0x2a0a': ["pizza"],
