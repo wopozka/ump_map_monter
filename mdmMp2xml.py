@@ -2263,14 +2263,27 @@ def extract_reference_code(label, refpos, messages_printer=None):
         0x1f: 'ele'
     }
 
-    label_split = label[refpos + 2:].split(' ', 1)
-    if len(label_split) == 2:
-        refstr, right = label[refpos + 2:].split(' ', 1)
+    # najpierw wydziel ref_label
+    try:
+        code, ref_label = label[refpos + 2:].split(']')
+    except ValueError:
+        if messages_printer is not None:
+            messages_printer.printerror("Error in reference label: " + label + '. Missing ].')
+        return False, label, label, label
+
+
+    ref_label_split = ref_label.split(' ', 1)
+    ref = ref_label_split[0]
+    if len(ref_label_split) == 2:
+        right = ref_label_split[1]
     else:
-        refstr = label_split[0]
         right = ""
 
-    code, ref = refstr.split(']')
+    # try:
+    #     code, ref = refstr.split(']')
+    # except ValueError:
+    #     if messages_printer is not None:
+    #         messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
     label = (label[:refpos] + right).strip(' \t')
     try:
         reference_code = int(code, 0)
