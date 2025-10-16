@@ -518,6 +518,11 @@ umppoi_types = {
                 'RENT_A_BOAT': 0x2f023,
                 'LODKI': 0x2f023,
 
+                'POCZTA': 0x2f05,
+                'KURIER': 0x2f051,
+                'INPOST': 0x2f052,
+                'PACZKOMAT': 0x2f053,
+
                 'BANK': 0x2f06,
                 'ATMBANK': 0x2f061,
                 'ATM': 0x2f062,
@@ -799,9 +804,9 @@ poi_types = {
     0x2f030: ["shop",     "car"],
     0x2f04: ["aeroway",  "aerodrome"],
     0x2f05: ["amenity",  "post_office"],
-    0x2f050: ["amenity",  "post_office", "type", "courier"],
-    0x2f051: ["amenity",  "post_office", "type", "courier", "operator", "dhl"],
+    0x2f051: ["amenity",  "post_office", "type", "courier"],
     0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "ups"],
+    0x2f053: ["amenity",  "parcel_locker"],
     0x2f06: ["amenity",  "bank"],
     0x2f061: ["amenity",  "bank", "atm", "yes"],
     0x2f062: ["amenity",  "atm"],
