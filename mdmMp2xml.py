@@ -496,6 +496,11 @@ shape_types = {
 
     0x2d0a: ["leisure",  "stadium"],
 }
+
+# poniżej wybrane unikalne typy dla aliasów UMP, dodajemy dalsze liczby do bazowego typu, np poczta ta 0x2f05,
+# dodatkowe wyszczególnione typy to 0x2f051, 0x2f052, 0x2f053 itd. Sam nowy typ musi się później pojawić w
+# poi_types
+
 umppoi_types = {
                 'SUSHI': 0x2a025,
                 'GRILL': 0x2a031,
@@ -518,7 +523,6 @@ umppoi_types = {
                 'RENT_A_BOAT': 0x2f023,
                 'LODKI': 0x2f023,
 
-                'POCZTA': 0x2f05,
                 'KURIER': 0x2f051,
                 'INPOST': 0x2f052,
                 'PACZKOMAT': 0x2f053,
@@ -805,7 +809,7 @@ poi_types = {
     0x2f04: ["aeroway",  "aerodrome"],
     0x2f05: ["amenity",  "post_office"],
     0x2f051: ["amenity",  "post_office", "type", "courier"],
-    0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "ups"],
+    0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "InPost"],
     0x2f053: ["amenity",  "parcel_locker"],
     0x2f06: ["amenity",  "bank"],
     0x2f061: ["amenity",  "bank", "atm", "yes"],
