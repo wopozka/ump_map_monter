@@ -2288,11 +2288,6 @@ def extract_reference_code(label, refpos, messages_printer=None):
     else:
         right = ""
 
-    # try:
-    #     code, ref = refstr.split(']')
-    # except ValueError:
-    #     if messages_printer is not None:
-    #         messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
     label = (label[:refpos] + right).strip(' \t')
     try:
         reference_code = int(code, 0)
