@@ -1072,7 +1072,7 @@ class tabelaKonwersjiTypow(object):
             '0x2f05': ["poczta", "inpost", "paczkomat", "kurier"],
             '0x2f06': ["atm", "atmbank", "bank", "banki", "kantor"],
             '0x2f07': ["cardealer"],
-            '0x2f08': ["bus", "metro", "pkp", "pks", "tram", "taxi"],
+            '0x2f08': ["bus", "metro", "pkp", "pks", "tram", "trambus", "taxi"],
             '0x2f09': ["port", "marina", "stanica"],
             '0x2f0b': ["parking"],
             '0x2f0c': ["info", "informacja"],
