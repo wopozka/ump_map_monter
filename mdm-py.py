@@ -1150,6 +1150,10 @@ class mdmConfig(object):
         args.ignore_errors = False
         args.regions = False
         args.no_osm = True
+        args.road_signs = True
+        args.mp_file_encoding = 'cp1250'
+        args.force_timestamp = None
+        args.show_nonsearchable_addresses = False
         return args
 
     def zwroc_args_dla_rozdzialu_klas(self):
