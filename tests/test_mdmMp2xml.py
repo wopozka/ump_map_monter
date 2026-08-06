@@ -140,7 +140,7 @@ def test_lats_longs_from_string(target, answer):
 TEST_EXTRACT_REF_CODE = (
     ('~[0x01]123', (True, 'int_ref', '123', '')),
     ('~[0x0 5]101', (False, '0x0 5', '101', '')),
-    ('~[0x05101KKKK', (False, '~[0x05101KKKK', '~[0x05101KKKK', '')),
+    ('~[0x05101KKKK', (False, '~[0x05101KKKK', '~[0x05101KKKK', '~[0x05101KKKK')),
     ('~[0x01]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),
     ('~[0x2a]123', (True, 'int_ref', '123', '')),
     ('~[0x2a]123 Mazowiecka', (True, 'int_ref', '123', 'Mazowiecka')),

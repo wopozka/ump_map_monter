@@ -496,6 +496,11 @@ shape_types = {
 
     0x2d0a: ["leisure",  "stadium"],
 }
+
+# poniżej wybrane unikalne typy dla aliasów UMP, dodajemy dalsze liczby do bazowego typu, np poczta ta 0x2f05,
+# dodatkowe wyszczególnione typy to 0x2f051, 0x2f052, 0x2f053 itd. Sam nowy typ musi się później pojawić w
+# poi_types
+
 umppoi_types = {
                 'SUSHI': 0x2a025,
                 'GRILL': 0x2a031,
@@ -517,6 +522,10 @@ umppoi_types = {
                 'RENTACAR': 0x2f022,
                 'RENT_A_BOAT': 0x2f023,
                 'LODKI': 0x2f023,
+
+                'KURIER': 0x2f051,
+                'INPOST': 0x2f052,
+                'PACZKOMAT': 0x2f053,
 
                 'BANK': 0x2f06,
                 'ATMBANK': 0x2f061,
@@ -799,9 +808,9 @@ poi_types = {
     0x2f030: ["shop",     "car"],
     0x2f04: ["aeroway",  "aerodrome"],
     0x2f05: ["amenity",  "post_office"],
-    0x2f050: ["amenity",  "post_office", "type", "courier"],
-    0x2f051: ["amenity",  "post_office", "type", "courier", "operator", "dhl"],
-    0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "ups"],
+    0x2f051: ["amenity",  "post_office", "type", "courier"],
+    0x2f052: ["amenity",  "post_office", "type", "courier", "operator", "InPost"],
+    0x2f053: ["amenity",  "parcel_locker"],
     0x2f06: ["amenity",  "bank"],
     0x2f061: ["amenity",  "bank", "atm", "yes"],
     0x2f062: ["amenity",  "atm"],
@@ -2279,11 +2288,6 @@ def extract_reference_code(label, refpos, messages_printer=None):
     else:
         right = ""
 
-    # try:
-    #     code, ref = refstr.split(']')
-    # except ValueError:
-    #     if messages_printer is not None:
-    #         messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
     label = (label[:refpos] + right).strip(' \t')
     try:
         reference_code = int(code, 0)

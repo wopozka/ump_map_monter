@@ -9,7 +9,6 @@ import tkinter.scrolledtext
 import tkinter.messagebox
 import sys
 import re
-import mdmEdytorPlikow
 try:
     from ctypes import windll
     ctypes_imported = True
@@ -21,6 +20,7 @@ try:
     import mont_demont as mont_demont_py
     import znajdz_wystajace
     import mdmkreatorOsmAnd
+    import mdmEdytorPlikow
 except ImportError:
     DownloadEverything = 1
 
@@ -2196,15 +2196,16 @@ class SetupMode(object):
                 continue
             else:
                 self.umpHome = abc
+        print('Utworzylem katalog ump: %s, do niego będą kopiowane pliki.' % self.umpHome)
         os.makedirs(self.umpHome)
 
     def sciagnij_pliki(self):
         for plik in self.plikiDoSciagniecia:
             try:
-                u = urllib.request.urlopen(self.plikiDoSciagniecia[plik])
+                u = urllib.request.urlopen(self.plikiDoSciagniecia[plik], timeout=5)
                 f = open(os.path.join(self.umpHome, plik), 'wb')
                 meta = u.info()
-                print(meta['Content-Length'])
+                # print(meta['Content-Length'])
                 filesize = int(meta['Content-Length'])
                 print("Downloading: %s Bytes: %s" % (plik, filesize))
                 file_size_dl = 0
@@ -2223,13 +2224,16 @@ class SetupMode(object):
                     # print(status)
 
                 f.close()
-            except urllib.error.HTTPError:
+            except (urllib.error.HTTPError, urllib.error.URLError):
                 print('Nie moge sciagnac pliku ' + plik)
+                self.plikiDoSciagniecia[plik] = None
 
     def rozpakuj_pliki_do_katalogow(self):
         # tworzymy katalogi mapedita i rozpakowujemy zipy
         os.chdir(self.umpHome)
         for plik in self.plikiDoSciagniecia:
+            if self.plikiDoSciagniecia[plik] is None:
+                continue
             if not plik == 'cvs.exe':
                 if plik.startswith('mapedit2'):
                     dest_directory = 'mapedit2'
