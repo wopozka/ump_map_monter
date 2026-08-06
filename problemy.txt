@@ -49,12 +49,16 @@ istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
     argparse (linia 4435) to "umphome". Uzycie --ump-home powoduje
     AttributeError: 'Namespace' object has no attribute 'umphone'.
 
+    poprawione!
+
 1.6 [BLAD] PlikMP1.__init__ - self.naglowek nieustawione
     Linie: 1666-1676 (konsumowane w linii 3438)
     Gdy brak narzedzia/header.txt, blok FileNotFoundError tylko loguje
     error i nigdy nie ustawia self.naglowek. montujpliki() pozniej robi
     plikMP.write(zawartoscPlikuMp.naglowek) (linia 3438) -> AttributeError
     zamiast czytelnego komunikatu o brakujacym pliku.
+
+    poprawione
 
 1.7 [CICHA KORUPCJA DANYCH] Obszary.zwroc_obszar / point_inside_polygon
     Linie: 1371-1379
@@ -67,6 +71,8 @@ istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
     wspolrzedne x/y zostaja pomieszane, co cicho korumpuje test "punkt w
     obszarze" uzywany do automatycznego przypisywania POI do plikow
     regionow.
+
+    poprawione
 
 1.8 [BLAD] cp1250_to_ascii() - brak return
     Linie: 3147-3152
@@ -106,6 +112,8 @@ istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
     Zamierzona "szybka sciezka" dla pustego/jednoliniowego pliku
     nigdy sie nie wykonuje.
 
+    naprawione
+
 1.13 [LEAK ZASOBOW] montujpliki() - niedomkniety handle pliku
     Linie: 3382-3433
     plikPNTTXT = open(...) bez "with", zamykany w linii 3433, ale
@@ -114,11 +122,15 @@ istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
     rozszerzeniu przecieka deskryptor pliku; w dlugo dzialajacym GUI
     (mdm-py.py) narasta to przy kolejnych uruchomieniach.
 
+    zrobione
+
 1.14 [LEAK ZASOBOW] demontuj() i pomocnicze - brak with/close
     Linie: 3644-3645, 3742-3743, 3745-3746
     open(...).read() / .readlines() lancuchowane bez "with" i bez
     jawnego .close(). W dlugo zyjacym procesie (GUI) przecieka
     deskryptory przy kazdym demontazu.
+
+    zrobione, potestowac
 
 1.15 [UTRATA DANYCH] PlikMP1.przeniesc_zawartosc_nowosci_pnt_do_plikow()
     Linie: 2178-2212

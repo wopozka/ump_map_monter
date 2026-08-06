@@ -1370,11 +1370,10 @@ class Obszary(object):
 
     def zwroc_obszar(self, x, y):
         for a in self.polygonyObszarow:
-            if self.point_inside_polygon(
-                    x, y,
-                    [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 == 0],
-                    [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 != 0]
-            ):
+            if self.point_inside_polygon(x, y, [float(b) for b in self.polygonyObszarow[a][0::2]],
+                                         [float(b) for b in self.polygonyObszarow[a][1::2]]):
+                    # [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 == 0],
+                    # [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 != 0]
                 return a
         return 'None'
 
@@ -1657,6 +1656,7 @@ class PlikMP1(object):
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = AutoPlikDlaPoi()
         self.dozwolone_obszary_dla_plikow = None
+        self.naglowek = ''
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
         self.plikHash = {}
@@ -3062,9 +3062,8 @@ class plikPNT(object):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         # pomijaj wszystko od poczatku do wystapienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
-        if len(zawartoscPliku) == 1:
-            if zawartoscPliku[0].strip() == 0:
-                return zawartoscPliku
+        if len(zawartoscPliku) == 1 and not zawartoscPliku[0].strip():
+            return zawartoscPliku
 
         tabIndex = 0
         indeksPierwszegoPoprawnegoElementu = -1
@@ -3429,6 +3428,7 @@ def montujpliki(args, naglowek_mapy=''):
 
             else:
                 print('nieznany typ pliku %s' % pliki_w_ump)
+                plikPNTTXT.close()
                 continue
             plikPNTTXT.close()
 
@@ -3641,8 +3641,10 @@ def demontuj(args):
     stderr_stdout_writer.stdoutwrite('Wczytuje %s' % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
 
     try:
-        zawartoscPlikuMp = open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
-                                errors=Zmienne.ReadErrors).read()
+        with open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
+                  errors=Zmienne.ReadErrors) as mp_plik:
+            zawartoscPlikuMp = mp_plik.read()
+
     except FileNotFoundError:
         stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.'
                                            % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
@@ -3739,11 +3741,13 @@ def demontuj(args):
         else:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
-                    orgPlikZawartosc = open(nazwa_pliku, encoding=Zmienne.Kodowanie,
-                                            errors=Zmienne.ReadErrors).readlines()
+                    nazwa_pliku_ = 'granice-czesciowe.txt'
                 else:
-                    orgPlikZawartosc = open(os.path.join(Zmienne.KatalogzUMP, nazwa_pliku), encoding=Zmienne.Kodowanie,
-                                            errors=Zmienne.ReadErrors).readlines()
+                    nazwa_pliku_ = os.path.join(Zmienne.KatalogzUMP, nazwa_pliku)
+
+                with open(nazwa_pliku_, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as n_plik_gr:
+                    orgPlikZawartosc = n_plik_gr.readlines()
+
                 if orgPlikZawartosc:
                     if orgPlikZawartosc[-1][-1] != '\n':
                         orgPlikZawartosc[-1] += '\\ No new line at the end of file\n'
@@ -3862,7 +3866,7 @@ def edytuj(args):
     stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
-        Zmienne.ustaw_katalog_home(args.umphone)
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
