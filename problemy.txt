@@ -1,0 +1,692 @@
+ANALIZA PROJEKTU ump_map_monter - ZNALEZIONE BLEDY I PROBLEMY
+================================================================
+Data analizy: 2026-08-06
+
+Uwaga: pozycje uporzadkowane w ramach kazdego pliku od najbardziej
+krytycznych (crashe, utrata danych, cicha korupcja danych) do mniej
+istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
+
+
+================================================================
+1. mont_demont.py (silnik montujacy/demontujacy mapy)
+================================================================
+
+1.1 [KRYTYCZNE] demontuj() - ZeroDivisionError na malych mapach
+    Linia: 3685
+    int(ilosc_rekordow/100) uzywane jako dzielnik modulo do progress
+    bara. Gdy plik mp ma mniej niz 100 rekordow, int(x/100) = 0, a
+    (numer_aktualnego_rekordu + 1) % 0 rzuca ZeroDivisionError.
+    Demontaz kazdej malej mapy (male/testowe obszary) wywala sie od
+    razu na pierwszym rekordzie.
+
+1.2 [KRYTYCZNE] demontuj() - TypeError przy brakujacym newline
+    Linia: 3764
+    plikMp.plikizMp[nazwa_pliku][-1][-1] += '\ No new line...'
+    Nadmiarowy [-1] indeksuje ostatni znak (str) ostatniej linii i
+    probuje += (item assignment na str - niemozliwe).
+    TypeError: 'str' object does not support item assignment.
+    Wystepuje przy kazdym pliku, ktory nie konczy sie znakiem \n -
+    czyli dokladnie w przypadku, ktory ten kod mial obslugiwac.
+
+1.3 [KRYTYCZNE - UTRATA DANYCH] wojkuj() / ustaw_force_speed()
+    Linie: 4210-4229, 4302-4317
+    process.wait() bez sprawdzenia process.returncode, po czym
+    bezwarunkowo: os.remove(wynik_mp) + shutil.copy(plik_tymczasowy,
+    wynik_mp). Jesli wojek.exe / podnies-poziom.pl padnie z bledem,
+    plik tymczasowy jest pusty/niekompletny, a oryginalny wynik.mp
+    zostaje trwale zniszczony i zastapiony pustym/uszkodzonym plikiem.
+
+1.4 [KRYTYCZNE - UTRATA DANYCH] dodaj_dane_routingowe()
+    Linie: 4186-4207
+    process.communicate() zapisywany do plik_wyjsciowy bez sprawdzenia
+    returncode ani poprawnosci danych z netgena. Jesli netgen zawiedzie,
+    pusty/smieciowy wynik moze nadpisac prawdziwy wynik.mp (domyslnie
+    ta sama nazwa dla wejscia i wyjscia).
+
+1.5 [BLAD] edytuj() - literowka args.umphone
+    Linia: 3865
+    Zmienne.ustaw_katalog_home(args.umphone) - prawdziwy dest w
+    argparse (linia 4435) to "umphome". Uzycie --ump-home powoduje
+    AttributeError: 'Namespace' object has no attribute 'umphone'.
+
+1.6 [BLAD] PlikMP1.__init__ - self.naglowek nieustawione
+    Linie: 1666-1676 (konsumowane w linii 3438)
+    Gdy brak narzedzia/header.txt, blok FileNotFoundError tylko loguje
+    error i nigdy nie ustawia self.naglowek. montujpliki() pozniej robi
+    plikMP.write(zawartoscPlikuMp.naglowek) (linia 3438) -> AttributeError
+    zamiast czytelnego komunikatu o brakujacym pliku.
+
+1.7 [CICHA KORUPCJA DANYCH] Obszary.zwroc_obszar / point_inside_polygon
+    Linie: 1371-1379
+    [float(b) for b in self.polygonyObszarow[a] if
+     self.polygonyObszarow[a].index(b) % 2 == 0]
+    list.index(b) zwraca indeks PIERWSZEGO wystapienia wartosci b, nie
+    pozycje aktualnie iterowanego elementu. Jesli ta sama wspolrzedna
+    (string) wystepuje raz na pozycji parzystej (x) i raz na nieparzystej
+    (y) - co jest typowe w zamknietych/prostokatnych poligonach obszarow -
+    wspolrzedne x/y zostaja pomieszane, co cicho korumpuje test "punkt w
+    obszarze" uzywany do automatycznego przypisywania POI do plikow
+    regionow.
+
+1.8 [BLAD] cp1250_to_ascii() - brak return
+    Linie: 3147-3152
+    Funkcja liczy ascii_string = cp1250_string.translate(...), ale
+    nigdy nie robi return. Kazdy kod liczacy na wynik tej funkcji
+    dostaje None.
+
+1.9 [CICHA KORUPCJA DANYCH] AutoPlikDlaPoi.przygotuj_obszar_typ_plik()
+    Linie: 1453-1459
+    pliki = [p for p in self.typ_plik[typ] if obszar in p] - dopasowanie
+    przez zawieranie substringu, nie dokladne dopasowanie nazwy/segmentu
+    sciezki. Region, ktorego nazwa jest podciagiem innej nazwy regionu
+    (lub nazwy pliku), spowoduje pomieszanie plikow i bledne przypisanie
+    automatycznie umieszczanych POI do zlego obszaru.
+
+1.10 [POTENCJALNA ZLA LATKA] PaczerGranicCzesciowych.zwroc_zalatane_granice()
+    Linia: 804
+    przesuniecie = self.granice_txt.index(DataX) - DataX_index -
+    lokalizuje pozycje latki po PIERWSZYM wystapieniu tekstu linii
+    "Data" w granice.txt. Jesli identyczny string wspolrzednych
+    wystepuje wiecej niz raz (prawdopodobne dla wspoldzielonych/
+    zduplikowanych segmentow granic), latka moze zostac zle
+    zakotwiczona - w najlepszym razie zostanie odrzucona ([]), w
+    najgorszym zaaplikowana w zlym miejscu.
+
+1.11 [BLAD] TestyPoprawnosciDanych.sprawdz_czy_endlevel_wieksze_od_data()
+    Linie: 245-246
+    min_data = min(data_levels) rzuca ValueError ("min() arg is an
+    empty sequence"), jesli rekord ma EndLevel, ale brak jakiegokolwiek
+    klucza Data* (uszkodzony/zdeformowany rekord mp) - nieobslugiwany
+    wyjatek przerywa caly demontaz.
+
+1.12 [BLAD] plikPNT.usun_naglowek() - porownanie str z int
+    Linia: 3066
+    if zawartoscPliku[0].strip() == 0: - porownuje string z liczba 0,
+    w Python 3 zawsze False (bez wyjatku, po prostu cicho zle).
+    Zamierzona "szybka sciezka" dla pustego/jednoliniowego pliku
+    nigdy sie nie wykonuje.
+
+1.13 [LEAK ZASOBOW] montujpliki() - niedomkniety handle pliku
+    Linie: 3382-3433
+    plikPNTTXT = open(...) bez "with", zamykany w linii 3433, ale
+    branch "else" dla nierozpoznanego typu pliku (3430-3432) robi
+    continue, pomijajac .close(). Kazdy plik o nierozpoznanym
+    rozszerzeniu przecieka deskryptor pliku; w dlugo dzialajacym GUI
+    (mdm-py.py) narasta to przy kolejnych uruchomieniach.
+
+1.14 [LEAK ZASOBOW] demontuj() i pomocnicze - brak with/close
+    Linie: 3644-3645, 3742-3743, 3745-3746
+    open(...).read() / .readlines() lancuchowane bez "with" i bez
+    jawnego .close(). W dlugo zyjacym procesie (GUI) przecieka
+    deskryptory przy kazdym demontazu.
+
+1.15 [UTRATA DANYCH] PlikMP1.przeniesc_zawartosc_nowosci_pnt_do_plikow()
+    Linie: 2178-2212
+    Linie komentarzy buforowane w komentarz_w_nowosci i flushowane
+    tylko przy kolejnej linii nie-komentarzowej (rekord POI). Jesli
+    _nowosci.pnt konczy sie komentarzem/komentarzami bez kolejnego
+    rekordu punktu, te komentarze sa trwale gubione.
+
+1.16 [FOOTGUN] stworz_plik_typ() - zly typ argumentu
+    Linia: 4337
+    zmienne = UstawieniaPoczatkowe(args) przekazuje caly
+    argparse.Namespace jako plikmp, podczas gdy wszystkie inne
+    wywolania przekazuja string/liste nazw plikow. self.OutputFile/
+    InputFile staja sie samym obiektem Namespace. Obecnie nieuzywane
+    w tej funkcji, ale to pulapka na przyszlosc.
+
+1.17 [MARTWY/BLEDNY KOD] PolylinePolygone.rekord2Dane()
+    Linia: 2897
+    self.liniaObszar = string - przypisuje zaimportowany MODUL
+    "string" (import string na poczatku pliku) do atrybutu, ktory
+    nigdzie w pliku nie jest czytany. Wyglada na pozostawiony kod
+    debugowy / pomylke.
+
+
+================================================================
+2. mdmMp2xml.py (konwerter mp -> xml)
+================================================================
+
+2.1 [KRYTYCZNE - FUNKCJA MARTWA] --no_NumberX nigdy nie dziala
+    Linie: 3499 (rejestracja) vs 2990, 3012 (sprawdzenie)
+    main() rejestruje wyjscie pod kluczem 'no_number', a
+    output_normal_pickled sprawdza string 'no_numbers' (z "s").
+    Klucze nigdy sie nie zgadzaja - opcja --no_NumberX produkuje
+    plik zawierajacy tylko naglowek XML/punkty granic, bez zadnych
+    punktow/drog - funkcja calkowicie nie dziala, bez zadnego bledu.
+
+2.2 [KRYTYCZNE] Zla zmienna w branchu 'no_numbers'
+    Linie: 3012-3013
+    W petli for filename in output_files: branch 'no_numbers' drukuje
+    newway (pozostalosc po poprzednim branchu 'navit' albo po
+    poprzednim obiegu petli) zamiast wlasciwego way. Nawet po naprawie
+    2.1 spowodowaloby to zapis danych ze zlego obiektu albo NameError.
+
+2.3 [CICHA KORUPCJA DANYCH] print_way_pickled/print_relation_pickled
+    Linie: 2598-2601, 2630-2633 (wywolania: 3005-3018, 3025-3027)
+    pop('_c') na WSPOLDZIELONYM slowniku way/relation zamiast na
+    kopii. Ten sam obiekt jest przekazywany do wielu plikow wyjsciowych
+    po kolei (najpierw 'normal', potem 'navit'/'index'/'no_number', a
+    dla relacji bez kopii wcale). Po pierwszym wywolaniu '_c' jest
+    usuwane, wiec filtr "if way['_c'] <= 0: return" nigdy juz sie nie
+    wykona dla tego obiektu przy kolejnych plikach wyjsciowych -
+    geometria, ktora powinna byc odfiltrowana, przecieka do plikow
+    'navit'/'index'/'no_number'.
+
+2.4 [CICHA KORUPCJA DANYCH] add_addrinfo - blad przy low == hi
+    Linie: 1277-1280, 1297-1314
+    Gdy low == hi, pt0 zostaje ustawione na sentinel 0 (zaden punkt
+    nie jest tworzony/dolaczany), ale dalszy kod bezwarunkowo robi
+    pointattrs[pt0]['addr:postcode'] = ... / addr:city / addr:region /
+    addr:country na tym samym pt0. Segment interpolacji adresowej z
+    identycznym low/hi housenumber powoduje zapisanie tych tagow na
+    punkcie o id 0 (przypadkowy, niezwiazany punkt np. pierwszy wezel
+    granicy/drogi w pliku) - cicha korupcja jego atrybutow.
+
+2.5 [MARTWY KOD] way_to_way_id - intersection nie mutuje w miejscu
+    Linia: 1925
+    way_id_set.intersection(node_ways_relation[node]) liczy nowy set,
+    ale nigdy go nie przypisuje z powrotem do way_id_set (set.intersection
+    nie mutuje w miejscu). Rozroznianie wieloczlonowe po wielu wezlach
+    jest w praktyce martwe - funkcja dziala wylacznie na podstawie setu
+    way z pierwszego wezla.
+
+2.6 [BLAD - LITEROWKA] postprocess_poi_tags
+    Linia: 1657
+    Dla ump:type == '0x1715' kod ustawia way['maxwight'] (literowka)
+    zamiast way['maxweight']. POI typu 0x1715 dostaje niestandardowy
+    tag "maxwight", nierozpoznawany przez mkgmap/OSM jako ograniczenie
+    wagowe.
+
+2.7 [BLAD] DirIndicator - niepoprawna wartosc oneway
+    Linie: 1419-1423
+    value == '1' -> oneway='yes', ale kazda inna wartosc surowa (np. '0')
+    jest zapisywana dosłownie jako way['oneway'] = value. DirIndicator=0
+    produkuje oneway=0 w wynikowym XML - niestandardowa/niepoprawna
+    wartosc tagu OSM.
+
+2.8 [KRYTYCZNE - CRASH] RestrParam / extract_routeparam - brak walidacji zakresu
+    Linie: 1492-1498 (RestrParam), 2495-2497 (extract_routeparam)
+    Obie petle for i, val in enumerate(params[4:]) indeksuja 8-elementowy
+    tuple exceptions[i] bez sprawdzenia zakresu, a RestrParam bez
+    zadnego try/except. Wartosc RestrParam/RouteParam z wiecej niz 8
+    polami rozdzielonymi przecinkiem rzuca nieobslugiwany IndexError,
+    wywalajac caly proces konwersji (lub proces roboczy pod --threads).
+
+2.9 [NIEKONSYSTENTNE] print_relation_pickled - brak limitu 255 znakow
+    Linie: 2660-2663
+    Kazdy tag bez prefiksu "_" jest zapisywany bezposrednio, bez
+    obciecia dlugosci len(str(value)) > 255, ktore stosuja
+    print_point_pickled (2580-2585) i print_way_pickled (2616-2621).
+    Zbyt dlugi tag na relacji (np. bardzo dlugi note/destination) jest
+    zapisywany bez filtrowania, niekonsystentnie wzgledem punktow/drog
+    i mozliwe, ze odrzucany przez narzedzia Garmin/mkgmap wymuszajace
+    limit 255 znakow.
+
+2.10 [ZLE OBSLUZONE BLEDY] polygon_make_ccw - goly except
+    Linie: 1189-1212
+    Obliczanie kata dla kazdego wierzcholka owinięte w goly
+    except: pass, ktory maskuje kazdy wyjatek (np. ZeroDivisionError z
+    ablen/bclen == 0 przy zdublowanych/pokrywajacych sie punktach).
+    Poligon ze zdublowanymi kolejnymi punktami cicho pomija wklad kata
+    zamiast zglosic blad, co moze dac zla decyzje CW/CCW bez
+    ostrzezenia, a naprawde zdeformowany shape moze nie dostac
+    fixme='Weird shape'.
+
+2.11 [BLAD - MASKOWANIE] print_point_pickled - goly except
+    Linie: 2586-2589
+    Goly except: wokol zapisu tagu XML w print_point_pickled lapie
+    wszystko (rowniez bledy programistyczne), logujac tylko ogolny
+    komunikat "failed" i cicho gubiac ten jeden tag. Kazdy blad w
+    xmlize()/formatowaniu konkretnego tagu jest maskowany jako ogolne
+    ostrzezenie bez mozliwosci ustalenia prawdziwej przyczyny.
+
+2.12 [BRAK OBSLUGI BLEDOW] get_type_from_umptyp i inne
+    Linie: 1172, 1777, 1088
+    int(way['ump:type'], 0) / int(polyline['Type'], 0) / int(value, 0)
+    wywolywane na tekscie z pliku .mp wprowadzonym przez uzytkownika,
+    bez try/except, w odroznieniu od wiekszosci innego parsowania
+    tagow w tym pliku (chronionego przez ignore_errors). Zdeformowana
+    wartosc Type= (nie-hex string) rzuca nieobslugiwany ValueError i
+    zabija cały proces konwersji.
+
+2.13 [MARTWY KOD] recode() - nieuzywany except
+    Linie: 1026-1032
+    Blok try bezwarunkowo zwraca input bez zmian, wiec blok except
+    (mial lapac bledy dekodowania cp1250->UTF-8) nigdy sie nie
+    wykonuje. Funkcja daje falszywe wrazenie, ze recoding/walidacja
+    faktycznie sie odbywa dla kazdej wartosci Label/komentarza z
+    plikow .mp.
+
+2.14 [LEAK ZASOBOW] main() - niedomkniety plik przy kopiowaniu do stdout
+    Linie: 3547-3552
+    shutil.copyfileobj(open(output_files_to_generate['normal'], 'r',
+    encoding="utf-8"), sys.stdout) - obiekt pliku z open() nigdy nie
+    jest przypisany do zmiennej ani zamykany (brak with, brak .close()).
+    Jesli copyfileobj rzuci wyjatek w trakcie (lapany przez otaczajacy
+    except IOError), handle pliku przecieka.
+
+2.15 [WYDAJNOSC] worker() - podwojne wczytanie calego pliku do pamieci
+    Linie: 3293-3309
+    infile.readlines() liczone tylko po to, by ustalic
+    num_lines_to_process (wynik odrzucany), potem infile.seek(0) i
+    ponowne wczytanie od zera. Na duzych plikach .mp praktycznie
+    podwaja peak memory i czas I/O tylko dla progress-bara; w
+    polaczeniu z --threads N przy wielu rownoleglych workerach moze
+    znaczaco zwiekszyc zuzycie pamieci.
+
+
+================================================================
+3. mdm-py.py (nakladka graficzna GUI)
+================================================================
+
+3.1 [KRYTYCZNE - RACE CONDITION] Wspoldzielony obiekt Argumenty()
+    Linie: 2848-2868 (GenerujListeObszarow), 1358, 1391-1393
+    Jedna instancja args = Argumenty() tworzona RAZ przed petla, a
+    potem przekazywana przez referencje do kazdego checkboxa regionu
+    (self.args = args). Akcje z menu kontekstowego (np.
+    sprawdz_ciaglosc_grafow_routingowych) mutuja
+    self.args.plikmp/self.args.mode na tym wspoldzielonym obiekcie.
+    Kliknieccie prawym przyciskiem tej samej akcji dla regionu A, gdy
+    identyczna akcja dla regionu B jeszcze dziala w swoim wątku
+    (kazda odpala wlasny wątek), powoduje ze jeden nadpisuje
+    mode/plikmp drugiego, mieszajac wyniki lub wykonujac zla operacje.
+
+3.2 [KRYTYCZNE] readConfig - crash calej appki na starcie
+    Linia: 1182
+    if not a and '=' not in a: continue - powinno byc "or", nie
+    "and". Niepusta linia bez znaku "=" (np. plik konfiguracyjny
+    ucieciy w polowie przez crash, albo recznie edytowany) przechodzi
+    dalej do klucz, wartosc = a.split('=', 1) (linia 1184), co rzuca
+    ValueError: not enough values to unpack. Lapany jest tylko
+    FileNotFoundError (linia 1192), wiec wyjatek wychodzi z
+    mdmConfig.__init__ wywolywanego przy starcie appki, zabijajac ja
+    zanim glowne okno sie pokaze.
+
+3.3 [RACE CONDITION] os.chdir w OnButtonClickMont
+    Linie: 3121-3124 (start wątkow), 3101 (chdir)
+    Dwa wątki w tle startowane jeden za drugim:
+    mont_demont_py.montujpliki oraz
+    cvsSprawdzAktualnoscMontowanychObszarow - ten drugi bezwarunkowo
+    robi os.chdir(Zmienne.KatalogzUMP). os.chdir jest globalny dla
+    calego procesu; jesli montujpliki rowniez zmienia katalog, dwa
+    wątki moga sie wyscigowac, operujac na plikach z niewlasciwego
+    katalogu roboczego - sporadyczne, trudne do powtorzenia bledy.
+
+3.4 [BLAD UI] ToolTip.schedule - zamraza cale okno
+    Linia: 609
+    self.id = self.widget.after(self.waittime, self.showtip(text)) -
+    wywoluje self.showtip(text) NATYCHMIAST (pokazuje tooltip bez
+    zadnego opoznienia), a jego wynik (None) przekazuje jako callback
+    do after. Tkinter after(ms, func=None) z func=None blokuje
+    synchronicznie caly event loop na 500ms. Kazdy najazd myszka na
+    widget z tooltipem (przyciski Montuj/Edytuj/Sprawdz) zamraza
+    cale okno na pol sekundy.
+
+3.5 [DEADLOCK] cvsci - mozliwy deadlock na duzym outpucie CVS
+    Linie: 1787-1799
+    subprocess.Popen(..., stdout=PIPE, stderr=PIPE) pollowany w petli,
+    ktora tylko sprawdza kolejke stop i spi; stdout/stderr czytane
+    tylko .readlines() PO zakonczeniu petli. Jesli output "cvs ci"
+    przekroczy bufor pipe systemu operacyjnego (duzy diff/verbose
+    odpowiedz serwera), proces dziecko blokuje sie na zapisie, a
+    rodzic nigdy nie drenuje pipe podczas pollowania - klasyczny
+    deadlock subprocess, zawieszajacy commit (mozna przerwac przez
+    "Przerwij", ktory wola process.terminate()).
+
+3.6 [FUNKCJA MARTWA] Przycisk "Zobacz" w oknie wynikow paczowania
+    Linie: 449-450
+    zobacz_plik_button = tkinter.Button(..., text='Zobacz') tworzony i
+    pakowany bez command=. Po nalozeniu latek (menu Paczuj -> Nalóż
+    łatki) klikniecie "Zobacz" w oknie wynikow nic nie robi -
+    funkcjonalnosc podglądu wynikowego pliku jest martwa.
+
+3.7 [BLAD LOGICZNY] Off-by-one .find() > 0 ukrywa status "Needs Patch"
+    Linia: 3104
+    if a.decode(Zmienne.Kodowanie).find('Needs Patch') > 0: powinno
+    byc >= 0. Jesli string "Needs Patch" zaczyna sie od indeksu 0 w
+    linii, jest traktowany jako "nieznaleziony", wiec popup
+    ostrzegajacy o nieaktualnych zrodlach jest cicho pomijany, a
+    uzytkownik dostaje falszywa informacje ze zrodla sa aktualne.
+
+3.8 [LEAK ZASOBOW / KORUPCJA] ZipFile bez with w OnButtonClickApply
+    Linie: 2917-2979
+    plikzip = zipfile.ZipFile(...) otwierany bez with/try-finally;
+    zamykany tylko w linii 2979, jesli petla zakonczy sie normalnie.
+    Jakikolwiek wyjatek inny niz jawnie lapany FileNotFoundError (np.
+    PermissionError z shutil.copy, zablokowany plik docelowy, brak
+    miejsca na dysku) zostawia otwarty handle zipa i niesfinalizowane
+    archiwum - uszkodzony, nieuzywalny plik zip plus przeciek handle.
+
+3.9 [BLAD - LITEROWKA] Region 'UMP-FRpantes'
+    Linia: 477
+    'UMP-FRpantes' na liscie modulow FRANCJA to prawdopodobnie
+    literowka miejsca 'UMP-FR-Nantes'. Wybor/checkout tego wpisu
+    wywoluje "cvs co UMP-FRpantes", ktory nie istnieje na serwerze -
+    checkout/update dla Nantes zawsze sie wywali.
+
+3.10 [FUNKCJA NIEDZIALAJACA] Ukryta zaleznosc od globalnego "app"
+    Linie: 1231-1233
+    if str(app.sprawdzButton['state']) != 'disabled': odwoluje sie do
+    modulowego globalnego "app", ktory jest przypisany tylko w bloku
+    if __name__ == "__main__": (linia 3180). Dziala tylko dzieki temu,
+    ze callback odpala sie po ustawieniu app; import tego modulu
+    gdzie indziej lub wywolanie handlera przed istnieniem app rzuca
+    NameError.
+
+3.11 [FUNKCJA NIEDZIALAJACA] bind() zamiast bind_class() - Ctrl+A nie dziala
+    Linie: 1215, 1280
+    self.bind("Text", "<Control-a>", self.event_select_all) przekazuje
+    3 argumenty pozycyjne do Widget.bind(sequence, func, add), wiec
+    "sequence" staje sie literalnym stringiem "Text" (nie prawdziwym
+    wzorcem eventu), a "add" staje sie callbackiem - to nigdy nie
+    binduje Ctrl+A tak jak zamierzono. Skrot Ctrl+A "zaznacz
+    wszystko" w tych polach tekstowych nie dziala (opcja z menu
+    kontekstowego dziala, bo ma osobny binding).
+
+3.12 [BLAD KOSMETYCZNY] Zla wersja Pythona w statusbarze
+    Linie: 2421-2422
+    'Python: %s.%s.%s' % (sys.version_info[0], sys.version_info[1],
+    sys.version_info[0], ...) uzywa indeksu [0] dwa razy zamiast [2]
+    dla wersji micro. Np. Python 3.11.7 wyswietla sie jako
+    "Python: 3.11.3".
+
+3.13 [NIEKONSYSTENTNE KODOWANIE] wczytaj_log_annotate/zapisz_log_annotate
+    Linie: 236-251
+    open(self.log_annotate_file, 'r')/'w' wywolywane bez encoding=,
+    zdajac sie na domyslne kodowanie platformy, podczas gdy kazdy inny
+    I/O w tym module jawnie uzywa zmienne.Kodowanie/utf-8. Sciezki
+    plikow wybrane przez uzytkownika (mogace zawierac polskie
+    diakrytyki) moga sie zle roundtripowac lub rzucic
+    UnicodeDecodeError w zaleznosci od domyslnego kodowania systemu.
+
+3.14 [MARTWY KOD] Zbedna zmienna url w pobierz_mapedit2
+    Linie: 2986-2989
+    url = 'https://www.geopainting.com/download/mapedit2-1-78-18.zip'
+    jest przypisywane, ale self.pobierz_pliki_z_internetu(...) jest
+    wywolywane z tym samym URL-em wpisanym na nowo jako literal.
+    Obecnie niegroźne (wartosci sie zgadzaja), ale edycja zmiennej url
+    w celu zmiany celu pobierania nie ma zadnego efektu.
+
+
+================================================================
+4. Pozostale moduly
+================================================================
+
+--- kdtree.py ---
+
+4.1 [WYDAJNOSC / CRASH] Drzewo bez balansowania + rekurencja bez limitu
+    Linie: 406-526 (search_knn/_search_node), zwiazane:
+    mont_demont.py:1579-1586
+    Drzewa budowane przez powtarzane tree.add() w kolejnosci z pliku,
+    a nie przez create(point_list) (balansujace mediana).
+    _search_node rekursuje raz na poziom drzewa bez limitu glebokosci.
+    Dluga polilinia (rzeka/droga/granica) o wspolrzednych trendujacych
+    monotonicznie tworzy drzewo zblizone do listy jednokierunkowej;
+    search_nn() (wywolywane z znajdz_najblizszy) rekursuje na glebokosc
+    ~n, rzucajac RecursionError dla duzych obszarow, a co najmniej
+    degradujac wyszukiwanie do O(n).
+
+4.2 [NIEZGODNOSC] search_nn_dist - docstring nie zgadza sie z implementacja
+    Linie: 548-572
+    Docstring twierdzi "n najblizszych wezlow w zasiegu", ale metoda
+    nie przyjmuje n/limitu liczby, zwraca WSZYSTKIE dopasowania w
+    radiusie. Obecnie nieuzywane w repo, wiec ryzyko utajone.
+
+4.3 [BLAD] Node.__eq__ / should_remove - porownanie list vs tuple
+    Linie: 182-186, 288-293
+    Rownosc porownuje self.data == point/other.data; projekt
+    przechowuje punkty jako listy (tree.add([float, float])), ale
+    gdzie indziej buduje punkty zapytania jako tuple
+    (wsp = (float(x), float(y)), mont_demont.py:1591).
+    [1,2] == (1,2) to False w Pythonie, wiec remove()/dokladne
+    dopasowania po tuple cicho nie znajduja wezla - bez wyjatku, po
+    prostu zly (pusty) wynik.
+
+4.4 [SIDE EFFECT] create() - mutacja listy wywolujacego
+    Linia: 646
+    point_list.sort(key=...) mutuje w miejscu liste przekazana przez
+    wywolujacego; kazdy caller trzymajacy referencje do tej listy
+    zobaczy ja cicho przesortowana.
+
+--- mdmkreatorOsmAnd.py ---
+
+4.5 [FUNKCJA MARTWA] Wizard nic nie robi dla etapu "kompilowanie"
+    Linie: 267-268
+    elif self.kolejnyetap == 'kompilowanie': pass - po zakonczeniu
+    konwersji mp->OSM klikniecie "Dalej" ponownie nic nie robi; wizard
+    cicho zawiesza sie i nigdy nie wywoluje faktycznego kroku
+    kompilacji mapy.
+
+4.6 [WALIDACJA NIE DZIALA] family_id - sprawdzany tylko pierwszy znak
+    Linia: 534
+    if not args.family_id[0].isdigit() or 0 > int(args.family_id[0]) >
+    65535: sprawdza tylko pierwszy znak, a lancuchowe porownanie
+    0 > x > 65535 dla jednej cyfry jest zawsze False. Wpisanie
+    "99999999" (same cyfry) przechodzi walidacje bez zmian i trafia do
+    kompilatora mapy jako Family ID poza zakresem, zamiast zostac
+    zresetowane do domyslnego '6324'.
+
+4.7 [BLAD / LEAK] cvsup - UnboundLocalError i przeciek pipe
+    Linie: 281-297
+    "line" przypisywane tylko wewnatrz pierwszej petli while
+    processexitstatus == None:; jesli cialo petli nigdy sie nie
+    wykona (proces juz zakonczony) lub self.obszary sie wyscigowo
+    zmieni, line.decode(...) w linii 295 rzuca UnboundLocalError.
+    Dodatkowo process.stdout nigdy nie jest jawnie zamykany (brak
+    with), co przecieka handle pipe przy kazdym "cvs up" na obszar.
+
+4.8 [MARTWY KOD] Zdublowana, rozjezdzajaca sie kopia mp2osm
+    Linie: 339-348 vs 350-358
+    Dwie rozjezdzajace sie kopie mp2osm: nieuzywana metoda instancji
+    (martwy kod, zastapiona przez next()'s Process(target=mp2osm, ...)
+    w linii 263) i faktyczna funkcja modulowa. Poprawka zrobiona w
+    jednej nie propaguje sie do drugiej, jesli martwa kopia kiedykolwiek
+    zostanie reaktywowana.
+
+4.9 [ZALOZENIE MOZE BYC BLEDNE] latin2_to_cp1250
+    Linie: 302-312
+    Czyta i zapisuje plik uzywajac self.Zmienne.Kodowanie (typowo
+    cp1250), stosujac zahardkodowana tabele podstawien
+    latin2-mojibake->cp1250; jesli faktyczne kodowanie pliku nie
+    zgadza sie z tym zalozeniem (np. uzytkownik skonfigurowal ascii),
+    krok translacji korumpuje juz poprawny tekst, zamiast go naprawic.
+
+--- mdmEdytorPlikow.py ---
+
+4.10 [KRYTYCZNE - UTRATA DANYCH] zapisz_plik - cichy blad zapisu, potem nadpisanie
+    Linie: 121-138
+    Bledy zapisu sa gubione przez except IOError: pass, a kod bez
+    warunku kontynuuje shutil.copy(plik_tymczasowy.name, ...),
+    nadpisujac prawdziwy plik. Jesli dysk jest pelny albo zapis
+    czesciowo zawiedzie, oryginalny plik zostaje zastapiony
+    uciętym/niekompletnym plikiem tymczasowym bez zadnego
+    ostrzezenia dla uzytkownika - cicha utrata danych.
+
+4.11 [CRASH] UnicodeEncodeError nie jest IOError
+    Linie: 121, 123
+    self.edytor.get(...) moze zawierac znaki nie do zapisania w
+    cp1250 (np. wklejona interpunkcja Unicode/emoji), rzucajac
+    UnicodeEncodeError, ktory jest podklasa ValueError, nie IOError -
+    to propaguje sie nieobslugiwane i wywala operacje zapisu zamiast
+    pokazac dialog "nie udalo sie zapisac".
+
+4.12 [NIEKONSYSTENTNE KODOWANIE] Zahardkodowane cp1250
+    Linie: 106, 121
+    Kodowanie zahardkodowane na 'cp1250', a nie
+    self.zmienne.Kodowanie (konfigurowalne gdzie indziej w projekcie
+    na ascii/cp1250). Projekt skonfigurowany na ascii bedzie mial
+    edytor cicho uzywajacy innego kodeka niz reszta toolchainu.
+
+--- generuj_dane_routingowe.py ---
+
+MODUL PRAKTYCZNIE NIE DZIALA - import lub uzycie wywala sie natychmiast:
+
+4.13 [KRYTYCZNE] Osamotnione "w" na poziomie modulu
+    Linia: 8
+    Goly statement "w" miedzy klasami NodDrogi i ObiektMapy, poza
+    jakakolwiek funkcja/klasa. "w" jest niezdefiniowane -
+    import generuj_dane_routingowe rzuca NameError natychmiast - modul
+    nie da sie wczytac w ogole.
+
+4.14 [KRYTYCZNE] ObiektMapy.__init__ bez self
+    Linia: 11
+    def __init__(rekord_danych): brak parametru self, a cialo uzywa
+    self.dane_obiektu = .... Kazde wywolanie ObiektMapy(rekord_danych)
+    (np. linia 133) rzuca NameError: name 'self' is not defined.
+
+4.15 [KRYTYCZNE] Niezdefiniowana zmienna "polyline"
+    Linia: 26
+    elif a.startswith('Type=') and polyline: odwoluje sie do
+    niezdefiniowanej nazwy "polyline" - NameError przy pierwszej
+    linii "Type=".
+
+4.16 [KRYTYCZNE] Literowki w nazwach
+    Linie: 78, 97
+    linijka_startswith('RoadSign') (powinno byc linijka.startswith)
+    oraz self.zwroc_obiekt_niezapetlony(obiekt_na_mapie)
+    (niezdefiniowana nazwa; parametr to faktycznie obiekt_mapy) -
+    obie to literowki dajace NameError.
+
+4.17 [KRYTYCZNE] Zla wielkosc liter klasy + odwrocone unpacking
+    Linie: 123, 125
+    MapaMp() powinno byc MapaMP (zla wielkosc liter, plus brakujacy
+    wymagany argument netgen_cfg) - NameError/TypeError; oraz
+    for linia, numer in enumerate(zawartosc_pliku_mp) ma odwrocone
+    rozpakowanie tuple (numer dostaje tekst linii, linia dostaje
+    indeks), wiec linia.startswith(...) na int rzuca AttributeError, a
+    lista naglowka wypelniana jest liczbami zamiast tekstu.
+
+--- znajdz_wystajace.py ---
+
+4.18 [KRYTYCZNA KORUPCJA DANYCH] clockwisecheck - zly krok petli
+    Linie: 56-68
+    Petla for i in range(n) krokiem 1, ale wspolrzedne przechowywane
+    jako plaska lista x,y,x,y,... Przy kazdym nieparzystym i "punkt"
+    (x1,y1)=(p[i],p[i+1]) miesza wspolrzedna y z x nastepnego punktu.
+    Okolo polowy skladnikow iloczynu wektorowego uzywanego do
+    okreslenia kierunku poligonu jest liczona ze zle dopasowanych
+    wartosci x/y, co moze odwrocic (zle) obliczony znak kierunku
+    obszaru.
+
+4.19 [UTRATA DANYCH] Gubienie ostatniej pary wspolrzednych przy odwracaniu
+    Linia: 43
+    for aa in range(len(tymczasowy_x)-1) - przy odwracaniu listy
+    wspolrzednych obszaru CCW petla wyklucza ostatni element (-1),
+    wiec jedna para wspolrzednych jest cicho gubiona z
+    self.wspolrzedne[obszar]. Obszar traci punkt zamykajacy,
+    korumpujac test ray-casting w is_inside dla kazdego kolejnego
+    sprawdzanego punktu wzgledem tego obszaru.
+
+4.20 [BLAD] is_inside - dopasowanie nazwy obszaru przez substring
+    Linie: 132-138
+    Dopasowanie nazwy obszaru uzywa zawierania substringu
+    (nazwaobszaru not in self.nazwa_obszaru /
+    if nazwaobszaru in obszar) zamiast dokladnego dopasowania. Jesli
+    dwa wczytane obszary maja wspolny substring nazwy (np. "Lodz" i
+    "Lodz-powiat"), cache moze cicho uzyc granicy zlego obszaru,
+    dajac bledny werdykt inside/outside bez zadnego bledu.
+
+4.21 [LEAK ZASOBOW / CRASH] Brak try/finally przy otwieraniu plikow
+    Linie: 84-125, 200-232
+    Pliki otwierane zwyklym open()/recznym .close() bez try/finally.
+    Zdeformowana linia w obszary.txt/.pnt (np. nienumeryczna
+    wspolrzedna powodujaca wyjatek float()) przerywa parsowanie w
+    polowie pliku i przecieka otwarty handle, dodatkowo wywalajac caly
+    przebieg w nieuporzadkowany sposob.
+
+4.22 [EDGE CASE] clockwisecheck - count == 0 traktowany jako "nie clockwise"
+    Linie: 69-74
+    Gdy count == 0 (zdegenerowana/wspolliniowa granica), funkcja
+    przechodzi bez return, czyli zwraca None; "not None" to True, wiec
+    __init__ (linia 37) traktuje NIEOKRESLONA orientacje jako "nie
+    clockwise" i bezwarunkowo odwraca wspolrzedne - niski, ale
+    realny, zle obsluzony edge case dla idealnie zbalansowanych/
+    zdegenerowanych poligonow.
+
+--- znajdz_bledy_numeracji.py ---
+
+4.23 [BLAD LOGICZNY] Alias listy zamiast kopii
+    Linie: 663-664
+    kluczeRedukcjiOdwrotne = kluczeRedukcji aliasuje ten sam obiekt
+    listy (brak kopii); nastepujace
+    kluczeRedukcjiOdwrotne.reverse() odwraca rowniez kluczeRedukcji.
+    Zewnetrzna petla w linii 666, ktora wedlug pobliskiego komentarza
+    powinna iterowac klucze w kolejnosci wzrastajacej, zeby
+    skonsolidowac lancuchy substytucji, teraz rowniez iteruje w
+    porzadku malejacym, zmieniajac kolejnosc laczenia i potencjalnie
+    zostawiajac lancuchy substytucji tylko czesciowo skonsolidowane.
+
+4.24 [BRAK WALIDACJI] Parsowanie linii Numbers= bez sprawdzania zakresu
+    Linie: 218-230, 865-885
+    Parsowanie zaklada stala liczbe pol bez walidacji formatu.
+    Uciety/zdeformowany rekord Numbers w prawdziwym pliku .mp rzuca
+    nieobslugiwany IndexError, przerywajac caly przebieg sprawdzania
+    numeracji dla tego pliku mapy.
+
+4.25 [ZLA OBSLUGA WYJATKU] Zbyt waski except ValueError
+    Linie: 792-799
+    except ValueError: pass wokol
+    list(oddzielnegrafy[int(skad)])[0] jest zbyt waskie: wpisy moga
+    byc None (wyzerowane przez krok substytucji w linii 683) albo
+    int(skad) moze byc poza zakresem, rzucajac TypeError/IndexError
+    zamiast ValueError. Po zakonczeniu kosztownej wieloprocesowej
+    analizy Bellmana-Forda, generowanie raportu wywala sie
+    nieobslugiwane na nieprzewidzianym odwolaniu do wierzcholka,
+    gubiac wszystkie wyniki analizy.
+
+4.26 [DUPLIKACJA LOGIKI] Zdublowany, rozjezdzajacy sie algorytm
+    Linie: 377-429 vs 492-540
+    Algorytm redukcji zbiorow/laczenia grafow wewnatrz
+    sprawdzNieciaglosciSiatkiRoutejUwzglednijJednokierunkowosc to
+    prawie duplikat (z lekko innym krokiem czyszczacym, linie
+    412-417 vs 519-525) funkcji
+    redukuj_ilosc_zbiorow_routingowych. Poprawka poprawnosci w jednej
+    nie propaguje sie automatycznie do drugiej, a obie roznia sie juz
+    subtelnie sposobem usuwania przetworzonych indeksow.
+
+4.27 [CRASH] sprawdzzapetlenie - rekursja bez limitu glebokosci
+    Linie: 824-856
+    Rekursywnie bisekcjonuje liste punktow drogi, zeby rozdzielic
+    samo-przeciecia, bez limitu glebokosci. Droga silnie
+    samo-przecinajaca sie/z duplikowanymi punktami (mozliwe w
+    nieporzadnych danych z OSM) moze doprowadzic rekursje na tyle
+    glebokosci, ze rzuci RecursionError, przerywajac sprawdzanie tego
+    pliku.
+
+--- 6to5_5to6.py ---
+
+4.28 [MARTWY PLIK] Caly plik to nieuzywane importy
+    Linie: 1-3
+    Caly plik sklada sie z trzech nieuzywanych importow (string, sys,
+    argparse), bez zadnych funkcji, klas czy logiki wykonawczej, i
+    nie jest importowany nigdzie w kodzie (potwierdzone
+    wyszukiwaniem). Mimo nazwy sugerujacej narzedzie konwersji
+    6-to-5/5-to-6, nie robi absolutnie nic - opuszczony/niedokonczony
+    stub.
+
+
+================================================================
+PODSUMOWANIE - PRIORYTETY
+================================================================
+
+Najpilniejsze (utrata danych / crash na typowych sciezkach):
+  - mont_demont.py: 1.1, 1.2, 1.3, 1.4 (crash na malych mapach,
+    crash na plikach bez koncowego newline, nadpisanie wynik.mp
+    pustym plikiem przy porazce subprocessu)
+  - mdmEdytorPlikow.py: 4.10 (edytor moze nadpisac plik ucietymi
+    danymi bez ostrzezenia)
+  - mdmMp2xml.py: 2.4 (korupcja losowego punktu przy low==hi w
+    adresach), 2.1+2.2 (--no_NumberX martwe)
+
+Do rozwazenia calkowitego przepisania/usunięcia:
+  - generuj_dane_routingowe.py - modul nie dziala nawet przy imporcie
+  - 6to5_5to6.py - martwy stub bez logiki
+
+Warto naprawic przy najblizszej okazji (cicha korupcja danych,
+trudna do wykrycia bez testow regresyjnych):
+  - mont_demont.py: 1.7 (x/y w point-in-polygon), 1.9 (substring
+    matching dla obszarow POI)
+  - znajdz_wystajace.py: 4.18, 4.19 (bledy w clockwisecheck i
+    odwracaniu wspolrzednych obszaru)
+  - mdmMp2xml.py: 2.3 (pop('_c') na wspoldzielonym slowniku)
