@@ -1012,6 +1012,17 @@ poi_types = {
 glob_progress_bar_queue = None
 
 
+def count_file_lines(f):
+    lines = 0
+    buf_size = 1024 * 1024
+    read_f = f.read  # loop optimization
+    buf = read_f(buf_size)
+    while buf:
+        lines += buf.count('\n')
+        buf = read_f(buf_size)
+    return lines
+
+
 def set_runstamp(r_stamp):
     global runstamp
     runstamp = r_stamp
@@ -3295,7 +3306,7 @@ def worker(task, options, border_points=None):
         messages_printer.printerror("Can't open file " + task['file'])
         sys.exit()
     try:
-        num_lines_to_process = len(infile.readlines())
+        num_lines_to_process = count_file_lines(infile)
     except UnicodeDecodeError:
         infile.close()
         if options.ignore_errors:
@@ -3306,7 +3317,7 @@ def worker(task, options, border_points=None):
             except (IOError, PermissionError):
                 messages_printer.printerror("Can't open file " + task['file'])
                 sys.exit()
-            num_lines_to_process = len(infile.readlines())
+            num_lines_to_process = count_file_lines(infile)
         else:
             messages_printer.printerror('File ' + task['file'] + ' can not be red using ' + file_encoding + '.')
             sys.exit()
