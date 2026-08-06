@@ -1931,7 +1931,7 @@ def way_to_way_id(way, node_ways_relation=None):
         if num == 0:
             way_id_set = node_ways_relation[node]
         else:
-            way_id_set.intersection(node_ways_relation[node])
+            way_id_set = way_id_set.intersection(node_ways_relation[node])
         if len(way_id_set) == 1:
             return tuple(way_id_set)[0]
     return None
@@ -3014,7 +3014,7 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
                             newway['natural'] = 'water'
                         print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'no_numbers' and 'NumberX' not in _way:
-                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(_way.copy(), task_id, orig_id, node_generalizator, out)
                     elif filename == 'index' and 'is_in' in _way:
                         newway = remove_label_braces(_way)
                         if options.regions and 'is_in:state' in newway:
@@ -3500,7 +3500,7 @@ def main(options, args):
         if options.index_file is not None:
             output_files_to_generate['index'] = path_file(options.index_file)
         if options.nonumber_file is not None:
-            output_files_to_generate['no_number'] = path_file(options.nonumber_file)
+            output_files_to_generate['no_numbers'] = path_file(options.nonumber_file)
         if options.nominatim_file is not None:
             output_files_to_generate['nominatim'] = path_file(options.nominatim_file)
 
