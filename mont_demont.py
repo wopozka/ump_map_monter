@@ -4229,8 +4229,11 @@ def wojkuj(args):
     print(' '.join(wojek_call))
     process = subprocess.Popen(wojek_call)
     process.wait()
-    os.remove(wynik_mp)
-    shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    if process.returncode == 0:
+        os.remove(wynik_mp)
+        shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    else:
+        stderr_stdout_writer.stderrorwrite('Wojek zakonczyl sie bledniem, wynik.mp nie zostal zmieniony')
     os.remove(wynik_mp_wojek.name)
 
 
@@ -4317,8 +4320,11 @@ def ustaw_force_speed(args):
     stderr_stdout_writer.stdoutwrite(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
     process.wait()
-    os.remove(wynik_mp)
-    shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
+    if process.returncode == 0:
+        os.remove(wynik_mp)
+        shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
+    else:
+        stderr_stdout_writer.stderrorwrite('podnies-poziom.pl zakonczyl sie bledem, wynik.mp nie zostal zmieniony')
     os.remove(wynik_mp_podnies_poziom.name)
 
 
