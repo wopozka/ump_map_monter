@@ -3766,7 +3766,7 @@ def demontuj(args):
                 if not plikMp.plikizMp[nazwa_pliku]:
                     plikMp.plikizMp[nazwa_pliku].append('\\ No new line at the end of file\n')
                 elif plikMp.plikizMp[nazwa_pliku][-1][-1] != '\n':
-                    plikMp.plikizMp[nazwa_pliku][-1][-1] += '\\ No new line at the end of file\n'
+                    plikMp.plikizMp[nazwa_pliku][-1] += '\\ No new line at the end of file\n'
                 if 'granice-czesciowe.txt' not in nazwa_pliku:
                     tofile = nazwa_pliku.replace('UMP', 'UMP_Nowe').replace('narzedzia', 'narzedzia_Nowe')
                 else:
