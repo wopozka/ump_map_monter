@@ -374,7 +374,7 @@ class CvsAnnotate(tkinter.Toplevel):
         row = self.text_widgets['annotate'].index('current').split('.')[0]
         revision = self.text_widgets['annotate'].get(row + '.0', row + '.end').split(' ', 1)[0]
         self.text_widgets['revision_log'].delete('1.0', 'end')
-        self.text_widgets['revision_log'].insert('insert', self.revision_log['revision ' + revision])
+        self.text_widgets['revision_log'].insert('insert', self.revision_log.get('revision ' + revision, ''))
 
     def revision_double_clicked(self, event):
         self.revision_clicked(event)
@@ -657,9 +657,9 @@ class ListaPlikowFrame(tkinter.Frame):
 
     def update_me(self):
         try:
+            abc = 0
             while 1:
                 zmienioneplikihash = self.queueListaPlikowFrame.get_nowait()
-                abc = 0
                 style = tkinter.ttk.Style()
                 style.configure('Helvetica.TLabel', font=('Helvetica', 9))
                 for a in zmienioneplikihash[0][:]:
@@ -2206,28 +2206,33 @@ class SetupMode(object):
     def sciagnij_pliki(self):
         for plik in self.plikiDoSciagniecia:
             try:
-                u = urllib.request.urlopen(self.plikiDoSciagniecia[plik], timeout=5)
-                f = open(os.path.join(self.umpHome, plik), 'wb')
-                meta = u.info()
-                # print(meta['Content-Length'])
-                filesize = int(meta['Content-Length'])
-                print("Downloading: %s Bytes: %s" % (plik, filesize))
-                file_size_dl = 0
-                block_sz = 8192
-                while True:
-                    buffer = u.read(block_sz)
-                    if not buffer:
-                        break
+                with urllib.request.urlopen(self.plikiDoSciagniecia[plik], timeout=5) as u:
+                    with open(os.path.join(self.umpHome, plik), 'wb') as f:
+                        # f = open(os.path.join(self.umpHome, plik), 'wb')
+                        meta = u.info()
+                        # print(meta['Content-Length'])
+                        filesize = meta.get('Content-Length')
+                        filesize = int(filesize) if filesize is not None else None
+                        print("Downloading: %s Bytes: %s" % (plik, filesize))
+                        file_size_dl = 0
+                        block_sz = 8192
+                        while True:
+                            buffer = u.read(block_sz)
+                            if not buffer:
+                                break
 
-                    file_size_dl += len(buffer)
-                    f.write(buffer)
-                    status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
-                    status = status + chr(8)*(len(status)+1)
-                    sys.stdout.write(status)
-                    sys.stdout.flush()
-                    # print(status)
+                            file_size_dl += len(buffer)
+                            f.write(buffer)
+                            if filesize is not None:
+                                status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / filesize)
+                            else:
+                                status = r"%10d [n/a]" % file_size_dl
+                            status = status + chr(8)*(len(status)+1)
+                            sys.stdout.write(status)
+                            sys.stdout.flush()
+                            # print(status)
 
-                f.close()
+                        # f.close()
             except (urllib.error.HTTPError, urllib.error.URLError):
                 print('Nie moge sciagnac pliku ' + plik)
                 self.plikiDoSciagniecia[plik] = None
