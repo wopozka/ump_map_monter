@@ -1750,7 +1750,7 @@ class PlikMP1(object):
         Wczytuje dokladnosc danego pliku oraz hash tego pliku zapisany w pliku mp. Nastepnie otwiera plik z dysku.
         Jesli oba hashe sa sobie rowne wtedy zwraca 0, w przeciwnym wypadku 1. Gdy nie ma hasha - jest pusty zwraca 2
         """
-        plik, dokladnosc, wartosc_hash, Miasto = linia_z_cyfram_i_hashem.strip().split(';', 4)
+        plik, dokladnosc, wartosc_hash, Miasto = linia_z_cyfram_i_hashem.strip().split(';', 3)
         if zaokraglij != '0':
             dokladnosc = zaokraglij
 
