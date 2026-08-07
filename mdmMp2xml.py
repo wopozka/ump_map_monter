@@ -627,7 +627,7 @@ poi_types = {
     0x1711: ["note", "FIXME"],
     0x1712: ["hazard",  "roadworks"],
     0x1714: ["traffic_sign",  "maxweight"],
-    0x1715: ["traffic_sign",  "maxwight"],
+    0x1715: ["traffic_sign",  "maxweight"],
     0x1716: ["traffic_sign",  "maxheight"],
     0x170a: ["note", "FIXME: verify"],
     0x170d: ["note", "FIXME"],
@@ -1674,7 +1674,7 @@ def postprocess_poi_tags(way):
                 way['maxweight'] = way['name']
         elif way['ump:type'] == '0x1715':
             if 'name' in way:
-                way['maxwight'] = way['name']
+                way['maxweight'] = way['name']
         elif way['ump:type'] == '0x1716':
             if 'name' in way:
                 way['maxheight'] = way['name']
