@@ -3683,9 +3683,10 @@ def demontuj(args):
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
     update_progress(0 / 100, args)
     tester_poprawnosci_danych = TestyPoprawnosciDanych(stderr_stdout_writer)
+    krok_progress = max(1, int(ilosc_rekordow / 100))
     for numer_aktualnego_rekordu, rekord_z_pliku_mp in enumerate(rekordy_mp):
-        if (numer_aktualnego_rekordu + 1) % int(ilosc_rekordow/100) == 0:
-            update_progress(round((numer_aktualnego_rekordu + 1) / int(ilosc_rekordow), 2), args)
+        if (numer_aktualnego_rekordu + 1) % krok_progress == 0:
+            update_progress(round((numer_aktualnego_rekordu + 1) / ilosc_rekordow, 2), args)
         dane_do_zapisu = plikMp.zwroc_rekord_pliku_mp(rekord_z_pliku_mp.strip())
         # tester_queue.put(dane_do_zapisu)
         plikMp.procesuj_rekordy_mp(dane_do_zapisu)
