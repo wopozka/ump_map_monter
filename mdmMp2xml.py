@@ -1961,7 +1961,7 @@ def signbit(x):
         return 1
     if x < 0:
         return -1
-
+    return 0
 
 def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
