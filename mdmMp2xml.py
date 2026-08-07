@@ -1263,6 +1263,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
             if _type not in interp_types:
                 continue
             _type = interp_types[_type]
+            # dla interpolacji adresow, low to od czego zaczynamy, hi to na czym konczymy
             low = addrs[n][right * 3 + 1]
             hi = addrs[n][right * 3 + 2]
 
@@ -1294,6 +1295,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
 
             if 0:  # prev_house == low:
                 low_node = prev_node
+            # przypadek pojedynczego domu przy ulicy, z jednym numerem. W takim przypaku umiesc go po środku drogi
             elif low == hi:
                 shortlat = (nlat - lat) / 2
                 shortlon = (nlon - lon) / 2
@@ -1301,7 +1303,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
             else:
                 pt0 = len(points)
                 low_node = unproj(lat + dlat + shortlat, lon + dlon + shortlon)
-                while low_node in map_elements_props['points']:
+                while low_node in points:
                     low_node = (low_node[0] + normlat / 10,
                                 low_node[1] + normlon / 10)
                 attrs['addr:housenumber'] = low
