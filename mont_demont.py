@@ -1202,7 +1202,7 @@ class tabelaKonwersjiTypow(object):
         name_2_alias = {
             'Aldi': 'SUPER',
             'apteka': 'APTEKA',
-            'basen': 'BASEM',
+            'basen': 'BASEN',
             'benzyna': 'PALIWO',
             'biblioteka': 'BIBLIOTEKA',
             'Biedronka': 'SUPER',
@@ -2894,7 +2894,7 @@ class PolylinePolygone(ObiektNaMapie):
     """funkcja parsuje dane z pliku txt/mp i przetwarza na reprezentacje wewnetrzna"""
     def rekord2Dane(self, stringZDanymi, domyslneMiasto):
         Klucze = set()
-        self.liniaObszar = string
+        # self.liniaObszar = string
 
         for tmpbbb in stringZDanymi.strip().split('\n'):
             tmpbbb = tmpbbb.strip()
@@ -3386,8 +3386,8 @@ def montujpliki(args, naglowek_mapy=''):
             if args.monthash:
                 zawartoscPlikuMp.plikHash[pliki_w_ump] = ''
             else:
-                zawartoscPlikuMp.plikHash[pliki_w_ump] = \
-                    hashlib.md5(open(plik_ze_sciezka_pelna, 'rb').read()).hexdigest()
+                with open(plik_ze_sciezka_pelna, 'rb') as f:
+                    zawartoscPlikuMp.plikHash[pliki_w_ump] = hashlib.md5(f.read()).hexdigest()
             # print('Udalo sie otworzyc pliku %s'%(pliki))
 
             ############################################################################################################
@@ -4345,7 +4345,7 @@ def stworz_plik_typ(args):
         nazwa_typ = args.nazwa_typ[0]
     else:
         nazwa_typ = args.nazwa_typ
-    zmienne = UstawieniaPoczatkowe(args)
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
     plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id + '\n']
