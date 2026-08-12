@@ -3,101 +3,80 @@
 
 import sys
 import timeit
-from collections import defaultdict, namedtuple
-from multiprocessing import Pool
+from collections import defaultdict, deque, namedtuple
 import os.path
-from multiprocessing import cpu_count
-import time
 
 
-def update_progress(progress):
-    bar_length = 20
-    status = ''
-    if isinstance(progress, int):
-        progress = float(progress)
-    if not isinstance(progress, float):
-        progress = 0
-        status = "error: progress var must be float\r\n"
-    if progress < 0:
-        progress = 0
-        status = "Halt...\n"
-    if progress >= 1:
-        progress = 1
-        status = "Zrobione...\n"
-    block = int(round(bar_length*progress))
-    text = "\rProcent: [{0}] {1}% {2}".format("#"*block + "-"*(bar_length-block), int(progress*100), status)
-    sys.stdout.write(text)
-    sys.stdout.flush()
+class ZbioryRozlaczne(object):
+    """Union-Find (DSU) z kompresja sciezek i laczeniem po rozmiarze.
 
+    znajdz() na elemencie, ktory nigdy nie bral udzialu w polacz/polacz_wszystkie,
+    zwraca go bez zadnych efektow ubocznych (nie rejestruje go) - dzieki temu
+    mozna bezpiecznie sprawdzic, czy dwa wezly naleza juz do tego samego zbioru,
+    bez ryzyka przypadkowego zarejestrowania jednego z nich jako nowy,
+    sztuczny zbior jednoelementowy."""
 
-# Class to represent a graph
-class Graph(object):
+    def __init__(self):
+        self.rodzic = {}
+        self.rozmiar = {}
 
-    def __init__(self, vertices):
-        self.vertices = vertices
-        self.V = len(vertices)  # No. of vertices
-        self.graph = []  # default dictionary to store graph
-        self.infinity = float('Inf')
+    def znajdz(self, x):
+        if x not in self.rodzic:
+            return x
+        korzen = x
+        while self.rodzic[korzen] != korzen:
+            korzen = self.rodzic[korzen]
+        while self.rodzic[x] != korzen:
+            self.rodzic[x], x = korzen, self.rodzic[x]
+        return korzen
 
-    # function to add an edge to graph
-    def addEdge(self, u, v, w):
-        self.graph.append([u, v, w])
+    def polacz(self, x, y):
+        self.rodzic.setdefault(x, x)
+        self.rodzic.setdefault(y, y)
+        rx, ry = self.znajdz(x), self.znajdz(y)
+        if rx == ry:
+            return
+        if self.rozmiar.get(rx, 1) < self.rozmiar.get(ry, 1):
+            rx, ry = ry, rx
+        self.rodzic[ry] = rx
+        self.rozmiar[rx] = self.rozmiar.get(rx, 1) + self.rozmiar.get(ry, 1)
 
-    # utility function used to print the solution
-    def printArr(self, dist):
-        print("Vertex   Distance from Source")
-        wynik = []
-        # for i in range(self.V):
-        for i in self.vertices:
-            print("%s \t\t %s" % (i, str(dist[i])))
-            wynik.append((i, str(dist[i])))
+    def polacz_wszystkie(self, elementy):
+        elementy = list(elementy)
+        if not elementy:
+            return
+        pierwszy = elementy[0]
+        self.rodzic.setdefault(pierwszy, pierwszy)
+        for element in elementy[1:]:
+            self.polacz(pierwszy, element)
+
+    def grupy(self):
+        wynik = defaultdict(set)
+        for element in self.rodzic:
+            wynik[self.znajdz(element)].add(element)
         return wynik
 
-    def BellmanFord(self, src):
-        # Step 1: Initialize distances from src to all other vertices
-        # as INFINITE
-        # dist = [float("Inf")] * self.V
-        # dist = dict()
-        # for a in self.vertices:
-        #     dist[a] = self.infinity
-        dist = {a: self.infinity for a in self.vertices}
-        dist[src] = 0
 
-        # Step 2: Relax all edges |V| - 1 times. A simple shortest
-        # path from src to any other vertex can have at-most |V| - 1
-        # edges
-        for i in range(self.V-1):
-            # Update dist value and parent index of the adjacent vertices of
-            # the picked vertex. Consider only those vertices which are still in
-            # queue
-            for u, v, w in self.graph:
-                # if dist[u] != float("Inf") and dist[u] + w < dist[v]:
-                if dist[u] != self.infinity and dist[u] + w < dist[v]:
-                    dist[v] = dist[u] + w
+def wierzcholki_nieosiagalne(wierzcholki, sasiedzi):
+    """Dla kazdego wierzcholka-zrodla zwraca pary (skad, dokad), do ktorych nie
+    da sie dojechac zgodnie z kierunkiem krawedzi. Zwykly BFS (O(V+E) na
+    zrodlo) - krawedzie maja jednostkowa wage, wiec liczenie najkrotszych
+    sciezek Bellmanem-Fordem (O(V*E) na zrodlo) nie jest tu potrzebne."""
+    nieosiagalne = []
+    for src in wierzcholki:
+        odwiedzone = {src}
+        kolejka = deque([src])
+        while kolejka:
+            aktualny = kolejka.popleft()
+            for sasiad in sasiedzi.get(aktualny, ()):
+                if sasiad not in odwiedzone:
+                    odwiedzone.add(sasiad)
+                    kolejka.append(sasiad)
+        for dokad in wierzcholki:
+            if dokad not in odwiedzone:
+                nieosiagalne.append((src, dokad))
+    return nieosiagalne
 
-        # Step 3: check for negative-weight cycles.  The above step
-        # guarantees shortest distances if graph doesn't contain
-        # negative weight cycle.  If we get a shorter path, then there
-        # is a cycle.
-
-        # for u, v, w in self.graph:
-        #         if dist[u] != float("Inf") and dist[u] + w < dist[v]:
-        #                 print("Graph contains negative weight cycle")
-        #                 return
-
-        # print all distance
-        # self.printArr(dist)
-        wynik = []
-        # for i in range(self.V):
-        for i in self.vertices:
-            # print("%s \t\t %s" % (i, str(dist[i])))
-            if dist[i] == self.infinity:
-                wynik.append((str(src)+'->'+str(i), str(dist[i])))
-        # ueue.put(wynik)
-        return wynik
-
-        # return
-        
 
 class Mapa(object):
     def __init__(self, nazwapliku, stderr_stdout_writer, mode):
@@ -374,78 +353,29 @@ class Mapa(object):
                         self.stderr_stdout_writer.stderrorwrite('Jednokierunkowa ślepa: ' + para_wspolrzednych)
 
 
-    def redukuj_ilosc_zbiorow_routingowych(self, nodyRoutingoweDrog):
-        iloscdrog = len(nodyRoutingoweDrog)
-        iloscdrogdlaprogress = iloscdrog
-        iloscNone = 0
-        procent = 0
-        timer_start = timeit.default_timer()
-        update_progress(0)
-        tmpccc = -1
-        while tmpccc:
-            if tmpccc == -1:
-                tmpccc = 0
-            # for tmpccc in range(0, iloscdrog-1):
-            if nodyRoutingoweDrog[tmpccc]:
-                udalosiezredukowac = 1
-                while udalosiezredukowac:
-                    udalosiezredukowac = 0
-                    numery_nodow_do_usuniecia = []
-                    for tmpbbb in range(tmpccc + 1, iloscdrog):
-
-                        if nodyRoutingoweDrog[tmpbbb]:
-                            for zzz in nodyRoutingoweDrog[tmpbbb]:
-                                if zzz in nodyRoutingoweDrog[tmpccc]:
-                                    setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
-                                    nodyRoutingoweDrog[tmpccc] = setwsp
-                                    nodyRoutingoweDrog[tmpbbb] = None
-                                    numery_nodow_do_usuniecia.append(tmpbbb)
-                                    iloscdrog -= 1
-                                    iloscNone += 1
-                                    udalosiezredukowac = 1
-                                    break
-                        aktprocent = round(iloscNone / iloscdrogdlaprogress, 2)
-                        if aktprocent * 100 > procent + 1:
-                            procent = aktprocent * 100
-                            update_progress(aktprocent)
-                    # usun elementy:
-                    iter = 0
-                    for zzz in numery_nodow_do_usuniecia:
-                        if nodyRoutingoweDrog[zzz - iter]:
-                            print('Uwaga nie usuwam None')
-                        del nodyRoutingoweDrog[zzz - iter]
-                        iter += 1
-
-            # noweNody = [a for a in nodyRoutingoweDrog if a]
-            # nodyRoutingoweDrog = noweNody
-            if nodyRoutingoweDrog[-1]:
-                nodyRoutingoweDrog.append(None)
-                iloscdrog += 1
-            if nodyRoutingoweDrog[tmpccc + 1]:
-                tmpccc += 1
-            else:
-                tmpccc = None
-            print(iloscdrog, nodyRoutingoweDrog[iloscdrog - 1])
-        return nodyRoutingoweDrog
-
     def sprawdzNieciaglosciSiatkiRoutingowej(self):
-        # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
-        nodyRoutingoweDrog = []
-        # timer_start = timeit.default_timer()
-        nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-        # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-        nodyRoutingoweDrog.append(nodyGranicznetmp)
+        # laczymy w DSU wezly routingowe kazdej drogi - drogi dzielace wspolny
+        # wezel routingowy trafiaja do tego samego zbioru (skladowej spojnej)
+        dsu = ZbioryRozlaczne()
+        nodyGranicznetmp = set(a for a in self.NodyGraniczne if a in self.WszystkieNody)
+        dsu.polacz_wszystkie(nodyGranicznetmp)
         for tmpaaa in self.Drogi:
-            nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
-        # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
-        # iloscdrog = len(nodyRoutingoweDrog)
-        # iloscdrogdlaprogress = iloscdrog
-        # iloscNone = 0
-        # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-        print('analizuje %s drog' % len(nodyRoutingoweDrog))
+            dsu.polacz_wszystkie(c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)
+        print('analizuje %s drog' % (len(self.Drogi) + 1))
 
         timer_start = timeit.default_timer()
-        oddzielnegrafy = [a for a in self.redukuj_ilosc_zbiorow_routingowych(nodyRoutingoweDrog) if a]
+        grupy = dsu.grupy()
+        # wezly graniczne wyznaczaja "glowna" siatke - jej nie raportujemy jako
+        # oddzielny/rozlaczny graf; gdy w pliku nie ma wezlow granicznych, za
+        # glowna przyjmujemy najwieksza ze znalezionych skladowych
+        if nodyGranicznetmp:
+            glowna_grupa = dsu.znajdz(next(iter(nodyGranicznetmp)))
+        elif grupy:
+            glowna_grupa = max(grupy, key=lambda korzen: len(grupy[korzen]))
+        else:
+            glowna_grupa = None
+        oddzielnegrafy = ([grupy[glowna_grupa]] if glowna_grupa is not None else []) + \
+            [zbior for korzen, zbior in grupy.items() if korzen != glowna_grupa]
 
         print()
         print('czas wykonania %s' % (timeit.default_timer() - timer_start))
@@ -454,139 +384,62 @@ class Mapa(object):
                 print(str(oddzielnegrafy[a]))
 
     def sprawdzNieciaglosciSiatkiRoutingowejUwzglednijJednokierunkowosc(self):
-        # najpierw tworzymy dla każdej drogi jej węzły tylko w postaci węzłów routingowych
-        nodyRoutingoweDrog = []
-        nodyRoutingoweDrogJednokierunkowych = []
-        # timer_start = timeit.default_timer()
-        nodyGranicznetmp = set((a for a in self.NodyGraniczne if a in self.WszystkieNody))
-        # print('czas wykonania %s' %(timeit.default_timer() - timer_start))
-        # dodajemy nody graniczne do pierwszej pozycji, inaczej bedzie pokazywal slepe na granicy
-        nodyRoutingoweDrog.append(nodyGranicznetmp)
-        procent = 0
+        # 2-kierunkowe drogi (i samo-zapetlone jednokierunkowe) laczymy w DSU -
+        # dajac skladowe spojne, do ktorych da sie dojechac i wyjechac w obie strony
+        dsu = ZbioryRozlaczne()
+        nodyGranicznetmp = set(a for a in self.NodyGraniczne if a in self.WszystkieNody)
+        dsu.polacz_wszystkie(nodyGranicznetmp)
+
+        drogi_kierunkowe = []
         for tmpaaa in self.Drogi:
-            # if self.WszystkieNody[self.Drogi[tmpaaa][0]].numerParyWspDlaDanejDrogi[self.Drogi[tmpaaa][0]][1]:
-            if tmpaaa in self.DrogiJednokierunkowe:
-                njedn = [c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy]
-                if njedn[0] == njedn[-1]:
-                    # print('droga zapetlona', self.Drogi[tmpaaa])
-                    nodyRoutingoweDrog.append(set(njedn))
-                else:
-                    nodyRoutingoweDrogJednokierunkowych.append(njedn)
+            nody_routingowe = [c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy]
+            if tmpaaa in self.DrogiJednokierunkowe and nody_routingowe and nody_routingowe[0] != nody_routingowe[-1]:
+                drogi_kierunkowe.append(nody_routingowe)
             else:
-                nodyRoutingoweDrog.append(set((c for c in self.Drogi[tmpaaa] if self.WszystkieNody[c].wezelRoutingowy)))
+                dsu.polacz_wszystkie(nody_routingowe)
 
-        # obrabiamy drogi jednokierunkowe, jeśli kończy się i zaczyna w tym samym segmencie to można dodać bez patrzenia
-        # do danego segmentu
-        nodyRoutingoweDrogJednokierunkowych, nodyRoutingoweDrog = \
-            self.polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(nodyRoutingoweDrogJednokierunkowych,
-                                                                     nodyRoutingoweDrog)
-
-        iloscdrog = len(nodyRoutingoweDrog)
-        iloscdrogdlaprogress = iloscdrog
-        iloscNone = 0
-        # teraz trzeba czary mary ze zbiorami tak aby to wszysto jakos polaczyc
-        print('analizuje %s drog' % iloscdrog)
-        timer_start = timeit.default_timer()
-        update_progress(0)
-        tmpccc = -1
-        while tmpccc:
-            if tmpccc == -1:
-                tmpccc = 0
-        # for tmpccc in range(0, iloscdrog-1):
-            if nodyRoutingoweDrog[tmpccc]:
-                udalosiezredukowac = 1
-                while udalosiezredukowac:
-                    udalosiezredukowac = 0
-                    numery_nodow_do_usuniecia = []
-                    for tmpbbb in range(tmpccc+1, iloscdrog):
-
-                        if nodyRoutingoweDrog[tmpbbb]:
-                            for zzz in nodyRoutingoweDrog[tmpbbb]:
-                                if zzz in nodyRoutingoweDrog[tmpccc]:
-                                    setwsp = nodyRoutingoweDrog[tmpccc].union(nodyRoutingoweDrog[tmpbbb])
-                                    nodyRoutingoweDrog[tmpccc] = setwsp
-                                    nodyRoutingoweDrog[tmpbbb] = None
-                                    numery_nodow_do_usuniecia.append(tmpbbb)
-                                    # uaktualniamy dane do paska postepu
-                                    iloscdrog -= 1
-                                    iloscNone += 1
-                                    udalosiezredukowac = 1
-                                    break
-                        aktprocent = round(iloscNone/iloscdrogdlaprogress, 2)
-                        if aktprocent * 100 > procent + 1:
-                            procent = aktprocent * 100
-                            update_progress(aktprocent)
-                    # usun elementy:
-                    # iter = 0
-                    numery_nodow_do_usuniecia.reverse()
-                    for zzz in numery_nodow_do_usuniecia:
-                        if nodyRoutingoweDrog[zzz]:
-                            print('Uwaga nie usuwam None')
-                        del nodyRoutingoweDrog[zzz]
-                        # if nodyRoutingoweDrog[zzz-iter]:
-                        #     print('Uwaga nie usuwam None')
-                        # del nodyRoutingoweDrog[zzz-iter]
-                        # iter += 1
-
-            # noweNody = [a for a in nodyRoutingoweDrog if a]
-            # nodyRoutingoweDrog = noweNody
-            if nodyRoutingoweDrog[-1]:
-                nodyRoutingoweDrog.append(None)
-                iloscdrog += 1
-            if nodyRoutingoweDrog[tmpccc+1]:
-                tmpccc += 1
+        # jednokierunkowa zaczynajaca i konczaca sie w tym samym, juz polaczonym
+        # zbiorze jest z nim osiagalna w obie strony (dojedziemy do jej poczatku,
+        # a z konca da sie do niego wrocic) - dolaczamy jej wezly do tego zbioru,
+        # zamiast opisywac ja jako oddzielna krawedz skierowana
+        pozostale_drogi_kierunkowe = []
+        for droga in drogi_kierunkowe:
+            if dsu.znajdz(droga[0]) == dsu.znajdz(droga[-1]):
+                dsu.polacz_wszystkie(droga)
             else:
-                tmpccc = None
-            print(iloscdrog, nodyRoutingoweDrog[iloscdrog-1])
-        oddzielnegrafy = [a for a in nodyRoutingoweDrog if a]
-        # print('oddzielne grafy')
-        # for a in range(len(oddzielnegrafy)):
-        #     print(a, oddzielnegrafy[a])
+                pozostale_drogi_kierunkowe.append(droga)
+        drogi_kierunkowe = pozostale_drogi_kierunkowe
 
-        print(len(oddzielnegrafy))
-        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
-        # if len(oddzielnegrafy)>1:
-        #    for a in range(1, len(oddzielnegrafy)):
-        #        print(str(oddzielnegrafy[a]))
+        grupy = dsu.grupy()
+        korzenie = list(grupy.keys())
+        oddzielnegrafy = [grupy[korzen] for korzen in korzenie]
+        korzen_do_indeksu = {korzen: i for i, korzen in enumerate(korzenie)}
+        print('analizuje %s drog' % len(oddzielnegrafy))
 
-        timer_start = timeit.default_timer()
+        def indeks_komponentu(node):
+            korzen = dsu.znajdz(node)
+            if korzen in korzen_do_indeksu:
+                return str(korzen_do_indeksu[korzen])
+            return node
+
         print('Redukuje drogi jednokierunkowe')
-        print(len(nodyRoutingoweDrogJednokierunkowych))
-        for aaa in range(0, len(oddzielnegrafy)):
-            for bbb in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-                if nodyRoutingoweDrogJednokierunkowych[bbb]:
-                    inside = 1
-                    for ccc in nodyRoutingoweDrogJednokierunkowych[bbb]:
-                        if ccc not in oddzielnegrafy[aaa]:
-                            inside = 0
-                            break
-                    if inside:
-                        nodyRoutingoweDrogJednokierunkowych[bbb] = None
+        print(len(drogi_kierunkowe))
 
-        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
         paryJednokierunkoweBezGrafu = []
         polaczeniaPomiedzyGrafami = []
         print('sprawdzam polaczenia jednokierunkowe miedzy grafami')
         timer_start = timeit.default_timer()
-        for aaa in (a for a in nodyRoutingoweDrogJednokierunkowych if a):
-            for bbb in range(0, len(aaa)-1):
-                n = aaa[bbb]
-                n_plus_1 = aaa[bbb+1]
-                for ccc in range(0, len(oddzielnegrafy)):
-                    if aaa[bbb] in oddzielnegrafy[ccc]:
-                        n = str(ccc)
-                        break
-                for ccc in range(0, len(oddzielnegrafy)):
-                    if aaa[bbb+1] in oddzielnegrafy[ccc]:
-                        n_plus_1 = str(ccc)
-                        break
+        for aaa in drogi_kierunkowe:
+            for bbb in range(0, len(aaa) - 1):
+                n = indeks_komponentu(aaa[bbb])
+                n_plus_1 = indeks_komponentu(aaa[bbb + 1])
                 if n == n_plus_1:
                     pass
                 elif n.isdigit() and n_plus_1.isdigit():
-                    if ((n, n_plus_1)) not in polaczeniaPomiedzyGrafami:
+                    if (n, n_plus_1) not in polaczeniaPomiedzyGrafami:
                         polaczeniaPomiedzyGrafami.append((n, n_plus_1))
                 else:
-                    if ((n, n_plus_1)) not in paryJednokierunkoweBezGrafu:
+                    if (n, n_plus_1) not in paryJednokierunkoweBezGrafu:
                         paryJednokierunkoweBezGrafu.append((n, n_plus_1))
 
         polaczeniaPomiedzyGrafami.sort()
@@ -660,7 +513,7 @@ class Mapa(object):
         print('slownik redukcji', slownikRedukcji)
         kluczeRedukcji = sorted([int(a) for a in slownikRedukcji])
         kluczeRedukcji = [str(a) for a in kluczeRedukcji]
-        kluczeRedukcjiOdwrotne = kluczeRedukcji
+        kluczeRedukcjiOdwrotne = list(kluczeRedukcji)
         kluczeRedukcjiOdwrotne.reverse()
 
         for tmpaaa in kluczeRedukcji:
@@ -736,90 +589,31 @@ class Mapa(object):
             if tmpaaa[1] not in wierzcholkiGrafu:
                 wierzcholkiGrafu.append(tmpaaa[1])
 
-        graf = Graph(wierzcholkiGrafu)
+        sasiedzi = defaultdict(list)
         for tmpaaa in polaczeniaPomiedzyGrafami:
-            graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
+            sasiedzi[tmpaaa[0]].append(tmpaaa[1])
         for tmpaaa in paryJednokierunkoweBezGrafu:
-            graf.addEdge(tmpaaa[0], tmpaaa[1], 1)
+            sasiedzi[tmpaaa[0]].append(tmpaaa[1])
 
         print('spradzam polaczenia')
-
-        pool = Pool(cpu_count())
-        # ponizsze to jakis artefakt, chyba nie rzumiem o co chodzi
-        # wierzcholkiGrafu = [a for a in wierzcholkiGrafu]
-        # rs = pool.map_async(graf.BellmanFord, wierzcholkiGrafu)
-
-        rs = []
-        for wierzch in wierzcholkiGrafu:
-            rs.append(pool.apply_async(graf.BellmanFord, [wierzch]))
-
-        progress100 = len(wierzcholkiGrafu)
-        time_of_break = 1
         timer_start = timeit.default_timer()
-        incomplete_count_previous = 0
-        incomplete_count = 0
-        while 1:
-            incomplete_count_previous = incomplete_count
-            incomplete_count = sum(1 for x in rs if not x.ready())
-            if incomplete_count == 0:
-                print('Skończone')
-                break
-            if incomplete_count_previous and incomplete_count_previous == incomplete_count:
-                time_of_break += 1
-                # print(time_of_break)
-            else:
-                time_of_running_in_seconds = round(timeit.default_timer() - timer_start)
-                if incomplete_count < progress100:
-                    ETA_int = round(incomplete_count/((progress100-incomplete_count)/time_of_running_in_seconds))
-                    if ETA_int <= 120:
-                        ETA = str(ETA_int) + ' s'
-                    else:
-                        ETA = str(round(ETA_int/60, 1))+' min'
-                    print('Pozostało ' + str(incomplete_count) + ' wierzchołków do sprawdzenia. ETA: ' + ETA)
 
-            time.sleep(time_of_break)
+        def opisz_wierzcholek(nazwa):
+            if not nazwa.isdigit():
+                return nazwa
+            indeks = int(nazwa)
+            if indeks >= len(oddzielnegrafy) or not oddzielnegrafy[indeks]:
+                return nazwa
+            return nazwa + '(' + next(iter(oddzielnegrafy[indeks])) + ')'
 
-        file = open(self.nazwaplikudlaoutput, 'w')
-        for wynikAnalizy in rs:
-            # wyninkAnalizy ma postac [('53.27990,16.45933->53.32999,16.02584', 'inf')]
-            if wynikAnalizy.get(timeout=1):
-                for tmpbbb in wynikAnalizy.get(timeout=1):
-                    print(tmpbbb)
-                    skaddokad, infinity = tmpbbb
-                    skad, dokad = skaddokad.split('->')
-                    try:
-                        # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
-                        skad = skad + '(' + list(oddzielnegrafy[int(skad)])[0] + ')'
-                    except ValueError:
-                        pass
-                    try:
-                        # poniewaz oddzielnegrafy to set wiec aby wyciagnac jeden element z niego musze zrobic liste
-                        dokad = dokad + '(' + list(oddzielnegrafy[int(dokad)])[0] + ')'
-                    except ValueError:
-                        pass
-                    print(skad + '->' + dokad + ' brak polaczenia')
-                    file.write(skad + '->' + dokad + ' brak polaczenia\n')
+        with open(self.nazwaplikudlaoutput, 'w') as file:
+            for skad, dokad in wierzcholki_nieosiagalne(wierzcholkiGrafu, sasiedzi):
+                linia = opisz_wierzcholek(skad) + '->' + opisz_wierzcholek(dokad) + ' brak polaczenia'
+                print(linia)
+                file.write(linia + '\n')
 
-        file.close()
+        print('czas wykonania %s' % (timeit.default_timer() - timer_start))
         print('Utworzono plik %s.' % self.nazwaplikudlaoutput)
-
-    @staticmethod
-    def polacz_jednokierunkowe_o_tym_samym_poczatku_i_koncu(nodyRoutingoweDrogJednokierunkowych,
-                                                            nodyRoutingoweDrog):
-        # jeśli jednokierunkowa zaczya się i kończy w tym samym zbiorze, to znaczy, że z każdego dowolnego
-        # punktu tej jednokierunkowej można dojechać do tego zbioru. Można więc spokojnie połączyć te dwa zbiory
-
-        for tmpaaa in range(0, len(nodyRoutingoweDrogJednokierunkowych)):
-            for tmpbbb in range(0, len(nodyRoutingoweDrog)):
-                if (nodyRoutingoweDrogJednokierunkowych[tmpaaa][0] in nodyRoutingoweDrog[tmpbbb]) and \
-                        (nodyRoutingoweDrogJednokierunkowych[tmpaaa][-1] in nodyRoutingoweDrog[tmpbbb]):
-                    nodyRoutingoweDrog[tmpbbb] = \
-                        nodyRoutingoweDrog[tmpbbb].union(nodyRoutingoweDrogJednokierunkowych[tmpaaa])
-                    # print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrogJednokierunkowych[tmpaaa] )
-                    # print('Jednokierunkowa z poczatkiem i koncem w grafie', nodyRoutingoweDrog[tmpbbb] )
-                    nodyRoutingoweDrogJednokierunkowych[tmpaaa] = None
-                    break
-        return nodyRoutingoweDrogJednokierunkowych, nodyRoutingoweDrog
 
     def sprawdzzapetlenie(self, nodydrogi):
         """ funkcja sprawdza czy droga nie jest ze sobą zapętlona, jeśli jest, to wtedy dzieli ją na pół aż rozpętli"""
