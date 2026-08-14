@@ -318,7 +318,7 @@ class Mapa(object):
                 if self.Zakazy[zakaz_id] is None:
                     continue
                 if tmpbbb in self.WszystkieNody:
-                    self.WszystkieNody[tmpbbb].wezelRoutingowy = +1
+                    self.WszystkieNody[tmpbbb].wezelRoutingowy += 1
                     self.Zakazy[zakaz_id].Nodes.append(self.WszystkieNody[tmpbbb])
                 else:
                     self.stderr_stdout_writer.stderrorwrite('Błąd zakazu! Węzeł bez drogi ' + tmpbbb)
@@ -425,8 +425,14 @@ class Mapa(object):
         print('Redukuje drogi jednokierunkowe')
         print(len(drogi_kierunkowe))
 
-        paryJednokierunkoweBezGrafu = []
-        polaczeniaPomiedzyGrafami = []
+        # laczymy skierowane odcinki miedzy skladowymi (albo pojedynczymi wezlami
+        # poza siatka dwukierunkowa) w krawedzie grafu skierowanego. Osiagalnosc
+        # miedzy skladowymi/wezlami - w tym w obie strony, gdy istnieja krawedzie
+        # A->B i B->A - sprawdza pozniej wieloskokowy BFS w wierzcholki_nieosiagalne(),
+        # wiec scalanie wzajemnie polaczonych par w jeden wezel nie zmienia wyniku
+        # i nie jest tu potrzebne
+        paryJednokierunkoweBezGrafu = set()
+        polaczeniaPomiedzyGrafami = set()
         print('sprawdzam polaczenia jednokierunkowe miedzy grafami')
         timer_start = timeit.default_timer()
         for aaa in drogi_kierunkowe:
@@ -434,15 +440,14 @@ class Mapa(object):
                 n = indeks_komponentu(aaa[bbb])
                 n_plus_1 = indeks_komponentu(aaa[bbb + 1])
                 if n == n_plus_1:
-                    pass
+                    continue
                 elif n.isdigit() and n_plus_1.isdigit():
-                    if (n, n_plus_1) not in polaczeniaPomiedzyGrafami:
-                        polaczeniaPomiedzyGrafami.append((n, n_plus_1))
+                    polaczeniaPomiedzyGrafami.add((n, n_plus_1))
                 else:
-                    if (n, n_plus_1) not in paryJednokierunkoweBezGrafu:
-                        paryJednokierunkoweBezGrafu.append((n, n_plus_1))
+                    paryJednokierunkoweBezGrafu.add((n, n_plus_1))
 
-        polaczeniaPomiedzyGrafami.sort()
+        polaczeniaPomiedzyGrafami = sorted(polaczeniaPomiedzyGrafami)
+        paryJednokierunkoweBezGrafu = sorted(paryJednokierunkoweBezGrafu)
         print(polaczeniaPomiedzyGrafami)
         print(paryJednokierunkoweBezGrafu)
         print(len(polaczeniaPomiedzyGrafami))
@@ -450,144 +455,23 @@ class Mapa(object):
 
         print()
         print('czas wykonania %s' % (timeit.default_timer() - timer_start))
-        # print(len([a for a in nodyRoutingoweDrogJednokierunkowych if a]))
-        print('Redukuje ilosc osobnych grafow')
-        slownikRedukcji = {}
-
-        # Redukujemy ilość osobnych grafów. Trzeba to zrobić kilkakrotnie, ponieważ przy zamianie elementy które
-        # już raz zamieniliśmy mogą ponownie ulce zamianie. Poza tym powstają elementy typu (0,0) które należy
-        # zamienić na none.
-
-        iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
-        iloscNonePomiedzyGrafami_poprzedni = -1
-
-        while iloscNonePomiedzyGrafami > iloscNonePomiedzyGrafami_poprzedni:
-            iloscNonePomiedzyGrafami_poprzedni = iloscNonePomiedzyGrafami
-            for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
-                print(aaa)
-                if polaczeniaPomiedzyGrafami[aaa]:
-                    pOdwr = (polaczeniaPomiedzyGrafami[aaa][1], polaczeniaPomiedzyGrafami[aaa][0])
-                    print('polaczenia', polaczeniaPomiedzyGrafami[aaa], pOdwr)
-                    if pOdwr in polaczeniaPomiedzyGrafami:
-                        print('odwrotne w polaczeniach')
-                        indeks = polaczeniaPomiedzyGrafami.index(pOdwr)
-                        min_ = str(min(int(polaczeniaPomiedzyGrafami[aaa][0]),
-                                       int(polaczeniaPomiedzyGrafami[aaa][1])))
-                        max_ = str(max(int(polaczeniaPomiedzyGrafami[aaa][0]),
-                                       int(polaczeniaPomiedzyGrafami[aaa][1])))
-                        if min_ in slownikRedukcji:
-                            if min_ != max_:
-                                slownikRedukcji[min_].append(max_)
-                        else:
-                            slownikRedukcji[min_] = [max_]
-                        polaczeniaPomiedzyGrafami[aaa] = None
-                        polaczeniaPomiedzyGrafami[indeks] = None
-                        # teraz wiemy, że dana para jest tozszama (0,100) i (100,0). Czyli 100 laduje w tym przypadku
-                        # calkowicie w 0. W tym przypadku nalezy wszystkie
-                        # 100 w pozostałych elementach pozamieniac na 0. Dlatego iterujemy po wszystkich elementach i
-                        # dokonujemy stosownych korekt. Bo de facto ten element (100) znika już wiec dobrze go
-                        # zastapic nowym.
-                        for bbb in range(0, len(polaczeniaPomiedzyGrafami)):
-                            if polaczeniaPomiedzyGrafami[bbb]:
-                                a, b = polaczeniaPomiedzyGrafami[bbb]
-                                if a == max_:
-                                    a = min_
-                                    print('zamieniam pierwszy element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + a)
-                                if b == max_:
-                                    b = min_
-                                    print('zamieniam drugi element ' + str(polaczeniaPomiedzyGrafami[bbb]) + '->' + b)
-                                if a == b:
-                                    polaczeniaPomiedzyGrafami[bbb] = None
-                                else:
-                                    polaczeniaPomiedzyGrafami[bbb] = (a, b)
-                                # print(polaczeniaPomiedzyGrafami[bbb])
-                iloscNonePomiedzyGrafami = len([a for a in polaczeniaPomiedzyGrafami if a])
-
-        print(polaczeniaPomiedzyGrafami)
-        polaczeniaPomiedzyGrafami = [a for a in polaczeniaPomiedzyGrafami if a]
-        print(len(polaczeniaPomiedzyGrafami))
-
-        # musze uporzadkowac slownik redukcji, bo z racji wieloprzebiegowosci poprzedniej czesci niektore elementy
-        # nie sa calkowicie zastapione i moga sie dublowac. np
-        # 1: 10,12,45 i 10: 77, trzeba uporzadkowac tak 1: 10.12.45.77
-        print('slownik redukcji', slownikRedukcji)
-        kluczeRedukcji = sorted([int(a) for a in slownikRedukcji])
-        kluczeRedukcji = [str(a) for a in kluczeRedukcji]
-        kluczeRedukcjiOdwrotne = list(kluczeRedukcji)
-        kluczeRedukcjiOdwrotne.reverse()
-
-        for tmpaaa in kluczeRedukcji:
-            if slownikRedukcji[tmpaaa]:
-                for tmpbbb in kluczeRedukcjiOdwrotne:
-                    if tmpbbb == tmpaaa:
-                        break
-                    else:
-                        if slownikRedukcji[tmpbbb] and tmpbbb in slownikRedukcji[tmpaaa]:
-                            slownikRedukcji[tmpaaa] = slownikRedukcji[tmpaaa] + slownikRedukcji[tmpbbb]
-                            slownikRedukcji[tmpbbb] = None
-        slownikRedukcji = {a: slownikRedukcji[a] for a in slownikRedukcji if slownikRedukcji[a]}
-        print('slownik redukcji', slownikRedukcji)
-        # mapujemy co na co zamienić
-        slownikSubstytucji = dict()
-        print('oddzielne grafy przed', oddzielnegrafy)
-        for aaa in slownikRedukcji:
-            for bbb in slownikRedukcji[aaa]:
-                slownikSubstytucji[bbb] = aaa
-                oddzielnegrafy[int(bbb)] = None
-        print('oddzielne grafy po', oddzielnegrafy)
-
-        print('slownik substytucji ', slownikSubstytucji)
-        for aaa in oddzielnegrafy:
-            print(aaa)
-
-        print('redukuje pary jednokierunkowe bez grafu')
-        for aaa in range(0, len(paryJednokierunkoweBezGrafu)):
-            if paryJednokierunkoweBezGrafu[aaa][0] in slownikSubstytucji:
-                print('lewe znalezione ', paryJednokierunkoweBezGrafu[aaa])
-                bbb = (slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][0]], paryJednokierunkoweBezGrafu[aaa][1])
-                paryJednokierunkoweBezGrafu[aaa] = bbb
-                print('lewe zamieenione ', bbb)
-            if paryJednokierunkoweBezGrafu[aaa][1] in slownikSubstytucji:
-                print('prawe znalezione ', paryJednokierunkoweBezGrafu[aaa])
-                bbb = (paryJednokierunkoweBezGrafu[aaa][0], slownikSubstytucji[paryJednokierunkoweBezGrafu[aaa][1]])
-                paryJednokierunkoweBezGrafu[aaa] = bbb
-                print('prawe znalezione ', bbb)
-
-        print('polaczenia pomiedzy grafami przed', polaczeniaPomiedzyGrafami)
-        for aaa in range(0, len(polaczeniaPomiedzyGrafami)):
-            if polaczeniaPomiedzyGrafami[aaa]:
-                if polaczeniaPomiedzyGrafami[aaa][0] in slownikSubstytucji:
-                    bbb = (slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][0]], polaczeniaPomiedzyGrafami[aaa][1])
-                    polaczeniaPomiedzyGrafami[aaa] = bbb
-                if polaczeniaPomiedzyGrafami[aaa][1] in slownikSubstytucji:
-                    bbb = (polaczeniaPomiedzyGrafami[aaa][0], slownikSubstytucji[polaczeniaPomiedzyGrafami[aaa][1]])
-                    polaczeniaPomiedzyGrafami[aaa] = bbb
-
-        polaczeniaPomiedzyGrafami = list(set(polaczeniaPomiedzyGrafami))
-        print('polaczenia pomiedzy grafami po ', polaczeniaPomiedzyGrafami)
-        paryJednokierunkoweBezGrafu = list(set(paryJednokierunkoweBezGrafu))
-        print(len(paryJednokierunkoweBezGrafu))
 
         wierzcholkiGrafu = []
         print('Buduje wierzcholki grafu')
         for tmpaaa in range(0, len(oddzielnegrafy)):
-            print(tmpaaa, oddzielnegrafy[tmpaaa])
             if oddzielnegrafy[tmpaaa]:
                 wierzcholkiGrafu.append(str(tmpaaa))
-        print(wierzcholkiGrafu)
         for tmpaaa in polaczeniaPomiedzyGrafami:
-            if tmpaaa:
-                print(tmpaaa)
-                if tmpaaa[0] not in wierzcholkiGrafu:
-                    wierzcholkiGrafu.append(tmpaaa[0])
-                if tmpaaa[1] not in wierzcholkiGrafu:
-                    wierzcholkiGrafu.append(tmpaaa[1])
-        for tmpaaa in paryJednokierunkoweBezGrafu:
-            print(tmpaaa)
             if tmpaaa[0] not in wierzcholkiGrafu:
                 wierzcholkiGrafu.append(tmpaaa[0])
             if tmpaaa[1] not in wierzcholkiGrafu:
                 wierzcholkiGrafu.append(tmpaaa[1])
+        for tmpaaa in paryJednokierunkoweBezGrafu:
+            if tmpaaa[0] not in wierzcholkiGrafu:
+                wierzcholkiGrafu.append(tmpaaa[0])
+            if tmpaaa[1] not in wierzcholkiGrafu:
+                wierzcholkiGrafu.append(tmpaaa[1])
+        print(wierzcholkiGrafu)
 
         sasiedzi = defaultdict(list)
         for tmpaaa in polaczeniaPomiedzyGrafami:
