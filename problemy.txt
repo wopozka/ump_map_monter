@@ -6,6 +6,13 @@ Uwaga: pozycje uporzadkowane w ramach kazdego pliku od najbardziej
 krytycznych (crashe, utrata danych, cicha korupcja danych) do mniej
 istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
 
+Uzupelnienie: 2026-08-31 - dodatkowa analiza mont_demont.py (punkty
+1.18-1.33 nizej). Przy okazji zweryfikowano stan punktow 1.1-1.17:
+1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.12, 1.13, 1.14, 1.16 i 1.17 sa juz
+naprawione/nieaktualne w biezacym kodzie (zgodnie z adnotacjami
+"poprawione"/"zrobione" ponizej); 1.4, 1.8, 1.9, 1.10, 1.11 i 1.15
+nadal wystepuja w kodzie bez zmian.
+
 
 ================================================================
 1. mont_demont.py (silnik montujacy/demontujacy mapy)
@@ -153,6 +160,118 @@ istotnych (leaki zasobow, martwy kod, drobne niezgodnosci).
     "string" (import string na poczatku pliku) do atrybutu, ktory
     nigdzie w pliku nie jest czytany. Wyglada na pozostawiony kod
     debugowy / pomylke.
+
+1.18 [DUPLIKACJA KODU] TestyPoprawnosciDanych - powtarzalny wzorzec sprawdz_*
+    Linie: 231-620 (liczne metody sprawdz_*)
+    Kilkanascie metod (sprawdz_czy_forceclass_zabronione,
+    sprawdz_czy_endlevel_wieksze_od_data, sprawdz_label_dla_poi, itd.)
+    powtarza identyczny szablon: pobierz wspolrzedne przez
+    zwroc_wspolrzedne_do_szukania(), zbuduj komunikat,
+    error_out_writer.stderrorwrite(...), zwroc kod bledu jako string.
+    Warto wydzielic wspolny helper (np. zglos_blad(komunikat,
+    kod_bledu)), zeby zmniejszyc duplikacje i ryzyko niespojnosci przy
+    kolejnych zmianach.
+
+1.19 [DUPLIKACJA KODU] zapiszPOI / zapiszTXT - niemal identyczne bloki
+    Linie: 1923-2098 (przyblizone)
+    Budowanie rekordu (Komentarz/Dziwne/Data/POIPOLY) powtarza sie
+    niemal 1:1 w obu metodach - kandydat do wspolnej funkcji
+    pomocniczej.
+
+1.20 [DUPLIKACJA KODU] montuj_mkgmap / montuj_obszary_txt - powtarzalne ustawianie args.*
+    Linie: 3483-3612 (przyblizone)
+    Oba miejsca recznie ustawiaja ten sam zestaw ~15 atrybutow args.*
+    przed wywolaniem montujpliki() - warto wyciagnac do wspolnego
+    slownika/funkcji z domyslnymi flagami.
+
+1.21 [WYDAJNOSC] PlikMP1.plikNormalizacja - liniowe przeszukanie per rekord
+    Linie: 1837-1849
+    Dla kazdego rekordu POI/drogi funkcja przeszukuje liniowo
+    wszystkie pliki w celu normalizacji wielkosci liter nazw - O(n*m)
+    dla duzych map. Warto zbudowac raz slownik lower()->oryginalna
+    nazwa.
+
+1.22 [WYDAJNOSC] Budowanie stringow przez += w petli zamiast join
+    Linie: 1786-1806 (IndeksyMiast.zwroc_indeks_miasta, zaokraglij)
+    Konkatenacja stringow w petli - dla wiekszych zbiorow lepiej uzyc
+    listy + ''.join().
+
+1.23 [WYDAJNOSC / STYL] AutoPlikDlaPolylinePolygone.znajdz_najblizszy - reczna petla zamiast min(key=)
+    Linie: 1588-1606
+    Reczne sledzenie najlepszej odleglosci w dwoch listach zamiast
+    min(iterable, key=...).
+
+1.24 [NIESPOJNOSC UX] Gole print() zamiast stderrorwrite/stdoutwrite
+    Linie: ~1600, ~1734, ~2914
+    Kilka miejsc uzywa print() bezposrednio zamiast
+    self.error_out_writer.stderrorwrite/stdoutwrite. W trybie GUI
+    (mdm-py.py) komunikaty ida przez kolejke (stdoutqueue/stderrqueue)
+    - te print() nigdy tam nie trafiaja, wiec uzytkownik GUI nie
+    zobaczy tych komunikatow.
+
+1.25 [MARTWY KOD] Zakomentowane fragmenty kodu
+    Linie: np. 1781-1784, 2041-2052, 3396-3401
+    Warto usunac zamiast trzymac jako komentarze - utrudniaja
+    czytanie i sugeruja, ze cos moze byc jeszcze wlaczone.
+
+1.26 [RYZYKO KODOWANIA] Deklaracja pliku iso-8859-2 vs faktyczne uzycie cp1250/latin2
+    Linia: 2 (naglowek), oraz uzycie w UstawieniaPoczatkowe.__init__ (~831-834)
+    Naglowek pliku deklaruje # -*- coding: iso-8859-2 -*-, podczas gdy
+    runtime jawnie uzywa cp1250 (Windows) / latin2 (Linux). ISO-8859-2
+    i CP1250 roznia sie kilkoma znakami w zakresie polskich
+    diakrytykow. Literaly stringowe z polskimi znakami w kodzie (np.
+    tabela aliasow typow w tabelaKonwersjiTypow.create_name2Alias)
+    zaleza od faktycznego zapisu bajtow pliku na dysku - moze to
+    cicho zle dekodowac te literaly. Warto ujednolicic, najlepiej
+    zapisac plik jako UTF-8 i zadeklarowac # -*- coding: utf-8 -*-.
+
+1.27 [BLAD LOGICZNY - PODOBNY DO 1.10] IndeksyMiast - .index() lapie tylko pierwsze wystapienie
+    Linie: 2130-2144 (zwroc_indeks_miasta / zbuduj_city_idx_zwroc_format)
+    city_idx_miasto.index(nazwaMiastaIdx) lapie pierwsze wystapienie
+    identycznej nazwy miasta, analogicznie do problemu 1.10 z
+    granicami czesciowymi - przy zduplikowanych nazwach moze zwrocic
+    zly indeks.
+
+1.28 [MYLACE NAZEWNICTWO] merge_alias2TypeFromFile_and_alias2Type
+    Linie: 1275-1284
+    Nazwa metody sugeruje uzycie type2AliasFromFile, ale cialo
+    iteruje po alias2TypeFromFile. Dziala poprawnie, ale nazwa
+    wprowadza w blad przy czytaniu kodu.
+
+1.29 [KOSMETYKA] Literowki w komunikatach bledow
+    Linia: 486 ("Nieppprawny format...") i kilka podobnych
+    Warto poprawic przy okazji edycji pobliskiego kodu.
+
+1.30 [UPROSZCZENIE] Nadmiarowe krotki wyjatkow
+    Linie: 2501, 3847
+    except (FileNotFoundError, IOError): i
+    except (IOError, FileNotFoundError, PermissionError): - w Pythonie
+    3 IOError to alias OSError, ktory juz obejmuje pozostale wymienione
+    wyjatki. Mozna uproscic do except OSError:.
+
+1.31 [ORGANIZACJA] Caly modul w jednym pliku ~4700 linii
+    Caly plik mont_demont.py laczy parsowanie, walidacje, montaz,
+    demontaz, obsluge CLI (argparse) i wywolania narzedzi
+    zewnetrznych (java/netgen/wojek) w jednym pliku z ~20 klasami i
+    ~30 funkcjami. Naturalny podzial: walidacja.py
+    (TestyPoprawnosciDanych), typy.py (tabelaKonwersjiTypow + wielka
+    tabela aliasow typow), montaz.py/demontaz.py, cli.py (main() z
+    argparse, ~220 linii samych subparserow). Ulatwiloby to nawigacje
+    i testowanie w izolacji.
+
+1.32 [ORGANIZACJA] Niespojne konwencje nazewnicze
+    Mieszanie PascalCase (KatalogRoboczy, NazwaPliku) i snake_case
+    (dozwolone_klucze, stderr_stdout_writer) w obrebie tych samych
+    klas; metody typu sprawdzKierunekRonda/clockwisecheck obok
+    sprawdz_czy_forceclass_zabronione. Nie blokujace funkcjonalnie,
+    ale utrudnia orientacje w kodzie.
+
+1.33 [BRAK] Brak type hints i niekonsekwentne docstringi
+    Wiekszosc funkcji nie ma adnotacji typow ani docstringow;
+    nieliczne wyjatki (np. clockwisecheck, PaczerGranicCzesciowych)
+    maja pelne opisy. Dodanie type hints (przynajmniej dla publicznych
+    metod klas typu Mkgmap, TestyPoprawnosciDanych) ulatwiloby uzycie
+    IDE/statycznej analizy.
 
 
 ================================================================
