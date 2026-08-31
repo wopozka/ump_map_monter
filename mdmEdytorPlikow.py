@@ -107,8 +107,10 @@ class MdmEdytorPlikow(tkinter.Toplevel):
                       errors=self.zmienne.ReadErrors) as file_content:
                 self.edytor.delete('1.0', 'end')
                 self.edytor.mark_set('insert', '1.0')
-                for linijka in file_content:
-                    self.edytor.insert('insert', linijka)
+                self.edytor.config(undo=False)
+                self.edytor.insert('insert', file_content.read())
+                self.edytor.config(undo=True)
+                self.edytor.edit_reset()
                 self.edytor.see('1.0')
                 self.edytor.edit_modified(False)
             self.otwarty_plik_variable.set(self.wybierz_plik_var.get())
