@@ -131,7 +131,7 @@ class TestyPoprawnosciDanych(object):
     DOZWOLONE_KLUCZE_PRZESTARZALE = {'Rampa'}
     # ponizsze klucze pojawiaja sie wielokrotnie w rekordzie, dlatego monter dodaje numery na koncu, aby je
     # rozroznic. Z tego powodu sa traktowane inaczej
-    DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
+    DOZWOLONE_KLUCZE_Z_NUMEREM = ('Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit',)
     TYPY_DROG_Z_KIERUNKIEM = {'0x1', '0x2', '0x8', '0x9'}
     TYPY_DROG_BEZ_TWOWAY = {'0x3', '0x4', '0x5', '0x6', '0x7', '0xa', '0xb', '0xc', '0xd', '0xe', '0xf', '0x16',
                             '0x1a', '0x1b'}
@@ -270,12 +270,9 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
         for klucz in dane_do_zapisu:
             if klucz not in self.dozwolone_klucze:
-                klucz_z_numerem_znaleziony = False
-                for klucz_z_numerem in self.dozwolone_klucze_z_numerem:
-                    if klucz.startswith(klucz_z_numerem):
-                        klucz_z_numerem_znaleziony = True
-                        break
-                if not klucz_z_numerem_znaleziony:
+                # Optymalizacja: startswith(tuple) jest znacznie szybszy ni¿ pêtla for z if startswith()
+                # C-level implementation - O(1) zamiast O(n) dla ka¿dego klucza
+                if not klucz.startswith(TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_Z_NUMEREM):
                     coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                     if klucz in self.dozwolone_klucze_przestarzale:
                         self.error_out_writer.stderrorwrite('Nieu¿ywany klucz %s %s, mo¿na usun±æ.' % (klucz, coords))
