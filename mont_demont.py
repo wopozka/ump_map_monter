@@ -19,6 +19,7 @@ import json
 import subprocess
 import tempfile
 import shutil
+from multiprocessing import Pool
 import kdtree
 import znajdz_bledy_numeracji
 from collections import OrderedDict
@@ -3292,6 +3293,74 @@ def testuj_poprawnosc_danych(tester_poprawnosci_danych, dane_do_zapisu):
         tester_poprawnosci_danych.testy_poprawnosci_danych_txt(dane_do_zapisu)
 
 
+_ZMIENNE_DIFF_WORKERA = None
+
+
+def _init_diff_workera(zmienne):
+    # initializer puli procesow - zmienne przekazywane raz na proces roboczy,
+    # zamiast przy kazdym zadaniu
+    global _ZMIENNE_DIFF_WORKERA
+    _ZMIENNE_DIFF_WORKERA = zmienne
+
+
+def _worker_diff_pliku(zadanie):
+    """
+    Uruchamiane w puli procesow roboczych: liczy diff miedzy oryginalnym plikiem
+    z KatalogzUMP a nowa zawartoscia zbudowana podczas demontazu, zapisuje plik
+    .diff oraz zaktualizowana kopie oryginalu na dysku. Kazdy plik jest niezalezny
+    (wlasna sciezka odczytu/zapisu), wiec to bezpieczne do wykonania rownolegle.
+    Dziala tylko dla "zwyklych" plikow - _nowosci.* i granice-czesciowe.txt maja
+    specjalna logike/wspoldzielony stan i sa obslugiwane sekwencyjnie w demontuj().
+    """
+    zmienne = _ZMIENNE_DIFF_WORKERA
+    nazwa_pliku, nowa_zawartosc = zadanie
+    komunikaty = []
+
+    try:
+        with open(os.path.join(zmienne.KatalogzUMP, nazwa_pliku), encoding=zmienne.Kodowanie,
+                  errors=zmienne.ReadErrors) as n_plik_gr:
+            orgPlikZawartosc = n_plik_gr.readlines()
+        if orgPlikZawartosc:
+            if orgPlikZawartosc[-1][-1] != '\n':
+                orgPlikZawartosc[-1] += '\\ No new line at the end of file\n'
+        else:
+            orgPlikZawartosc.append('\\ No new line at the end of file\n')
+    except FileNotFoundError:
+        komunikaty.append(('stdout', 'Powstal nowy plik %s. Zarejestruj go w cvs.'
+                           % nazwa_pliku.replace(os.sep, '-')))
+        with open(os.path.join(zmienne.KatalogRoboczy, nazwa_pliku.replace(os.sep, '-')), 'w',
+                  encoding=zmienne.Kodowanie, errors=zmienne.WriteErrors) as f:
+            f.writelines(nowa_zawartosc)
+        return {'diff_lines': [], 'lista_diffow_entry': nazwa_pliku, 'komunikaty': komunikaty}
+
+    if not nowa_zawartosc:
+        nowa_zawartosc.append('\\ No new line at the end of file\n')
+    elif nowa_zawartosc[-1][-1] != '\n':
+        nowa_zawartosc[-1] += '\\ No new line at the end of file\n'
+    tofile = nazwa_pliku.replace('UMP', 'UMP_Nowe').replace('narzedzia', 'narzedzia_Nowe')
+
+    plikDiff = []
+    for line in difflib.unified_diff(orgPlikZawartosc, nowa_zawartosc, fromfile=nazwa_pliku, tofile=tofile):
+        if line.endswith('\\ No new line at the end of file\n'):
+            a, b = line.split('\\')
+            plikDiff.append(a + '\n')
+            plikDiff.append('\\' + b)
+        else:
+            plikDiff.append(line)
+
+    lista_diffow_entry = None
+    if plikDiff:
+        komunikaty.append(('stdout', 'Powstala latka dla pliku %s.' % nazwa_pliku))
+        plikdootwarcia = os.path.join(zmienne.KatalogRoboczy, nazwa_pliku.replace(os.sep, '-'))
+        with open(plikdootwarcia, 'w', encoding=zmienne.Kodowanie, errors=zmienne.WriteErrors) as f:
+            f.writelines(nowa_zawartosc)
+        with open(plikdootwarcia + '.diff', 'w', encoding=zmienne.Kodowanie, errors=zmienne.WriteErrors) as f:
+            f.writelines(plikDiff)
+        lista_diffow_entry = nazwa_pliku
+
+    return {'diff_lines': plikDiff, 'lista_diffow_entry': lista_diffow_entry, 'komunikaty': komunikaty}
+
+
 def zwroc_typ_komentarz(nazwa_pliku):
     # kolejnosc ifow odzwierciedla ilosc plikow danego typu w projekcie. Daje to bardzo malutkie przyspieszenie
     # przy czym cities trzeba szukac najpierw, bo tez sie konczy na pnt
@@ -3705,6 +3774,7 @@ def demontuj(args):
     # jako wartosc bedzie ustawione ''
     listaDiffow = []
     slownikHash = {}
+    zadania_diff = []
     for nazwa_pliku in plikMp.plikizMp:
         # usuwamy pierwsza linijke z pliku ktora to zawiera hash do pliku.
         if not nazwa_pliku.startswith('_nowosci.'):
@@ -3733,7 +3803,7 @@ def demontuj(args):
                 with open(os.path.join(Zmienne.KatalogRoboczy, nazwa_pliku), 'w', encoding=Zmienne.Kodowanie,
                           errors=Zmienne.WriteErrors) as f:
                     f.writelines(plikMp.plikizMp[nazwa_pliku])
-        else:
+        elif nazwa_pliku.find('granice-czesciowe.txt') > 0:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
                     nazwa_pliku_ = 'granice-czesciowe.txt'
@@ -3808,6 +3878,23 @@ def demontuj(args):
                             f.writelines(plikDiff)
                         listaDiffow.append(nazwa_pliku)
                     plikDiff = []
+        else:
+            # "zwykle" pliki - diff liczymy rownolegle w puli procesow, zamiast
+            # sekwencyjnie w tej petli
+            zadania_diff.append((nazwa_pliku, plikMp.plikizMp[nazwa_pliku]))
+
+    if zadania_diff:
+        with Pool(initializer=_init_diff_workera, initargs=(Zmienne,)) as pool_diff:
+            for wynik_diff in pool_diff.imap(_worker_diff_pliku, zadania_diff):
+                for poziom, tekst in wynik_diff['komunikaty']:
+                    if poziom == 'stdout':
+                        stderr_stdout_writer.stdoutwrite(tekst)
+                    else:
+                        stderr_stdout_writer.stderrorwrite(tekst)
+                if wynik_diff['diff_lines']:
+                    wszystkie_diffy_razem.extend(wynik_diff['diff_lines'])
+                if wynik_diff['lista_diffow_entry']:
+                    listaDiffow.append(wynik_diff['lista_diffow_entry'])
 
     if wszystkie_diffy_razem:
         stderr_stdout_writer.stdoutwrite('Plik wszystko.diff - zbiorczy plik dla wszystkich latek.')
