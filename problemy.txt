@@ -13,6 +13,11 @@ naprawione/nieaktualne w biezacym kodzie (zgodnie z adnotacjami
 "poprawione"/"zrobione" ponizej); 1.4, 1.8, 1.9, 1.10, 1.11 i 1.15
 nadal wystepuja w kodzie bez zmian.
 
+Uzupelnienie: 2026-09-03 - analiza mont_demont.py skupiona wylacznie
+na wydajnosci (punkty 1.34-1.40 nizej), poza juz zgloszonymi 1.21-1.23.
+Uszeregowane od najwiekszego wplywu (operacje per-plik/per-rekord na
+duzych zbiorach danych) do najmniejszego (operacje jednorazowe).
+
 
 ================================================================
 1. mont_demont.py (silnik montujacy/demontujacy mapy)
@@ -272,6 +277,78 @@ nadal wystepuja w kodzie bez zmian.
     maja pelne opisy. Dodanie type hints (przynajmniej dla publicznych
     metod klas typu Mkgmap, TestyPoprawnosciDanych) ulatwiloby uzycie
     IDE/statycznej analizy.
+
+1.34 [WYDAJNOSC] montujpliki()/demontuj() - kazdy plik czytany 2-3 razy z dysku
+    Linie: 2620-2631 (sprawdz_czy_pliki_bez_utf8 - readlines() tylko
+    do sprawdzenia kodowania, wynik odrzucany), 3386-3387 (osobny
+    odczyt binarny do MD5), 3402/3417 (kolejny readlines()/read() do
+    wlasciwego parsowania). Analogicznie przy demontazu: cyfry_hash()
+    (1745-1776) liczy MD5 z osobnego odczytu binarnego, a budowanie
+    diffow (3740-3747) czyta ten sam plik ponownie do difflib.
+    PaczerGranicCzesciowych.__init__ (676-682) czyta granice.txt raz
+    tekstowo i raz binarnie do hasha tego samego pliku.
+    Dla montazu calego kraju (setki plikow, dziesiatki-setki MB) to
+    2-3-krotny koszt I/O tam, gdzie wystarczy jeden odczyt.
+    Sugestia: wczytac plik raz jako bajty, policzyc MD5 z tych bajtow,
+    zdekodowac raz do tekstu (blad dekodowania lapac wyjatkiem zamiast
+    osobnego przebiegu walidacyjnego); przy demontazu zachowac
+    wczytana tresc/linie i uzyc ich tez do difflib zamiast czytac
+    plik ponownie.
+
+1.35 [WYDAJNOSC] Listy zamiast set/frozenset przy membership-testach per rekord
+    Linie: 142-166 (typy_data_0_only, typy_label_z_miastem - listy
+    ~20-30 elementow), 2849 (City.rozmiar2Type - tuple 11 elementow).
+    Testowane operatorem "in" w sprawdzData0Only, sprawdz_label_dla_poly,
+    sprawdz_czy_miasto_i_label_dla_topo oraz w kodzie POI - wywolywane
+    dla kazdego rekordu polyline/polygon/POI przy montazu i demontazu,
+    czyli O(n) przeszukanie tam, gdzie wystarczy O(1). Ten sam wzorzec,
+    ktory zostal juz poprawiony dla DOZWOLONE_KLUCZE_Z_NUMEREM
+    (startswith z tuplą zamiast petli for) - tu brakuje analogicznej
+    zamiany list/tuple -> frozenset.
+
+1.36 [WYDAJNOSC] stworz_misc_info() - budowanie OrderedDict od zera per POI
+    Linie: 1848-1859
+    "skroty" i "przedrostek" (po 8 wpisow kazdy) sa tworzone na nowo
+    przy kazdym wywolaniu funkcji, czyli dla kazdego POI podczas
+    montazu. Sugestia: wyniesc jako stala modulowa/klasowa (zwykly
+    dict zdefiniowany raz), zamiast alokowac przy kazdym wywolaniu.
+
+1.37 [WYDAJNOSC] zwroc_rekord_pliku_mp() - OrderedDict per rekord
+    Linia: 2212
+    OrderedDict() tworzony dla kazdego rekordu pliku mp przy
+    demontazu. W Pythonie 3.7+ zwykly dict zachowuje kolejnosc
+    wstawiania i jest lzejszy/szybszy - OrderedDict tutaj jest zbedny.
+
+1.38 [WYDAJNOSC - POWIAZANE Z 1.27] zbuduj_city_idx_zwroc_format - O(n^2) przy budowie indeksu miast
+    Linia: 2139
+    Oprocz problemu logicznego opisanego w 1.27 (index() lapie
+    pierwsze wystapienie zamiast biezacego), city_idx_miasto.index(...)
+    wywolywane wewnatrz petli budujacej liste miast daje O(n) wyszukiwanie
+    przy kazdej iteracji, czyli O(n^2) dla calego indeksu (dla calej
+    Polski - potencjalnie tysiace miast, realne sekundy). Sugestia:
+    budowac z enumerate() i osobnym slownikiem nazwa->indeks zamiast
+    .index() - naprawia to od razu oba problemy (logiczny i wydajnosciowy).
+
+1.39 [WYDAJNOSC] Autoprzypisywanie POI/polylinii do obszarow - brak wstepnego odrzucania
+    Linie: 1368-1394 (Obszary.zwroc_obszar / point_inside_polygon)
+    Przy autopolypoly/autopoi kazdy punkt drogi/poligonu jest testowany
+    pelnym ray-castingiem przeciw kazdemu obszarowi, bez taniego
+    wstepnego odrzucenia - O(P x A x V) dla P punktow, A obszarow,
+    V wierzcholkow obszaru. Sugestia: prekalkulowac raz bounding-box
+    (min/max x,y) per obszar i najpierw odrzucac obszary poza bboxem,
+    zanim wykona sie pelny ray-casting.
+    Powiazane: kdtree uzywane w tym samym przeplywie (znajdz_najblizszy,
+    1574-1583) jest budowane przez powtarzane tree.add() zamiast
+    kdtree.create(point_list) - problem juz opisany w 4.1 (kdtree.py),
+    degraduje search_nn() z O(log n) do O(n) dla niezbalansowanego drzewa.
+
+1.40 [WYDAJNOSC - DROBNE] zwroc_naglowek_dla_pliku - wczytanie calego pliku po naglowek
+    Linie: 2488-2497
+    mp_file.readlines() wczytuje caly plik .mp do pamieci tylko po to,
+    zeby znalezc pierwsze wystapienie "[END-IMG ID]" i przerwac.
+    Sugestia: iterowac bezposrednio po obiekcie pliku (for linia in
+    mp_file) zamiast readlines() - unika trzymania calego pliku w
+    pamieci dla operacji, ktora i tak konczy sie na pierwszych liniach.
 
 
 ================================================================
