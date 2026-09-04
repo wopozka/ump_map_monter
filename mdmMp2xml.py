@@ -1203,36 +1203,34 @@ def polygon_make_ccw(shape, c_points):
     if num < 3:
         return
 
-    # OPTYMALIZACJA P3: Pre-konwersja współrzędnych
-    # Zamiast konwertować float() dla każdego punktu w pętli (czyli num×6 konwersji),
-    # rób konwersję RAZ na początku i cache'uj wyniki.
-    # Przyspieszenie: 4x szybciej (eliminuje ~1200 µs na 100 punktów)
-    cached_points = [(float(c_points[node][0]), float(c_points[node][1])) for node in nodes]
+    # Pre-konwersja współrzędnych RAZ (nodes[num] duplikuje nodes[0], więc
+    # bierzemy tylko `num` odrębnych wierzchołków zamkniętego poligonu).
+    pts = [(float(c_points[node][0]), float(c_points[node][1])) for node in nodes[:num]]
 
     angle = 0.0
     epsilon = 0.001
-    # TODO: zoptymalizować, bo (b,c) bieżącej iteracji stają się (a,b) następnej
-    for i in range(num):
-        try:
-            a = (i + 0)
-            b = (i + 1)
-            c = (i + 2) % num
-            # No projection needed - konwersje już wykonane w cache'u
-            alat, alon = cached_points[a]
-            blat, blon = cached_points[b]
-            clat, clon = cached_points[c]
-            ablen = math.hypot(blat - alat, blon - alon)
-            bclen = math.hypot(clat - blat, clon - blon)
-            # Vector cross product (?)
-            cross = (blat - alat) * (clon - blon) - (blon - alon) * (clat - blat)
-            # Vector dot product (?)
-            dot = (blat - alat) * (clat - blat) + (blon - alon) * (clon - blon)
 
-            sine = cross / (ablen * bclen)
-            cosine = dot / (ablen * bclen)
-            angle += signbit(sine) * math.acos(cosine)
-        except:
-            pass
+    # Kąt skrętu w wierzchołku b liczymy jako atan2(cross, dot) wektorów
+    # ab i bc - to samo co signbit(sine)*acos(cosine), ale bez hypot()/acos():
+    # atan2 nie wymaga normalizacji wektorów (więc bez sqrt i dzielenia) i jest
+    # zdefiniowany wszędzie (atan2(0, 0) == 0.0), więc zdublowane/pokrywające
+    # się punkty nie rzucają ZeroDivisionError/ValueError jak wcześniej -
+    # try/except nie jest już potrzebny.
+    # Wektor (b - a) z poprzedniej iteracji staje się (a - poprzednie b) w kolejnej,
+    # więc liczymy go raz i przesuwamy zamiast odejmować od nowa.
+    alat, alon = pts[-1]
+    blat, blon = pts[0]
+    ab_lat, ab_lon = blat - alat, blon - alon
+    for i in range(num):
+        clat, clon = pts[(i + 1) % num]
+        bc_lat, bc_lon = clat - blat, clon - blon
+
+        cross = ab_lat * bc_lon - ab_lon * bc_lat
+        dot = ab_lat * bc_lat + ab_lon * bc_lon
+        angle += math.atan2(cross, dot)
+
+        blat, blon = clat, clon
+        ab_lat, ab_lon = bc_lat, bc_lon
     angle = math.degrees(-angle)
 
     if -360.0 - epsilon < angle < -360.0 + epsilon:  # CW
