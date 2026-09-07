@@ -301,6 +301,83 @@ class MessagePrinters(object):
     def get_error_num(self):
         return self.error_num
 
+class GlobalConstants(object):
+    maxN = 72.00000
+    maxW = -12.00000
+    maxS = 34.00000
+    maxE = 50.00000
+    street_name_prefixes = ("aleja ", "Aleja ", "rondo ", "Rondo ", "osiedle ", "Osiedle ", "pasaż ", "Pasaż ",)
+    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
+                     'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
+                     'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
+    turn_lanes = {"*": "none", "S": "through", "T": "through", "Z": "reverse", "P": "right", "L": "left",
+                  "osP": "sharp_right", "osL": "sharp_left", "leP": "slight_right", "leL": "slight_left",
+                  "doP": "merge_to_right", "doL": "merge_to_left",
+                  # 2 specjalne dla pasów tylko w jedną stronę ale wymagające kontynuacji na następnym odcinku
+                  "(P)": "right;through", "(L)": "left;through",
+                  # Przy kontynuacji dla podwójnych skrzyżowań (stosować przed, a w środku już bez *, pamiętając o
+                  # odjęciu lewoskrętów) w przeciwieństwie do 7ways gdzie jest none, w osmand można stosować prawidłowe
+                  # oznaczenia gdyż ma to inną funkcję.
+                  "*S": "through", "*T": "through", "*Z": "reverse", "*P": "right", "*L": "left",
+                  "+": ";",  # faster conversion
+                  "|": "|"}
+    hills_vales_type = ('0x6616', '0x6617',)
+    otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
+                   r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
+    degtokm = math.pi * 12742 / 360
+    reftype = {
+        # interstate symbol, name can consist only digits, allowed only at beginning of label
+        0x01: 'int_ref', 0x2a: 'int_ref',
+        # US Highway – shield, name can consist only from digits, allowed only at beginning of label
+        0x02: 'int_ref', 0x2b: 'int_ref',
+        # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
+        0x03: 'ref', 0x2c: 'ref',
+        # Highway – big, allowed only at beginning of label
+        0x04: 'ref', 0x2d: 'ref',
+        # Main road – middle, allowed only at beginning of label
+        0x05: 'ref', 0x2e: 'ref',
+        # Main road – small, allowed only at beginning of label
+        0x06: 'ref', 0x2f: 'ref',
+        # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
+        0x1d: 'loc_name',
+        # elevation
+        0x1f: 'ele'
+    }
+
+    street_for_addr_pattern = re.compile(r'\{.*\}')
+    route_param_maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '120', 7: '140'}
+    route_param_exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+
+    osmand_pri_modifier = 0.1
+    class_vs_speeds = {0x1: 6,  # highway:motorway
+                       0x2: 5,  # highway:trunk
+                       0x3: 4,  # highway:primary
+                       0x4: 3,  # highway:secondary
+                       0x5: 3,  # highway:tertiary
+                       0x6: 2,  # highway:residential
+                       0x7: 1,  # highway:living_street
+                       0x8: 2,  # highway:trunk_link
+                       0x9: 4,  # highway:motorway_link
+                       0xa: 0,  # highway:track
+                       0xb: 2,  # highway:primary_link
+                       0xc: 1,  # junction:roundabout
+                       0xd: 1,  # highway:cycleway
+                       0xe: 5,  # highway:tertiary tunnel:yes
+                       0xf: 0,  # highway:track tracktype:grade4
+                       0x10: 1,
+                       0x16: 0,  # highway:path
+                       0x1a: 0,  # route:ferry
+                       0x1b: 0,  # route:ferry
+                       }
+
+
+class MpFileKeys(object):
+    data = ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',)
+    levels = ('EndLevel', 'Level', 'Levels',)
+    signs =  ('Sign', 'SignPos', 'SignAngle',)
+    ignored_headings = ("[IMG ID]", '[CYFRY]', '[SIGN]', '[RESTRICT]')
+
 
 # some global constants
 __version__ = '1.0.0'
@@ -1078,30 +1155,29 @@ def points_from_bline(points_str):
     # 54.85628,13.97873
     # 48.95703,24.23996
     # Ekspansja, niech pamieta granice dla z grubsza calej Europy kontynentalnej
-    maxN = 72.00000
-    maxW = -12.00000
-    maxS = 34.00000
-    maxE = 50.00000
+    # maxN = 72.00000
+    # maxW = -12.00000
+    # maxS = 34.00000
+    # maxE = 50.00000
     points = []
     for point in lats_longs_from_line(points_str):
-        if maxN > float(point[0]) > maxS and maxW < float(point[1]) < maxE:
+        if (GlobalConstants.maxN > float(point[0]) > GlobalConstants.maxS and
+                GlobalConstants.maxW < float(point[1]) < GlobalConstants.maxE):
             points.append(point)
     return points
 
 
 # TxF: ucinanie przedrostkow
 def cut_prefix(string):
-    if string.startswith("aleja ") or string.startswith("Aleja ") or string.startswith("rondo ") or \
-       string.startswith("Rondo ") or string.startswith("osiedle ") or string.startswith("Osiedle ") or \
-       string.startswith("pasaż ") or string.startswith("Pasaż "):
+    if string.startswith(GlobalConstants.street_name_prefixes):
         string = re.sub(r"^\w+ ", "", string)
     return string
 
 
 def convert_btag(key, value, options, bpoints, messages_printer=None):
-    if key.lower() in ('label',):
+    if key.lower() =='label':
         pass
-    elif key in ('Data0',):
+    elif key == 'Data0':
         for _tmpnode in points_from_bline(value):
             bpoints_append(_tmpnode, bpoints)
     elif key == 'Type':
@@ -1391,28 +1467,29 @@ def prepare_line(points_str, filestamp=None, closed=False, map_elements_props=No
 
 def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_elements_props=None,
                             messages_printer=None):
-    maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
-    levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
-    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
-    ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
-                     'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
-                     'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
-    turn_lanes = {"*": "none", "S": "through", "T": "through", "Z": "reverse", "P": "right", "L": "left",
-                  "osP": "sharp_right", "osL": "sharp_left", "leP": "slight_right", "leL": "slight_left",
-                  "doP": "merge_to_right", "doL": "merge_to_left",
-                  # 2 specjalne dla pasów tylko w jedną stronę ale wymagające kontynuacji na następnym odcinku
-                  "(P)": "right;through", "(L)": "left;through",
-                  # Przy kontynuacji dla podwójnych skrzyżowań (stosować przed, a w środku już bez *, pamiętając o
-                  # odjęciu lewoskrętów) w przeciwieństwie do 7ways gdzie jest none, w osmand można stosować prawidłowe
-                  # oznaczenia gdyż ma to inną funkcję.
-                  "*S": "through", "*T": "through", "*Z": "reverse", "*P": "right", "*L": "left",
-                  "+": ";",  # faster conversion
-                  "|": "|"}
+    # maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
+    # levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
+    # GlobalConstants.exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    # GlobalConstants.ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
+    #                  'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
+    #                  'Słowacja': "Slovakia", 'Ukraina': "Ukraine", 'Węgry': "Hungary"}
+    # GlobalConstants.turn_lanes = {"*": "none", "S": "through", "T": "through", "Z": "reverse", "P": "right", "L": "left",
+    #               "osP": "sharp_right", "osL": "sharp_left", "leP": "slight_right", "leL": "slight_left",
+    #               "doP": "merge_to_right", "doL": "merge_to_left",
+    #               # 2 specjalne dla pasów tylko w jedną stronę ale wymagające kontynuacji na następnym odcinku
+    #               "(P)": "right;through", "(L)": "left;through",
+    #               # Przy kontynuacji dla podwójnych skrzyżowań (stosować przed, a w środku już bez *, pamiętając o
+    #               # odjęciu lewoskrętów) w przeciwieństwie do 7ways gdzie jest none, w osmand można stosować prawidłowe
+    #               # oznaczenia gdyż ma to inną funkcję.
+    #               "*S": "through", "*T": "through", "*Z": "reverse", "*P": "right", "*L": "left",
+    #               "+": ";",  # faster conversion
+    #               "|": "|"}
     way = {'_timestamp': filestamp}
     for key, value in mp_record.items():
+        key_lower = key.lower()
         if not value:
             continue
-        if key.lower() in ('label',):
+        if key_lower in ('label',):
             label = value
             refpos = label.find("~[")
             if refpos > -1:
@@ -1429,22 +1506,22 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                         raise ParsingError('Problem parsing label ' + value)
             if 'name' not in way and label:
                 way['name'] = label.strip()
-        elif key.lower() in ('label2',):
+        elif key_lower == 'label2':
             way['loc_name'] = value
-        elif key.lower() in ('fulllabel',):
+        elif key_lower == 'fulllabel':
             pass
-        elif key.lower() == 'label3':
+        elif key_lower == 'label3':
             way['alt_name'] = value
-        elif key.lower() == 'adrlabel':
+        elif key_lower == 'adrlabel':
             way['alt_name'] = value
-        elif key.lower() == 'typ':
+        elif key_lower == 'typ':
             way['ump:typ'] = value
         elif key == 'DirIndicator':
             if value == '1':
                 way['oneway'] = 'yes'
             else:
                 way['oneway'] = value
-        elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
+        elif key in MpFileKeys.data:
             num = int(key[4:])
             count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
@@ -1477,17 +1554,17 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             #         tag(way, pline_types[int(value, 0)])
             #     else:
             #         messages_printer.printerror("Unknown line type "+hex(int(value, 0)))
-        elif key in ('EndLevel', 'Level', 'Levels',):
+        elif key in MpFileKeys.levels:
             # if 'highway' not in way:
             #     way['highway'] = levels[int(value, 0)]
             # way['layer'] = str(value) ??
             pass
-        elif key.lower() == 'miasto':
+        elif key_lower == 'miasto':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
-        elif key.lower() == 'streetdesc':
+        elif key_lower == 'streetdesc':
             way['addr:street'] = value
-        elif key.lower() == 'cityname':
+        elif key_lower == 'cityname':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
         elif key == 'MiscInfo':
@@ -1502,7 +1579,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 way['motorcycle'] = 'yes'
             else:
                 way['motorcycle'] = 'no'
-        elif key in ('RouteParam', 'Routeparam'):
+        elif key_lower == 'routeparam':
             r_params = extract_routeparam(value)
             if r_params:
                 for rp_key, rp_val in r_params.items():
@@ -1512,12 +1589,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                     messages_printer.printerror('Corrupted RouteParam parameters: %s' % value)
                 else:
                     raise ParsingError('Corrupted RouteParam parameters: %s' % value)
-        elif key == 'RestrParam':
+        elif key_lower == 'restrparam':
             params = value.split(',')
             excpts = []
             for i, val in enumerate(params[4:]):
                 if val == '1':
-                    excpts.append(exceptions[i])
+                    excpts.append(GlobalConstants.exceptions[i])
             way['except'] = ','.join(excpts)
         elif key == 'HLevel0':
             if feat != Features.polyline:
@@ -1549,12 +1626,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             if '_addr' not in way:
                 way['_addr'] = {}
             way['_addr'][int(value[0], 0)] = value[1:]
-        elif key.lower() == 'rampa':
+        elif key_lower == 'rampa':
             way['bridge'] = 'yes'
         elif key == 'Highway':
             way['ref'] = value
         elif key.startswith('Exit'):
-            way[key.lower()] = value
+            way[key_lower] = value
         elif key == 'OvernightParking':
             way['overnight_parking'] = 'yes'
         elif key == 'Phone':
@@ -1594,7 +1671,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                     value = value[1:]
                 if value[-1] == "|":
                     value = value[:-1]
-                way['turn:lanes'] = "".join([turn_lanes.get(op, op) for op in re.split('([|+])', value)])
+                way['turn:lanes'] = "".join([GlobalConstants.turn_lanes.get(op, op) for op in re.split('([|+])', value)])
                 way['lanes'] = str(value.count('|') + 1)
         elif key == 'Floors':
             way['building:levels'] = value
@@ -1616,20 +1693,20 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['is_in:state'] = value
         elif key == 'CountryName':
             way['is_in:country'] = re.sub('-UMP~.*$', '', value)
-            if way['is_in:country'] in ump_countries:
-                way['is_in:country'] = ump_countries[way['is_in:country']]
+            if way['is_in:country'] in GlobalConstants.ump_countries:
+                way['is_in:country'] = GlobalConstants.ump_countries[way['is_in:country']]
         elif key == 'CountryCode':
             way['is_in:country_code'] = value
-        elif key in ('Sign', 'SignPos', 'SignAngle',):
+        elif key in MpFileKeys.signs:
             # TODO: znaki zakazu
             pass
-        elif key in ('DontDisplayAddr', 'DontDisplayAdr',):
+        elif key_lower == 'dontdisplayaddr' or key_lower == 'dontdisplayadr':
             # TODO: obsluga adresacji
             pass
-        elif key in ('DontFind',):
+        elif key_lower =='dontfind':
             # TODO: obsluga adresacji
             pass
-        elif key in ('SignLabel',):
+        elif key == 'SignLabel':
             # TODO: pomysl Art
             signs = value.split(';')
             for sign in signs:
@@ -1645,17 +1722,18 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                 elif sign[0] == '-':
                     way['destination:backward'] = sign[1:].replace("\\", ";")
                     way['_backward_sign_present'] = 'yes'
-        elif key in ('TLanes', 'Rodzaj', 'Weight_t',):
+        # experymenty Arta
+        elif key == 'TLanes' or key == 'Rodzaj' or key == 'Weight_t':
             # experymenty Ar't
             pass
-        elif key in ('RoadID',):
+        elif key == 'RoadID':
             # let's omit routing params for maps with routing data
             pass
         elif key.startswith('Nod'):
             # let's omit routing params for maps with routing data
             pass
         # WebPage jest tagiem dla budynkow, Oplata:rower, Oplata: moto ignorujemy na chwile obecna
-        elif key in ('WebPage', 'Oplata:rower', 'Oplata:moto',):
+        elif key == 'WebPage' or key == 'Oplata:rower' or key == 'Oplata:moto':
             pass
         else:
             if ignore_errors:
@@ -1668,7 +1746,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
 
 def postprocess_poi_tags(way):
     if 'ump:type' in way:
-        if way['ump:type'] in ('0x6616', '0x6617'):
+        if way['ump:type'] in GlobalConstants.hills_vales_type:
             # for peeks and valleys elevation in meters is stored as streetdesc, copy it
             if 'addr:street' in way and way['addr:street']:
                 way['ele'] = way['addr:street']
@@ -1701,8 +1779,8 @@ def postprocess_poi_tags(way):
 def parse_txt(infile, options, progress_bar=None, border_points=None, messages_printer=None, filestamp=None):
     if border_points is None:
         border_points = []
-    otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
-                   r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
+    # otwarteDict = {r"([Pp]n|pon\.)": "Mo", r"([Ww]t|wt\.)": "Tu", r"([Ss]r|śr|Śr|śr\.)": "We", r"([Cc]z|czw\.)": "Th",
+    #               r"([Pp]t|piąt\.|pt\.)": "Fr", r"([Ss]o|[Ss]b|sob\.)": "Sa", r"([Nn]d|ni|niedz\.)": "Su"}
     maxtypes = {}
     map_elements_props = {'points': Mylist(border_points),  # zmodyfikowana lista do obsługi pointsów
                           'pointattrs': defaultdict(dict),  # format: point_id: {atrybuty pointa}
@@ -1725,7 +1803,7 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
         elif line == "[POI]":
             polyline = {}
             feat = Features.poi
-        elif line in ("[IMG ID]", '[CYFRY]', '[SIGN]', '[RESTRICT]'):
+        elif line in MpFileKeys.ignored_headings:
             polyline = {}
             feat = Features.ignore
         elif line == '[END]' and feat != Features.ignore:
@@ -1792,8 +1870,8 @@ def parse_txt(infile, options, progress_bar=None, border_points=None, messages_p
                             val = val[:match.start()]		# odciecie
 
                         # Pn-So 09:00-20:00; Nd 09:30-18:00" => 'Mo-Sa 09:00-20:00; Su 09:30-18:00'
-                        for x in otwarteDict:
-                            val = re.sub(x, otwarteDict[x], val)
+                        for x in GlobalConstants.otwarteDict:
+                            val = re.sub(x, GlobalConstants.otwarteDict[x], val)
                         way['opening_hours'] = val
             comment = None
             if 'Type' in polyline and feat == Features.polyline:
@@ -1952,10 +2030,10 @@ def way_to_way_id(way, node_ways_relation=None):
 
 
 def distKM(lat0, lon0, lat1, lon1):
-    degtokm = math.pi * 12742 / 360
+    # GlobalConstants.degtokm = math.pi * 12742 / 360
     latcorr = math.cos(math.radians(float(lat1)))
-    dlat = (float(lat1) - float(lat0)) * degtokm
-    dlon = (float(lon1) - float(lon0)) * degtokm * latcorr
+    dlat = (float(lat1) - float(lat0)) * GlobalConstants.degtokm
+    dlon = (float(lon1) - float(lon0)) * GlobalConstants.degtokm * latcorr
     return math.sqrt(dlat ** 2 + dlon ** 2)
 
 
@@ -2267,28 +2345,29 @@ def extract_reference_code(label, refpos, messages_printer=None):
     -------
     tuple(conversion_result, name_of_way_key, value of reference, new label)
     """
-    reftype = {
-        # interstate symbol, name can consist only digits, allowed only at beginning of label
-        0x01: 'int_ref', 0x2a: 'int_ref',
-        # US Highway – shield, name can consist only from digits, allowed only at beginning of label
-        0x02: 'int_ref',  0x2b: 'int_ref',
-        # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
-        0x03: 'ref', 0x2c: 'ref',
-        # Highway – big, allowed only at beginning of label
-        0x04: 'ref', 0x2d: 'ref',
-        # Main road – middle, allowed only at beginning of label
-        0x05: 'ref', 0x2e: 'ref',
-        # Main road – small, allowed only at beginning of label
-        0x06: 'ref', 0x2f: 'ref',
-        # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
-        0x1d: 'loc_name',
-        # elevation
-        0x1f: 'ele'
-    }
+    # reftype = {
+    #     # interstate symbol, name can consist only digits, allowed only at beginning of label
+    #     0x01: 'int_ref', 0x2a: 'int_ref',
+    #     # US Highway – shield, name can consist only from digits, allowed only at beginning of label
+    #     0x02: 'int_ref',  0x2b: 'int_ref',
+    #     # US Highway – round symbol, name can consist only from digits, allowed only at beginning of label
+    #     0x03: 'ref', 0x2c: 'ref',
+    #     # Highway – big, allowed only at beginning of label
+    #     0x04: 'ref', 0x2d: 'ref',
+    #     # Main road – middle, allowed only at beginning of label
+    #     0x05: 'ref', 0x2e: 'ref',
+    #     # Main road – small, allowed only at beginning of label
+    #     0x06: 'ref', 0x2f: 'ref',
+    #     # Country, region, abbreviation, eg. Country1=United States~[0x1d]US, Region1=New York~[0x1d]NY
+    #     0x1d: 'loc_name',
+    #     # elevation
+    #     0x1f: 'ele'
+    # }
 
     # najpierw wydziel ref_label
     try:
         code, ref_label = label[refpos + 2:].split(']')
+        code_lower = code.lower()
     except ValueError:
         if messages_printer is not None:
             messages_printer.printerror("Error in reference label: " + label + '. Missing ].')
@@ -2308,26 +2387,26 @@ def extract_reference_code(label, refpos, messages_printer=None):
     except ValueError:
         if messages_printer is not None:
             messages_printer.printerror("Error in reference code: " + code + '. It should be in hex format.')
-        return False, code.lower(), ref, label
+        return False, code_lower, ref, label
 
-    if reference_code in reftype:
-        return True, reftype[reference_code], ref.replace("/", ";"), label
+    if reference_code in GlobalConstants.reftype:
+        return True, GlobalConstants.reftype[reference_code], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     else:
         # Used before a letter forces it to be a lower case
-        if code.lower() == '0x1b':
+        if code_lower == '0x1b':
             # way['loc_name'] = right
             label = ref + label
             return True, 'loc_name', right, label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
-        elif code.lower() == '0x1c':
+        elif code_lower == '0x1c':
             # way['loc_name'] = ref
             label = ref + label
             return True, 'loc_name', ref, label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
-        elif code.lower() == '0x1e':
+        elif code_lower == '0x1e':
             label = label.replace('~[0x1e]', '')
             if messages_printer is not None:
                 messages_printer.printerror("1E" + label)
@@ -2335,7 +2414,7 @@ def extract_reference_code(label, refpos, messages_printer=None):
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown reference code: " + code)
-            return False, code.lower(), ref, label
+            return False, code_lower, ref, label
             # raise ParsingError('Problem parsing label ' + label)
 
 
@@ -2447,16 +2526,17 @@ def extract_szlak(value):
     unknonw_ref = []
     trial_tag = []
     for colour in value.split(','):
-        if colour.lower() == 'zolty':
+        colour_lower = colour.lower()
+        if colour_lower == 'zolty':
             ref.append('Żółty szlak')
             trial_tag.append('marked_trail_yellow')
-        elif colour.lower() == 'zielony':
+        elif colour_lower == 'zielony':
             ref.append('Zielony szlak')
             trial_tag.append('marked_trail_green')
-        elif colour.lower() == 'czerwony':
+        elif colour_lower == 'czerwony':
             ref.append('Czerwony szlak')
             trial_tag.append('marked_trail_red')
-        elif colour.lower() == 'niebieski':
+        elif colour_lower == 'niebieski':
             ref.append('Niebieski szlak')
             trial_tag.append('marked_trail_blue')
         else:
@@ -2466,7 +2546,7 @@ def extract_szlak(value):
 
 
 def extract_street_for_addr(way):
-    p = re.compile(r'\{.*\}')  # dowolny string otoczony klamrami
+    p = GlobalConstants.street_for_addr_pattern  # dowolny string otoczony klamrami
     if 'alt_name' in way:
         return '', way['alt_name']
     # klamry w nazwie eliminuja wpis jako wlasciwa nazwe dla adresacji
@@ -2495,8 +2575,8 @@ def extract_routeparam(value):
     -------
     dict: {key, value}, empty dict in case of failure
     """
-    maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '120', 7: '140'}
-    exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
+    # maxspeeds = {0: '8', 1: '20', 2: '40', 3: '56', 4: '72', 5: '93', 6: '120', 7: '140'}
+    # exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
     try:
         params = tuple(int(a) for a in value.split(','))
     except ValueError:
@@ -2505,39 +2585,39 @@ def extract_routeparam(value):
     _way['ump:speed_limit'] = str(params[0])
     _way['ump:route_class'] = str(params[1])
     if params[0] != 0:
-        _way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+        _way['maxspeed'] = GlobalConstants.route_param_maxspeeds[params[0]]  # Probably useless
     if params[2] != 0:
         _way['oneway'] = 'yes'
     if params[3] != 0:
         _way['toll'] = 'yes'
     for i, val in enumerate(params[4:]):
         if val != 0:
-            _way[exceptions[i]] = 'no'
+            _way[GlobalConstants.route_param_exceptions[i]] = 'no'
     return _way
 
 
 def get_ump_osmandpri(_way):
-    osmand_pri_modifier = 0.1
-    class_vs_speeds = {0x1:  6,  # highway:motorway
-                       0x2:  5,  # highway:trunk
-                       0x3:  4,  # highway:primary
-                       0x4:  3,  # highway:secondary
-                       0x5:  3,  # highway:tertiary
-                       0x6:  2,  # highway:residential
-                       0x7:  1,  # highway:living_street
-                       0x8:  2,  # highway:trunk_link
-                       0x9:  4,  # highway:motorway_link
-                       0xa:  0,  # highway:track
-                       0xb:  2,  # highway:primary_link
-                       0xc:  1,  # junction:roundabout
-                       0xd:  1,  # highway:cycleway
-                       0xe:  5,   # highway:tertiary tunnel:yes
-                       0xf:  0,   # highway:track tracktype:grade4
-                       0x10:  1,
-                       0x16:  0,   # highway:path
-                       0x1a:  0,  # route:ferry
-                       0x1b:  0,  # route:ferry
-                       }
+    # osmand_pri_modifier = 0.1
+    # class_vs_speeds = {0x1:  6,  # highway:motorway
+    #                    0x2:  5,  # highway:trunk
+    #                    0x3:  4,  # highway:primary
+    #                    0x4:  3,  # highway:secondary
+    #                    0x5:  3,  # highway:tertiary
+    #                    0x6:  2,  # highway:residential
+    #                    0x7:  1,  # highway:living_street
+    #                    0x8:  2,  # highway:trunk_link
+    #                    0x9:  4,  # highway:motorway_link
+    #                    0xa:  0,  # highway:track
+    #                    0xb:  2,  # highway:primary_link
+    #                    0xc:  1,  # junction:roundabout
+    #                    0xd:  1,  # highway:cycleway
+    #                    0xe:  5,   # highway:tertiary tunnel:yes
+    #                    0xf:  0,   # highway:track tracktype:grade4
+    #                    0x10:  1,
+    #                    0x16:  0,   # highway:path
+    #                    0x1a:  0,  # route:ferry
+    #                    0x1b:  0,  # route:ferry
+    #                    }
     if 'ump:type' not in _way:
         return None
     if 'ump:osmandpri' not in _way:
@@ -2546,19 +2626,19 @@ def get_ump_osmandpri(_way):
         _type = int(_way['ump:type'], 0)
     except ValueError:
         return None
-    if 'ump:type' in _way and _type not in class_vs_speeds:
+    if 'ump:type' in _way and _type not in GlobalConstants.class_vs_speeds:
         return None
     ump_osmandpri = float(_way['ump:osmandpri'])
     if '_ForceSpeed' in _way:
         fs = _way['_ForceSpeed'].lower()
         try:
-            speed_modifier = int(fs) - class_vs_speeds[_type]
-            ump_osmandpri = ump_osmandpri + ump_osmandpri * speed_modifier * osmand_pri_modifier
+            speed_modifier = int(fs) - GlobalConstants.class_vs_speeds[_type]
+            ump_osmandpri = ump_osmandpri + ump_osmandpri * speed_modifier * GlobalConstants.osmand_pri_modifier
         except ValueError:
             if fs == 'slower':
-                ump_osmandpri = ump_osmandpri - ump_osmandpri * osmand_pri_modifier
+                ump_osmandpri = ump_osmandpri - ump_osmandpri * GlobalConstants.osmand_pri_modifier
             elif fs == 'faster':
-                ump_osmandpri = ump_osmandpri + ump_osmandpri * osmand_pri_modifier
+                ump_osmandpri = ump_osmandpri + ump_osmandpri * GlobalConstants.osmand_pri_modifier
     if ump_osmandpri < 0.4:
         ump_osmandpri = 0.4
     elif ump_osmandpri > 1.4:
