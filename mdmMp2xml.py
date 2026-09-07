@@ -1391,8 +1391,8 @@ def prepare_line(points_str, filestamp=None, closed=False, map_elements_props=No
 
 def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_elements_props=None,
                             messages_printer=None):
-    maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
-    levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
+    # maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
+    # levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
     ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
                      'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
@@ -1412,7 +1412,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
     for key, value in mp_record.items():
         if not value:
             continue
-        if key.lower() in ('label',):
+        key_lower = key.lower()
+        if key_lower in ('label',):
             label = value
             refpos = label.find("~[")
             if refpos > -1:
@@ -1429,15 +1430,15 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                         raise ParsingError('Problem parsing label ' + value)
             if 'name' not in way and label:
                 way['name'] = label.strip()
-        elif key.lower() in ('label2',):
+        elif key_lower in ('label2',):
             way['loc_name'] = value
-        elif key.lower() in ('fulllabel',):
+        elif key_lower in ('fulllabel',):
             pass
-        elif key.lower() == 'label3':
+        elif key_lower == 'label3':
             way['alt_name'] = value
-        elif key.lower() == 'adrlabel':
+        elif key_lower == 'adrlabel':
             way['alt_name'] = value
-        elif key.lower() == 'typ':
+        elif key_lower == 'typ':
             way['ump:typ'] = value
         elif key == 'DirIndicator':
             if value == '1':
@@ -1445,7 +1446,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             else:
                 way['oneway'] = value
         elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
-            num = int(key[4:])
+            # num = int(key[4:])
             count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
             # jesli nie uda sie skonwertowac DataX na cos poprawnego to wtedy zwroc pusty slownik.
@@ -1482,12 +1483,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             #     way['highway'] = levels[int(value, 0)]
             # way['layer'] = str(value) ??
             pass
-        elif key.lower() == 'miasto':
+        elif key_lower == 'miasto':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
-        elif key.lower() == 'streetdesc':
+        elif key_lower == 'streetdesc':
             way['addr:street'] = value
-        elif key.lower() == 'cityname':
+        elif key_lower == 'cityname':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
         elif key == 'MiscInfo':
@@ -1549,12 +1550,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             if '_addr' not in way:
                 way['_addr'] = {}
             way['_addr'][int(value[0], 0)] = value[1:]
-        elif key.lower() == 'rampa':
+        elif key_lower == 'rampa':
             way['bridge'] = 'yes'
         elif key == 'Highway':
             way['ref'] = value
         elif key.startswith('Exit'):
-            way[key.lower()] = value
+            way[key_lower] = value
         elif key == 'OvernightParking':
             way['overnight_parking'] = 'yes'
         elif key == 'Phone':
@@ -2314,20 +2315,21 @@ def extract_reference_code(label, refpos, messages_printer=None):
         return True, reftype[reference_code], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     else:
+        code_lower = code.lower()
         # Used before a letter forces it to be a lower case
-        if code.lower() == '0x1b':
+        if code_lower == '0x1b':
             # way['loc_name'] = right
             label = ref + label
             return True, 'loc_name', right, label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
-        elif code.lower() == '0x1c':
+        elif code_lower == '0x1c':
             # way['loc_name'] = ref
             label = ref + label
             return True, 'loc_name', ref, label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
-        elif code.lower() == '0x1e':
+        elif code_lower == '0x1e':
             label = label.replace('~[0x1e]', '')
             if messages_printer is not None:
                 messages_printer.printerror("1E" + label)
@@ -2335,7 +2337,7 @@ def extract_reference_code(label, refpos, messages_printer=None):
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown reference code: " + code)
-            return False, code.lower(), ref, label
+            return False, code_lower, ref, label
             # raise ParsingError('Problem parsing label ' + label)
 
 
@@ -2447,16 +2449,17 @@ def extract_szlak(value):
     unknonw_ref = []
     trial_tag = []
     for colour in value.split(','):
-        if colour.lower() == 'zolty':
+        colour_lower = colour.lower()
+        if colour_lower == 'zolty':
             ref.append('Żółty szlak')
             trial_tag.append('marked_trail_yellow')
-        elif colour.lower() == 'zielony':
+        elif colour_lower == 'zielony':
             ref.append('Zielony szlak')
             trial_tag.append('marked_trail_green')
-        elif colour.lower() == 'czerwony':
+        elif colour_lower == 'czerwony':
             ref.append('Czerwony szlak')
             trial_tag.append('marked_trail_red')
-        elif colour.lower() == 'niebieski':
+        elif colour_lower == 'niebieski':
             ref.append('Niebieski szlak')
             trial_tag.append('marked_trail_blue')
         else:
