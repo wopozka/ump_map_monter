@@ -1562,10 +1562,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             way['phone'] = value
         elif key == 'HouseNumber':
             way['addr:housenumber'] = value
-        elif key == 'KodPoczt' or key == 'ZIP' or key == 'ZipCode':
+        elif key_lower in ('kodpoczt',  'zip', 'zipcode'):
             way['addr:postcode'] = value
-        elif key == 'Zip':
-            pass
         elif key == 'Time':
             way['hour_on'] = value
         elif key == 'Height_f':
