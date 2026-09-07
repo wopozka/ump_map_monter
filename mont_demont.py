@@ -3736,7 +3736,7 @@ def demontuj(args):
         else:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
-                    nazwa_pliku_ = 'granice-czesciowe.txt'
+                    nazwa_pliku_ = nazwa_pliku
                 else:
                     nazwa_pliku_ = os.path.join(Zmienne.KatalogzUMP, nazwa_pliku)
 
