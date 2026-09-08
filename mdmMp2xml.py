@@ -1058,18 +1058,12 @@ def bpoints_append(node, bpoints):
 
 
 def lats_longs_from_line(nodes_str):
-    lats = []
-    longs = []
-    for la, element in enumerate(nodes_str.split(',')):
-        try:
-            coord = '{:.{n_dec_digits}f}'.format(float(element.strip('()')), n_dec_digits=6)
-        except ValueError:
-            return tuple()
-        if la % 2:
-            longs.append(coord)
-        else:
-            lats.append(coord)
-    return tuple(zip(lats, longs))
+    try:
+        coords = [f'{float(element.strip("()")):.6f}' for element in nodes_str.split(',')]
+    except ValueError:
+        return tuple()
+    coords_iter = iter(coords)
+    return tuple(zip(coords_iter, coords_iter))
 
 
 def points_from_bline(points_str):
@@ -1193,7 +1187,8 @@ def get_type_from_umptyp(way, ump_spw_types):
 
 
 def tag(way, spw_types):
-    for key, value in zip(spw_types[::2], spw_types[1::2]):
+    spw_types_iter = iter(spw_types)
+    for key, value in zip(spw_types_iter, spw_types_iter):
         way[key] = value
 
 
@@ -1201,6 +1196,7 @@ def polygon_make_ccw(shape, c_points):
     nodes = shape['_nodes']
     num = len(nodes) - 1
     if num < 3:
+
         return
 
     # Pre-konwersja współrzędnych RAZ (nodes[num] duplikuje nodes[0], więc
