@@ -1196,7 +1196,6 @@ def polygon_make_ccw(shape, c_points):
     nodes = shape['_nodes']
     num = len(nodes) - 1
     if num < 3:
-
         return
 
     # Pre-konwersja współrzędnych RAZ (nodes[num] duplikuje nodes[0], więc
