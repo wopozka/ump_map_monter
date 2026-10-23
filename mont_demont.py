@@ -1119,6 +1119,8 @@ class tabelaKonwersjiTypow(object):
             '0x5809': ['REP_NE'],
             '0x580a': ['REP_SW'],
             '0x580b': ['REP_SE'],
+            '0x580c': ['REP_NSEW'],
+            '0x580d': ['REP_NESESWNW'],
             '0x5901': ["airportbig"],
             '0x5902': ["airportmed", "lotnisko_srednie"],
             '0x5903': ["airportsmall", "lotnisko_male", "aeroklub"],

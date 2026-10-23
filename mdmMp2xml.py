@@ -903,6 +903,8 @@ poi_types = {
     0x5809: ["seamark:calling-in_point:traffic_flow", "NE"],
     0x580a: ["seamark:calling-in_point:traffic_flow", "SW"],
     0x580b: ["seamark:calling-in_point:traffic_flow", "SE"],
+    0x580c: ["seamark:calling-in_point:traffic_flow", "NS-EW"],
+    0x580d: ["seamark:calling-in_point:traffic_flow", "NE-SE-SW-NW"],
     0x5900: ["aeroway",  "aerodrome"],
     0x5901: ["aeroway",  "aerodrome"],
     0x5902: ["aeroway",  "aerodrome"],
