@@ -1119,6 +1119,8 @@ class tabelaKonwersjiTypow(object):
             '0x5809': ['REP_NE'],
             '0x580a': ['REP_SW'],
             '0x580b': ['REP_SE'],
+            '0x580c': ['REP_NSEW'],
+            '0x580d': ['REP_NESESWNW'],
             '0x5901': ["airportbig"],
             '0x5902': ["airportmed", "lotnisko_srednie"],
             '0x5903': ["airportsmall", "lotnisko_male", "aeroklub"],
@@ -3736,7 +3738,7 @@ def demontuj(args):
         else:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
-                    nazwa_pliku_ = 'granice-czesciowe.txt'
+                    nazwa_pliku_ = nazwa_pliku
                 else:
                     nazwa_pliku_ = os.path.join(Zmienne.KatalogzUMP, nazwa_pliku)
 
