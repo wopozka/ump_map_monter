@@ -21,6 +21,7 @@ import tempfile
 import shutil
 import kdtree
 import znajdz_bledy_numeracji
+import znajdz_bledy_adresacji
 from collections import OrderedDict
 from collections import defaultdict
 from datetime import date
@@ -3931,6 +3932,25 @@ def sprawdz_numeracje(args):
         stderr_stdout_writer.stdoutwrite('Sprawdzanie ciaglowsci siatki routingowej gotowe!')
 
 
+def sprawdz_adresy(args):
+    stderr_stdout_writer = ErrOutWriter(args)
+    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    stderr_stdout_writer.stdoutwrite('Sprawdzam zgodnosc adresacji punktowej z liniowa!')
+
+    if args.umphome:
+        Zmienne.ustaw_katalog_home(args.umphome)
+
+    if args.katrob:
+        Zmienne.KatalogRoboczy = args.katrob
+
+    if args.plikmp:
+        Zmienne.KatalogRoboczy = os.getcwd()+'/'
+        Zmienne.InputFile = args.plikmp
+    znajdz_bledy_adresacji.main(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile),
+                                stderr_stdout_writer, args.limit)
+    stderr_stdout_writer.stdoutwrite('Sprawdzanie adresacji gotowe!')
+
+
 def sprawdz(args):
     stderr_stdout_writer = ErrOutWriter(args)
     Zmienne = UstawieniaPoczatkowe('wynik.mp')
@@ -4550,6 +4570,15 @@ def main(argumenty):
     parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
                                                                            'domyslnie wynik.mp')
     parsers_sprawdz.set_defaults(func=sprawdz_numeracje)
+
+    # parser dla komendy sprawdz_adresy
+    parsers_sprawdz = subparsers.add_parser('sprawdz_adresy', help='sprawdza zgodnosc adresacji punktowej z liniowa')
+    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
+                                                                           'domyslnie wynik.mp')
+    parsers_sprawdz.add_argument('-l', '--limit', dest='limit', type=float, default=150,
+                                 help='maksymalna odleglosc w metrach punktu adresowego od numeracji liniowej, '
+                                      'domyslnie 150')
+    parsers_sprawdz.set_defaults(func=sprawdz_adresy)
 
     # parser dla komendy sprawdz_siatke_routingowa
     parsers_sprawdz = subparsers.add_parser('sprawdz_siatke_routingowa', help='sprawdz ciaglosc siatki routingowej')
