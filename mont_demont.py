@@ -21,6 +21,7 @@ import tempfile
 import shutil
 import kdtree
 import znajdz_bledy_numeracji
+import znajdz_bledy_adresacji
 from collections import OrderedDict
 from collections import defaultdict
 from datetime import date
@@ -131,7 +132,7 @@ class TestyPoprawnosciDanych(object):
     DOZWOLONE_KLUCZE_PRZESTARZALE = {'Rampa'}
     # ponizsze klucze pojawiaja sie wielokrotnie w rekordzie, dlatego monter dodaje numery na koncu, aby je
     # rozroznic. Z tego powodu sa traktowane inaczej
-    DOZWOLONE_KLUCZE_Z_NUMEREM = {'Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit'}
+    DOZWOLONE_KLUCZE_Z_NUMEREM = ('Numbers', 'Data0', 'Data1', 'Data2', 'Data3', 'HLevel', 'Exit',)
     TYPY_DROG_Z_KIERUNKIEM = {'0x1', '0x2', '0x8', '0x9'}
     TYPY_DROG_BEZ_TWOWAY = {'0x3', '0x4', '0x5', '0x6', '0x7', '0xa', '0xb', '0xc', '0xd', '0xe', '0xf', '0x16',
                             '0x1a', '0x1b'}
@@ -270,12 +271,9 @@ class TestyPoprawnosciDanych(object):
     def sprawdz_poprawnosc_klucza(self, dane_do_zapisu):
         for klucz in dane_do_zapisu:
             if klucz not in self.dozwolone_klucze:
-                klucz_z_numerem_znaleziony = False
-                for klucz_z_numerem in self.dozwolone_klucze_z_numerem:
-                    if klucz.startswith(klucz_z_numerem):
-                        klucz_z_numerem_znaleziony = True
-                        break
-                if not klucz_z_numerem_znaleziony:
+                # Optymalizacja: startswith(tuple) jest znacznie szybszy ni¿ pêtla for z if startswith()
+                # C-level implementation - O(1) zamiast O(n) dla ka¿dego klucza
+                if not klucz.startswith(TestyPoprawnosciDanych.DOZWOLONE_KLUCZE_Z_NUMEREM):
                     coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
                     if klucz in self.dozwolone_klucze_przestarzale:
                         self.error_out_writer.stderrorwrite('Nieu¿ywany klucz %s %s, mo¿na usun±æ.' % (klucz, coords))
@@ -629,23 +627,20 @@ class TestyPoprawnosciDanych(object):
         self.resetuj_wspolrzedne()
 
     def testy_poprawnosci_danych_txt(self, dane_do_zapisu):
-        wyniki_testow = list()
-        wyniki_testow.append(self.testuj_kierunkowosc_ronda(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_kierunki_dla_drog(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdzData0Only(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_join_zamiast_merge(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_label_dla_poly(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_czy_miasto_i_label_dla_topo(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_poprawnosc_klucza(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu, klucze_do_sprawdzenia=None))
-        wyniki_testow.append(self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu))
-        wyniki_testow.append(self.sprawdz_krotkie_remonty(dane_do_zapisu))
+        self.testuj_kierunkowosc_ronda(dane_do_zapisu)
+        self.sprawdz_kierunki_dla_drog(dane_do_zapisu)
+        self.sprawdzData0Only(dane_do_zapisu)
+        self.sprawdz_join_zamiast_merge(dane_do_zapisu)
+        self.sprawdz_label_dla_poly(dane_do_zapisu)
+        self.sprawdz_czy_miasto_i_label_dla_topo(dane_do_zapisu)
+        self.sprawdz_label_dla_drogi_z_numerami(dane_do_zapisu)
+        self.sprawdz_poprawnosc_klucza(dane_do_zapisu)
+        self.sprawdz_czy_endlevel_wieksze_od_data(dane_do_zapisu)
+        self.sprawdz_poprawnosc_wartosci_klucza(dane_do_zapisu, klucze_do_sprawdzenia=None)
+        self.sprawdz_czy_forceclass_zabronione(dane_do_zapisu)
+        self.sprawdz_krotkie_remonty(dane_do_zapisu)
         # wyniki_testow.append(self.sprawdz_czy_tylko_znaki_cp1250(dane_do_zapisu))
         self.resetuj_wspolrzedne()
-        if wyniki_testow:
-            return ','.join(a for a in wyniki_testow if a)
         return ''
 
     def testuj_kierunkowosc_ronda(self, dane_do_zapisu):
@@ -1125,6 +1120,8 @@ class tabelaKonwersjiTypow(object):
             '0x5809': ['REP_NE'],
             '0x580a': ['REP_SW'],
             '0x580b': ['REP_SE'],
+            '0x580c': ['REP_NSEW'],
+            '0x580d': ['REP_NESESWNW'],
             '0x5901': ["airportbig"],
             '0x5902': ["airportmed", "lotnisko_srednie"],
             '0x5903': ["airportsmall", "lotnisko_male", "aeroklub"],
@@ -1202,7 +1199,7 @@ class tabelaKonwersjiTypow(object):
         name_2_alias = {
             'Aldi': 'SUPER',
             'apteka': 'APTEKA',
-            'basen': 'BASEM',
+            'basen': 'BASEN',
             'benzyna': 'PALIWO',
             'biblioteka': 'BIBLIOTEKA',
             'Biedronka': 'SUPER',
@@ -1370,11 +1367,10 @@ class Obszary(object):
 
     def zwroc_obszar(self, x, y):
         for a in self.polygonyObszarow:
-            if self.point_inside_polygon(
-                    x, y,
-                    [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 == 0],
-                    [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 != 0]
-            ):
+            if self.point_inside_polygon(x, y, [float(b) for b in self.polygonyObszarow[a][0::2]],
+                                         [float(b) for b in self.polygonyObszarow[a][1::2]]):
+                    # [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 == 0],
+                    # [float(b) for b in self.polygonyObszarow[a] if self.polygonyObszarow[a].index(b) % 2 != 0]
                 return a
         return 'None'
 
@@ -1657,6 +1653,7 @@ class PlikMP1(object):
         self.sciezka_zwalidowana = set()
         self.auto_pliki_dla_poi = AutoPlikDlaPoi()
         self.dozwolone_obszary_dla_plikow = None
+        self.naglowek = ''
 
         # przechowywanie hashy dla danego pliku w postaci slownika: nazwapliku:wartosc hash
         self.plikHash = {}
@@ -1750,7 +1747,7 @@ class PlikMP1(object):
         Wczytuje dokladnosc danego pliku oraz hash tego pliku zapisany w pliku mp. Nastepnie otwiera plik z dysku.
         Jesli oba hashe sa sobie rowne wtedy zwraca 0, w przeciwnym wypadku 1. Gdy nie ma hasha - jest pusty zwraca 2
         """
-        plik, dokladnosc, wartosc_hash, Miasto = linia_z_cyfram_i_hashem.strip().split(';', 4)
+        plik, dokladnosc, wartosc_hash, Miasto = linia_z_cyfram_i_hashem.strip().split(';', 3)
         if zaokraglij != '0':
             dokladnosc = zaokraglij
 
@@ -2894,7 +2891,7 @@ class PolylinePolygone(ObiektNaMapie):
     """funkcja parsuje dane z pliku txt/mp i przetwarza na reprezentacje wewnetrzna"""
     def rekord2Dane(self, stringZDanymi, domyslneMiasto):
         Klucze = set()
-        self.liniaObszar = string
+        # self.liniaObszar = string
 
         for tmpbbb in stringZDanymi.strip().split('\n'):
             tmpbbb = tmpbbb.strip()
@@ -3062,9 +3059,8 @@ class plikPNT(object):
         """funkcja usuwa naglowek pliku pnt, i zwraca zawartosc pliku po usunieciu naglowka"""
         # pomijaj wszystko od poczatku do wystapienia pierwszego poprawnego wpisu w pliku: XX.XXXXY, YY.YYYYY
         # przypadek gdy mamy pusty plik
-        if len(zawartoscPliku) == 1:
-            if zawartoscPliku[0].strip() == 0:
-                return zawartoscPliku
+        if len(zawartoscPliku) == 1 and not zawartoscPliku[0].strip():
+            return zawartoscPliku
 
         tabIndex = 0
         indeksPierwszegoPoprawnegoElementu = -1
@@ -3387,8 +3383,8 @@ def montujpliki(args, naglowek_mapy=''):
             if args.monthash:
                 zawartoscPlikuMp.plikHash[pliki_w_ump] = ''
             else:
-                zawartoscPlikuMp.plikHash[pliki_w_ump] = \
-                    hashlib.md5(open(plik_ze_sciezka_pelna, 'rb').read()).hexdigest()
+                with open(plik_ze_sciezka_pelna, 'rb') as f:
+                    zawartoscPlikuMp.plikHash[pliki_w_ump] = hashlib.md5(f.read()).hexdigest()
             # print('Udalo sie otworzyc pliku %s'%(pliki))
 
             ############################################################################################################
@@ -3429,6 +3425,7 @@ def montujpliki(args, naglowek_mapy=''):
 
             else:
                 print('nieznany typ pliku %s' % pliki_w_ump)
+                plikPNTTXT.close()
                 continue
             plikPNTTXT.close()
 
@@ -3641,8 +3638,10 @@ def demontuj(args):
     stderr_stdout_writer.stdoutwrite('Wczytuje %s' % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
 
     try:
-        zawartoscPlikuMp = open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
-                                errors=Zmienne.ReadErrors).read()
+        with open(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile), encoding=Zmienne.Kodowanie,
+                  errors=Zmienne.ReadErrors) as mp_plik:
+            zawartoscPlikuMp = mp_plik.read()
+
     except FileNotFoundError:
         stderr_stdout_writer.stderrorwrite('Nie odnalazlem pliku %s.'
                                            % os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile))
@@ -3681,9 +3680,10 @@ def demontuj(args):
     # iterujemy po kolejnych rekordach w pliku mp. Rekordy to dane pomiedzy [END]
     update_progress(0 / 100, args)
     tester_poprawnosci_danych = TestyPoprawnosciDanych(stderr_stdout_writer)
+    krok_progress = max(1, int(ilosc_rekordow / 100))
     for numer_aktualnego_rekordu, rekord_z_pliku_mp in enumerate(rekordy_mp):
-        if (numer_aktualnego_rekordu + 1) % int(ilosc_rekordow/100) == 0:
-            update_progress(round((numer_aktualnego_rekordu + 1) / int(ilosc_rekordow), 2), args)
+        if (numer_aktualnego_rekordu + 1) % krok_progress == 0:
+            update_progress(round((numer_aktualnego_rekordu + 1) / ilosc_rekordow, 2), args)
         dane_do_zapisu = plikMp.zwroc_rekord_pliku_mp(rekord_z_pliku_mp.strip())
         # tester_queue.put(dane_do_zapisu)
         plikMp.procesuj_rekordy_mp(dane_do_zapisu)
@@ -3739,11 +3739,13 @@ def demontuj(args):
         else:
             try:
                 if nazwa_pliku.find('granice-czesciowe.txt') > 0:
-                    orgPlikZawartosc = open(nazwa_pliku, encoding=Zmienne.Kodowanie,
-                                            errors=Zmienne.ReadErrors).readlines()
+                    nazwa_pliku_ = nazwa_pliku
                 else:
-                    orgPlikZawartosc = open(os.path.join(Zmienne.KatalogzUMP, nazwa_pliku), encoding=Zmienne.Kodowanie,
-                                            errors=Zmienne.ReadErrors).readlines()
+                    nazwa_pliku_ = os.path.join(Zmienne.KatalogzUMP, nazwa_pliku)
+
+                with open(nazwa_pliku_, encoding=Zmienne.Kodowanie, errors=Zmienne.ReadErrors) as n_plik_gr:
+                    orgPlikZawartosc = n_plik_gr.readlines()
+
                 if orgPlikZawartosc:
                     if orgPlikZawartosc[-1][-1] != '\n':
                         orgPlikZawartosc[-1] += '\\ No new line at the end of file\n'
@@ -3761,7 +3763,7 @@ def demontuj(args):
                 if not plikMp.plikizMp[nazwa_pliku]:
                     plikMp.plikizMp[nazwa_pliku].append('\\ No new line at the end of file\n')
                 elif plikMp.plikizMp[nazwa_pliku][-1][-1] != '\n':
-                    plikMp.plikizMp[nazwa_pliku][-1][-1] += '\\ No new line at the end of file\n'
+                    plikMp.plikizMp[nazwa_pliku][-1] += '\\ No new line at the end of file\n'
                 if 'granice-czesciowe.txt' not in nazwa_pliku:
                     tofile = nazwa_pliku.replace('UMP', 'UMP_Nowe').replace('narzedzia', 'narzedzia_Nowe')
                 else:
@@ -3862,7 +3864,7 @@ def edytuj(args):
     stderr_stdout_writer = ErrOutWriter(args)
 
     if args.umphome:
-        Zmienne.ustaw_katalog_home(args.umphone)
+        Zmienne.ustaw_katalog_home(args.umphome)
 
     if args.katrob:
         Zmienne.KatalogRoboczy = args.katrob
@@ -3930,6 +3932,25 @@ def sprawdz_numeracje(args):
         stderr_stdout_writer.stdoutwrite('Sprawdzanie numeracji i zakazow gotowe!')
     else:
         stderr_stdout_writer.stdoutwrite('Sprawdzanie ciaglowsci siatki routingowej gotowe!')
+
+
+def sprawdz_adresy(args):
+    stderr_stdout_writer = ErrOutWriter(args)
+    Zmienne = UstawieniaPoczatkowe('wynik.mp')
+    stderr_stdout_writer.stdoutwrite('Sprawdzam zgodnosc adresacji punktowej z liniowa!')
+
+    if args.umphome:
+        Zmienne.ustaw_katalog_home(args.umphome)
+
+    if args.katrob:
+        Zmienne.KatalogRoboczy = args.katrob
+
+    if args.plikmp:
+        Zmienne.KatalogRoboczy = os.getcwd()+'/'
+        Zmienne.InputFile = args.plikmp
+    znajdz_bledy_adresacji.main(os.path.join(Zmienne.KatalogRoboczy, Zmienne.InputFile),
+                                stderr_stdout_writer, args.limit)
+    stderr_stdout_writer.stdoutwrite('Sprawdzanie adresacji gotowe!')
 
 
 def sprawdz(args):
@@ -4224,8 +4245,11 @@ def wojkuj(args):
     print(' '.join(wojek_call))
     process = subprocess.Popen(wojek_call)
     process.wait()
-    os.remove(wynik_mp)
-    shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    if process.returncode == 0:
+        os.remove(wynik_mp)
+        shutil.copy(wynik_mp_wojek.name, wynik_mp)
+    else:
+        stderr_stdout_writer.stderrorwrite('Wojek zakonczyl sie bledniem, wynik.mp nie zostal zmieniony')
     os.remove(wynik_mp_wojek.name)
 
 
@@ -4312,8 +4336,11 @@ def ustaw_force_speed(args):
     stderr_stdout_writer.stdoutwrite(' '.join(podnies_poziom_call))
     process = subprocess.Popen(podnies_poziom_call)
     process.wait()
-    os.remove(wynik_mp)
-    shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
+    if process.returncode == 0:
+        os.remove(wynik_mp)
+        shutil.copy(wynik_mp_podnies_poziom.name, wynik_mp)
+    else:
+        stderr_stdout_writer.stderrorwrite('podnies-poziom.pl zakonczyl sie bledem, wynik.mp nie zostal zmieniony')
     os.remove(wynik_mp_podnies_poziom.name)
 
 
@@ -4334,7 +4361,7 @@ def stworz_plik_typ(args):
         nazwa_typ = args.nazwa_typ[0]
     else:
         nazwa_typ = args.nazwa_typ
-    zmienne = UstawieniaPoczatkowe(args)
+    zmienne = UstawieniaPoczatkowe('wynik.mp')
     katalog_narzedzia = os.path.join(zmienne.KatalogzUMP, 'narzedzia')
     katalog_ikonki = os.path.join(katalog_narzedzia, 'ikonki')
     plik_typ_zawartosc = ['[_id]\n', 'ProductCode=1\n', 'FID=' + args.family_id + '\n']
@@ -4545,6 +4572,15 @@ def main(argumenty):
     parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
                                                                            'domyslnie wynik.mp')
     parsers_sprawdz.set_defaults(func=sprawdz_numeracje)
+
+    # parser dla komendy sprawdz_adresy
+    parsers_sprawdz = subparsers.add_parser('sprawdz_adresy', help='sprawdza zgodnosc adresacji punktowej z liniowa')
+    parsers_sprawdz.add_argument('-i', '--input-file', dest='plikmp', help='nazwa pliku do sprawdzenia, '
+                                                                           'domyslnie wynik.mp')
+    parsers_sprawdz.add_argument('-l', '--limit', dest='limit', type=float, default=150,
+                                 help='maksymalna odleglosc w metrach punktu adresowego od numeracji liniowej, '
+                                      'domyslnie 150')
+    parsers_sprawdz.set_defaults(func=sprawdz_adresy)
 
     # parser dla komendy sprawdz_siatke_routingowa
     parsers_sprawdz = subparsers.add_parser('sprawdz_siatke_routingowa', help='sprawdz ciaglosc siatki routingowej')

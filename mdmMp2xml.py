@@ -627,7 +627,7 @@ poi_types = {
     0x1711: ["note", "FIXME"],
     0x1712: ["hazard",  "roadworks"],
     0x1714: ["traffic_sign",  "maxweight"],
-    0x1715: ["traffic_sign",  "maxwight"],
+    0x1715: ["traffic_sign",  "maxweight"],
     0x1716: ["traffic_sign",  "maxheight"],
     0x170a: ["note", "FIXME: verify"],
     0x170d: ["note", "FIXME"],
@@ -903,6 +903,8 @@ poi_types = {
     0x5809: ["seamark:calling-in_point:traffic_flow", "NE"],
     0x580a: ["seamark:calling-in_point:traffic_flow", "SW"],
     0x580b: ["seamark:calling-in_point:traffic_flow", "SE"],
+    0x580c: ["seamark:calling-in_point:traffic_flow", "NS-EW"],
+    0x580d: ["seamark:calling-in_point:traffic_flow", "NE-SE-SW-NW"],
     0x5900: ["aeroway",  "aerodrome"],
     0x5901: ["aeroway",  "aerodrome"],
     0x5902: ["aeroway",  "aerodrome"],
@@ -1012,6 +1014,17 @@ poi_types = {
 glob_progress_bar_queue = None
 
 
+def count_file_lines(f):
+    lines = 0
+    buf_size = 1024 * 1024
+    read_f = f.read  # loop optimization
+    buf = read_f(buf_size)
+    while buf:
+        lines += buf.count('\n')
+        buf = read_f(buf_size)
+    return lines
+
+
 def set_runstamp(r_stamp):
     global runstamp
     runstamp = r_stamp
@@ -1047,18 +1060,12 @@ def bpoints_append(node, bpoints):
 
 
 def lats_longs_from_line(nodes_str):
-    lats = []
-    longs = []
-    for la, element in enumerate(nodes_str.split(',')):
-        try:
-            coord = '{:.{n_dec_digits}f}'.format(float(element.strip('()')), n_dec_digits=6)
-        except ValueError:
-            return tuple()
-        if la % 2:
-            longs.append(coord)
-        else:
-            lats.append(coord)
-    return tuple(zip(lats, longs))
+    try:
+        coords = [f'{float(element.strip("()")):.6f}' for element in nodes_str.split(',')]
+    except ValueError:
+        return tuple()
+    coords_iter = iter(coords)
+    return tuple(zip(coords_iter, coords_iter))
 
 
 def points_from_bline(points_str):
@@ -1182,7 +1189,8 @@ def get_type_from_umptyp(way, ump_spw_types):
 
 
 def tag(way, spw_types):
-    for key, value in zip(spw_types[::2], spw_types[1::2]):
+    spw_types_iter = iter(spw_types)
+    for key, value in zip(spw_types_iter, spw_types_iter):
         way[key] = value
 
 
@@ -1192,33 +1200,34 @@ def polygon_make_ccw(shape, c_points):
     if num < 3:
         return
 
+    # Pre-konwersja współrzędnych RAZ (nodes[num] duplikuje nodes[0], więc
+    # bierzemy tylko `num` odrębnych wierzchołków zamkniętego poligonu).
+    pts = [(float(c_points[node][0]), float(c_points[node][1])) for node in nodes[:num]]
+
     angle = 0.0
     epsilon = 0.001
-    # TODO: zoptymalizować, bo (b,c) bieżącej iteracji stają się (a,b) następnej
-    for i in range(num):
-        try:
-            a = (i + 0)
-            b = (i + 1)
-            c = (i + 2) % num
-            # No projection needed
-            alat = float(c_points[nodes[a]][0])
-            alon = float(c_points[nodes[a]][1])
-            blat = float(c_points[nodes[b]][0])
-            blon = float(c_points[nodes[b]][1])
-            clat = float(c_points[nodes[c]][0])
-            clon = float(c_points[nodes[c]][1])
-            ablen = math.hypot(blat - alat, blon - alon)
-            bclen = math.hypot(clat - blat, clon - blon)
-            # Vector cross product (?)
-            cross = (blat - alat) * (clon - blon) - (blon - alon) * (clat - blat)
-            # Vector dot product (?)
-            dot = (blat - alat) * (clat - blat) + (blon - alon) * (clon - blon)
 
-            sine = cross / (ablen * bclen)
-            cosine = dot / (ablen * bclen)
-            angle += signbit(sine) * math.acos(cosine)
-        except:
-            pass
+    # Kąt skrętu w wierzchołku b liczymy jako atan2(cross, dot) wektorów
+    # ab i bc - to samo co signbit(sine)*acos(cosine), ale bez hypot()/acos():
+    # atan2 nie wymaga normalizacji wektorów (więc bez sqrt i dzielenia) i jest
+    # zdefiniowany wszędzie (atan2(0, 0) == 0.0), więc zdublowane/pokrywające
+    # się punkty nie rzucają ZeroDivisionError/ValueError jak wcześniej -
+    # try/except nie jest już potrzebny.
+    # Wektor (b - a) z poprzedniej iteracji staje się (a - poprzednie b) w kolejnej,
+    # więc liczymy go raz i przesuwamy zamiast odejmować od nowa.
+    alat, alon = pts[-1]
+    blat, blon = pts[0]
+    ab_lat, ab_lon = blat - alat, blon - alon
+    for i in range(num):
+        clat, clon = pts[(i + 1) % num]
+        bc_lat, bc_lon = clat - blat, clon - blon
+
+        cross = ab_lat * bc_lon - ab_lon * bc_lat
+        dot = ab_lat * bc_lat + ab_lon * bc_lon
+        angle += math.atan2(cross, dot)
+
+        blat, blon = clat, clon
+        ab_lat, ab_lon = bc_lat, bc_lon
     angle = math.degrees(-angle)
 
     if -360.0 - epsilon < angle < -360.0 + epsilon:  # CW
@@ -1252,6 +1261,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
             if _type not in interp_types:
                 continue
             _type = interp_types[_type]
+            # dla interpolacji adresow, low to od czego zaczynamy, hi to na czym konczymy
             low = addrs[n][right * 3 + 1]
             hi = addrs[n][right * 3 + 2]
 
@@ -1283,6 +1293,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
 
             if 0:  # prev_house == low:
                 low_node = prev_node
+            # przypadek pojedynczego domu przy ulicy, z jednym numerem. W takim przypaku umiesc go po środku drogi
             elif low == hi:
                 shortlat = (nlat - lat) / 2
                 shortlon = (nlon - lon) / 2
@@ -1290,7 +1301,7 @@ def add_addrinfo(f_way, street, city, region, right, map_elements_props):
             else:
                 pt0 = len(points)
                 low_node = unproj(lat + dlat + shortlat, lon + dlon + shortlon)
-                while low_node in map_elements_props['points']:
+                while low_node in points:
                     low_node = (low_node[0] + normlat / 10,
                                 low_node[1] + normlon / 10)
                 attrs['addr:housenumber'] = low
@@ -1377,8 +1388,8 @@ def prepare_line(points_str, filestamp=None, closed=False, map_elements_props=No
 
 def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_elements_props=None,
                             messages_printer=None):
-    maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
-    levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
+    # maxspeeds = {'0': '8', '1': '20', '2': '40', '3': '56', '4': '72', '5': '93', '6': '108', '7': '128'}
+    # levels = {1: "residential", 2: "tertiary", 3: "secondary", 4: "trunk"}
     exceptions = ('emergency', 'goods', 'motorcar', 'psv', 'taxi', 'foot', 'bicycle', 'hgv')
     ump_countries = {'Austria': "Austria", 'Białoruś': "Belarus", 'Czechy': "Czech Republic", 'Grecja': "Grecja",
                      'Litwa': "Lithuania", 'Łotwa': "Latvia", 'Niemcy': "Germany", 'Rosja': "Russia",
@@ -1398,7 +1409,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
     for key, value in mp_record.items():
         if not value:
             continue
-        if key.lower() in ('label',):
+        key_lower = key.lower()
+        if key_lower in ('label',):
             label = value
             refpos = label.find("~[")
             if refpos > -1:
@@ -1415,15 +1427,15 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
                         raise ParsingError('Problem parsing label ' + value)
             if 'name' not in way and label:
                 way['name'] = label.strip()
-        elif key.lower() in ('label2',):
+        elif key_lower in ('label2',):
             way['loc_name'] = value
-        elif key.lower() in ('fulllabel',):
+        elif key_lower in ('fulllabel',):
             pass
-        elif key.lower() == 'label3':
+        elif key_lower == 'label3':
             way['alt_name'] = value
-        elif key.lower() == 'adrlabel':
+        elif key_lower == 'adrlabel':
             way['alt_name'] = value
-        elif key.lower() == 'typ':
+        elif key_lower == 'typ':
             way['ump:typ'] = value
         elif key == 'DirIndicator':
             if value == '1':
@@ -1431,7 +1443,7 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             else:
                 way['oneway'] = value
         elif key in ('Data0', 'Data1', 'Data2', 'Data3', 'Data4',):
-            num = int(key[4:])
+            # num = int(key[4:])
             count, way['_nodes'] = prepare_line(value, filestamp=filestamp, closed=feat == Features.polygon,
                                                 map_elements_props=map_elements_props)
             # jesli nie uda sie skonwertowac DataX na cos poprawnego to wtedy zwroc pusty slownik.
@@ -1468,12 +1480,12 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             #     way['highway'] = levels[int(value, 0)]
             # way['layer'] = str(value) ??
             pass
-        elif key.lower() == 'miasto':
+        elif key_lower == 'miasto':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
-        elif key.lower() == 'streetdesc':
+        elif key_lower == 'streetdesc':
             way['addr:street'] = value
-        elif key.lower() == 'cityname':
+        elif key_lower == 'cityname':
             way['addr:city'] = value.replace('@', ';')
             way['is_in'] = value.replace('@', ';')
         elif key == 'MiscInfo':
@@ -1535,22 +1547,20 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
             if '_addr' not in way:
                 way['_addr'] = {}
             way['_addr'][int(value[0], 0)] = value[1:]
-        elif key.lower() == 'rampa':
+        elif key_lower == 'rampa':
             way['bridge'] = 'yes'
         elif key == 'Highway':
             way['ref'] = value
         elif key.startswith('Exit'):
-            way[key.lower()] = value
+            way[key_lower] = value
         elif key == 'OvernightParking':
             way['overnight_parking'] = 'yes'
         elif key == 'Phone':
             way['phone'] = value
         elif key == 'HouseNumber':
             way['addr:housenumber'] = value
-        elif key == 'KodPoczt' or key == 'ZIP' or key == 'ZipCode':
+        elif key_lower in ('kodpoczt',  'zip', 'zipcode'):
             way['addr:postcode'] = value
-        elif key == 'Zip':
-            pass
         elif key == 'Time':
             way['hour_on'] = value
         elif key == 'Height_f':
@@ -1663,7 +1673,7 @@ def postprocess_poi_tags(way):
                 way['maxweight'] = way['name']
         elif way['ump:type'] == '0x1715':
             if 'name' in way:
-                way['maxwight'] = way['name']
+                way['maxweight'] = way['name']
         elif way['ump:type'] == '0x1716':
             if 'name' in way:
                 way['maxheight'] = way['name']
@@ -1931,7 +1941,7 @@ def way_to_way_id(way, node_ways_relation=None):
         if num == 0:
             way_id_set = node_ways_relation[node]
         else:
-            way_id_set.intersection(node_ways_relation[node])
+            way_id_set = way_id_set.intersection(node_ways_relation[node])
         if len(way_id_set) == 1:
             return tuple(way_id_set)[0]
     return None
@@ -1950,7 +1960,7 @@ def signbit(x):
         return 1
     if x < 0:
         return -1
-
+    return 0
 
 def next_node(pivot=None, direction=None, node_ways_relation=None, map_elements_props=None, messages_printer=None):
     """
@@ -2300,20 +2310,21 @@ def extract_reference_code(label, refpos, messages_printer=None):
         return True, reftype[reference_code], ref.replace("/", ";"), label
         # way[reftype[int(code, 0)]] = ref.replace("/", ";")
     else:
+        code_lower = code.lower()
         # Used before a letter forces it to be a lower case
-        if code.lower() == '0x1b':
+        if code_lower == '0x1b':
             # way['loc_name'] = right
             label = ref + label
             return True, 'loc_name', right, label
         # Separation: on the map visible only the first section (when over 1km), with the mouse sees displayed
         # one the word completely, not separated
-        elif code.lower() == '0x1c':
+        elif code_lower == '0x1c':
             # way['loc_name'] = ref
             label = ref + label
             return True, 'loc_name', ref, label
         # Separation: on the map visible only the second section(when over 1 km), with the mouse sees displayed one the
         # word completely, by blank separated
-        elif code.lower() == '0x1e':
+        elif code_lower == '0x1e':
             label = label.replace('~[0x1e]', '')
             if messages_printer is not None:
                 messages_printer.printerror("1E" + label)
@@ -2321,7 +2332,7 @@ def extract_reference_code(label, refpos, messages_printer=None):
         else:
             if messages_printer is not None:
                 messages_printer.printerror("Unknown reference code: " + code)
-            return False, code.lower(), ref, label
+            return False, code_lower, ref, label
             # raise ParsingError('Problem parsing label ' + label)
 
 
@@ -2433,16 +2444,17 @@ def extract_szlak(value):
     unknonw_ref = []
     trial_tag = []
     for colour in value.split(','):
-        if colour.lower() == 'zolty':
+        colour_lower = colour.lower()
+        if colour_lower == 'zolty':
             ref.append('Żółty szlak')
             trial_tag.append('marked_trail_yellow')
-        elif colour.lower() == 'zielony':
+        elif colour_lower == 'zielony':
             ref.append('Zielony szlak')
             trial_tag.append('marked_trail_green')
-        elif colour.lower() == 'czerwony':
+        elif colour_lower == 'czerwony':
             ref.append('Czerwony szlak')
             trial_tag.append('marked_trail_red')
-        elif colour.lower() == 'niebieski':
+        elif colour_lower == 'niebieski':
             ref.append('Niebieski szlak')
             trial_tag.append('marked_trail_blue')
         else:
@@ -3014,7 +3026,7 @@ def output_normal_pickled(options, filenames_to_gen, pickled_filenames=None, nod
                             newway['natural'] = 'water'
                         print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
                     elif filename == 'no_numbers' and 'NumberX' not in _way:
-                        print_way_pickled(newway, task_id, orig_id, node_generalizator, out)
+                        print_way_pickled(_way.copy(), task_id, orig_id, node_generalizator, out)
                     elif filename == 'index' and 'is_in' in _way:
                         newway = remove_label_braces(_way)
                         if options.regions and 'is_in:state' in newway:
@@ -3295,7 +3307,7 @@ def worker(task, options, border_points=None):
         messages_printer.printerror("Can't open file " + task['file'])
         sys.exit()
     try:
-        num_lines_to_process = len(infile.readlines())
+        num_lines_to_process = count_file_lines(infile)
     except UnicodeDecodeError:
         infile.close()
         if options.ignore_errors:
@@ -3306,7 +3318,7 @@ def worker(task, options, border_points=None):
             except (IOError, PermissionError):
                 messages_printer.printerror("Can't open file " + task['file'])
                 sys.exit()
-            num_lines_to_process = len(infile.readlines())
+            num_lines_to_process = count_file_lines(infile)
         else:
             messages_printer.printerror('File ' + task['file'] + ' can not be red using ' + file_encoding + '.')
             sys.exit()
@@ -3500,7 +3512,7 @@ def main(options, args):
         if options.index_file is not None:
             output_files_to_generate['index'] = path_file(options.index_file)
         if options.nonumber_file is not None:
-            output_files_to_generate['no_number'] = path_file(options.nonumber_file)
+            output_files_to_generate['no_numbers'] = path_file(options.nonumber_file)
         if options.nominatim_file is not None:
             output_files_to_generate['nominatim'] = path_file(options.nominatim_file)
 
