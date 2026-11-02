@@ -11,6 +11,7 @@ import copy
 
 glob_progress_bar_queue = Queue()
 glob_logerrqueue = Queue()
+glob_kolejka_komunikacyjna = Queue()
 
 class ButtonZdalnieSterowany(tkinter.ttk.Button):
     def __init__(self, parent, **options):
@@ -38,13 +39,14 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
             self.args = mdm_config.zwroc_args_do_kompilacji_osmand()
             self.Zmienne = mont_demont.UstawieniaPoczatkowe('wynik.mp')
             self.obszary = obszary
-            self.logerrqueue = queue.Queue()
+            # kolejki musza byc multiprocessing.Queue, bo trafiaja do procesu potomnego (spawn na Windows -> pickle)
+            self.logerrqueue = glob_logerrqueue
             tkinter.Toplevel.__init__(self, parent, **options)
             self.transient(parent)
             self.title(u'Kreator tworzenia mapy dla OSMAnda')
             self.parent = parent
             self.kolejnyetap = 'montowanie'
-            self.kolejka_komunikacyjna = queue.Queue()
+            self.kolejka_komunikacyjna = glob_kolejka_komunikacyjna
             # format: [obszar][mp/drp] = referencja do progressbara
             self.progress_bar = dict(dict())
             #  dla progress_bar_queue uzywamy zmiennej globalnej, znacznie upraszcza obsluge komunikacji multiprocessing
@@ -232,7 +234,6 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
         global glob_logerrqueue
         self.buttonNext.config(state='disabled')
         if self.kolejnyetap == 'uaktualnianie':
-            self.logerrqueue = queue.Queue()
             thread = threading.Thread(target=self.cvsup)
             thread.start()
 
@@ -256,8 +257,6 @@ class KreatorKompilacjiOSMAnd(tkinter.Toplevel):
                 options.threadnum = threadnum
             # thread = threading.Thread(target=self.mp2osm, args=(self.logerrqueue, self.args))
             options.progress_bar_queue = glob_progress_bar_queue
-            print(options.progress_bar_queue)
-            self.logerrqueue = glob_logerrqueue
             options.stdoutqueue = glob_logerrqueue
             options.stderrqueue = glob_logerrqueue
             _subprocess = Process(target=mp2osm, args=(self.logerrqueue, self.kolejka_komunikacyjna, options,
