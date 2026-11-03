@@ -2619,15 +2619,33 @@ class PlikiDoMontowania(object):
 
     def sprawdz_czy_pliki_bez_utf8(self):
         self.errOutWriter.stdoutwrite('Sprawdzam poprawnosc kodowania plikow w cp1250.')
+        wielkosc_odczytu = 1048576
         for _plik, plik in self.pobierz_pliki_do_montowania():
-            with open(plik, 'r', encoding='cp1250') as plik_do_czyt:
+            kodowanie_poprawne = True
+            with open(plik, 'rb') as plik_do_czyt:
+                kawalek_pliku = plik_do_czyt.read(wielkosc_odczytu)
+                if not kawalek_pliku:
+                    break
                 try:
-                    plik_zaw = plik_do_czyt.readlines()
+                    plik_zaw = kawalek_pliku.decode('cp1250')
                 except UnicodeDecodeError:
+                    cp1250_decoded = False
+                else:
+                    cp1250_decoded = True
+
+                try:
+                    plik_zaw = kawalek_pliku.decode('utf8')
+                except UnicodeDecodeError:
+                    utf8_decoded = False
+                else:
+                    utf8_decoded = True
+                if not cp1250_decoded and utf8_decoded:
                     self.errOutWriter.stderrorwrite('Kodowanie pliku %s [NOK]. Prawdopodobnie znaki UTF8 w pliku.'
                                                     % _plik)
-                else:
-                    self.errOutWriter.stdoutwrite('Kodowanie pliku %s [OK].' % _plik)
+                    kodowanie_poprawne = False
+                    break
+            if kodowanie_poprawne:
+                self.errOutWriter.stdoutwrite('Kodowanie pliku %s [OK].' % _plik)
         return
 
 
