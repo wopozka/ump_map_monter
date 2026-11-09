@@ -453,8 +453,8 @@ shape_types = {
     0xa:  ["building", "university"],
     0xb:  ["amenity",  "hospital"],
     0xc:  ["landuse",  "industrial"],  # a wild guess
-    0xd:  ["landuse",  "construction"],
-    0xe:  ["aeroway",  "taxiway"],  # runway na lotniskach
+    0xd:  ["historic",  "archeological_site"],
+    0xe:  ["aeroway",  "taxiway"],  # taxiway na lotniskach
     0x13: ["building", "yes"],
     0x14: ["natural",  "wood"],  # sometimes landuse=military
     0x15: ["natural",  "wood"],
@@ -508,6 +508,13 @@ umppoi_types = {
                 'THAI': 0x2a041,
                 'MLECZNY': 0x2a121,
                 'LIBANSKA': 0x2a135,
+
+                'AMUSEMENT_PARK': 0x2c01,
+                'PLAC_ZABAW': 0x2c015,
+
+                'ZAMEK': 0x2c040,
+                'PALAC': 0x2c041,
+                'DWOREK': 0x2c042,
 
                 'UCZELNIA': 0x2c055,
                 'PRZEDSZKOLE': 0x2c056,
@@ -686,10 +693,10 @@ poi_types = {
     0x1c0d: ["barrier",  "obstruction", "visibility", "no"],
     0x1e00: ["place",    "region"],
     0x1f00: ["place",    "region"],
-    0x2000: ["highway",  "exit"],
-    0x2100: ["highway",  "services"],
-    0x210f: ["highway",  "services"],
-    0x2110: ["highway",  "services"],
+    0x2000: ["highway",  "motorway_junction"],
+    0x2100: ["highway",  "motorway_junction"],
+    0x210f: ["highway",  "motorway_junction"],
+    0x2110: ["highway",  "motorway_junction"],
     0x2200: ["highway",  "rest_area"],
     0x2400: ["amenity",  "weigh_station"],
     0x2500: ["highway",  "toll"],
@@ -741,16 +748,15 @@ poi_types = {
     0x2b04: ["tourism",  "hotel"],
     0x2c00: ["tourism",  "attraction"],
     0x2c005: ["tourism",  "viewpoint"],
-    0x2c01: ["tourism",  "attraction", "leisure", "park"],
+    0x2c01: ["tourism",  "theme_park"],
     0x2c015: ["leisure",  "playground"],
     0x2c02: ["tourism",  "museum"],
     0x2c025: ["tourism",  "museum", "amenity", "arts_centre"],
     0x2c03: ["amenity",  "library"],
     0x2c04: ["historic", "castle"],
-    0x2c040: ["historic", "castle", "castle_type", "dworek"],
-    0x2c041: ["historic", "castle", "castle_type", "palace"],
-    0x2c042: ["historic", "castle", "castle_type", "fortress"],
-    0x2c043: ["historic", "castle", "castle_type", "fortress"],
+    0x2c040: ["historic", "castle", "castle_type", "fortress"],
+    0x2c041: ["historic", "castle", "castle_type", "stately"],
+    0x2c042: ["historic", "manor"],
     0x2c05: ["amenity",  "school"],
     0x2c055: ["amenity",  "university"],
     0x2c056: ["amenity",  "kindergarten", "note", "Przedszkole"],
@@ -940,7 +946,7 @@ poi_types = {
     0x640b: ["landuse",  "military"],
     0x640c: ["man_made", "mineshaft"],
     0x640d: ["man_made", "works", "waterway", "oil_platform"],
-    0x640e: ["leisure",  "park"],
+    0x640e: ["leisure",  "nature_reserve"],
     0x640f: ["amenity",  "post_box"],
     0x6410: ["amenity",  "school"],
     0x6411: ["man_made", "tower"],
@@ -1550,7 +1556,8 @@ def convert_tags_return_way(mp_record, feat, ignore_errors, filestamp=None, map_
         elif key_lower == 'rampa':
             way['bridge'] = 'yes'
         elif key == 'Highway':
-            way['ref'] = value
+            if feat != Features.poi:
+                way['ref'] = value
         elif key.startswith('Exit'):
             way[key_lower] = value
         elif key == 'OvernightParking':
@@ -2500,16 +2507,18 @@ def extract_routeparam(value):
     except ValueError:
         return {}
     _way = dict()
-    _way['ump:speed_limit'] = str(params[0])
+    _way['ump:route_speed'] = str(params[0])
     _way['ump:route_class'] = str(params[1])
-    if params[0] != 0:
-        _way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
+#    if params[0] != 0:
+#        _way['maxspeed'] = maxspeeds[params[0]]  # Probably useless
     if params[2] != 0:
         _way['oneway'] = 'yes'
     if params[3] != 0:
         _way['toll'] = 'yes'
     for i, val in enumerate(params[4:]):
         if val != 0:
+            if 'access' not in _way: 
+                _way['access'] = 'yes'
             _way[exceptions[i]] = 'no'
     return _way
 
