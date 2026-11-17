@@ -407,25 +407,28 @@ class TestyPoprawnosciDanych(object):
             return ''
 
     def sprawdz_label_dla_poi(self, dane_do_zapisu):
-        if 0x2900 <= int(dane_do_zapisu['Type'], 16) <= 0x3008:
-            if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
-                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-                self.error_out_writer.stderrorwrite(
-                    '\nBrak Label dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
-                return 'brak_label'
-            elif 'Miasto' not in dane_do_zapisu or ('Miasto' in dane_do_zapisu and not dane_do_zapisu['Miasto']):
-                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-                self.error_out_writer.stderrorwrite(
-                    '\nBrak Miasto dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
-                return 'brak_miasto'
-            return ''
-        elif dane_do_zapisu['Type'] in City.rozmiar2Type:
-            if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
-                coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
-                self.error_out_writer.stderrorwrite(
-                    '\nBrak nazwy Miasta dla punktu o wspolrzednych %s.' % coords)
-                return 'brak_nazwy_miasta'
-            return ''
+        coords = self.zwroc_wspolrzedne_do_szukania(dane_do_zapisu)
+        try:
+            if 0x2900 <= int(dane_do_zapisu['Type'], 16) <= 0x3008:
+                if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
+                    self.error_out_writer.stderrorwrite(
+                        '\nBrak Label dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
+                    return 'brak_label'
+                elif 'Miasto' not in dane_do_zapisu or ('Miasto' in dane_do_zapisu and not dane_do_zapisu['Miasto']):
+                    self.error_out_writer.stderrorwrite(
+                        '\nBrak Miasto dla punktu o wspolrzednych %s.\nWyszukiwanie nie bêdzie dzia³aæ.' % coords)
+                    return 'brak_miasto'
+                return ''
+            elif dane_do_zapisu['Type'] in City.rozmiar2Type:
+                if 'Label' not in dane_do_zapisu or ('Label' in dane_do_zapisu and not dane_do_zapisu['Label']):
+                    self.error_out_writer.stderrorwrite(
+                        '\nBrak nazwy Miasta dla punktu o wspolrzednych %s.' % coords)
+                    return 'brak_nazwy_miasta'
+                return ''
+        except ValueError:
+            self.error_out_writer.stderrorwrite('\nNiepoprawne Type=%s dla punktu o wspolrzednych %s.'
+                                                % (dane_do_zapisu['Type'], coords))
+            return 'niepoprawne_type'
         return ''
 
     def sprawdz_label_dla_poly(self, dane_do_zapisu):
